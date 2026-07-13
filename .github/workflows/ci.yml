@@ -1,0 +1,44 @@
+name: Check Code Quality
+
+on:
+  pull_request:
+    branches: [master]
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository code using the latest major version
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Validate that the code matches the Google Java Formatting style guide
+      - name: Check Java Code Formatting Style
+        uses: axel-op/google-java-format-action@v3
+        with:
+          args: "--check --set-exit-if-changed src/**/*.java"
+
+      # 3. Set up a pristine Java 26 environment using the latest major version
+      - name: Set up JDK 26
+        uses: actions/setup-java@v4
+        with:
+          java-version: "26"
+          distribution: "temurin"
+
+      # 4. Cache Ant dependencies to keep PR checks running fast
+      - name: Cache Ant dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.ant
+          key: ${{ runner.os }}-ant-${{ hashFiles('**/build.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-ant-
+
+      # 5. Compile the application and verify the build doesn't break
+      - name: Build JAR with Ant
+        run: ant -buildfile build.xml jar

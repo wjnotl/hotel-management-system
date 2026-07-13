@@ -1,0 +1,14 @@
+# --- OS Specific Files ---
+.DS_Store
+Thumbs.db
+
+# --- Ant Build Outputs ---
+build/
+dist/
+
+# --- NetBeans Internal Configuration ---
+nbproject/private/
+
+# --- Java Crash Logs ---
+*.log
+*.class
