@@ -1,6 +1,9 @@
 {
   "[java]": {
-    "editor.defaultFormatter": "josevseb.google-java-format-for-vs-code"
+    "editor.defaultFormatter": "josevseb.google-java-format-for-vs-code",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
   },
   "files.exclude": {
     "**/build": true,
@@ -20,5 +23,8 @@
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
     "br.bat": "build.bat,run.bat,ci.bat,format.bat"
-  }
+  },
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true
 }
