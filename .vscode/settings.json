@@ -15,5 +15,10 @@
   "editor.tabSize": 2,
   "editor.detectIndentation": false,
   "editor.indentSize": "tabSize",
-  "java.compile.nullAnalysis.mode": "automatic"
+  "java.compile.nullAnalysis.mode": "automatic",
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "br.bat": "build.bat,run.bat,ci.bat,format.bat"
+  }
 }
