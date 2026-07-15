@@ -19,9 +19,10 @@ jobs:
 
       # 2. Validate that the code matches the Google Java Formatting style guide
       - name: Check Java Code Formatting Style
-        uses: axel-op/google-java-format-action@v3
+        uses: axel-op/googlejavaformat-action@v4
         with:
-          args: "--check --set-exit-if-changed src/**/*.java"
+          version: "1.35.0"
+          args: "--dry-run --set-exit-if-changed"
 
       # 3. Set up a pristine Java 26 environment using the latest major version
       - name: Set up JDK 26
@@ -41,4 +42,4 @@ jobs:
 
       # 5. Compile the application and verify the build doesn't break
       - name: Build JAR with Ant
-        run: ant -buildfile build.xml jar
+        run: ant jar
