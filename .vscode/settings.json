@@ -1,18 +1,30 @@
 {
   "[java]": {
-    "editor.defaultFormatter": "redhat.java"
+    "editor.defaultFormatter": "josevseb.google-java-format-for-vs-code",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
   },
   "files.exclude": {
     "**/build": true,
     "**/dist": true,
     "**/nbproject": true,
+    "**/lib": true,
     "build.xml": true,
     "manifest.mf": true
   },
-  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
-  "java.format.settings.profile": "GoogleStyle",
+  "java.format.settings.google.version": "1.35.0",
   "editor.formatOnSave": true,
   "editor.tabSize": 2,
   "editor.detectIndentation": false,
-  "editor.indentSize": "tabSize"
+  "editor.indentSize": "tabSize",
+  "java.compile.nullAnalysis.mode": "automatic",
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "br.bat": "build.bat,run.bat,ci.bat,format.bat"
+  },
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true
 }

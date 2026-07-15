@@ -12,3 +12,6 @@ nbproject/private/
 # --- Java Crash Logs ---
 *.log
 *.class
+
+# --- Java Libraries ---
+lib/

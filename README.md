@@ -29,11 +29,18 @@ You do not need to download Apache Ant separately if you already have NetBeans i
 
 ## 🚀 Getting Started & Execution Scripts
 
-To accommodate different development workflows, this repository contains three distinct execution scripts in the root directory:
+To accommodate different development workflows, this repository contains utility scripts in the root directory:
+
+### Execution & Compilation
 
 - **`br.bat` (Recommended Shortcut):** The fastest option for development. Typing `.\br` in your VS Code terminal automatically runs a chained lifecycle execution block (`call ant jar && java -jar ...`). It compiles your changes via Ant and boots the application immediately if the build succeeds. If compilation fails, it terminates instantly to show errors.
 - **`build.bat`:** Run this script to compile your Java source files, handle project dependency generation, and package your distribution assets natively using Apache Ant (`ant jar`).
 - **`run.bat`:** Run this script to execute the pre-compiled application package directly using the native Java launcher (`java -jar "dist\HotelManagementSystem.jar"`).
+
+### Code Quality Utilities
+
+- **`ci.bat`:** Run this script to execute a local dry-run verification of the project's code quality before pushing. It verifies your local Java installation version, checks for Google Java Format style compliance, and runs an Ant build test.
+- **`format.bat`:** Run this script to automatically format and overwrite all of your `.java` source files in the `src` directory so that they perfectly align with the strict Google Java Formatting style.
 
 ---
 
@@ -52,6 +59,8 @@ To accommodate different development workflows, this repository contains three d
 ├── br.bat               # Fast Build & Run shortcut script
 ├── build.bat            # Isolated project compilation script
 ├── run.bat              # Isolated application runner script
+├── ci.bat               # Local CI verification script
+├── format.bat           # Auto-formatting tool script
 └── build.xml            # Apache Ant build script configurations
 ```
 

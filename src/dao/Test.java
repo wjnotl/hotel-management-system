@@ -1,5 +1,3 @@
 package dao;
 
-public class Test {
-  
-}
+public class Test {}
