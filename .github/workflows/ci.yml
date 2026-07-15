@@ -7,39 +7,30 @@ on:
       - opened
       - synchronize
       - reopened
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout the repository code using the latest major version
+      # 1. Checkout the repository code
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Validate that the code matches the Google Java Formatting style guide
-      - name: Check Java Code Formatting Style
-        uses: axel-op/googlejavaformat-action@v4
-        with:
-          version: "1.35.0"
-          args: "--dry-run --set-exit-if-changed"
-
-      # 3. Set up a pristine Java 26 environment using the latest major version
+      # 2. Set up JDK 26 environment
       - name: Set up JDK 26
         uses: actions/setup-java@v4
         with:
           java-version: "26"
           distribution: "temurin"
 
-      # 4. Cache Ant dependencies to keep PR checks running fast
-      - name: Cache Ant dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.ant
-          key: ${{ runner.os }}-ant-${{ hashFiles('**/build.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-ant-
+      # 3. Check code formatting style (fails instantly if any file mismatches)
+      - name: Check Java Code Formatting Style
+        run: |
+          curl -L -s -o google-java-format.jar [https://github.com/google/google-java-format/releases/download/v1.35.0/google-java-format-1.35.0-all-deps.jar](https://github.com/google/google-java-format/releases/download/v1.35.0/google-java-format-1.35.0-all-deps.jar)
+          find src/ -name "*.java" | xargs java -jar google-java-format.jar --set-exit-if-changed --dry-run
 
-      # 5. Compile the application and verify the build doesn't break
+      # 4. Compile the application with Ant
       - name: Build JAR with Ant
         run: ant jar
