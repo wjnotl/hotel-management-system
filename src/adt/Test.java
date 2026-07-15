@@ -1,5 +1,3 @@
 package adt;
 
-public class Test {
-
-}
+public class Test {}

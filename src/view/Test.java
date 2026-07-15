@@ -1,5 +1,3 @@
 package view;
 
-public class Test {
-  
-}
+public class Test {}
