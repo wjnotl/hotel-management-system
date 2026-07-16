@@ -1,19 +1,25 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
- */
 package control;
 
-/**
- * @author User
- */
-public class HotelManagementSystem {
+import control.vip.VipController;
+import util.ConsoleUtil;
+import view.MainMenuView;
 
-  /**
-   * @param args the command line arguments
-   */
+public class HotelManagementSystem {
+  private static MainMenuView mainMenuView = new MainMenuView();
+
   public static void main(String[] args) {
-    System.out.println("Hello World!");
-    System.out.println("Hello World! 2");
+    while (true) {
+      try {
+        int choice = mainMenuView.displayMainMenu();
+
+        if (choice == 2) {
+          new VipController().start();
+        } else if (choice == 5) {
+          System.exit(0);
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 }
