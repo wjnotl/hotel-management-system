@@ -1,59 +1,25 @@
 package control;
 
+import control.vip.VipController;
 import util.ConsoleUtil;
+import view.MainMenuView;
 
 public class HotelManagementSystem {
-  private static final boolean IS_DEBUG_MODE = false;
+  private static MainMenuView mainMenuView = new MainMenuView();
 
   public static void main(String[] args) {
     while (true) {
       try {
-        runMainMenu();
+        int choice = mainMenuView.displayMainMenu();
+
+        if (choice == 2) {
+          new VipController().start();
+        } else if (choice == 5) {
+          System.exit(0);
+        }
       } catch (Exception e) {
-        handleGlobalException(e);
+        ConsoleUtil.printError(e.getMessage());
       }
-    }
-  }
-
-  private static void runMainMenu() {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("MAIN MENU");
-    System.out.println("1. Open sub module");
-    System.out.println("2. Exit");
-
-    int choice = ConsoleUtil.getIntInput("Select option: ", 1, 2);
-
-    if (choice == 1) {
-      runSubMenu();
-    } else {
-      System.exit(0);
-    }
-  }
-
-  private static void runSubMenu() {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("SUB MODULE");
-    System.out.println("1. Test 1");
-    System.out.println("2. Back to main menu");
-
-    int choice = ConsoleUtil.getIntInput("Select option: ", 1, 2);
-    if (choice == 1) {
-      System.out.println("Test 1");
-      ConsoleUtil.getStringInput("Press Enter to continue...");
-    } else {
-      return;
-    }
-  }
-
-  private static void handleGlobalException(Exception e) {
-    if (IS_DEBUG_MODE) {
-      ConsoleUtil.clearScreen();
-      System.out.println("=== DEV DEBUG LOG ===");
-      e.printStackTrace(System.out);
-      System.out.println("=====================");
-      ConsoleUtil.getStringInput("\nPress Enter to continue...");
-    } else {
-      ConsoleUtil.printError(e.getMessage());
     }
   }
 }

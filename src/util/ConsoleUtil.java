@@ -4,7 +4,6 @@ import java.util.Scanner;
 
 public class ConsoleUtil {
   private static final Scanner scanner = new Scanner(System.in);
-  private static final int MIN_WIDTH_TITLE_BOX = 40;
 
   public static void clearScreen() {
     System.out.print("\033\143");
@@ -12,10 +11,14 @@ public class ConsoleUtil {
   }
 
   public static void printTitleBox(String title) {
+    printTitleBox(title, 40); // default min width = 40
+  }
+
+  public static void printTitleBox(String title, int minWidth) {
     if (title == null) title = "";
 
     int contentWidth = title.length() + 8; // 2 spaces + "::" on both sides
-    int boxWidth = Math.max(MIN_WIDTH_TITLE_BOX, contentWidth);
+    int boxWidth = Math.max(minWidth, contentWidth);
 
     // Keep box layout symmetric
     if ((boxWidth - 8 - title.length()) % 2 != 0) {
@@ -28,17 +31,29 @@ public class ConsoleUtil {
 
     String border = ":".repeat(boxWidth);
     String side = "::";
-    String middle = " ".repeat(leftPadding) + title + " ".repeat(rightPadding);
+    String middle = "  " + " ".repeat(leftPadding) + title + " ".repeat(rightPadding) + "  ";
 
     System.out.println(border);
-    System.out.println(side + "  " + middle + "  " + side);
+    System.out.println(side + middle + side);
     System.out.println(border + "\n");
   }
 
   public static void printError(String message) {
+    if (message == null) {
+      message = "An unknown error occurred!";
+    }
+
     clearScreen();
     System.out.println("Error: " + message);
-    System.out.println("Press Enter to continue...");
+    printContinueMessage();
+  }
+
+  public static void printContinueMessage() {
+    printContinueMessage("Press Enter to continue...");
+  }
+
+  public static void printContinueMessage(String message) {
+    System.out.println(message);
     scanner.nextLine();
   }
 
@@ -62,20 +77,31 @@ public class ConsoleUtil {
   public static int getIntInput(String prompt, int min, int max) {
     System.out.print(prompt);
 
+    String rawInput = scanner.nextLine().trim();
+
+    if (rawInput.length() > 1 && rawInput.startsWith("0")) {
+      throw new IllegalArgumentException("Invalid input format! Do not include leading zeros.");
+    }
+
     try {
-      int choice = Integer.parseInt(scanner.nextLine().trim());
+      int choice = Integer.parseInt(rawInput);
 
       // If the number is out of bounds, throw an error
       if (choice < min || choice > max) {
+        // if max - min = 1, then just throw must be x or y
+        if (max - min == 1) {
+          throw new IllegalArgumentException("Invalid input! Must be " + min + " or " + max + ".");
+        }
+
         throw new IllegalArgumentException(
-            "Selection out of bounds! Must be between " + min + " and " + max + ".");
+            "Invalid input! Must be between " + min + " and " + max + ".");
       }
 
       return choice;
 
     } catch (NumberFormatException e) {
       // If they typed letters, catch the format bug and throw a clean message up
-      throw new IllegalArgumentException("Invalid input format! Please type a valid number.");
+      throw new IllegalArgumentException("Invalid input! Please type a valid number.");
     }
   }
 
