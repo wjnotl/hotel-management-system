@@ -70,7 +70,7 @@ public class ConsoleUtil {
         return false;
       }
 
-      printError("Invalid choice!");
+      printError("Invalid choice! You can only choose Y or N.");
     }
   }
 
