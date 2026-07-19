@@ -3,15 +3,6 @@ package adt;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-/**
- * Heap-based priority queue, built on top of any ListInterface implementation (AList or LinkedList
- * - your choice, passed into the constructor). Can act as a max-heap or min-heap; flip with
- * setMaxHeap(), which triggers a full rebuild since a max-heap layout usually isn't a valid
- * min-heap layout.
- *
- * <p>Position math (1-based, matches ListInterface): parent(i) = i / 2 left(i) = 2 * i right(i) = 2
- * * i + 1
- */
 public class PriorityQueue<T> implements PriorityQueueInterface<T> {
 
   private static class PriorityEntry<T> {
@@ -27,16 +18,14 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
   private final ListInterface<PriorityEntry<T>> list;
   private boolean isMaxHeap;
 
-  // default: max-heap, backed by LinkedList (no capacity ceiling)
   public PriorityQueue() {
-    this(new LinkedList<>(), true);
+    this(new AList<>(), true);
   }
 
   public PriorityQueue(boolean isMaxHeap) {
-    this(new LinkedList<>(), isMaxHeap);
+    this(new AList<>(), isMaxHeap);
   }
 
-  // plug in whichever ListInterface implementation you want underneath
   public PriorityQueue(ListInterface<PriorityEntry<T>> list, boolean isMaxHeap) {
     this.list = list;
     this.isMaxHeap = isMaxHeap;
@@ -44,9 +33,11 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
 
   @Override
   public boolean enqueue(T newEntry, int priority) {
+    // Deny duplicates or processing if values are null
     if (newEntry == null || isFull() || positionOf(newEntry) != -1) {
       return false;
     }
+    // Append entry at the base of the list array and bubble it up into place
     list.add(new PriorityEntry<>(newEntry, priority));
     siftUp(list.getNumberOfEntries());
     return true;
@@ -56,15 +47,16 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
   public T dequeue() {
     if (isEmpty()) return null;
 
-    T top = list.getEntry(1).entry;
+    T top = list.getEntry(1).entry; // Save root element data
     int lastPosition = list.getNumberOfEntries();
 
     if (lastPosition == 1) {
       list.remove(1);
     } else {
+      // Pull the tail end node all the way up to act as temporary root node
       list.replace(1, list.getEntry(lastPosition));
       list.remove(lastPosition);
-      siftDown(1);
+      siftDown(1); // Bubble it downwards to fix balancing
     }
     return top;
   }
@@ -85,8 +77,11 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
       return true;
     }
 
+    // Swap structural layout locations with the tail element to delete smoothly
     list.replace(pos, list.getEntry(lastPosition));
     list.remove(lastPosition);
+
+    // Balance in both directions since the exact offset relationship is unknown
     siftDown(pos);
     siftUp(pos);
     return true;
@@ -97,14 +92,7 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
     return positionOf(entry) != -1;
   }
 
-  /**
-   * Removes whatever entry currently sits at the given internal heap position (1-based, matches
-   * ListInterface). This is NOT "the Nth person in line" - position 2 and 3 are just wherever the
-   * tree balancing happened to leave them, not queue order. Mainly useful for testing/debugging the
-   * heap directly.
-   *
-   * @return the removed entry, or null if position is out of range
-   */
+  @Override
   public T removeAt(int position) {
     int size = list.getNumberOfEntries();
     if (position < 1 || position > size) return null;
@@ -139,9 +127,14 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
     int pos = positionOf(entry);
     if (pos == -1) return false;
 
-    int oldPriority = list.getEntry(pos).priority;
-    list.getEntry(pos).priority = newPriority;
+    PriorityEntry<T> heapEntry = list.getEntry(pos);
+    int oldPriority = heapEntry.priority;
 
+    // Mutate priority score and explicitly overwrite data changes in the AList container layer
+    heapEntry.priority = newPriority;
+    list.replace(pos, heapEntry);
+
+    // Shift positions up or down based on how priority changed
     if (higherPriority(newPriority, oldPriority)) {
       siftUp(pos);
     } else if (newPriority != oldPriority) {
@@ -170,33 +163,25 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
     return new PriorityQueueIterator();
   }
 
-  // ---------- min/max switching ----------
-
   public boolean isMaxHeap() {
     return isMaxHeap;
   }
 
-  /**
-   * Flips between max-heap and min-heap mode. Since a valid max-heap arrangement isn't generally a
-   * valid min-heap arrangement, this triggers a full rebuild (Floyd's build-heap, O(n)) rather than
-   * just toggling the flag.
-   */
   public void setMaxHeap(boolean isMaxHeap) {
-    if (this.isMaxHeap == isMaxHeap) return; // no change needed
+    if (this.isMaxHeap == isMaxHeap) return;
     this.isMaxHeap = isMaxHeap;
-    rebuildHeap();
+    rebuildHeap(); // Re-index entire structural collection to honor new sorting strategy
   }
 
-  // starts from the last parent node and sifts down each one, working
-  // backwards to the root - standard O(n) build-heap approach
   private void rebuildHeap() {
     int size = list.getNumberOfEntries();
+    // Run Floyd's build-heap loop backward from the lowest parent element to the root node
     for (int i = size / 2; i >= 1; i--) {
       siftDown(i);
     }
   }
 
-  // ---------- internal helpers ----------
+  // INTERNAL HELPERS
 
   private int positionOf(T entry) {
     for (int i = 1; i <= list.getNumberOfEntries(); i++) {
@@ -205,12 +190,12 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
     return -1;
   }
 
-  // "higher priority" means closer to the root - for a max-heap that's the
-  // bigger number, for a min-heap that's the smaller number
   private boolean higherPriority(int a, int b) {
+    // Determines if entry A stays closer to the root tree position than entry B
     return isMaxHeap ? (a > b) : (a < b);
   }
 
+  // Quick 1-based parent-child tree mapping index algorithms
   private int parent(int i) {
     return i / 2;
   }
@@ -230,6 +215,7 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
   }
 
   private void siftUp(int i) {
+    // Escalate item upward while priority beats parent parameters
     while (i > 1 && higherPriority(list.getEntry(i).priority, list.getEntry(parent(i)).priority)) {
       swap(i, parent(i));
       i = parent(i);
@@ -241,16 +227,19 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
     while (true) {
       int l = left(i), r = right(i), best = i;
 
+      // Identify the most appropriate element candidate among current node and its children
       if (l <= size && higherPriority(list.getEntry(l).priority, list.getEntry(best).priority))
         best = l;
       if (r <= size && higherPriority(list.getEntry(r).priority, list.getEntry(best).priority))
         best = r;
 
-      if (best == i) break;
+      if (best == i) break; // Balance criteria satisfied completely
       swap(i, best);
       i = best;
     }
   }
+
+  // ITERATOR IMPLEMENTATION
 
   private class PriorityQueueIterator implements Iterator<T> {
     private int position = 1;

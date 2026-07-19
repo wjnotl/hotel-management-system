@@ -1,36 +1,30 @@
 package adt;
 
-/**
- * Map ADT interface. Stores key-value pairs, retrieval by key instead of by position or priority.
- */
+import java.util.Iterator;
+
 public interface MapInterface<K, V> {
 
-  /**
-   * Adds a new key-value pair, or updates the value if the key already exists.
-   *
-   * @return true if this was a new key, false if it replaced an existing one
-   */
+  // Inserts a key-value mapping. Overwrites the value and returns false if the key exists.
   public boolean put(K key, V value);
 
-  /**
-   * @return the value mapped to this key, or null if the key isn't present
-   */
+  // Grabs the value paired with this key, or returns null if it does not exist.
   public V get(K key);
 
-  /**
-   * Removes the key-value pair for the given key.
-   *
-   * @return the removed value, or null if the key wasn't present
-   */
+  // Evicts the key-value pair completely and hands back the evicted value.
   public V remove(K key);
 
+  // Checks if a specific key exists anywhere in the map.
   public boolean containsKey(K key);
 
+  // Returns the total number of key-value mappings.
   public int size();
 
+  // Checks if the map is empty.
   public boolean isEmpty();
 
+  // Flushes all key-value entries from the map.
   public void clear();
 
-  public java.util.Iterator<K> getKeyIterator();
+  // Yields an iterator to step through all the keys.
+  public Iterator<K> getKeyIterator();
 }

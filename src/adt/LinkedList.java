@@ -1,16 +1,12 @@
 package adt;
 
-/**
- * LinkedList.java A class that implements the ADT List using a chain of nodes,
- * with the node implemented as an inner class.
- *
- * @author Frank M. Carrano
- * @version 2.0
- */
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 public class LinkedList<T> implements ListInterface<T> {
 
-  private Node firstNode; // reference to first node
-  private int numberOfEntries;  	// number of entries in list
+  private Node firstNode;
+  private int numberOfEntries;
 
   public LinkedList() {
     clear();
@@ -24,16 +20,17 @@ public class LinkedList<T> implements ListInterface<T> {
 
   @Override
   public boolean add(T newEntry) {
-    Node newNode = new Node(newEntry);	// create the new node
+    Node newNode = new Node(newEntry);
 
     if (isEmpty()) {
       firstNode = newNode;
-    } else {                        // add to end of nonempty list
-      Node currentNode = firstNode;	// traverse linked list with p pointing to the current node
-      while (currentNode.next != null) { // while have not reached the last node
+    } else {
+      // Walk all the way down to the tail end node
+      Node currentNode = firstNode;
+      while (currentNode.next != null) {
         currentNode = currentNode.next;
       }
-      currentNode.next = newNode; // make last node reference new node
+      currentNode.next = newNode; // Glue new node to the tail end
     }
 
     numberOfEntries++;
@@ -41,101 +38,91 @@ public class LinkedList<T> implements ListInterface<T> {
   }
 
   @Override
-  public boolean add(int newPosition, T newEntry) { // OutOfMemoryError possible
-    boolean isSuccessful = true;
-
-    if ((newPosition >= 1) && (newPosition <= numberOfEntries + 1)) {
+  public boolean add(int newPosition, T newEntry) {
+    if (newPosition >= 1 && newPosition <= numberOfEntries + 1) {
       Node newNode = new Node(newEntry);
 
-      if (isEmpty() || (newPosition == 1)) { // case 1: add to beginning of list
+      if (isEmpty() || newPosition == 1) {
+        // Swap node references at the very head of the list
         newNode.next = firstNode;
         firstNode = newNode;
-      } else {								// case 2: list is not empty and newPosition > 1
+      } else {
+        // Stop right before the insert position index
         Node nodeBefore = firstNode;
         for (int i = 1; i < newPosition - 1; ++i) {
-          nodeBefore = nodeBefore.next;		// advance nodeBefore to its next node
+          nodeBefore = nodeBefore.next;
         }
-
-        newNode.next = nodeBefore.next;	// make new node point to current node at newPosition
-        nodeBefore.next = newNode;		// make the node before point to the new node
+        // Splice new node seamlessly between nodeBefore and the adjacent neighbor
+        newNode.next = nodeBefore.next;
+        nodeBefore.next = newNode;
       }
 
       numberOfEntries++;
-    } else {
-      isSuccessful = false;
+      return true;
     }
-
-    return isSuccessful;
+    return false;
   }
 
   @Override
   public T remove(int givenPosition) {
-    T result = null;                 // return value
+    if (givenPosition >= 1 && givenPosition <= numberOfEntries) {
+      T result = null;
 
-    if ((givenPosition >= 1) && (givenPosition <= numberOfEntries)) {
-      if (givenPosition == 1) {      // case 1: remove first entry
-        result = firstNode.data;     // save entry to be removed
-        firstNode = firstNode.next;
-      } else {                         // case 2: givenPosition > 1
+      if (givenPosition == 1) {
+        result = firstNode.data;
+        firstNode = firstNode.next; // Snip head element out of the chain
+      } else {
+        // Stop right before the deletion target node
         Node nodeBefore = firstNode;
         for (int i = 1; i < givenPosition - 1; ++i) {
-          nodeBefore = nodeBefore.next;		// advance nodeBefore to its next node
+          nodeBefore = nodeBefore.next;
         }
-        result = nodeBefore.next.data;  // save entry to be removed
-        nodeBefore.next = nodeBefore.next.next;	// make node before point to node after the
-      } 																// one to be deleted (to disconnect node from chain)
+        result = nodeBefore.next.data;
+        // Skip over the target node to disconnect it from the list chain
+        nodeBefore.next = nodeBefore.next.next;
+      }
 
       numberOfEntries--;
+      return result;
     }
-
-    return result; // return removed entry, or null if operation fails
+    return null;
   }
 
   @Override
   public boolean replace(int givenPosition, T newEntry) {
-    boolean isSuccessful = true;
-
-    if ((givenPosition >= 1) && (givenPosition <= numberOfEntries)) {
+    if (givenPosition >= 1 && givenPosition <= numberOfEntries) {
       Node currentNode = firstNode;
       for (int i = 0; i < givenPosition - 1; ++i) {
-        currentNode = currentNode.next;		// advance currentNode to next node
+        currentNode = currentNode.next;
       }
-      currentNode.data = newEntry;	// currentNode is pointing to the node at givenPosition
-    } else {
-      isSuccessful = false;
+      currentNode.data = newEntry; // Update payload reference directly
+      return true;
     }
-
-    return isSuccessful;
+    return false;
   }
 
   @Override
   public T getEntry(int givenPosition) {
-    T result = null;
-
-    if ((givenPosition >= 1) && (givenPosition <= numberOfEntries)) {
+    if (givenPosition >= 1 && givenPosition <= numberOfEntries) {
       Node currentNode = firstNode;
       for (int i = 0; i < givenPosition - 1; ++i) {
-        currentNode = currentNode.next;		// advance currentNode to next node
+        currentNode = currentNode.next;
       }
-      result = currentNode.data;	// currentNode is pointing to the node at givenPosition
+      return currentNode.data;
     }
-
-    return result;
+    return null;
   }
 
   @Override
   public boolean contains(T anEntry) {
-    boolean found = false;
     Node currentNode = firstNode;
-
-    while (!found && (currentNode != null)) {
+    while (currentNode != null) {
       if (anEntry.equals(currentNode.data)) {
-        found = true;
-      } else {
-        currentNode = currentNode.next;
+        return true;
       }
+      currentNode = currentNode.next;
     }
-    return found;
+    return false;
   }
 
   @Override
@@ -145,31 +132,34 @@ public class LinkedList<T> implements ListInterface<T> {
 
   @Override
   public boolean isEmpty() {
-    boolean result;
-
-    result = numberOfEntries == 0;
-
-    return result;
+    return numberOfEntries == 0;
   }
 
   @Override
   public boolean isFull() {
+    // Dynamic lists allocate references as needed; effectively never capped
     return false;
   }
 
   @Override
-  public String toString() {
-    String outputStr = "";
-    Node currentNode = firstNode;
-    while (currentNode != null) {
-      outputStr += currentNode.data + "\n";
-      currentNode = currentNode.next;
-    }
-    return outputStr;
+  public Iterator<T> getIterator() {
+    return new LinkedListIterator();
   }
 
-  private class Node {
+  @Override
+  public String toString() {
+    StringBuilder output = new StringBuilder();
+    Node currentNode = firstNode;
+    while (currentNode != null) {
+      output.append(currentNode.data).append("\n");
+      currentNode = currentNode.next;
+    }
+    return output.toString();
+  }
 
+  // NESTED STRUCTURAL LAYER
+
+  private class Node {
     private T data;
     private Node next;
 
@@ -184,4 +174,24 @@ public class LinkedList<T> implements ListInterface<T> {
     }
   }
 
+  // ITERATOR IMPLEMENTATION
+
+  private class LinkedListIterator implements Iterator<T> {
+    private Node currentNode = firstNode;
+
+    @Override
+    public boolean hasNext() {
+      return currentNode != null;
+    }
+
+    @Override
+    public T next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      T data = currentNode.data;
+      currentNode = currentNode.next; // Advance to the next chained node
+      return data;
+    }
+  }
 }
