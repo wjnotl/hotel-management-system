@@ -8,6 +8,7 @@ public class Guest {
   private String email; // Email Address
   private String phoneNumber; // Phone Number
   private String memberId; // Links to Member card (null if non-member)
+  private int strikeCount; // Daily no-show counter
 
   public Guest(
       String guestId,
@@ -16,7 +17,8 @@ public class Guest {
       String passportNumber,
       String email,
       String phoneNumber,
-      String memberId) {
+      String memberId,
+      int strikeCount) {
     this.guestId = guestId;
     this.name = name;
     this.icNumber = icNumber;
@@ -24,6 +26,7 @@ public class Guest {
     this.email = email;
     this.phoneNumber = phoneNumber;
     this.memberId = memberId;
+    this.strikeCount = strikeCount;
   }
 
   public String getGuestId() {
@@ -54,6 +57,10 @@ public class Guest {
     return memberId;
   }
 
+  public int getStrikeCount() {
+    return strikeCount;
+  }
+
   public void setGuestId(String guestId) {
     this.guestId = guestId;
   }
@@ -80,5 +87,9 @@ public class Guest {
 
   public void setMemberId(String memberId) {
     this.memberId = memberId;
+  }
+
+  public void setStrikeCount(int strikeCount) {
+    this.strikeCount = strikeCount;
   }
 }

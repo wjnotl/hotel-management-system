@@ -15,7 +15,6 @@ public class Reservation {
   private String guestId; // Links to Guest.guestId
   private String confirmationNumber; // Unique 8-digit trip ID (Primary lookup key)
   private Status status; // Enforce typed status state
-  private int strikeCount; // Daily no-show counter
   private boolean isBoiling; // Patience threshold flag
   private double priorityScore; // Calculated Max-Heap score
   private LocalDateTime reservationTime; // When the booking was made
@@ -25,7 +24,6 @@ public class Reservation {
       String guestId,
       String confirmationNumber,
       Status status,
-      int strikeCount,
       boolean isBoiling,
       double priorityScore,
       LocalDateTime reservationTime,
@@ -33,7 +31,6 @@ public class Reservation {
     this.guestId = guestId;
     this.confirmationNumber = confirmationNumber;
     this.status = status;
-    this.strikeCount = strikeCount;
     this.isBoiling = isBoiling;
     this.priorityScore = priorityScore;
     this.reservationTime = reservationTime;
@@ -50,10 +47,6 @@ public class Reservation {
 
   public Status getStatus() {
     return status;
-  }
-
-  public int getStrikeCount() {
-    return strikeCount;
   }
 
   public boolean getIsBoiling() {
@@ -82,10 +75,6 @@ public class Reservation {
 
   public void setStatus(Status status) {
     this.status = status;
-  }
-
-  public void setStrikeCount(int strikeCount) {
-    this.strikeCount = strikeCount;
   }
 
   public void setBoiling(boolean isBoiling) {
