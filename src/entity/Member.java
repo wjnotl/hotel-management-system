@@ -4,8 +4,7 @@ public class Member {
   public static enum LoyaltyTier {
     DIAMOND,
     GOLD,
-    SILVER,
-    NON_MEMBER
+    SILVER
   }
 
   private String memberId;

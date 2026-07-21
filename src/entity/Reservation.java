@@ -1,5 +1,7 @@
 package entity;
 
+import java.time.LocalDateTime;
+
 public class Reservation {
   public static enum Status {
     RESERVED,
@@ -16,6 +18,8 @@ public class Reservation {
   private int strikeCount; // Daily no-show counter
   private boolean isBoiling; // Patience threshold flag
   private double priorityScore; // Calculated Max-Heap score
+  private LocalDateTime reservationTime; // When the booking was made
+  private LocalDateTime queueArrivalTime; // Exact timestamp they arrived in the lobby queue
 
   public Reservation(
       String guestId,
@@ -23,13 +27,17 @@ public class Reservation {
       Status status,
       int strikeCount,
       boolean isBoiling,
-      double priorityScore) {
+      double priorityScore,
+      LocalDateTime reservationTime,
+      LocalDateTime queueArrivalTime) {
     this.guestId = guestId;
     this.confirmationNumber = confirmationNumber;
     this.status = status;
     this.strikeCount = strikeCount;
     this.isBoiling = isBoiling;
     this.priorityScore = priorityScore;
+    this.reservationTime = reservationTime;
+    this.queueArrivalTime = queueArrivalTime;
   }
 
   public String getGuestId() {
@@ -56,6 +64,14 @@ public class Reservation {
     return priorityScore;
   }
 
+  public LocalDateTime getReservationTime() {
+    return reservationTime;
+  }
+
+  public LocalDateTime getQueueArrivalTime() {
+    return queueArrivalTime;
+  }
+
   public void setGuestId(String guestId) {
     this.guestId = guestId;
   }
@@ -78,5 +94,13 @@ public class Reservation {
 
   public void setPriorityScore(double priorityScore) {
     this.priorityScore = priorityScore;
+  }
+
+  public void setReservationTime(LocalDateTime reservationTime) {
+    this.reservationTime = reservationTime;
+  }
+
+  public void setQueueArrivalTime(LocalDateTime queueArrivalTime) {
+    this.queueArrivalTime = queueArrivalTime;
   }
 }
