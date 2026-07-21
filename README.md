@@ -52,7 +52,6 @@ To accommodate different development workflows, this repository contains utility
 ├── src/                 # Main Java Source Code
 │   ├── adt/             # Abstract Data Types implementations
 │   ├── control/         # Controller/Core Application Logic
-│   ├── dao/             # Data Access Objects (File handling / Persistence)
 │   ├── entity/          # Business Model / Entity classes
 │   ├── util/            # Helper utilities
 │   └── view/            # UI components / Boundary classes
