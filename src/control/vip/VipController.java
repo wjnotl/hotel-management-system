@@ -6,14 +6,16 @@ import view.VipView;
 public class VipController {
   private VipView vipView = new VipView();
 
+  public VipController() {}
+
   public void start() {
     while (true) {
       try {
         int choice = vipView.displayMenu();
 
         if (choice == 1) {
-          handleVipOption1();
-        } else if (choice == 2) {
+          manageWaitlist();
+        } else if (choice == 5) {
           return;
         }
       } catch (Exception e) {
@@ -22,8 +24,7 @@ public class VipController {
     }
   }
 
-  public void handleVipOption1() {
-    // TODO: Implement VIP Option 1
-    vipView.displayVipOption1();
+  public void manageWaitlist() {
+    vipView.manageWaitlist(null, null);
   }
 }

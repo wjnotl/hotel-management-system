@@ -21,7 +21,7 @@ public class MainMenuView {
     System.out.println("2. VIP Priority Room Allocation");
     System.out.println("3. Housekeeping & Task Logging");
     System.out.println("4. Front-Desk Search & Services");
-    System.out.println("5. Exit");
+    System.out.println("5. Exit\n");
 
     return ConsoleUtil.getIntInput("Select option: ", 1, 5);
   }
