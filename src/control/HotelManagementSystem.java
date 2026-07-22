@@ -16,6 +16,7 @@ public class HotelManagementSystem {
           new VipController().start();
         } else if (choice == 5) {
           if (ConsoleUtil.showConfirmMessage("Are you sure you want to exit?")) {
+            mainMenuView.displayExitMessage();
             System.exit(0);
           }
         }

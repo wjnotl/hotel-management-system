@@ -3,9 +3,7 @@ package view;
 import util.ConsoleUtil;
 
 public class MainMenuView {
-  public int displayMainMenu() {
-    ConsoleUtil.clearScreen();
-
+  private void displayPrettyLogo() {
     System.out.print(
         """
         ████████╗ █████╗ ██████╗ ██╗   ██╗███╗   ███╗████████╗
@@ -15,6 +13,12 @@ public class MainMenuView {
            ██║   ██║  ██║██║  ██║╚██████╔╝██║ ╚═╝ ██║   ██║
            ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝   ╚═╝
         """);
+  }
+
+  public int displayMainMenu() {
+    ConsoleUtil.clearScreen();
+
+    displayPrettyLogo();
     ConsoleUtil.printTitleBox("RESORT MANAGEMENT SYSTEM", 54);
 
     System.out.println("1. Standard Booking & Walk-In");
@@ -24,5 +28,14 @@ public class MainMenuView {
     System.out.println("5. Exit\n");
 
     return ConsoleUtil.getIntInput("Select option: ", 1, 5);
+  }
+
+  public void displayExitMessage() {
+    ConsoleUtil.clearScreen();
+
+    displayPrettyLogo();
+    ConsoleUtil.printTitleBox("RESORT MANAGEMENT SYSTEM", 54);
+
+    System.out.println(" ".repeat(22) + "Thank you!" + " ".repeat(22));
   }
 }
