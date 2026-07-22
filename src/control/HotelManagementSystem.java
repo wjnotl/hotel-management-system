@@ -10,11 +10,11 @@ public class HotelManagementSystem {
   public static void main(String[] args) {
     while (true) {
       try {
-        int choice = mainMenuView.displayMainMenu();
+        String choice = mainMenuView.displayMainMenu();
 
-        if (choice == 2) {
+        if (choice == "2") {
           new VipController().start();
-        } else if (choice == 5) {
+        } else if (choice == "5") {
           if (ConsoleUtil.showConfirmMessage("Are you sure you want to exit?")) {
             mainMenuView.displayExitMessage();
             System.exit(0);

@@ -11,11 +11,11 @@ public class VipController {
   public void start() {
     while (true) {
       try {
-        int choice = vipView.displayMenu();
+        String choice = vipView.displayMenu();
 
-        if (choice == 1) {
+        if (choice == "1") {
           manageWaitlist();
-        } else if (choice == 5) {
+        } else if (choice == "5") {
           return;
         }
       } catch (Exception e) {
