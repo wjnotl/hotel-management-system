@@ -159,16 +159,6 @@ public class PriorityQueue<T> implements PriorityQueueInterface<T> {
   }
 
   @Override
-  public ListInterface<T> toList() {
-    ListInterface<T> copy = new AList<>(list.getNumberOfEntries());
-    Iterator<T> it = getIterator();
-    while (it.hasNext()) {
-      copy.add(it.next());
-    }
-    return copy;
-  }
-
-  @Override
   public Iterator<T> getIterator() {
     return new PriorityQueueIterator();
   }
