@@ -1,5 +1,6 @@
 package adt;
 
+import java.util.Comparator;
 import java.util.Iterator;
 
 public interface ListInterface<T> {
@@ -33,6 +34,9 @@ public interface ListInterface<T> {
 
   // Tells if the backing structure is maxed out.
   public boolean isFull();
+
+  // Sorts the list contents using a custom Comparator.
+  public void sort(Comparator<T> comparator);
 
   // Gives back a standard iterator to cleanly traverse elements sequentially.
   public Iterator<T> getIterator();

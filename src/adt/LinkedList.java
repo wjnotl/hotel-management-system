@@ -1,5 +1,6 @@
 package adt;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -142,6 +143,14 @@ public class LinkedList<T> implements ListInterface<T> {
   }
 
   @Override
+  public void sort(Comparator<T> comparator) {
+    if (numberOfEntries <= 1 || comparator == null) {
+      return;
+    }
+    firstNode = mergeSort(firstNode, comparator);
+  }
+
+  @Override
   public Iterator<T> getIterator() {
     return new LinkedListIterator();
   }
@@ -155,6 +164,53 @@ public class LinkedList<T> implements ListInterface<T> {
       currentNode = currentNode.next;
     }
     return output.toString();
+  }
+
+  // INTERNAL HELPERS
+
+  private Node mergeSort(Node head, Comparator<T> comparator) {
+    if (head == null || head.next == null) {
+      return head;
+    }
+
+    // 1. Split list in half using slow/fast pointers
+    Node middle = getMiddle(head);
+    Node nextOfMiddle = middle.next;
+    middle.next = null;
+
+    // 2. Recursively sort both halves
+    Node left = mergeSort(head, comparator);
+    Node right = mergeSort(nextOfMiddle, comparator);
+
+    // 3. Merge sorted halves back together
+    return sortedMerge(left, right, comparator);
+  }
+
+  private Node sortedMerge(Node a, Node b, Comparator<T> comparator) {
+    if (a == null) return b;
+    if (b == null) return a;
+
+    Node result;
+    if (comparator.compare(a.data, b.data) <= 0) {
+      result = a;
+      result.next = sortedMerge(a.next, b, comparator);
+    } else {
+      result = b;
+      result.next = sortedMerge(a, b.next, comparator);
+    }
+    return result;
+  }
+
+  private Node getMiddle(Node head) {
+    if (head == null) return head;
+    Node slow = head;
+    Node fast = head;
+
+    while (fast.next != null && fast.next.next != null) {
+      slow = slow.next;
+      fast = fast.next.next;
+    }
+    return slow;
   }
 
   // NESTED STRUCTURAL LAYER

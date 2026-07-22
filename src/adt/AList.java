@@ -1,5 +1,6 @@
 package adt;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -118,6 +119,16 @@ public class AList<T> implements ListInterface<T> {
   }
 
   @Override
+  public void sort(Comparator<T> comparator) {
+    // If the list has 0 or 1 item, or if comparator is null, it's already sorted
+    if (numberOfEntries <= 1 || comparator == null) {
+      return;
+    }
+
+    quickSort(0, numberOfEntries - 1, comparator);
+  }
+
+  @Override
   public Iterator<T> getIterator() {
     return new AListIterator();
   }
@@ -160,6 +171,36 @@ public class AList<T> implements ListInterface<T> {
     for (int index = removedIndex; index < lastIndex; index++) {
       listArray[index] = listArray[index + 1];
     }
+  }
+
+  private void quickSort(int low, int high, Comparator<T> comparator) {
+    if (low < high) {
+      int pivotIndex = partition(low, high, comparator);
+      quickSort(low, pivotIndex - 1, comparator);
+      quickSort(pivotIndex + 1, high, comparator);
+    }
+  }
+
+  private int partition(int low, int high, Comparator<T> comparator) {
+    T pivot = listArray[high]; // Clean 0-based access
+    int i = low - 1;
+
+    for (int j = low; j < high; j++) {
+      if (comparator.compare(listArray[j - 1], pivot) <= 0) {
+        i++;
+        swap(i - 1, j - 1);
+      }
+    }
+    swap(i, high - 1);
+    return i + 1;
+  }
+
+  private void swap(int i, int j) {
+    if (i == j) return;
+
+    T temp = listArray[i];
+    listArray[i] = listArray[j];
+    listArray[j] = temp;
   }
 
   // ITERATOR IMPLEMENTATION
