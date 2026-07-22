@@ -39,6 +39,9 @@ public interface PriorityQueueInterface<T> {
   // Clears out the queue completely.
   public void clear();
 
+  // Converts priority queue elements into an AList snapshot
+  public ListInterface<T> toList();
+
   // Yields an iterator to step through the elements.
   public Iterator<T> getIterator();
 }
