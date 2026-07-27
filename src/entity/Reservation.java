@@ -16,7 +16,7 @@ public class Reservation {
   private String confirmationNumber; // Unique 8-digit trip ID (Primary lookup key)
   private Status status; // Enforce typed status state
   private boolean isBoiling; // Patience threshold flag
-  private double priorityScore; // Calculated Max-Heap score
+  private int priorityScore; // Calculated Max-Heap score
   private LocalDateTime reservationTime; // When the booking was made
   private LocalDateTime queueArrivalTime; // Exact timestamp they arrived in the lobby queue
 
@@ -25,7 +25,7 @@ public class Reservation {
       String confirmationNumber,
       Status status,
       boolean isBoiling,
-      double priorityScore,
+      int priorityScore,
       LocalDateTime reservationTime,
       LocalDateTime queueArrivalTime) {
     this.guestId = guestId;
@@ -53,7 +53,7 @@ public class Reservation {
     return isBoiling;
   }
 
-  public double getPriorityScore() {
+  public int getPriorityScore() {
     return priorityScore;
   }
 
@@ -81,7 +81,7 @@ public class Reservation {
     this.isBoiling = isBoiling;
   }
 
-  public void setPriorityScore(double priorityScore) {
+  public void setPriorityScore(int priorityScore) {
     this.priorityScore = priorityScore;
   }
 

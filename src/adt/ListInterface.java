@@ -12,7 +12,9 @@ public interface ListInterface<T> {
   public boolean add(int newPosition, T newEntry);
 
   // Plucks out the entry at the given 1-based position and closes the gap.
-  public T remove(int givenPosition);
+  public boolean remove(T entry);
+
+  public T removeAt(int givenPosition);
 
   // Wipes the list completely clean.
   public void clear();

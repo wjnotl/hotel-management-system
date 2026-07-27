@@ -64,7 +64,15 @@ public class LinkedList<T> implements ListInterface<T> {
   }
 
   @Override
-  public T remove(int givenPosition) {
+  public boolean remove(T entry) {
+    if (getPosition(entry) == -1) return false;
+
+    removeAt(getPosition(entry));
+    return true;
+  }
+
+  @Override
+  public T removeAt(int givenPosition) {
     if (givenPosition >= 1 && givenPosition <= numberOfEntries) {
       T result = null;
 
@@ -166,6 +174,18 @@ public class LinkedList<T> implements ListInterface<T> {
   }
 
   // INTERNAL HELPERS
+
+  private int getPosition(T entry) {
+    if (entry == null) return -1;
+    if (isEmpty()) return -1;
+
+    Node currentNode = firstNode;
+    for (int i = 0; i < numberOfEntries; i++) {
+      if (currentNode.data.equals(entry)) return i;
+      currentNode = currentNode.next;
+    }
+    return -1;
+  }
 
   private Node mergeSort(Node head, Comparator<T> comparator) {
     if (head == null || head.next == null) {

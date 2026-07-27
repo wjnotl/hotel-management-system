@@ -7,14 +7,14 @@ public class ArrayList<T> implements ListInterface<T> {
   private T[] array;
   private int numOfEntries;
   private static final int DEFAULT_CAPACITY = 25;
-  private boolean canExpand = false;
+  private boolean canExpand;
 
   public ArrayList() {
     this(DEFAULT_CAPACITY);
   }
 
   public ArrayList(int initialCapacity) {
-    this(initialCapacity, false);
+    this(initialCapacity, true);
   }
 
   @SuppressWarnings("unchecked")
@@ -56,7 +56,15 @@ public class ArrayList<T> implements ListInterface<T> {
   }
 
   @Override
-  public T remove(int givenPosition) {
+  public boolean remove(T entry) {
+    if (getPosition(entry) == -1) return false;
+
+    removeAt(getPosition(entry));
+    return true;
+  }
+
+  @Override
+  public T removeAt(int givenPosition) {
     if (givenPosition < 1 || givenPosition > numOfEntries) return null;
 
     T result = array[givenPosition - 1];
@@ -134,6 +142,16 @@ public class ArrayList<T> implements ListInterface<T> {
 
   // INTERNAL HELPERS
 
+  private int getPosition(T entry) {
+    if (entry == null) return -1;
+    if (isEmpty()) return -1;
+
+    for (int i = 0; i < numOfEntries; i++) {
+      if (array[i].equals(entry)) return i;
+    }
+    return -1;
+  }
+
   @SuppressWarnings("unchecked")
   private void doubleCapacity() {
     int newLength = 2 * array.length;
@@ -200,7 +218,7 @@ public class ArrayList<T> implements ListInterface<T> {
     @Override
     public T next() {
       if (!hasNext()) return null;
-      
+
       T entry = array[currentIndex];
       currentIndex++;
       return entry;

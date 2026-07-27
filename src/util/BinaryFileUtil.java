@@ -22,10 +22,8 @@ public class BinaryFileUtil<T> {
   }
 
   public void saveToFile(T data) {
-    try {
-      ObjectOutputStream ooStream = new ObjectOutputStream(new FileOutputStream(fileName));
+    try (ObjectOutputStream ooStream = new ObjectOutputStream(new FileOutputStream(fileName))) {
       ooStream.writeObject(data);
-      ooStream.close();
     } catch (FileNotFoundException ex) {
       ConsoleUtil.printError("File " + fileName + " not found: " + ex.getMessage());
     } catch (IOException ex) {
@@ -37,13 +35,18 @@ public class BinaryFileUtil<T> {
   public T retrieveFromFile() {
     File file = new File(fileName);
 
-    try {
-      ObjectInputStream oiStream = new ObjectInputStream(new FileInputStream(file));
-      T result = (T) (oiStream.readObject());
-      oiStream.close();
-      return result;
+    // If file doesn't exist or is empty (0 bytes), return null quietly
+    if (!file.exists() || file.length() == 0) {
+      return null;
+    }
+
+    try (ObjectInputStream oiStream = new ObjectInputStream(new FileInputStream(file))) {
+      return (T) oiStream.readObject();
     } catch (FileNotFoundException ex) {
       ConsoleUtil.printError("File " + fileName + " not found");
+    } catch (EOFException ex) {
+      // Reached end of file cleanly / empty file format
+      return null;
     } catch (IOException ex) {
       ConsoleUtil.printError("Error reading from " + fileName + ": " + ex.getMessage());
     } catch (ClassNotFoundException ex) {
