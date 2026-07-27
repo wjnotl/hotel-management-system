@@ -1,6 +1,8 @@
 package entity;
 
-public class Room {
+import java.io.Serializable;
+
+public class Room implements Serializable {
   public static enum Status {
     DIRTY,
     CLEANING,

@@ -1,9 +1,10 @@
 package adt;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Iterator;
 
-public class ArrayList<T> implements ListInterface<T> {
+public class ArrayList<T> implements ListInterface<T>, Serializable {
   private T[] array;
   private int numOfEntries;
   private static final int DEFAULT_CAPACITY = 25;
@@ -225,8 +226,6 @@ public class ArrayList<T> implements ListInterface<T> {
     }
 
     @Override
-    public void remove() {
-
-    }
+    public void remove() {}
   }
 }

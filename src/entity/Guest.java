@@ -1,6 +1,8 @@
 package entity;
 
-public class Guest {
+import java.io.Serializable;
+
+public class Guest implements Serializable {
   private String guestId; // Unique customer ID (e.g., "G-10023")
   private String name; // Full Name
   private String icNumber; // IC Number

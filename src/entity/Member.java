@@ -1,6 +1,8 @@
 package entity;
 
-public class Member {
+import java.io.Serializable;
+
+public class Member implements Serializable {
   public static enum LoyaltyTier {
     DIAMOND,
     GOLD,
