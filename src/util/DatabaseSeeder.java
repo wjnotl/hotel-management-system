@@ -81,7 +81,7 @@ public class DatabaseSeeder {
       Reservation r1 =
           new Reservation(
               "G-101",
-              "CONF-8001",
+              NumberUtil.generateDigitPin(8),
               Reservation.Status.WAITING,
               true,
               8180,
@@ -90,7 +90,7 @@ public class DatabaseSeeder {
       Reservation r2 =
           new Reservation(
               "G-102",
-              "CONF-8002",
+              NumberUtil.generateDigitPin(8),
               Reservation.Status.WAITING,
               false,
               6500,
@@ -99,7 +99,7 @@ public class DatabaseSeeder {
       Reservation r3 =
           new Reservation(
               "G-103",
-              "CONF-8003",
+              NumberUtil.generateDigitPin(8),
               Reservation.Status.WAITING,
               true,
               4200,
@@ -108,7 +108,7 @@ public class DatabaseSeeder {
       Reservation r4 =
           new Reservation(
               "G-104",
-              "CONF-8004",
+              NumberUtil.generateDigitPin(8),
               Reservation.Status.WAITING,
               false,
               2100,

@@ -2,7 +2,7 @@ package util;
 
 public class TableUtil {
 
-  // Allignment Enums
+  // Alignment Enums
   public enum Align {
     LEFT,
     CENTER,
@@ -46,7 +46,6 @@ public class TableUtil {
       }
     }
 
-    // Wrap Setter
     public TableSettings setWrap(int colIndex) {
       if (isValidIndex(colIndex)) {
         this.overflowModes[colIndex] = OverflowMode.WRAP;
@@ -55,7 +54,6 @@ public class TableUtil {
       return this;
     }
 
-    // Truncate Setter
     public TableSettings setTruncate(int colIndex) {
       if (isValidIndex(colIndex)) {
         this.overflowModes[colIndex] = OverflowMode.TRUNCATE;
@@ -64,7 +62,6 @@ public class TableUtil {
       return this;
     }
 
-    // TruncateAt Setter - Strictly forces the character limit parameter
     public TableSettings setTruncateAt(int colIndex, int customCharLimit) {
       if (isValidIndex(colIndex)) {
         if (customCharLimit <= 0) {
@@ -92,14 +89,19 @@ public class TableUtil {
     }
   }
 
+  // --- ALL BORDER POSITIONS & TRANSITIONS ---
   public enum BorderPosition {
-    TOP,
-    MIDDLE,
-    BOTTOM
+    TOP, // ╔ ╦ ╗ - Top row border
+    MIDDLE, // ╠ ╬ ╣ - Standard row separator
+    BOTTOM, // ╚ ╩ ╝ - Bottom table border with column junctions
+    HEADER_CLOSE, // ╠ ╩ ╣ - Caps multi-column headers when transitioning into a merged row
+    SPAN_OPEN, // ╠ ╦ ╣ - Opens multi-column rows from a merged section
+    PLAIN_ROW, // ╠ ═ ╣ - Clean horizontal divider across a single spanned row
+    PLAIN_BOTTOM // ╚ ═ ╝ - Clean bottom frame for a spanned row without column junctions
   }
 
   public static void printTableBorder(TableSettings settings, BorderPosition position) {
-    String[] borders = new String[3];
+    String[] borders;
 
     switch (position) {
       case TOP:
@@ -111,6 +113,18 @@ public class TableUtil {
       case BOTTOM:
         borders = new String[] {"╚", "╩", "╝"};
         break;
+      case HEADER_CLOSE:
+        borders = new String[] {"╠", "╩", "╣"};
+        break;
+      case SPAN_OPEN:
+        borders = new String[] {"╠", "╦", "╣"};
+        break;
+      case PLAIN_ROW:
+        borders = new String[] {"╠", "═", "╣"};
+        break;
+      case PLAIN_BOTTOM:
+        borders = new String[] {"╚", "═", "╝"};
+        break;
       default:
         throw new IllegalArgumentException("System Error: Invalid border position specified!");
     }
@@ -119,7 +133,7 @@ public class TableUtil {
     for (int i = 0; i < settings.colWidths.length; i++) {
       System.out.print("═".repeat(settings.colWidths[i]));
       if (i < settings.colWidths.length - 1) {
-        System.out.print(borders[1]); // Middle border
+        System.out.print(borders[1]); // Middle junction
       } else {
         System.out.print(borders[2]); // Right border
       }
@@ -131,9 +145,7 @@ public class TableUtil {
     String[][] processedCellLines = new String[columns.length][];
     int maxLinesRequired = 0;
 
-    // Pre-process text transformations per column configuration
     for (int i = 0; i < columns.length; i++) {
-      // null safety check
       String text = (columns[i] == null) ? "" : columns[i];
 
       OverflowMode mode = settings.overflowModes[i];
@@ -151,13 +163,11 @@ public class TableUtil {
 
       processedCellLines[i] = lines;
 
-      // find the cell with the most lines
       if (lines.length > maxLinesRequired) {
         maxLinesRequired = lines.length;
       }
     }
 
-    // Render
     for (int lineIndex = 0; lineIndex < maxLinesRequired; lineIndex++) {
       for (int colIndex = 0; colIndex < columns.length; colIndex++) {
         System.out.print("║");
@@ -165,7 +175,6 @@ public class TableUtil {
         String[] colLines = processedCellLines[colIndex];
         int totalLinesInCell = colLines.length;
 
-        // Subtract 2 from the width to reserve room for 1 space on each side
         int totalWidth = settings.colWidths[colIndex];
         int printableWidth = totalWidth - 2;
 
@@ -174,7 +183,6 @@ public class TableUtil {
 
         String cellText = "";
 
-        // Vertical Align Logic
         int totalBlankLines = maxLinesRequired - totalLinesInCell;
         if (vAlign == VAlign.BOTTOM) {
           if (lineIndex >= totalBlankLines) {
@@ -192,15 +200,12 @@ public class TableUtil {
           }
         }
 
-        // If the text is wider than new printable area, clamp it to fit
         if (cellText.length() > printableWidth) {
           cellText = cellText.substring(0, Math.max(0, printableWidth));
         }
 
-        // Print the left padding space buffer
         System.out.print(" ");
 
-        // Horizontal Align Logic
         if (hAlign == Align.RIGHT) {
           System.out.format("%" + printableWidth + "s", cellText);
         } else if (hAlign == Align.CENTER) {
@@ -212,7 +217,6 @@ public class TableUtil {
           System.out.format("%-" + printableWidth + "s", cellText);
         }
 
-        // Print the right padding space buffer
         System.out.print(" ");
       }
       System.out.println("║");

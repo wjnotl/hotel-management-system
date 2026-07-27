@@ -1,17 +1,22 @@
 package adt;
 
+import java.io.Serializable;
 import java.util.Iterator;
 
-public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
+public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Serializable {
+  private static final long serialVersionUID = 1L;
+
   private static final int DEFAULT_CAPACITY = 16;
   private final boolean canExpand;
   private boolean isMaxHeap;
 
-  private PriorityEntry<T>[] array; // start from index 1 instead of index 0
+  private PriorityEntry<T>[] array; // starts from index 1
   private int size;
   private long sequenceCounter = 0;
 
-  private static class PriorityEntry<T> {
+  private static class PriorityEntry<T> implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     T entry;
     int priority;
     long sequenceNumber;
@@ -66,7 +71,7 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
 
   @Override
   public T dequeue() {
-    if (isEmpty()) return null;
+    if (isEmpty() || array[1] == null) return null;
 
     T top = array[1].entry;
 
@@ -84,7 +89,7 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
 
   @Override
   public T peek() {
-    return isEmpty() ? null : array[1].entry;
+    return (isEmpty() || array[1] == null) ? null : array[1].entry;
   }
 
   @Override
@@ -102,14 +107,16 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
     array[size] = null;
     size--;
 
-    siftDown(pos);
-    siftUp(pos);
+    if (pos <= size && array[pos] != null) {
+      siftDown(pos);
+      siftUp(pos);
+    }
     return true;
   }
 
   @Override
   public T removeAt(int position) {
-    if (position < 1 || position > size) return null;
+    if (position < 1 || position > size || array[position] == null) return null;
 
     T removed = array[position].entry;
 
@@ -120,8 +127,11 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
       array[position] = array[size];
       array[size] = null;
       size--;
-      siftDown(position);
-      siftUp(position);
+
+      if (position <= size && array[position] != null) {
+        siftDown(position);
+        siftUp(position);
+      }
     }
     return removed;
   }
@@ -139,7 +149,7 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
   @Override
   public int getPriority(T entry) {
     int pos = positionOf(entry);
-    if (pos == -1) return -1;
+    if (pos == -1 || array[pos] == null) return -1;
 
     return array[pos].priority;
   }
@@ -147,7 +157,7 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
   @Override
   public boolean changePriority(T entry, int newPriority) {
     int pos = positionOf(entry);
-    if (pos == -1) return false;
+    if (pos == -1 || array[pos] == null) return false;
 
     int oldPriority = array[pos].priority;
     array[pos].priority = newPriority;
@@ -164,12 +174,12 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
 
   @Override
   public boolean isEmpty() {
-    return size == 0;
+    return size <= 0 || array[1] == null;
   }
 
   @Override
   public boolean isFull() {
-    return size == array.length - 1;
+    return size >= array.length - 1;
   }
 
   @Override
@@ -214,14 +224,19 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
   }
 
   private int positionOf(T entry) {
-    if (entry == null) return -1;
+    if (entry == null || isEmpty()) return -1;
     for (int i = 1; i <= size; i++) {
-      if (array[i].entry.equals(entry)) return i;
+      if (array[i] != null && array[i].entry != null && array[i].entry.equals(entry)) {
+        return i;
+      }
     }
     return -1;
   }
 
   private boolean hasHigherPriority(PriorityEntry<T> a, PriorityEntry<T> b) {
+    if (a == null) return false;
+    if (b == null) return true;
+
     if (a.priority != b.priority) {
       return isMaxHeap ? a.priority > b.priority : a.priority < b.priority;
     }
@@ -249,7 +264,7 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
   }
 
   private void siftUp(int i) {
-    while (i > 1 && hasHigherPriority(array[i], array[parent(i)])) {
+    while (i > 1 && array[i] != null && hasHigherPriority(array[i], array[parent(i)])) {
       swap(i, parent(i));
       i = parent(i);
     }
@@ -259,10 +274,10 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
     while (true) {
       int l = left(i), r = right(i), best = i;
 
-      if (l <= size && hasHigherPriority(array[l], array[best])) {
+      if (l <= size && array[l] != null && hasHigherPriority(array[l], array[best])) {
         best = l;
       }
-      if (r <= size && hasHigherPriority(array[r], array[best])) {
+      if (r <= size && array[r] != null && hasHigherPriority(array[r], array[best])) {
         best = r;
       }
 
@@ -286,7 +301,7 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T> {
     public T next() {
       if (!hasNext()) return null;
 
-      T data = array[position].entry;
+      T data = array[position] != null ? array[position].entry : null;
       position++;
       return data;
     }

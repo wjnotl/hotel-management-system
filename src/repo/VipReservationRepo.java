@@ -9,8 +9,8 @@ import util.BinaryFileUtil;
 
 public class VipReservationRepo {
   private final BinaryFileUtil<ListInterface<Reservation>> fileUtil;
-  private ListInterface<Reservation> vipReservationList;
-  private PriorityQueueInterface<Reservation> vipReservationQueue;
+  private ListInterface<Reservation> reservationList;
+  private PriorityQueueInterface<Reservation> heap;
 
   public VipReservationRepo() {
     this.fileUtil = new BinaryFileUtil<>("vip_reservations.dat");
@@ -18,58 +18,64 @@ public class VipReservationRepo {
   }
 
   private void load() {
-    // 1. Read persistent list from disk
-    this.vipReservationList = fileUtil.retrieveFromFile();
-    if (this.vipReservationList == null) {
-      this.vipReservationList = new ArrayList<>();
+    this.reservationList = fileUtil.retrieveFromFile();
+    if (this.reservationList == null) {
+      this.reservationList = new ArrayList<>(25, true);
     }
 
-    // 2. Build in-memory priority queue from loaded list
-    this.vipReservationQueue = new BinaryHeapPriorityQueue<>();
-    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
-      Reservation r = vipReservationList.getEntry(i);
-      vipReservationQueue.enqueue(r, r.getPriorityScore());
+    // Rebuild priority queue from stored list
+    this.heap = new BinaryHeapPriorityQueue<>(true); // Max Heap
+    for (int i = 1; i <= reservationList.getNumberOfEntries(); i++) {
+      Reservation r = reservationList.getEntry(i);
+      if (r != null) {
+        heap.enqueue(r, r.getPriorityScore());
+      }
     }
   }
 
   private void save() {
-    fileUtil.saveToFile(vipReservationList);
+    fileUtil.saveToFile(reservationList);
   }
 
   public void addReservation(Reservation reservation, int priority) {
-    vipReservationList.add(reservation);
-    vipReservationQueue.enqueue(reservation, priority);
+    reservationList.add(reservation);
+    heap.enqueue(reservation, priority);
     save();
   }
 
   public Reservation dequeueNextVip() {
-    Reservation next = vipReservationQueue.dequeue();
-    if (next != null) {
-      vipReservationList.remove(next);
+    Reservation top = heap.dequeue();
+
+    if (top != null) {
+      // 1. Remove from backing reservation list
+      boolean removed = reservationList.remove(top);
+
+      // 2. Fallback: If equals() failed, remove manually by matching confirmation number
+      if (!removed) {
+        for (int i = 1; i <= reservationList.getNumberOfEntries(); i++) {
+          Reservation r = reservationList.getEntry(i);
+          if (r != null
+              && top.getConfirmationNumber().equalsIgnoreCase(r.getConfirmationNumber())) {
+            reservationList.removeAt(i);
+            break;
+          }
+        }
+      }
+
+      // 3. Save updated list back to dat file
       save();
     }
-    return next;
-  }
 
-  public Reservation peekNextVip() {
-    return vipReservationQueue.peek();
+    return top;
   }
 
   public boolean cancelReservation(Reservation reservation) {
-    boolean removedList = vipReservationList.remove(reservation);
-    boolean removedQueue = vipReservationQueue.remove(reservation);
+    if (reservation == null) return false;
 
-    if (removedList || removedQueue) {
-      save();
-      return true;
-    }
-    return false;
-  }
+    boolean heapRemoved = heap.remove(reservation);
+    boolean listRemoved = reservationList.remove(reservation);
 
-  public boolean updatePriority(Reservation reservation, int newPriority) {
-    boolean updatedQueue = vipReservationQueue.changePriority(reservation, newPriority);
-    if (updatedQueue) {
-      reservation.setPriorityScore(newPriority);
+    if (heapRemoved || listRemoved) {
       save();
       return true;
     }
@@ -77,10 +83,6 @@ public class VipReservationRepo {
   }
 
   public ListInterface<Reservation> getReservationList() {
-    return vipReservationList;
-  }
-
-  public int getVipCount() {
-    return vipReservationQueue.getNumberOfEntries();
+    return reservationList;
   }
 }

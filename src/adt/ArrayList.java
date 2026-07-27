@@ -5,6 +5,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 
 public class ArrayList<T> implements ListInterface<T>, Serializable {
+  private static final long serialVersionUID = 1L;
+
   private T[] array;
   private int numOfEntries;
   private static final int DEFAULT_CAPACITY = 25;
@@ -58,9 +60,10 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
 
   @Override
   public boolean remove(T entry) {
-    if (getPosition(entry) == -1) return false;
+    int pos = getPosition(entry);
+    if (pos == -1) return false;
 
-    removeAt(getPosition(entry));
+    removeAt(pos);
     return true;
   }
 
@@ -103,12 +106,7 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
 
   @Override
   public boolean contains(T anEntry) {
-    for (int index = 0; index < numOfEntries; index++) {
-      if (anEntry.equals(array[index])) {
-        return true;
-      }
-    }
-    return false;
+    return getPosition(anEntry) != -1;
   }
 
   @Override
@@ -128,7 +126,6 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
 
   @Override
   public void sort(Comparator<T> comparator) {
-    // If the list has 0 or 1 item, or if comparator is null, it's already sorted
     if (numOfEntries <= 1 || comparator == null) {
       return;
     }
@@ -144,11 +141,12 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
   // INTERNAL HELPERS
 
   private int getPosition(T entry) {
-    if (entry == null) return -1;
-    if (isEmpty()) return -1;
+    if (entry == null || isEmpty()) return -1;
 
     for (int i = 0; i < numOfEntries; i++) {
-      if (array[i].equals(entry)) return i;
+      if (array[i] != null && array[i].equals(entry)) {
+        return i + 1; // 1-based indexing for 1-based public methods
+      }
     }
     return -1;
   }
@@ -185,16 +183,16 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
   }
 
   private int partition(int low, int high, Comparator<T> comparator) {
-    T pivot = array[high]; // Clean 0-based access
+    T pivot = array[high];
     int i = low - 1;
 
     for (int j = low; j < high; j++) {
-      if (comparator.compare(array[j - 1], pivot) <= 0) {
+      if (comparator.compare(array[j], pivot) <= 0) {
         i++;
-        swap(i - 1, j - 1);
+        swap(i, j);
       }
     }
-    swap(i, high - 1);
+    swap(i + 1, high);
     return i + 1;
   }
 

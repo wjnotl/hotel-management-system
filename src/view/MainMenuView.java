@@ -27,7 +27,7 @@ public class MainMenuView {
     System.out.println("4. Front-Desk Search & Services");
     System.out.println("5. Exit\n");
 
-    return ConsoleUtil.getMenuInput("Select option: ", 1, 5).input;
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).input;
   }
 
   public void displayExitMessage() {

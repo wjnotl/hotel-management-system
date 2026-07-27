@@ -5,6 +5,7 @@ import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import util.ConsoleUtil;
+import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 
 public class VipView {
@@ -12,18 +13,18 @@ public class VipView {
   public String displayMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("VIP Priority Room Allocation");
-    System.out.println("1. Manage Waitlist");
-    System.out.println("2. Manage Allocation");
-    System.out.println("3. Settings & Configurations");
-    System.out.println("4. Generate Analytics Report");
-    System.out.println("5. Back to Main Menu\n");
+    System.out.println(" 1. Manage Waitlist");
+    System.out.println(" 2. Manage Allocation");
+    System.out.println(" 3. Settings & Configurations");
+    System.out.println(" 4. Generate Analytics Report");
+    System.out.println(" 5. Back to Main Menu\n");
 
-    return ConsoleUtil.getMenuInput("Select option: ", 1, 5).input;
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).input;
   }
 
   // --- SCREEN 1: MANAGE WAITLIST ---
 
-  public String renderWaitlistScreen(
+  public GetMenuInputResult renderWaitlistScreen(
       ListInterface<Reservation> list,
       ListInterface<Guest> guestList,
       ListInterface<Member> memberList,
@@ -66,28 +67,51 @@ public class VipView {
           "NO.", "GUEST ID", "GUEST NAME", "PHONE NO.", "TIER", "STRIKES", "BOILING", "SCORE"
         },
         settings);
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    if (totalMatches == 0) {
-      TableUtil.printTableRow(
-          new String[] {"-", "-", "*** NO MATCHING GUESTS FOUND ***", "-", "-", "-", "-", "-"},
-          settings);
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    // --- CLEAN SPANNED EMPTY STATE HANDLING ---
+    if (list == null || totalMatches == 0) {
+      // 1. Cap off the 8 header columns cleanly with upward T-junctions (╠ ╩ ╣)
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+      // 2. Differentiate between empty DB vs no filter matches
+      boolean hasActiveFilters =
+          (search != null && !search.trim().isEmpty())
+              || (tier != null && !"ALL".equalsIgnoreCase(tier.trim()))
+              || (status != null && !"ALL".equalsIgnoreCase(status.trim()));
+
+      String emptyMessage =
+          hasActiveFilters
+              ? "*** NO MATCHING GUESTS FOUND FOR ACTIVE FILTERS ***"
+              : "*** WAITLIST IS CURRENTLY EMPTY ***";
+
+      // 3. Single 91-character spanned width row (84 total col width + 7 inner border chars)
+      TableUtil.TableSettings emptySettings =
+          new TableUtil.TableSettings(new int[] {91}).setHAlign(0, TableUtil.Align.CENTER);
+
+      TableUtil.printTableRow(new String[] {emptyMessage}, emptySettings);
+
+      // 4. Clean bottom box border without any orphan column T-ticks (╚ ═ ╝)
+      TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+
       System.out.println(" Page 0 / 0 (Total Matches: 0)");
       System.out.println("----------------------------------------------------------------------");
       System.out.println(" [A] Add Guest          [Q] Quick Assign Top    [R] Refresh Table");
       System.out.println(" [S] Search / Filter    [O] Change Sort Order   [E] Exit to Menu\n");
 
       return ConsoleUtil.getMenuInput(
-              "Enter a command: ", new char[] {'A', 'Q', 'R', 'S', 'O', 'E'})
-          .input;
+          "Enter a command: ", new char[] {'A', 'Q', 'R', 'S', 'O', 'E'});
     }
+
+    // Standard multi-column middle border for non-empty tables
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
     int startIndex = (currentPage - 1) * pageSize + 1;
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
     for (int i = startIndex; i <= endIndex; i++) {
       Reservation r = list.getEntry(i);
+      if (r == null) continue;
+
       Guest g = findGuest(guestList, r.getGuestId());
       Member m = (g != null) ? findMember(memberList, g.getMemberId()) : null;
 
@@ -97,7 +121,7 @@ public class VipView {
       String phoneNo = (g != null && g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
       String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
       int strikes = (g != null) ? g.getStrikeCount() : 0;
-      String boilingStr = r.getIsBoiling() ? "[✓]" : "[ ]";
+      String boilingStr = r.getIsBoiling() ? "[!]" : "[ ]";
 
       TableUtil.printTableRow(
           new String[] {
@@ -121,58 +145,90 @@ public class VipView {
     System.out.println(" [N] Next Page          [P] Prev Page\n");
 
     int maxOptionNum = endIndex - startIndex + 1;
+    String promptText =
+        (maxOptionNum == 1)
+            ? "Enter a command or select guest index number (1): "
+            : "Enter a command or select a guest index number (1-" + maxOptionNum + "): ";
+
     return ConsoleUtil.getMenuInput(
-            "Enter a command or select a guest index number (1-" + maxOptionNum + "): ",
-            1,
-            maxOptionNum,
-            new char[] {'A', 'Q', 'R', 'S', 'O', 'E', 'N', 'P'})
-        .input;
+        promptText, 1, maxOptionNum, new char[] {'A', 'Q', 'R', 'S', 'O', 'E', 'N', 'P'});
   }
 
-  // --- SUB-MENUS & PROMPTS ---
+  // --- SUB-MENUS & PROMPTS WITH EXITS ---
 
   public String promptAddGuestInput() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ADD NEW GUEST");
     System.out.println(" Fetching profile records from Loyalty System...\n");
-    return ConsoleUtil.getStringInput(" Enter the Customer ID or Booking Reference Number: ");
+    System.out.println(" [Enter 'C' to Cancel and return to Waitlist]\n");
+    return ConsoleUtil.getStringInput(" Enter Customer ID or Booking Reference Number: ");
   }
 
-  public String[] displayFilterMenu(
-      String currentSearch, String currentTier, String currentStatus) {
+  // --- FILTER SUBMENUS WITH EXITS ---
+
+  public int displayFilterMainMenu(String search, String tier, String status) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("FILTER & SEARCH WAITLIST");
-    System.out.println(" 1. Search by Guest Name / ID / Phone");
-    System.out.println(" 2. Filter by Membership Tier");
-    System.out.println(" 3. Filter by Waiting State (Boiling)");
-    System.out.println(" 4. Clear All Waitlist Filters");
-    System.out.println(" 5. Back to Waitlist View\n");
+    ConsoleUtil.printTitleBox("FILTER & SEARCH MANAGEMENT");
+    System.out.println(
+        " Active Search : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
+    System.out.println(" Active Tier   : [ " + (tier == null ? "ALL" : tier) + " ]");
+    System.out.println(" Active Status : [ " + (status == null ? "ALL" : status) + " ]");
+    System.out.println("------------------------------------------------------");
+    System.out.println(" 1. Text Search Submenu (Name / ID / Phone)");
+    System.out.println(" 2. Loyalty Tier Submenu");
+    System.out.println(" 3. Waiting State Submenu (Boiling / Normal)");
+    System.out.println(" 4. Reset / Clear All Filters");
+    System.out.println(" 5. Apply and Return to Waitlist");
+    System.out.println(" 6. Back / Exit Filter Menu\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose a search option (1-5): ", 1, 5).getAsInt();
-    String[] result = new String[] {currentSearch, currentTier, currentStatus};
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
 
-    if (choice == 1) {
-      String query = ConsoleUtil.getStringInput("Enter search query (leave blank to clear): ");
-      result[0] = query.isEmpty() ? null : query;
-    } else if (choice == 2) {
-      System.out.println(
-          "\n 1. Diamond Only\n 2. Gold Only\n 3. Silver Only\n 4. Clear Tier Filter\n");
-      int tChoice = ConsoleUtil.getMenuInput("Choose tier option (1-4): ", 1, 4).getAsInt();
-      if (tChoice == 1) result[1] = "DIAMOND";
-      else if (tChoice == 2) result[1] = "GOLD";
-      else if (tChoice == 3) result[1] = "SILVER";
-      else result[1] = null;
-    } else if (choice == 3) {
-      System.out.println("\n 1. Boiling Status Only\n 2. Normal Status Only\n 3. Clear Filter\n");
-      int sChoice = ConsoleUtil.getMenuInput("Choose state option (1-3): ", 1, 3).getAsInt();
-      if (sChoice == 1) result[2] = "BOILING";
-      else if (sChoice == 2) result[2] = "NORMAL";
-      else result[2] = null;
-    } else if (choice == 4) {
-      return new String[] {null, null, null};
-    }
+  public int displaySearchSubmenu(String currentQuery) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH QUERY SUBMENU");
+    System.out.println(
+        " Current Query: [ "
+            + (currentQuery == null ? "None" : "\"" + currentQuery + "\"")
+            + " ]\n");
+    System.out.println(" 1. Enter / Change Search Term");
+    System.out.println(" 2. Clear Search Term");
+    System.out.println(" 3. Back to Filter Management\n");
 
-    return result;
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public String promptSearchInput() {
+    System.out.println("\n [Leave blank or type 'C' to Cancel]");
+    return ConsoleUtil.getStringInput(
+        "Enter search query (Guest Name / ID / Phone / Booking Ref): ");
+  }
+
+  public int displayTierSubmenu(String currentTier) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("LOYALTY TIER FILTER SUBMENU");
+    System.out.println(
+        " Current Selected Tier: [ " + (currentTier == null ? "ALL" : currentTier) + " ]\n");
+    System.out.println(" 1. Filter: DIAMOND Tier");
+    System.out.println(" 2. Filter: GOLD Tier");
+    System.out.println(" 3. Filter: SILVER Tier");
+    System.out.println(" 4. Clear Tier Filter (Show All)");
+    System.out.println(" 5. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+  }
+
+  public int displayStatusSubmenu(String currentStatus) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("WAITING STATE FILTER SUBMENU");
+    System.out.println(
+        " Current Selected Status: [ " + (currentStatus == null ? "ALL" : currentStatus) + " ]\n");
+    System.out.println(" 1. Show BOILING Guests Only (High Urgency)");
+    System.out.println(" 2. Show NORMAL Guests Only");
+    System.out.println(" 3. Clear Status Filter (Show All)");
+    System.out.println(" 4. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   public String displaySortMenu() {
@@ -180,11 +236,13 @@ public class VipView {
     ConsoleUtil.printTitleBox("CHANGE SORT ORDER");
     System.out.println(" 1. Priority Score (High to Low)");
     System.out.println(" 2. Live Waiting Time (Longest to Shortest)");
-    System.out.println(" 3. Tier Rank Hierarchy (Diamond -> Gold -> Silver)\n");
+    System.out.println(" 3. Tier Rank Hierarchy (Diamond -> Gold -> Silver)");
+    System.out.println(" 4. Back to Waitlist (Keep current sort)\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose a sorting option (1-3): ", 1, 3).getAsInt();
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
     if (choice == 2) return "WAIT TIME (LONGEST -> SHORTEST)";
     if (choice == 3) return "TIER RANK (DIAMOND -> SILVER)";
+    if (choice == 4) return null; // Keep current sort
     return "PRIORITY SCORE (HIGH -> LOW)";
   }
 
@@ -201,7 +259,7 @@ public class VipView {
     System.out.println(" 2. Delete from Queue (Remove entirely from system)");
     System.out.println(" 3. Cancel Action and Return\n");
 
-    return ConsoleUtil.getMenuInput("Choose an action (1-3): ", 1, 3).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
   // --- INTERNAL PROFILE LOOKUP HELPERS ---

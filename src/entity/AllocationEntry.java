@@ -3,6 +3,8 @@ package entity;
 import java.io.Serializable;
 
 public class AllocationEntry implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private String reservationConfirmationNumber; // References Reservation.confirmationNumber
   private String assignedRoomNumber; // References Room.roomNumber
   private long expirationTimestamp; // Millisecond target timestamp
@@ -36,5 +38,26 @@ public class AllocationEntry implements Serializable {
 
   public void setExpirationTimestamp(long expirationTimestamp) {
     this.expirationTimestamp = expirationTimestamp;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    AllocationEntry other = (AllocationEntry) obj;
+    boolean sameConf =
+        reservationConfirmationNumber != null
+            && reservationConfirmationNumber.equals(other.reservationConfirmationNumber);
+    boolean sameRoom =
+        assignedRoomNumber != null && assignedRoomNumber.equals(other.assignedRoomNumber);
+    return sameConf && sameRoom;
+  }
+
+  @Override
+  public int hashCode() {
+    int result =
+        reservationConfirmationNumber != null ? reservationConfirmationNumber.hashCode() : 0;
+    result = 31 * result + (assignedRoomNumber != null ? assignedRoomNumber.hashCode() : 0);
+    return result;
   }
 }

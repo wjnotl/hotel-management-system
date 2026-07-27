@@ -61,7 +61,9 @@ public class ConsoleUtil {
     while (true) {
       clearScreen();
       try {
-        return getMenuInput(message + " (Y/N): ", new char[] {'Y', 'N'}).input == "Y";
+        return getMenuInput(message + " (Y/N): ", new char[] {'Y', 'N'})
+            .input
+            .equalsIgnoreCase("Y");
       } catch (Exception e) {
         printError(e.getMessage());
       }

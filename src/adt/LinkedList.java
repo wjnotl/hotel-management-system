@@ -1,9 +1,11 @@
 package adt;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Iterator;
 
-public class LinkedList<T> implements ListInterface<T> {
+public class LinkedList<T> implements ListInterface<T>, Serializable {
+  private static final long serialVersionUID = 1L;
 
   private Node firstNode;
   private int numberOfEntries;
@@ -25,12 +27,11 @@ public class LinkedList<T> implements ListInterface<T> {
     if (isEmpty()) {
       firstNode = newNode;
     } else {
-      // Walk all the way down to the tail end node
       Node currentNode = firstNode;
       while (currentNode.next != null) {
         currentNode = currentNode.next;
       }
-      currentNode.next = newNode; // Glue new node to the tail end
+      currentNode.next = newNode;
     }
 
     numberOfEntries++;
@@ -43,16 +44,13 @@ public class LinkedList<T> implements ListInterface<T> {
       Node newNode = new Node(newEntry);
 
       if (isEmpty() || newPosition == 1) {
-        // Swap node references at the very head of the list
         newNode.next = firstNode;
         firstNode = newNode;
       } else {
-        // Stop right before the insert position index
         Node nodeBefore = firstNode;
         for (int i = 1; i < newPosition - 1; ++i) {
           nodeBefore = nodeBefore.next;
         }
-        // Splice new node seamlessly between nodeBefore and the adjacent neighbor
         newNode.next = nodeBefore.next;
         nodeBefore.next = newNode;
       }
@@ -65,9 +63,10 @@ public class LinkedList<T> implements ListInterface<T> {
 
   @Override
   public boolean remove(T entry) {
-    if (getPosition(entry) == -1) return false;
+    int pos = getPosition(entry);
+    if (pos == -1) return false;
 
-    removeAt(getPosition(entry));
+    removeAt(pos);
     return true;
   }
 
@@ -78,15 +77,13 @@ public class LinkedList<T> implements ListInterface<T> {
 
       if (givenPosition == 1) {
         result = firstNode.data;
-        firstNode = firstNode.next; // Snip head element out of the chain
+        firstNode = firstNode.next;
       } else {
-        // Stop right before the deletion target node
         Node nodeBefore = firstNode;
         for (int i = 1; i < givenPosition - 1; ++i) {
           nodeBefore = nodeBefore.next;
         }
         result = nodeBefore.next.data;
-        // Skip over the target node to disconnect it from the list chain
         nodeBefore.next = nodeBefore.next.next;
       }
 
@@ -103,7 +100,7 @@ public class LinkedList<T> implements ListInterface<T> {
       for (int i = 0; i < givenPosition - 1; ++i) {
         currentNode = currentNode.next;
       }
-      currentNode.data = newEntry; // Update payload reference directly
+      currentNode.data = newEntry;
       return true;
     }
     return false;
@@ -123,14 +120,7 @@ public class LinkedList<T> implements ListInterface<T> {
 
   @Override
   public boolean contains(T anEntry) {
-    Node currentNode = firstNode;
-    while (currentNode != null) {
-      if (anEntry.equals(currentNode.data)) {
-        return true;
-      }
-      currentNode = currentNode.next;
-    }
-    return false;
+    return getPosition(anEntry) != -1;
   }
 
   @Override
@@ -145,7 +135,6 @@ public class LinkedList<T> implements ListInterface<T> {
 
   @Override
   public boolean isFull() {
-    // Dynamic lists allocate references as needed; effectively never capped
     return false;
   }
 
@@ -176,13 +165,16 @@ public class LinkedList<T> implements ListInterface<T> {
   // INTERNAL HELPERS
 
   private int getPosition(T entry) {
-    if (entry == null) return -1;
-    if (isEmpty()) return -1;
+    if (entry == null || isEmpty()) return -1;
 
     Node currentNode = firstNode;
-    for (int i = 0; i < numberOfEntries; i++) {
-      if (currentNode.data.equals(entry)) return i;
-      currentNode = currentNode.next;
+    for (int i = 1; i <= numberOfEntries; i++) {
+      if (currentNode != null && currentNode.data != null && currentNode.data.equals(entry)) {
+        return i; // 1-based position indexing
+      }
+      if (currentNode != null) {
+        currentNode = currentNode.next;
+      }
     }
     return -1;
   }
@@ -192,16 +184,13 @@ public class LinkedList<T> implements ListInterface<T> {
       return head;
     }
 
-    // 1. Split list in half using slow/fast pointers
     Node middle = getMiddle(head);
     Node nextOfMiddle = middle.next;
     middle.next = null;
 
-    // 2. Recursively sort both halves
     Node left = mergeSort(head, comparator);
     Node right = mergeSort(nextOfMiddle, comparator);
 
-    // 3. Merge sorted halves back together
     return sortedMerge(left, right, comparator);
   }
 
@@ -234,18 +223,15 @@ public class LinkedList<T> implements ListInterface<T> {
 
   // NESTED STRUCTURAL LAYER
 
-  private class Node {
+  private class Node implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private T data;
     private Node next;
 
     private Node(T data) {
       this.data = data;
       this.next = null;
-    }
-
-    private Node(T data, Node next) {
-      this.data = data;
-      this.next = next;
     }
   }
 
@@ -264,7 +250,7 @@ public class LinkedList<T> implements ListInterface<T> {
       if (!hasNext()) return null;
 
       T data = currentNode.data;
-      currentNode = currentNode.next; // Advance to the next chained node
+      currentNode = currentNode.next;
       return data;
     }
   }
