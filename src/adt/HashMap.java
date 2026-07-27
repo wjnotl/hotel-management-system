@@ -1,134 +1,132 @@
 package adt;
 
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 public class HashMap<K, V> implements MapInterface<K, V> {
 
-  private static class Entry<K, V> {
-    K key;
-    V value;
+  private static class Node<K, V> {
+    private K key;
+    private V value;
+    private Node<K, V> next;
 
-    Entry(K key, V value) {
+    private Node(K key, V value, Node<K, V> next) {
       this.key = key;
       this.value = value;
+      this.next = next;
     }
   }
 
-  private ListInterface<Entry<K, V>>[] buckets;
+  private static final int DEFAULT_BUCKET_COUNT = 16;
+  private static final double LOAD_FACTOR_THRESHOLD = 0.75;
+
+  private Node<K, V>[] buckets;
   private int numberOfEntries;
 
-  private final boolean hasLimit;
   private final int maxCapacity;
-
-  private static final int DEFAULT_BUCKET_COUNT = 16;
-  private static final double LOAD_FACTOR_LIMIT = 0.75;
-  private static final int UNLIMITED = -1;
+  private final int initialBucketCount;
+  private final double loadFactorThreshold;
 
   public HashMap() {
-    this(DEFAULT_BUCKET_COUNT, false, UNLIMITED);
+    this(DEFAULT_BUCKET_COUNT, LOAD_FACTOR_THRESHOLD, -1);
   }
 
-  public HashMap(int initialBucketCount, boolean hasLimit, int maxCapacity) {
-    this.buckets = createBucketArray(initialBucketCount);
-    this.numberOfEntries = 0;
-    this.hasLimit = hasLimit;
-    this.maxCapacity = maxCapacity;
+  public HashMap(int initialBucketCount) {
+    this(initialBucketCount, -1);
+  }
+
+  public HashMap(double loadFactorLimit) {
+    this(DEFAULT_BUCKET_COUNT, loadFactorLimit, -1);
+  }
+
+  public HashMap(int initialBucketCount, double loadFactorLimit) {
+    this(initialBucketCount, loadFactorLimit, -1);
   }
 
   @SuppressWarnings("unchecked")
-  private ListInterface<Entry<K, V>>[] createBucketArray(int size) {
-    // Workaround for generic array limitations in Java
-    return (ListInterface<Entry<K, V>>[]) new ListInterface[size];
+  public HashMap(int initialBucketCount, double loadFactorThreshold, int maxCapacity) {
+    this.initialBucketCount = initialBucketCount <= 0 ? DEFAULT_BUCKET_COUNT : initialBucketCount;
+    this.buckets = (Node<K, V>[]) new Node[initialBucketCount];
+    this.numberOfEntries = 0;
+    this.maxCapacity = maxCapacity;
+    this.loadFactorThreshold = loadFactorThreshold;
   }
 
   @Override
   public boolean put(K key, V value) {
     if (key == null) return false;
 
-    int index = bucketIndex(key, buckets.length);
-    if (buckets[index] == null) {
-      buckets[index] = new AList<>(); // Uses O(1) random-access memory array structure
-    }
-    ListInterface<Entry<K, V>> chain = buckets[index];
+    int index = getBucketIndex(key, buckets.length);
+    Node<K, V> curr = buckets[index];
 
-    // Scan the chain to check if the incoming key matches an existing entry
-    int chainSize = chain.getNumberOfEntries();
-    for (int i = 1; i <= chainSize; i++) {
-      Entry<K, V> existing = chain.getEntry(i);
-      if (existing.key.equals(key)) {
-        existing.value = value;
-        chain.replace(i, existing); // Notify container layer to reflect update
+    // Check if key already exists to update value
+    while (curr != null) {
+      if (curr.key.equals(key)) {
+        curr.value = value;
         return false;
       }
+      curr = curr.next;
     }
 
-    // Verify hard capacity controls before introducing a brand-new entry block
-    if (hasLimit && numberOfEntries >= maxCapacity) {
-      throw new IllegalStateException(
-          "Map capacity limit exceeded! Maximum allowed entries: " + maxCapacity);
+    // Capacity limit safety check
+    if (hasLimit() && numberOfEntries >= maxCapacity) {
+      return false;
     }
 
-    chain.add(new Entry<>(key, value));
-    numberOfEntries++;
-
-    // Evaluate dynamic allocation enlargement boundaries
-    if (loadFactor() > LOAD_FACTOR_LIMIT) {
+    // Expand buckets before inserting if load factor limit is hit
+    if ((double) numberOfEntries / buckets.length > loadFactorThreshold) {
       resize();
+      index = getBucketIndex(key, buckets.length); // Recalculate index for new bucket size
     }
+
+    // Insert new node at head of bucket chain
+    buckets[index] = new Node<>(key, value, buckets[index]);
+    numberOfEntries++;
     return true;
   }
 
   @Override
   public V get(K key) {
-    if (key == null) return null;
+    if (key == null || isEmpty()) return null;
 
-    ListInterface<Entry<K, V>> chain = buckets[bucketIndex(key, buckets.length)];
-    if (chain == null) return null;
+    int index = getBucketIndex(key, buckets.length);
+    Node<K, V> curr = buckets[index];
 
-    int chainSize = chain.getNumberOfEntries();
-    for (int i = 1; i <= chainSize; i++) {
-      Entry<K, V> entry = chain.getEntry(i);
-      if (entry.key.equals(key)) {
-        return entry.value;
+    while (curr != null) {
+      if (curr.key.equals(key)) {
+        return curr.value;
       }
+      curr = curr.next;
     }
     return null;
   }
 
   @Override
   public V remove(K key) {
-    if (key == null) return null;
+    if (key == null || isEmpty()) return null;
 
-    ListInterface<Entry<K, V>> chain = buckets[bucketIndex(key, buckets.length)];
-    if (chain == null) return null;
+    int index = getBucketIndex(key, buckets.length);
+    Node<K, V> curr = buckets[index];
+    Node<K, V> prev = null;
 
-    int chainSize = chain.getNumberOfEntries();
-    for (int i = 1; i <= chainSize; i++) {
-      Entry<K, V> entry = chain.getEntry(i);
-      if (entry.key.equals(key)) {
-        chain.remove(i);
+    while (curr != null) {
+      if (curr.key.equals(key)) {
+        if (prev == null) {
+          buckets[index] = curr.next;
+        } else {
+          prev.next = curr.next;
+        }
         numberOfEntries--;
-        return entry.value;
+        return curr.value;
       }
+      prev = curr;
+      curr = curr.next;
     }
     return null;
   }
 
   @Override
   public boolean containsKey(K key) {
-    if (key == null) return false;
-
-    ListInterface<Entry<K, V>> chain = buckets[bucketIndex(key, buckets.length)];
-    if (chain == null) return false;
-
-    int chainSize = chain.getNumberOfEntries();
-    for (int i = 1; i <= chainSize; i++) {
-      if (chain.getEntry(i).key.equals(key)) {
-        return true;
-      }
-    }
-    return false;
+    return get(key) != null;
   }
 
   @Override
@@ -142,9 +140,10 @@ public class HashMap<K, V> implements MapInterface<K, V> {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void clear() {
-    buckets = createBucketArray(DEFAULT_BUCKET_COUNT);
-    numberOfEntries = 0;
+    this.buckets = (Node<K, V>[]) new Node[initialBucketCount];
+    this.numberOfEntries = 0;
   }
 
   @Override
@@ -152,77 +151,71 @@ public class HashMap<K, V> implements MapInterface<K, V> {
     return new KeyIterator();
   }
 
-  // INTERNAL HELPERS
+  // --- INTERNAL HELPERS ---
 
-  private int bucketIndex(K key, int bucketCount) {
-    // Drop the sign bit to strip out negative integer numbers before running modulo calculation
-    return (key.hashCode() & 0x7fffffff) % bucketCount;
+  private boolean hasLimit() {
+    return maxCapacity > -1;
   }
 
-  private double loadFactor() {
-    return (double) numberOfEntries / buckets.length;
+  private int getBucketIndex(K key, int bucketCount) {
+    int h = key.hashCode();
+    h ^= (h >>> 16); // High-bit XOR mixer
+    return (h & 0x7FFFFFFF) % bucketCount;
   }
 
+  @SuppressWarnings("unchecked")
   private void resize() {
-    ListInterface<Entry<K, V>>[] oldBuckets = buckets;
-    buckets = createBucketArray(oldBuckets.length * 2);
+    Node<K, V>[] oldBuckets = buckets;
+    buckets = (Node<K, V>[]) new Node[oldBuckets.length * 2];
+    numberOfEntries = 0;
 
-    // Re-hash elements inside a clean expansion bucket list setup
-    for (ListInterface<Entry<K, V>> chain : oldBuckets) {
-      if (chain == null) continue;
-
-      int chainSize = chain.getNumberOfEntries();
-      for (int i = 1; i <= chainSize; i++) {
-        Entry<K, V> entry = chain.getEntry(i);
-        int newIndex = bucketIndex(entry.key, buckets.length);
-
-        if (buckets[newIndex] == null) {
-          buckets[newIndex] = new AList<>();
-        }
-        buckets[newIndex].add(entry);
+    for (Node<K, V> head : oldBuckets) {
+      Node<K, V> curr = head;
+      while (curr != null) {
+        put(curr.key, curr.value);
+        curr = curr.next;
       }
     }
   }
 
-  // ITERATOR IMPLEMENTATION
+  // --- ITERATOR IMPLEMENTATION ---
 
   private class KeyIterator implements Iterator<K> {
-    private int bucketPosition = 0;
-    private int entryPosition = 1; // Tracks custom 1-based ListInterface indexes
-    private K nextKey = null;
+    private int currentBucket = 0;
+    private Node<K, V> currentNode = null;
 
     KeyIterator() {
-      advance();
+      advanceToNextNode();
     }
 
-    private void advance() {
-      nextKey = null;
-      while (bucketPosition < buckets.length) {
-        ListInterface<Entry<K, V>> chain = buckets[bucketPosition];
-        // Ensure execution stays inside current list chain bounds
-        if (chain != null && entryPosition <= chain.getNumberOfEntries()) {
-          nextKey = chain.getEntry(entryPosition).key;
-          entryPosition++;
+    private void advanceToNextNode() {
+      if (currentNode != null && currentNode.next != null) {
+        currentNode = currentNode.next;
+        return;
+      }
+
+      currentNode = null;
+      while (currentBucket < buckets.length) {
+        if (buckets[currentBucket] != null) {
+          currentNode = buckets[currentBucket];
+          currentBucket++;
           return;
         }
-        // Jump sideways to inspect adjacent bucket arrays
-        bucketPosition++;
-        entryPosition = 1;
+        currentBucket++;
       }
     }
 
     @Override
     public boolean hasNext() {
-      return nextKey != null;
+      return currentNode != null;
     }
 
     @Override
     public K next() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      K key = nextKey;
-      advance();
+      if (!hasNext()) return null;
+
+      K key = currentNode.key;
+      advanceToNextNode();
       return key;
     }
   }

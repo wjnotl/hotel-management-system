@@ -2,7 +2,6 @@ package adt;
 
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 public class LinkedList<T> implements ListInterface<T> {
 
@@ -242,9 +241,8 @@ public class LinkedList<T> implements ListInterface<T> {
 
     @Override
     public T next() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
+      if (!hasNext()) return null;
+
       T data = currentNode.data;
       currentNode = currentNode.next; // Advance to the next chained node
       return data;
