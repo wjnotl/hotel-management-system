@@ -1,9 +1,11 @@
 package adt;
 
+import java.io.Serializable;
+import java.util.Comparator;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
-public class LinkedList<T> implements ListInterface<T> {
+public class LinkedList<T> implements ListInterface<T>, Serializable {
+  private static final long serialVersionUID = 1L;
 
   private Node firstNode;
   private int numberOfEntries;
@@ -25,12 +27,11 @@ public class LinkedList<T> implements ListInterface<T> {
     if (isEmpty()) {
       firstNode = newNode;
     } else {
-      // Walk all the way down to the tail end node
       Node currentNode = firstNode;
       while (currentNode.next != null) {
         currentNode = currentNode.next;
       }
-      currentNode.next = newNode; // Glue new node to the tail end
+      currentNode.next = newNode;
     }
 
     numberOfEntries++;
@@ -43,16 +44,13 @@ public class LinkedList<T> implements ListInterface<T> {
       Node newNode = new Node(newEntry);
 
       if (isEmpty() || newPosition == 1) {
-        // Swap node references at the very head of the list
         newNode.next = firstNode;
         firstNode = newNode;
       } else {
-        // Stop right before the insert position index
         Node nodeBefore = firstNode;
         for (int i = 1; i < newPosition - 1; ++i) {
           nodeBefore = nodeBefore.next;
         }
-        // Splice new node seamlessly between nodeBefore and the adjacent neighbor
         newNode.next = nodeBefore.next;
         nodeBefore.next = newNode;
       }
@@ -64,21 +62,28 @@ public class LinkedList<T> implements ListInterface<T> {
   }
 
   @Override
-  public T remove(int givenPosition) {
+  public boolean remove(T entry) {
+    int pos = getPosition(entry);
+    if (pos == -1) return false;
+
+    removeAt(pos);
+    return true;
+  }
+
+  @Override
+  public T removeAt(int givenPosition) {
     if (givenPosition >= 1 && givenPosition <= numberOfEntries) {
       T result = null;
 
       if (givenPosition == 1) {
         result = firstNode.data;
-        firstNode = firstNode.next; // Snip head element out of the chain
+        firstNode = firstNode.next;
       } else {
-        // Stop right before the deletion target node
         Node nodeBefore = firstNode;
         for (int i = 1; i < givenPosition - 1; ++i) {
           nodeBefore = nodeBefore.next;
         }
         result = nodeBefore.next.data;
-        // Skip over the target node to disconnect it from the list chain
         nodeBefore.next = nodeBefore.next.next;
       }
 
@@ -95,7 +100,7 @@ public class LinkedList<T> implements ListInterface<T> {
       for (int i = 0; i < givenPosition - 1; ++i) {
         currentNode = currentNode.next;
       }
-      currentNode.data = newEntry; // Update payload reference directly
+      currentNode.data = newEntry;
       return true;
     }
     return false;
@@ -115,14 +120,7 @@ public class LinkedList<T> implements ListInterface<T> {
 
   @Override
   public boolean contains(T anEntry) {
-    Node currentNode = firstNode;
-    while (currentNode != null) {
-      if (anEntry.equals(currentNode.data)) {
-        return true;
-      }
-      currentNode = currentNode.next;
-    }
-    return false;
+    return getPosition(anEntry) != -1;
   }
 
   @Override
@@ -137,8 +135,15 @@ public class LinkedList<T> implements ListInterface<T> {
 
   @Override
   public boolean isFull() {
-    // Dynamic lists allocate references as needed; effectively never capped
     return false;
+  }
+
+  @Override
+  public void sort(Comparator<T> comparator) {
+    if (numberOfEntries <= 1 || comparator == null) {
+      return;
+    }
+    firstNode = mergeSort(firstNode, comparator);
   }
 
   @Override
@@ -157,20 +162,76 @@ public class LinkedList<T> implements ListInterface<T> {
     return output.toString();
   }
 
+  // INTERNAL HELPERS
+
+  private int getPosition(T entry) {
+    if (entry == null || isEmpty()) return -1;
+
+    Node currentNode = firstNode;
+    for (int i = 1; i <= numberOfEntries; i++) {
+      if (currentNode != null && currentNode.data != null && currentNode.data.equals(entry)) {
+        return i; // 1-based position indexing
+      }
+      if (currentNode != null) {
+        currentNode = currentNode.next;
+      }
+    }
+    return -1;
+  }
+
+  private Node mergeSort(Node head, Comparator<T> comparator) {
+    if (head == null || head.next == null) {
+      return head;
+    }
+
+    Node middle = getMiddle(head);
+    Node nextOfMiddle = middle.next;
+    middle.next = null;
+
+    Node left = mergeSort(head, comparator);
+    Node right = mergeSort(nextOfMiddle, comparator);
+
+    return sortedMerge(left, right, comparator);
+  }
+
+  private Node sortedMerge(Node a, Node b, Comparator<T> comparator) {
+    if (a == null) return b;
+    if (b == null) return a;
+
+    Node result;
+    if (comparator.compare(a.data, b.data) <= 0) {
+      result = a;
+      result.next = sortedMerge(a.next, b, comparator);
+    } else {
+      result = b;
+      result.next = sortedMerge(a, b.next, comparator);
+    }
+    return result;
+  }
+
+  private Node getMiddle(Node head) {
+    if (head == null) return head;
+    Node slow = head;
+    Node fast = head;
+
+    while (fast.next != null && fast.next.next != null) {
+      slow = slow.next;
+      fast = fast.next.next;
+    }
+    return slow;
+  }
+
   // NESTED STRUCTURAL LAYER
 
-  private class Node {
+  private class Node implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private T data;
     private Node next;
 
     private Node(T data) {
       this.data = data;
       this.next = null;
-    }
-
-    private Node(T data, Node next) {
-      this.data = data;
-      this.next = next;
     }
   }
 
@@ -186,11 +247,10 @@ public class LinkedList<T> implements ListInterface<T> {
 
     @Override
     public T next() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
+      if (!hasNext()) return null;
+
       T data = currentNode.data;
-      currentNode = currentNode.next; // Advance to the next chained node
+      currentNode = currentNode.next;
       return data;
     }
   }

@@ -1,6 +1,10 @@
 package entity;
 
-public class Room {
+import java.io.Serializable;
+
+public class Room implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   public static enum Status {
     DIRTY,
     CLEANING,
@@ -41,5 +45,18 @@ public class Room {
 
   public void setReservationConfirmationNumber(String reservationConfirmationNumber) {
     this.reservationConfirmationNumber = reservationConfirmationNumber;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    Room other = (Room) obj;
+    return roomNumber != null && roomNumber.equals(other.roomNumber);
+  }
+
+  @Override
+  public int hashCode() {
+    return roomNumber != null ? roomNumber.hashCode() : 0;
   }
 }

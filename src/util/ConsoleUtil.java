@@ -53,56 +53,199 @@ public class ConsoleUtil {
   }
 
   public static void printContinueMessage(String message) {
-    System.out.println(message);
+    System.out.print(message);
     scanner.nextLine();
   }
 
   public static boolean showConfirmMessage(String message) {
     while (true) {
       clearScreen();
-      System.out.print(message + " (Y/N): ");
-      String choice = scanner.nextLine().trim();
-
-      if (choice.equalsIgnoreCase("Y")) {
-        return true;
+      try {
+        return getMenuInput(message + " (Y/N): ", new char[] {'Y', 'N'})
+            .input
+            .equalsIgnoreCase("Y");
+      } catch (Exception e) {
+        printError(e.getMessage());
       }
-      if (choice.equalsIgnoreCase("N")) {
-        return false;
-      }
-
-      printError("Invalid choice! You can only choose Y or N.");
     }
   }
 
-  public static int getIntInput(String prompt, int min, int max) {
-    System.out.print(prompt);
+  public static class GetMenuInputArgs {
+    public static class IntegerInputArgs {
+      public final int min;
+      public final int max;
 
-    String rawInput = scanner.nextLine().trim();
+      public IntegerInputArgs(int min, int max) {
+        this.min = min;
+        this.max = max;
 
-    if (rawInput.length() > 1 && rawInput.startsWith("0")) {
-      throw new IllegalArgumentException("Invalid input format! Do not include leading zeros.");
+        if (min > max) {
+          throw new IllegalArgumentException("Minimum value cannot be greater than maximum value!");
+        }
+      }
     }
 
-    try {
-      int choice = Integer.parseInt(rawInput);
+    public static class CharInputArgs {
+      public final char[] validChars;
 
-      // If the number is out of bounds, throw an error
-      if (choice < min || choice > max) {
-        // if max - min = 1, then just throw must be x or y
-        if (max - min == 1) {
-          throw new IllegalArgumentException("Invalid input! Must be " + min + " or " + max + ".");
+      public CharInputArgs(char[] validChars) {
+        this.validChars = validChars;
+
+        if (validChars == null || validChars.length == 0) {
+          throw new IllegalArgumentException("Valid characters cannot be empty!");
         }
-
-        throw new IllegalArgumentException(
-            "Invalid input! Must be between " + min + " and " + max + ".");
       }
 
-      return choice;
+      public String formatValidChars() {
+        int len = validChars.length;
 
-    } catch (NumberFormatException e) {
-      // If they typed letters, catch the format bug and throw a clean message up
-      throw new IllegalArgumentException("Invalid input! Please type a valid number.");
+        // Single character case: 'A'
+        if (len == 1) {
+          return "'" + Character.toUpperCase(validChars[0]) + "'";
+        }
+
+        // Two characters case: 'A' and 'B'
+        if (len == 2) {
+          return "'"
+              + Character.toUpperCase(validChars[0])
+              + "' and '"
+              + Character.toUpperCase(validChars[1])
+              + "'";
+        }
+
+        // 3+ characters case: 'A', 'B' and 'C'
+        String[] formatted = new String[len - 1];
+        for (int i = 0; i < len - 1; i++) {
+          formatted[i] = "'" + Character.toUpperCase(validChars[i]) + "'";
+        }
+
+        String lastItem = "'" + Character.toUpperCase(validChars[len - 1]) + "'";
+        return String.join(", ", formatted) + " and " + lastItem;
+      }
     }
+
+    public final String prompt;
+    public final IntegerInputArgs integerInputArgs;
+    public final CharInputArgs charInputArgs;
+
+    public GetMenuInputArgs(String prompt, IntegerInputArgs integerInputArgs) {
+      this(prompt, integerInputArgs, null);
+    }
+
+    public GetMenuInputArgs(String prompt, CharInputArgs charInputArgs) {
+      this(prompt, null, charInputArgs);
+    }
+
+    public GetMenuInputArgs(
+        String prompt, IntegerInputArgs integerInputArgs, CharInputArgs charInputArgs) {
+      this.prompt = prompt;
+      this.integerInputArgs = integerInputArgs;
+      this.charInputArgs = charInputArgs;
+
+      if (integerInputArgs == null && charInputArgs == null) {
+        throw new IllegalArgumentException("Input arguments cannot be null!");
+      }
+    }
+  }
+
+  public static class GetMenuInputResult {
+    public final String input;
+    public final boolean isNumber;
+
+    public GetMenuInputResult(String input, boolean isNumber) {
+      this.input = input;
+      this.isNumber = isNumber;
+    }
+
+    public int getAsInt() {
+      return Integer.parseInt(input);
+    }
+  }
+
+  public static GetMenuInputResult getMenuInput(String prompt, int min, int max) {
+    return getMenuInput(
+        new GetMenuInputArgs(prompt, new GetMenuInputArgs.IntegerInputArgs(min, max)));
+  }
+
+  public static GetMenuInputResult getMenuInput(String prompt, char[] validChars) {
+    return getMenuInput(
+        new GetMenuInputArgs(prompt, null, new GetMenuInputArgs.CharInputArgs(validChars)));
+  }
+
+  public static GetMenuInputResult getMenuInput(
+      String prompt, int min, int max, char[] validChars) {
+    return getMenuInput(
+        new GetMenuInputArgs(
+            prompt,
+            new GetMenuInputArgs.IntegerInputArgs(min, max),
+            new GetMenuInputArgs.CharInputArgs(validChars)));
+  }
+
+  private static GetMenuInputResult getMenuInput(GetMenuInputArgs inputArgs) {
+    System.out.print(inputArgs.prompt);
+    String rawInput = scanner.nextLine().trim();
+
+    if (rawInput.isEmpty()) {
+      throw new IllegalArgumentException("Input cannot be empty!");
+    }
+
+    // Check if includes search for integer
+    if (inputArgs.integerInputArgs != null) {
+      try {
+        int choice = Integer.parseInt(rawInput);
+
+        if (rawInput.length() > 1 && rawInput.startsWith("0")) {
+          throw new IllegalArgumentException(
+              "Invalid input format! Number must not include leading zeros.");
+        }
+
+        // If the number is out of bounds, throw an error
+        if (choice < inputArgs.integerInputArgs.min || choice > inputArgs.integerInputArgs.max) {
+          if (inputArgs.integerInputArgs.min == inputArgs.integerInputArgs.max) {
+            throw new IllegalArgumentException(
+                "Invalid input! Number must be " + inputArgs.integerInputArgs.max + ".");
+          }
+
+          // if max - min = 1, then just throw must be x or y
+          if (inputArgs.integerInputArgs.max - inputArgs.integerInputArgs.min == 1) {
+            throw new IllegalArgumentException(
+                "Invalid input! Number must be "
+                    + inputArgs.integerInputArgs.min
+                    + " or "
+                    + inputArgs.integerInputArgs.max
+                    + ".");
+          }
+
+          throw new IllegalArgumentException(
+              "Invalid input! Number must be between "
+                  + inputArgs.integerInputArgs.min
+                  + " and "
+                  + inputArgs.integerInputArgs.max
+                  + ".");
+        }
+
+        return new GetMenuInputResult(rawInput, true);
+      } catch (NumberFormatException e) {
+        // Not a number exception (throw directly if didn't expect character)
+        if (inputArgs.charInputArgs == null) {
+          throw new IllegalArgumentException("Invalid input! Please provide a valid number.");
+        }
+      }
+    }
+
+    // Check character input if input is not a valid number
+    if (rawInput.length() == 1) {
+      char inputChar = Character.toUpperCase(rawInput.charAt(0));
+
+      for (char valid : inputArgs.charInputArgs.validChars) {
+        if (Character.toUpperCase(valid) == inputChar) {
+          return new GetMenuInputResult(String.valueOf(inputChar), false);
+        }
+      }
+    }
+
+    throw new IllegalArgumentException(
+        "Invalid input! You can only choose " + inputArgs.charInputArgs.formatValidChars() + ".");
   }
 
   public static String getStringInput(String prompt) {

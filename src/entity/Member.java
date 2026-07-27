@@ -1,6 +1,10 @@
 package entity;
 
-public class Member {
+import java.io.Serializable;
+
+public class Member implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   public static enum LoyaltyTier {
     DIAMOND,
     GOLD,
@@ -39,5 +43,18 @@ public class Member {
 
   public void setPoints(int points) {
     this.points = points;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    Member other = (Member) obj;
+    return memberId != null && memberId.equals(other.memberId);
+  }
+
+  @Override
+  public int hashCode() {
+    return memberId != null ? memberId.hashCode() : 0;
   }
 }

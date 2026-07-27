@@ -1,6 +1,10 @@
 package entity;
 
-public class Guest {
+import java.io.Serializable;
+
+public class Guest implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private String guestId; // Unique customer ID (e.g., "G-10023")
   private String name; // Full Name
   private String icNumber; // IC Number
@@ -8,6 +12,7 @@ public class Guest {
   private String email; // Email Address
   private String phoneNumber; // Phone Number
   private String memberId; // Links to Member card (null if non-member)
+  private int strikeCount; // Daily no-show counter
 
   public Guest(
       String guestId,
@@ -16,7 +21,8 @@ public class Guest {
       String passportNumber,
       String email,
       String phoneNumber,
-      String memberId) {
+      String memberId,
+      int strikeCount) {
     this.guestId = guestId;
     this.name = name;
     this.icNumber = icNumber;
@@ -24,6 +30,7 @@ public class Guest {
     this.email = email;
     this.phoneNumber = phoneNumber;
     this.memberId = memberId;
+    this.strikeCount = strikeCount;
   }
 
   public String getGuestId() {
@@ -54,6 +61,10 @@ public class Guest {
     return memberId;
   }
 
+  public int getStrikeCount() {
+    return strikeCount;
+  }
+
   public void setGuestId(String guestId) {
     this.guestId = guestId;
   }
@@ -80,5 +91,22 @@ public class Guest {
 
   public void setMemberId(String memberId) {
     this.memberId = memberId;
+  }
+
+  public void setStrikeCount(int strikeCount) {
+    this.strikeCount = strikeCount;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    Guest other = (Guest) obj;
+    return guestId != null && guestId.equals(other.guestId);
+  }
+
+  @Override
+  public int hashCode() {
+    return guestId != null ? guestId.hashCode() : 0;
   }
 }

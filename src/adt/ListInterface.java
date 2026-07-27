@@ -1,5 +1,6 @@
 package adt;
 
+import java.util.Comparator;
 import java.util.Iterator;
 
 public interface ListInterface<T> {
@@ -11,7 +12,9 @@ public interface ListInterface<T> {
   public boolean add(int newPosition, T newEntry);
 
   // Plucks out the entry at the given 1-based position and closes the gap.
-  public T remove(int givenPosition);
+  public boolean remove(T entry);
+
+  public T removeAt(int givenPosition);
 
   // Wipes the list completely clean.
   public void clear();
@@ -33,6 +36,9 @@ public interface ListInterface<T> {
 
   // Tells if the backing structure is maxed out.
   public boolean isFull();
+
+  // Sorts the list contents using a custom Comparator.
+  public void sort(Comparator<T> comparator);
 
   // Gives back a standard iterator to cleanly traverse elements sequentially.
   public Iterator<T> getIterator();
