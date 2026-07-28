@@ -13,18 +13,33 @@ public class Room implements Serializable {
     OCCUPIED
   }
 
-  private String roomNumber; // Room designation (e.g., "101")
+  public static enum RoomType {
+    LUXURY,
+    SUITE,
+    STANDARD
+  }
+
+  private String roomNumber; // Room designation (e.g., "801")
+  private RoomType roomType; // Category: LUXURY, SUITE, STANDARD
   private Status status; // Operational cleaning/occupancy state
   private String reservationConfirmationNumber; // Links to Reservation.confirmationNumber
 
-  public Room(String roomNumber, Status status, String reservationConfirmationNumber) {
+  public Room(
+      String roomNumber, RoomType roomType, Status status, String reservationConfirmationNumber) {
     this.roomNumber = roomNumber;
+    this.roomType = roomType;
     this.status = status;
     this.reservationConfirmationNumber = reservationConfirmationNumber;
   }
 
+  // --- GETTERS ---
+
   public String getRoomNumber() {
     return roomNumber;
+  }
+
+  public RoomType getRoomType() {
+    return roomType;
   }
 
   public Status getStatus() {
@@ -35,8 +50,14 @@ public class Room implements Serializable {
     return reservationConfirmationNumber;
   }
 
+  // --- SETTERS ---
+
   public void setRoomNumber(String roomNumber) {
     this.roomNumber = roomNumber;
+  }
+
+  public void setRoomType(RoomType roomType) {
+    this.roomType = roomType;
   }
 
   public void setStatus(Status status) {
