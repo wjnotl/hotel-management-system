@@ -22,8 +22,6 @@ public class VipView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).input;
   }
 
-  // --- SCREEN 1: MANAGE WAITLIST ---
-
   public GetMenuInputResult renderWaitlistScreen(
       ListInterface<Reservation> list,
       ListInterface<Guest> guestList,
@@ -34,11 +32,9 @@ public class VipView {
       String sort,
       int currentPage,
       int pageSize) {
-
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("MANAGE QUEUE WAITLIST");
 
-    // Banner Metadata
     System.out.println(
         " SEARCH QUERY   : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
     System.out.println(" TIER FILTER    : [ " + (tier == null ? "ALL" : tier) + " ]");
@@ -68,12 +64,11 @@ public class VipView {
         },
         settings);
 
-    // --- CLEAN SPANNED EMPTY STATE HANDLING ---
+    // if list is empty
     if (list == null || totalMatches == 0) {
-      // 1. Cap off the 8 header columns cleanly with upward T-junctions (╠ ╩ ╣)
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-      // 2. Differentiate between empty DB vs no filter matches
+      // get active filters
       boolean hasActiveFilters =
           (search != null && !search.trim().isEmpty())
               || (tier != null && !"ALL".equalsIgnoreCase(tier.trim()))
@@ -84,13 +79,11 @@ public class VipView {
               ? "*** NO MATCHING GUESTS FOUND FOR ACTIVE FILTERS ***"
               : "*** WAITLIST IS CURRENTLY EMPTY ***";
 
-      // 3. Single 91-character spanned width row (84 total col width + 7 inner border chars)
+      // single 91-character spanned width row (84 total col width + 7 inner border chars)
       TableUtil.TableSettings emptySettings =
           new TableUtil.TableSettings(new int[] {91}).setHAlign(0, TableUtil.Align.CENTER);
 
       TableUtil.printTableRow(new String[] {emptyMessage}, emptySettings);
-
-      // 4. Clean bottom box border without any orphan column T-ticks (╚ ═ ╝)
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
       System.out.println(" Page 0 / 0 (Total Matches: 0)");
@@ -142,19 +135,17 @@ public class VipView {
     System.out.println("----------------------------------------------------------------------");
     System.out.println(" [A] Add Guest          [Q] Quick Assign Top    [R] Refresh Table");
     System.out.println(" [S] Search / Filter    [O] Change Sort Order   [E] Exit to Menu");
-    System.out.println(" [N] Next Page          [P] Prev Page\n");
+    System.out.println(" [P] Prev Page          [N] Next Page\n");
 
     int maxOptionNum = endIndex - startIndex + 1;
     String promptText =
-        (maxOptionNum == 1)
+        maxOptionNum == 1
             ? "Enter a command or select guest index number (1): "
             : "Enter a command or select a guest index number (1-" + maxOptionNum + "): ";
 
     return ConsoleUtil.getMenuInput(
         promptText, 1, maxOptionNum, new char[] {'A', 'Q', 'R', 'S', 'O', 'E', 'N', 'P'});
   }
-
-  // --- SUB-MENUS & PROMPTS WITH EXITS ---
 
   public String promptAddGuestInput() {
     ConsoleUtil.clearScreen();
@@ -163,8 +154,6 @@ public class VipView {
     System.out.println(" [Enter 'C' to Cancel and return to Waitlist]\n");
     return ConsoleUtil.getStringInput(" Enter Customer ID or Booking Reference Number: ");
   }
-
-  // --- FILTER SUBMENUS WITH EXITS ---
 
   public int displayFilterMainMenu(String search, String tier, String status) {
     ConsoleUtil.clearScreen();
@@ -261,8 +250,6 @@ public class VipView {
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
-
-  // --- INTERNAL PROFILE LOOKUP HELPERS ---
 
   private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
     if (guestList == null || guestId == null) return null;

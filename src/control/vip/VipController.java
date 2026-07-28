@@ -24,7 +24,6 @@ public class VipController {
     this.memberRepo = new MemberRepo();
   }
 
-  // --- VIP MAIN MENU LOOP ---
   public void start() {
     while (true) {
       try {
@@ -33,7 +32,7 @@ public class VipController {
         if ("1".equals(choice)) {
           manageWaitlist();
         } else if ("5".equals(choice)) {
-          return; // Go back to Resort Main Menu
+          return;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -41,7 +40,6 @@ public class VipController {
     }
   }
 
-  // --- WAITLIST SCREEN LOOP ---
   public void manageWaitlist() {
     int currentPage = 1;
     int pageSize = 10;
@@ -53,14 +51,12 @@ public class VipController {
 
     while (true) {
       try {
-        // 1. Fetch live data
         ListInterface<Reservation> rawList = vipReservationRepo.getReservationList();
 
-        // 2. Filter & Sort
+        // filter & sort
         ListInterface<Reservation> filteredList =
             filterAndSortList(rawList, searchQuery, tierFilter, statusFilter, sortCriteria);
 
-        // 3. Render Waitlist Screen
         ConsoleUtil.GetMenuInputResult result =
             vipView.renderWaitlistScreen(
                 filteredList,
@@ -73,31 +69,25 @@ public class VipController {
                 currentPage,
                 pageSize);
 
-        if (result == null || result.input == null || result.input.trim().isEmpty()) {
-          continue;
-        }
-
-        String command = result.input.trim();
-
-        if ("E".equalsIgnoreCase(command)) {
+        if ("E".equalsIgnoreCase(result.input)) {
           break; // Return to VIP Main Menu
-        } else if ("A".equalsIgnoreCase(command)) {
+        } else if ("A".equalsIgnoreCase(result.input)) {
           handleAddGuest();
-        } else if ("S".equalsIgnoreCase(command)) {
+        } else if ("S".equalsIgnoreCase(result.input)) {
           String[] filters = handleFilterMenu(searchQuery, tierFilter, statusFilter);
           searchQuery = filters[0];
           tierFilter = filters[1];
           statusFilter = filters[2];
           currentPage = 1;
-        } else if ("O".equalsIgnoreCase(command)) {
+        } else if ("O".equalsIgnoreCase(result.input)) {
           String newSort = handleSortMenu(sortCriteria);
           if (newSort != null) {
             sortCriteria = newSort;
             currentPage = 1;
           }
-        } else if ("Q".equalsIgnoreCase(command)) {
+        } else if ("Q".equalsIgnoreCase(result.input)) {
           handleQuickAssignTop();
-        } else if ("N".equalsIgnoreCase(command)) {
+        } else if ("N".equalsIgnoreCase(result.input)) {
           int totalMatches = filteredList.getNumberOfEntries();
           int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
           if (currentPage < totalPages) {
@@ -105,15 +95,14 @@ public class VipController {
           } else {
             ConsoleUtil.printError("Already on the last page!");
           }
-        } else if ("P".equalsIgnoreCase(command)) {
+        } else if ("P".equalsIgnoreCase(result.input)) {
           if (currentPage > 1) {
             currentPage--;
           } else {
             ConsoleUtil.printError("Already on the first page!");
           }
         } else if (result.isNumber) {
-          int selectedIndex = result.getAsInt();
-          handleGuestAction(filteredList, selectedIndex, currentPage, pageSize);
+          handleGuestAction(filteredList, result.getAsInt(), currentPage, pageSize);
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -121,7 +110,6 @@ public class VipController {
     }
   }
 
-  // --- MAIN FILTER MENU & NESTED SUBMENUS ---
   private String[] handleFilterMenu(
       String currentSearch, String currentTier, String currentStatus) {
 
@@ -139,16 +127,13 @@ public class VipController {
           tier = handleTierFilterSubmenu(tier);
         } else if (choice == 3) {
           status = handleStatusFilterSubmenu(status);
-        } else if (choice == 4) {
-          // Reset / Clear All Filters
+        } else if (choice == 4) { // clear all filters
           search = null;
           tier = null;
           status = null;
-        } else if (choice == 5) {
-          // Apply and Return to Waitlist
+        } else if (choice == 5) { // apply and return
           return new String[] {search, tier, status};
-        } else if (choice == 6) {
-          // Back / Exit Filter Menu without forcing change
+        } else if (choice == 6) { // back without changing
           return new String[] {currentSearch, currentTier, currentStatus};
         }
       } catch (Exception e) {
@@ -157,7 +142,6 @@ public class VipController {
     }
   }
 
-  // Submenu 1: Search Query
   private String handleSearchQuerySubmenu(String currentSearch) {
     while (true) {
       try {
@@ -165,13 +149,13 @@ public class VipController {
         if (option == 1) {
           String input = vipView.promptSearchInput();
           if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-            return currentSearch; // Cancelled
+            return currentSearch; // cancelled
           }
           return input.trim();
         } else if (option == 2) {
-          return null; // Clear search query
+          return null; // clear search query
         } else if (option == 3) {
-          return currentSearch; // Back to Filter Management
+          return currentSearch; // back
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -179,7 +163,6 @@ public class VipController {
     }
   }
 
-  // Submenu 2: Tier Filter
   private String handleTierFilterSubmenu(String currentTier) {
     while (true) {
       try {
@@ -187,36 +170,34 @@ public class VipController {
         if (choice == 1) return "DIAMOND";
         if (choice == 2) return "GOLD";
         if (choice == 3) return "SILVER";
-        if (choice == 4) return null; // Clear tier filter
-        if (choice == 5) return currentTier; // Back to Filter Management
+        if (choice == 4) return null; // clear tier filter
+        if (choice == 5) return currentTier; // back
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
-  // Submenu 3: Status Filter
   private String handleStatusFilterSubmenu(String currentStatus) {
     while (true) {
       try {
         int choice = vipView.displayStatusSubmenu(currentStatus);
         if (choice == 1) return "BOILING";
         if (choice == 2) return "NORMAL";
-        if (choice == 3) return null; // Clear status filter
-        if (choice == 4) return currentStatus; // Back to Filter Management
+        if (choice == 3) return null; // clear status filter
+        if (choice == 4) return currentStatus; // back
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
-  // --- ISOLATED SORT SUBMENU LOOP ---
   private String handleSortMenu(String currentSort) {
     while (true) {
       try {
         String selectedSort = vipView.displaySortMenu();
         if (selectedSort == null) {
-          return currentSort; // Option 4 selected: Back without changing
+          return currentSort; // back
         }
         return selectedSort;
       } catch (Exception e) {
@@ -225,13 +206,12 @@ public class VipController {
     }
   }
 
-  // --- ISOLATED ADD GUEST PROMPT LOOP ---
   private void handleAddGuest() {
     while (true) {
       try {
         String id = vipView.promptAddGuestInput();
         if (id == null || id.trim().isEmpty() || "C".equalsIgnoreCase(id.trim())) {
-          return; // Cancel action
+          return; // back
         }
 
         // TODO: Process guest reservation addition
@@ -242,13 +222,12 @@ public class VipController {
     }
   }
 
-  // --- QUICK ASSIGN TOP ACTION ---
   private void handleQuickAssignTop() {
     try {
       Reservation top = vipReservationRepo.dequeueNextVip();
       if (top != null) {
         ConsoleUtil.clearScreen();
-        System.out.println(" >> STATUS: [✓] SUCCESS");
+        System.out.println(" >> STATUS: SUCCESS");
         System.out.println(
             " Successfully processed top VIP: " + top.getConfirmationNumber() + "\n");
         ConsoleUtil.printContinueMessage();
@@ -260,7 +239,6 @@ public class VipController {
     }
   }
 
-  // --- ISOLATED GUEST ACTION SUBMENU LOOP ---
   private void handleGuestAction(
       ListInterface<Reservation> list, int indexOnPage, int page, int pageSize) {
     while (true) {
@@ -279,19 +257,18 @@ public class VipController {
         if (action == 1 || action == 2) {
           vipReservationRepo.cancelReservation(selected);
           ConsoleUtil.clearScreen();
-          System.out.println(" >> STATUS: [✓] SUCCESS");
+          System.out.println(" >> STATUS: SUCCESS");
           System.out.println(
               " Guest reservation " + selected.getConfirmationNumber() + " updated.\n");
           ConsoleUtil.printContinueMessage();
         }
-        return; // Return back to waitlist table
+        return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
-  // --- FILTER & SORT HELPER ---
   private ListInterface<Reservation> filterAndSortList(
       ListInterface<Reservation> source, String search, String tier, String status, String sort) {
 
@@ -314,7 +291,7 @@ public class VipController {
       boolean matchesTier = true;
       boolean matchesStatus = true;
 
-      // 1. Text Search Matching
+      // text search matching
       if (search != null && !search.trim().isEmpty()) {
         String query = search.trim().toLowerCase();
         boolean matchConf =
@@ -332,13 +309,13 @@ public class VipController {
         matchesSearch = matchConf || matchGuestId || matchName || matchPhone;
       }
 
-      // 2. Loyalty Tier Matching
+      // loyalty tier matching
       if (tier != null && !tier.trim().isEmpty()) {
         String actualTier = (m != null) ? m.getTier().name() : "NON-MEMBER";
         matchesTier = tier.equalsIgnoreCase(actualTier);
       }
 
-      // 3. Boiling Status Matching
+      // boiling status matching
       if (status != null) {
         if ("BOILING".equalsIgnoreCase(status)) {
           matchesStatus = r.getIsBoiling();
@@ -352,7 +329,7 @@ public class VipController {
       }
     }
 
-    // Sort Logic
+    // sort logic
     if ("WAIT TIME (LONGEST -> SHORTEST)".equalsIgnoreCase(sort)) {
       filtered.sort((r1, r2) -> r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime()));
     } else if ("TIER RANK (DIAMOND -> SILVER)".equalsIgnoreCase(sort)) {
