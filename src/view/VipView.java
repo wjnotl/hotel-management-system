@@ -224,14 +224,24 @@ public class VipView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHANGE SORT ORDER");
     System.out.println(" 1. Priority Score (High to Low)");
-    System.out.println(" 2. Live Waiting Time (Longest to Shortest)");
-    System.out.println(" 3. Tier Rank Hierarchy (Diamond -> Gold -> Silver)");
-    System.out.println(" 4. Back to Waitlist (Keep current sort)\n");
+    System.out.println(" 2. Priority Score (Low to High)");
+    System.out.println(" 3. Live Waiting Time (Longest to Shortest)");
+    System.out.println(" 4. Live Waiting Time (Shortest to Longest)");
+    System.out.println(" 5. VIP Tier Rank (Diamond -> Gold -> Silver)");
+    System.out.println(" 6. VIP Tier Rank (Silver -> Gold -> Diamond)");
+    System.out.println(" 7. Strike Count (Lowest to Highest)");
+    System.out.println(" 8. Strike Count (Highest to Lowest)");
+    System.out.println(" 9. Back to Waitlist (Keep current sort)\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
-    if (choice == 2) return "WAIT TIME (LONGEST -> SHORTEST)";
-    if (choice == 3) return "TIER RANK (DIAMOND -> SILVER)";
-    if (choice == 4) return null; // Keep current sort
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 9).getAsInt();
+    if (choice == 2) return "PRIORITY SCORE (LOW -> HIGH)";
+    if (choice == 3) return "WAIT TIME (LONGEST -> SHORTEST)";
+    if (choice == 4) return "WAIT TIME (SHORTEST -> LONGEST)";
+    if (choice == 5) return "TIER RANK (DIAMOND -> SILVER)";
+    if (choice == 6) return "TIER RANK (SILVER -> DIAMOND)";
+    if (choice == 7) return "STRIKE COUNT (LOWEST -> HIGHEST)";
+    if (choice == 8) return "STRIKE COUNT (HIGHEST -> LOWEST)";
+    if (choice == 9) return null; // Keep current sort
     return "PRIORITY SCORE (HIGH -> LOW)";
   }
 

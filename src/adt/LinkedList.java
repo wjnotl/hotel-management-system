@@ -15,7 +15,7 @@ public class LinkedList<T> implements ListInterface<T>, Serializable {
   }
 
   @Override
-  public final void clear() {
+  public void clear() {
     firstNode = null;
     numberOfEntries = 0;
   }

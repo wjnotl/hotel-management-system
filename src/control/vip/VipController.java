@@ -309,13 +309,13 @@ public class VipController {
         matchesSearch = matchConf || matchGuestId || matchName || matchPhone;
       }
 
-      // loyalty tier matching
-      if (tier != null && !tier.trim().isEmpty()) {
-        String actualTier = (m != null) ? m.getTier().name() : "NON-MEMBER";
+      // tier matching
+      if (tier != null) {
+        String actualTier = (m != null && m.getTier() != null) ? m.getTier().name() : "";
         matchesTier = tier.equalsIgnoreCase(actualTier);
       }
 
-      // boiling status matching
+      // boiling state matching
       if (status != null) {
         if ("BOILING".equalsIgnoreCase(status)) {
           matchesStatus = r.getIsBoiling();
@@ -331,7 +331,21 @@ public class VipController {
 
     // sort logic
     if ("WAIT TIME (LONGEST -> SHORTEST)".equalsIgnoreCase(sort)) {
-      filtered.sort((r1, r2) -> r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime()));
+      filtered.sort(
+          (r1, r2) -> {
+            // Earliest arrival first = Longest wait
+            int cmp = r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+            return (cmp != 0) ? cmp : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+          });
+
+    } else if ("WAIT TIME (SHORTEST -> LONGEST)".equalsIgnoreCase(sort)) {
+      filtered.sort(
+          (r1, r2) -> {
+            // Latest arrival first = Shortest wait
+            int cmp = r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime());
+            return (cmp != 0) ? cmp : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+          });
+
     } else if ("TIER RANK (DIAMOND -> SILVER)".equalsIgnoreCase(sort)) {
       filtered.sort(
           (r1, r2) -> {
@@ -339,10 +353,67 @@ public class VipController {
             Guest g2 = findGuest(guestList, r2.getGuestId());
             Member m1 = (g1 != null) ? findMember(memberList, g1.getMemberId()) : null;
             Member m2 = (g2 != null) ? findMember(memberList, g2.getMemberId()) : null;
-            return Integer.compare(getTierWeight(m2), getTierWeight(m1));
+
+            int cmp = Integer.compare(getTierWeight(m2), getTierWeight(m1));
+            if (cmp != 0) return cmp;
+
+            cmp = Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+            return (cmp != 0) ? cmp : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
           });
+
+    } else if ("TIER RANK (SILVER -> DIAMOND)".equalsIgnoreCase(sort)) {
+      filtered.sort(
+          (r1, r2) -> {
+            Guest g1 = findGuest(guestList, r1.getGuestId());
+            Guest g2 = findGuest(guestList, r2.getGuestId());
+            Member m1 = (g1 != null) ? findMember(memberList, g1.getMemberId()) : null;
+            Member m2 = (g2 != null) ? findMember(memberList, g2.getMemberId()) : null;
+
+            int cmp = Integer.compare(getTierWeight(m1), getTierWeight(m2));
+            if (cmp != 0) return cmp;
+
+            cmp = Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+            return (cmp != 0) ? cmp : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+          });
+
+    } else if ("STRIKE COUNT (LOWEST -> HIGHEST)".equalsIgnoreCase(sort)) {
+      filtered.sort(
+          (r1, r2) -> {
+            Guest g1 = findGuest(guestList, r1.getGuestId());
+            Guest g2 = findGuest(guestList, r2.getGuestId());
+            int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
+            int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
+
+            int cmp = Integer.compare(s1, s2);
+            return (cmp != 0) ? cmp : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+          });
+
+    } else if ("STRIKE COUNT (HIGHEST -> LOWEST)".equalsIgnoreCase(sort)) {
+      filtered.sort(
+          (r1, r2) -> {
+            Guest g1 = findGuest(guestList, r1.getGuestId());
+            Guest g2 = findGuest(guestList, r2.getGuestId());
+            int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
+            int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
+
+            int cmp = Integer.compare(s2, s1);
+            return (cmp != 0) ? cmp : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+          });
+
+    } else if ("PRIORITY SCORE (LOW -> HIGH)".equalsIgnoreCase(sort)) {
+      filtered.sort(
+          (r1, r2) -> {
+            int cmp = Integer.compare(r1.getPriorityScore(), r2.getPriorityScore());
+            return (cmp != 0) ? cmp : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+          });
+
     } else {
-      filtered.sort((r1, r2) -> Integer.compare(r2.getPriorityScore(), r1.getPriorityScore()));
+      // DEFAULT: PRIORITY SCORE (HIGH -> LOW)
+      filtered.sort(
+          (r1, r2) -> {
+            int cmp = Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+            return (cmp != 0) ? cmp : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+          });
     }
 
     return filtered;
