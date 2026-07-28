@@ -13,31 +13,43 @@ public class Reservation implements Serializable {
     CHECKED_IN,
     NO_SHOW,
     CANCELLED
-  };
+  }
 
-  private String guestId; // Links to Guest.guestId
-  private String confirmationNumber; // Unique 8-digit trip ID (Primary lookup key)
-  private Status status; // Enforce typed status state
-  private boolean isBoiling; // Patience threshold flag
-  private int priorityScore; // Calculated Max-Heap score
-  private LocalDateTime reservationTime; // When the booking was made
-  private LocalDateTime queueArrivalTime; // Exact timestamp they arrived in the lobby queue
+  private String reservationId; // Unique internal ID (e.g. "RES-10001")
+  private String guestId; // References Guest.guestId
+  private String confirmationNumber; // References booking trip ID
+  private Room.RoomType roomType; // LUXURY, SUITE, STANDARD
+  private Status status;
+  private boolean isBoiling;
+  private int priorityScore;
+  private LocalDateTime reservationTime;
+  private LocalDateTime queueArrivalTime;
+  private LocalDateTime allocatedTime; // Useful for completed history & analytics
 
   public Reservation(
+      String reservationId,
       String guestId,
       String confirmationNumber,
+      Room.RoomType roomType,
       Status status,
       boolean isBoiling,
       int priorityScore,
       LocalDateTime reservationTime,
       LocalDateTime queueArrivalTime) {
+    this.reservationId = reservationId;
     this.guestId = guestId;
     this.confirmationNumber = confirmationNumber;
+    this.roomType = roomType;
     this.status = status;
     this.isBoiling = isBoiling;
     this.priorityScore = priorityScore;
     this.reservationTime = reservationTime;
     this.queueArrivalTime = queueArrivalTime;
+  }
+
+  // --- GETTERS ---
+  public String getReservationId() {
+    return reservationId;
   }
 
   public String getGuestId() {
@@ -46,6 +58,10 @@ public class Reservation implements Serializable {
 
   public String getConfirmationNumber() {
     return confirmationNumber;
+  }
+
+  public Room.RoomType getRoomType() {
+    return roomType;
   }
 
   public Status getStatus() {
@@ -68,12 +84,25 @@ public class Reservation implements Serializable {
     return queueArrivalTime;
   }
 
+  public LocalDateTime getAllocatedTime() {
+    return allocatedTime;
+  }
+
+  // --- SETTERS ---
+  public void setReservationId(String reservationId) {
+    this.reservationId = reservationId;
+  }
+
   public void setGuestId(String guestId) {
     this.guestId = guestId;
   }
 
   public void setConfirmationNumber(String confirmationNumber) {
     this.confirmationNumber = confirmationNumber;
+  }
+
+  public void setRoomType(Room.RoomType roomType) {
+    this.roomType = roomType;
   }
 
   public void setStatus(Status status) {
@@ -96,16 +125,20 @@ public class Reservation implements Serializable {
     this.queueArrivalTime = queueArrivalTime;
   }
 
+  public void setAllocatedTime(LocalDateTime allocatedTime) {
+    this.allocatedTime = allocatedTime;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
     if (obj == null || getClass() != obj.getClass()) return false;
     Reservation other = (Reservation) obj;
-    return confirmationNumber != null && confirmationNumber.equals(other.confirmationNumber);
+    return reservationId != null && reservationId.equalsIgnoreCase(other.reservationId);
   }
 
   @Override
   public int hashCode() {
-    return confirmationNumber != null ? confirmationNumber.hashCode() : 0;
+    return reservationId != null ? reservationId.toLowerCase().hashCode() : 0;
   }
 }
