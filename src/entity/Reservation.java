@@ -15,16 +15,16 @@ public class Reservation implements Serializable {
     CANCELLED
   }
 
-  private String reservationId; // Dedicated Unique ID (e.g., "RES-10001")
-  private String guestId; // Links to Guest.guestId
-  private String confirmationNumber; // Outer booking reference/trip ID
+  private String reservationId; // Unique internal ID (e.g. "RES-10001")
+  private String guestId; // References Guest.guestId
+  private String confirmationNumber; // References booking trip ID
   private Room.RoomType roomType; // LUXURY, SUITE, STANDARD
   private Status status;
   private boolean isBoiling;
   private int priorityScore;
   private LocalDateTime reservationTime;
   private LocalDateTime queueArrivalTime;
-  private LocalDateTime allocatedTime; // For future analytics reporting
+  private LocalDateTime allocatedTime; // Useful for completed history & analytics
 
   public Reservation(
       String reservationId,

@@ -127,216 +127,47 @@ public class DatabaseSeeder {
       LocalDateTime now = LocalDateTime.now();
 
       // --- LUXURY QUEUE (5 Reservations) ---
-      addRes(
-          vipRepo, "G-101", Room.RoomType.LUXURY, 9500, true, now.minusMinutes(50)); // Alex (Res 1)
-      addRes(
-          vipRepo,
-          "G-102",
-          Room.RoomType.LUXURY,
-          9100,
-          false,
-          now.minusMinutes(40)); // David (Res 1)
-      addRes(
-          vipRepo,
-          "G-101",
-          Room.RoomType.LUXURY,
-          8800,
-          true,
-          now.minusMinutes(35)); // Alex (Res 2 - Multi)
-      addRes(vipRepo, "G-103", Room.RoomType.LUXURY, 7600, false, now.minusMinutes(25)); // Sarah
-      addRes(vipRepo, "G-104", Room.RoomType.LUXURY, 7100, false, now.minusMinutes(15)); // Emma
+      addRes(vipRepo, "G-101", Room.RoomType.LUXURY, 9500, true, now.minusMinutes(50));
+      addRes(vipRepo, "G-102", Room.RoomType.LUXURY, 9100, false, now.minusMinutes(40));
+      addRes(vipRepo, "G-101", Room.RoomType.LUXURY, 8800, true, now.minusMinutes(35));
+      addRes(vipRepo, "G-103", Room.RoomType.LUXURY, 7600, false, now.minusMinutes(25));
+      addRes(vipRepo, "G-104", Room.RoomType.LUXURY, 7100, false, now.minusMinutes(15));
 
       // --- SUITE QUEUE (11 Reservations) ---
-      addRes(
-          vipRepo,
-          "G-102",
-          Room.RoomType.SUITE,
-          9300,
-          true,
-          now.minusMinutes(60)); // David (Res 2 - Multi)
-      addRes(
-          vipRepo,
-          "G-101",
-          Room.RoomType.SUITE,
-          8900,
-          false,
-          now.minusMinutes(45)); // Alex (Res 3 - Multi)
-      addRes(
-          vipRepo, "G-103", Room.RoomType.SUITE, 7800, true, now.minusMinutes(42)); // Sarah (Res 2)
-      addRes(
-          vipRepo, "G-104", Room.RoomType.SUITE, 7400, false, now.minusMinutes(38)); // Emma (Res 2)
-      addRes(
-          vipRepo,
-          "G-102",
-          Room.RoomType.SUITE,
-          7200,
-          false,
-          now.minusMinutes(30)); // David (Res 3 - Multi)
-      addRes(vipRepo, "G-105", Room.RoomType.SUITE, 5800, true, now.minusMinutes(28)); // Bruce
-      addRes(vipRepo, "G-106", Room.RoomType.SUITE, 4900, false, now.minusMinutes(25)); // Charles
-      addRes(
-          vipRepo,
-          "G-103",
-          Room.RoomType.SUITE,
-          4600,
-          false,
-          now.minusMinutes(20)); // Sarah (Res 3)
-      addRes(
-          vipRepo,
-          "G-105",
-          Room.RoomType.SUITE,
-          4300,
-          false,
-          now.minusMinutes(18)); // Bruce (Res 2)
-      addRes(
-          vipRepo,
-          "G-106",
-          Room.RoomType.SUITE,
-          4100,
-          false,
-          now.minusMinutes(12)); // Charles (Res 2)
-      addRes(
-          vipRepo, "G-104", Room.RoomType.SUITE, 3900, false, now.minusMinutes(5)); // Emma (Res 3)
+      addRes(vipRepo, "G-102", Room.RoomType.SUITE, 9300, true, now.minusMinutes(60));
+      addRes(vipRepo, "G-101", Room.RoomType.SUITE, 8900, false, now.minusMinutes(45));
+      addRes(vipRepo, "G-103", Room.RoomType.SUITE, 7800, true, now.minusMinutes(42));
+      addRes(vipRepo, "G-104", Room.RoomType.SUITE, 7400, false, now.minusMinutes(38));
+      addRes(vipRepo, "G-102", Room.RoomType.SUITE, 7200, false, now.minusMinutes(30));
+      addRes(vipRepo, "G-105", Room.RoomType.SUITE, 5800, true, now.minusMinutes(28));
+      addRes(vipRepo, "G-106", Room.RoomType.SUITE, 4900, false, now.minusMinutes(25));
+      addRes(vipRepo, "G-103", Room.RoomType.SUITE, 4600, false, now.minusMinutes(20));
+      addRes(vipRepo, "G-105", Room.RoomType.SUITE, 4300, false, now.minusMinutes(18));
+      addRes(vipRepo, "G-106", Room.RoomType.SUITE, 4100, false, now.minusMinutes(12));
+      addRes(vipRepo, "G-104", Room.RoomType.SUITE, 3900, false, now.minusMinutes(5));
 
       // --- STANDARD QUEUE (19 Reservations) ---
-      addRes(
-          vipRepo,
-          "G-101",
-          Room.RoomType.STANDARD,
-          9000,
-          true,
-          now.minusMinutes(70)); // Alex (Res 4)
-      addRes(
-          vipRepo,
-          "G-102",
-          Room.RoomType.STANDARD,
-          8700,
-          false,
-          now.minusMinutes(65)); // David (Res 4)
-      addRes(
-          vipRepo,
-          "G-103",
-          Room.RoomType.STANDARD,
-          7900,
-          true,
-          now.minusMinutes(58)); // Sarah (Res 4)
-      addRes(
-          vipRepo,
-          "G-104",
-          Room.RoomType.STANDARD,
-          7300,
-          false,
-          now.minusMinutes(55)); // Emma (Res 4)
-      addRes(
-          vipRepo,
-          "G-101",
-          Room.RoomType.STANDARD,
-          7100,
-          false,
-          now.minusMinutes(50)); // Alex (Res 5)
-      addRes(
-          vipRepo,
-          "G-105",
-          Room.RoomType.STANDARD,
-          5900,
-          true,
-          now.minusMinutes(48)); // Bruce (Res 3)
-      addRes(
-          vipRepo,
-          "G-106",
-          Room.RoomType.STANDARD,
-          5200,
-          false,
-          now.minusMinutes(44)); // Charles (Res 3)
-      addRes(
-          vipRepo,
-          "G-102",
-          Room.RoomType.STANDARD,
-          5000,
-          false,
-          now.minusMinutes(40)); // David (Res 5)
-      addRes(
-          vipRepo,
-          "G-103",
-          Room.RoomType.STANDARD,
-          4800,
-          false,
-          now.minusMinutes(36)); // Sarah (Res 5)
-      addRes(
-          vipRepo,
-          "G-105",
-          Room.RoomType.STANDARD,
-          4500,
-          true,
-          now.minusMinutes(32)); // Bruce (Res 4)
-      addRes(
-          vipRepo,
-          "G-104",
-          Room.RoomType.STANDARD,
-          4300,
-          false,
-          now.minusMinutes(28)); // Emma (Res 5)
-      addRes(
-          vipRepo,
-          "G-106",
-          Room.RoomType.STANDARD,
-          4100,
-          false,
-          now.minusMinutes(25)); // Charles (Res 4)
-      addRes(
-          vipRepo,
-          "G-105",
-          Room.RoomType.STANDARD,
-          3800,
-          false,
-          now.minusMinutes(22)); // Bruce (Res 5)
-      addRes(
-          vipRepo,
-          "G-103",
-          Room.RoomType.STANDARD,
-          3600,
-          false,
-          now.minusMinutes(18)); // Sarah (Res 6)
-      addRes(
-          vipRepo,
-          "G-106",
-          Room.RoomType.STANDARD,
-          3400,
-          false,
-          now.minusMinutes(15)); // Charles (Res 5)
-      addRes(
-          vipRepo,
-          "G-105",
-          Room.RoomType.STANDARD,
-          3200,
-          false,
-          now.minusMinutes(12)); // Bruce (Res 6)
-      addRes(
-          vipRepo,
-          "G-104",
-          Room.RoomType.STANDARD,
-          3000,
-          false,
-          now.minusMinutes(9)); // Emma (Res 6)
-      addRes(
-          vipRepo,
-          "G-106",
-          Room.RoomType.STANDARD,
-          2800,
-          false,
-          now.minusMinutes(6)); // Charles (Res 6)
-      addRes(
-          vipRepo,
-          "G-105",
-          Room.RoomType.STANDARD,
-          2500,
-          false,
-          now.minusMinutes(2)); // Bruce (Res 7)
+      addRes(vipRepo, "G-101", Room.RoomType.STANDARD, 9000, true, now.minusMinutes(70));
+      addRes(vipRepo, "G-102", Room.RoomType.STANDARD, 8700, false, now.minusMinutes(65));
+      addRes(vipRepo, "G-103", Room.RoomType.STANDARD, 7900, true, now.minusMinutes(58));
+      addRes(vipRepo, "G-104", Room.RoomType.STANDARD, 7300, false, now.minusMinutes(55));
+      addRes(vipRepo, "G-101", Room.RoomType.STANDARD, 7100, false, now.minusMinutes(50));
+      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 5900, true, now.minusMinutes(48));
+      addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 5200, false, now.minusMinutes(44));
+      addRes(vipRepo, "G-102", Room.RoomType.STANDARD, 5000, false, now.minusMinutes(40));
+      addRes(vipRepo, "G-103", Room.RoomType.STANDARD, 4800, false, now.minusMinutes(36));
+      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 4500, true, now.minusMinutes(32));
+      addRes(vipRepo, "G-104", Room.RoomType.STANDARD, 4300, false, now.minusMinutes(28));
+      addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 4100, false, now.minusMinutes(25));
+      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 3800, false, now.minusMinutes(22));
+      addRes(vipRepo, "G-103", Room.RoomType.STANDARD, 3600, false, now.minusMinutes(18));
+      addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 3400, false, now.minusMinutes(15));
+      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 3200, false, now.minusMinutes(12));
+      addRes(vipRepo, "G-104", Room.RoomType.STANDARD, 3000, false, now.minusMinutes(9));
+      addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 2800, false, now.minusMinutes(6));
+      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 2500, false, now.minusMinutes(2));
 
       System.out.println("Mock database seeded successfully!");
-      System.out.println("  -> Luxury Queue   : 5 Reservations");
-      System.out.println("  -> Suite Queue    : 11 Reservations");
-      System.out.println("  -> Standard Queue : 19 Reservations");
     }
   }
 
