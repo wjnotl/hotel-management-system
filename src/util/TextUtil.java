@@ -1,6 +1,10 @@
 package util;
 
+import adt.LinkedList;
+import adt.ListInterface;
+
 public class TextUtil {
+
   // Truncates text with an ellipsis if it exceeds the limit
   public static String truncate(String text, int limit) {
     if (text == null) return "";
@@ -12,65 +16,68 @@ public class TextUtil {
     return text;
   }
 
-  public static String[] wrapText(String text, int width) {
+  public static ListInterface<String> wrapText(String text, int width) {
+    ListInterface<String> linesList = new LinkedList<>();
+
     // Safe check for null or empty strings
     if (text == null || text.isEmpty()) {
-      return new String[] {""};
+      linesList.add("");
+      return linesList;
     }
 
-    // If it is long word with no spaces, slice it directly
+    // If it is a long word with no spaces, chop it into LinkedList nodes
     if (!text.contains(" ") && text.length() > width) {
-      return chopWordWithNewlines(text, width).split("\n");
+      return chopWord(text, width);
     }
 
-    // If it is a normal sentence
+    // If it is a normal sentence, process word-by-word
     String[] words = text.split(" ");
-
-    String outputString = ""; // will be split (using \n) into an array at the end
-    String currentString = ""; // temp string that will be added to the output string
+    StringBuilder currentLine = new StringBuilder();
 
     for (String word : words) {
-      int spaceCost = (currentString.length() > 0) ? 1 : 0;
+      int spaceCost = (currentLine.length() > 0) ? 1 : 0;
 
-      // If adding this word > column width boundary
-      if (currentString.length() + word.length() + spaceCost > width) {
-
-        // Save the completed line to output string
-        if (currentString.length() > 0) {
-          outputString += currentString + "\n";
-          currentString = ""; // Clear for the next line
+      // If adding this word exceeds column width boundary
+      if (currentLine.length() + word.length() + spaceCost > width) {
+        if (currentLine.length() > 0) {
+          linesList.add(currentLine.toString());
+          currentLine.setLength(0); // Reset buffer
         }
 
-        // If a single word is wider than the column, chop it up
+        // If a single word is wider than the column, chop it up into linesList
         if (word.length() > width) {
-          outputString += chopWordWithNewlines(word, width) + "\n";
+          ListInterface<String> choppedWords = chopWord(word, width);
+          for (int i = 1; i <= choppedWords.getNumberOfEntries(); i++) {
+            linesList.add(choppedWords.getEntry(i));
+          }
           continue;
         }
       }
 
-      // Put the word onto the active line string
-      if (currentString.length() > 0) {
-        currentString += " ";
+      // Add word to active line buffer
+      if (currentLine.length() > 0) {
+        currentLine.append(" ");
       }
-      currentString += word;
+      currentLine.append(word);
     }
 
-    // Grab any trailing text left over
-    if (currentString.length() > 0) {
-      outputString += currentString;
+    // Append remaining text left over
+    if (currentLine.length() > 0) {
+      linesList.add(currentLine.toString());
     }
 
-    // split to return array
-    return outputString.split("\n");
+    return linesList;
   }
 
-  private static String chopWordWithNewlines(String word, int width) {
-    String chopped = "";
+  private static ListInterface<String> chopWord(String word, int width) {
+    ListInterface<String> choppedList = new LinkedList<>();
     while (word.length() > width) {
-      chopped += word.substring(0, width) + "\n";
+      choppedList.add(word.substring(0, width));
       word = word.substring(width);
     }
-    chopped += word; // Add those remaining characters
-    return chopped;
+    if (!word.isEmpty()) {
+      choppedList.add(word); // Remaining characters
+    }
+    return choppedList;
   }
 }

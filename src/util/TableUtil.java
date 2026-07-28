@@ -1,5 +1,7 @@
 package util;
 
+import adt.ListInterface;
+
 public class TableUtil {
 
   // Alignment Enums
@@ -89,7 +91,7 @@ public class TableUtil {
     }
   }
 
-  // --- ALL BORDER POSITIONS & TRANSITIONS ---
+  // Border Position Enums
   public enum BorderPosition {
     TOP, // ╔ ╦ ╗ - Top row border
     MIDDLE, // ╠ ╬ ╣ - Standard row separator
@@ -141,8 +143,9 @@ public class TableUtil {
     System.out.println();
   }
 
+  @SuppressWarnings("unchecked")
   public static void printTableRow(String[] columns, TableSettings settings) {
-    String[][] processedCellLines = new String[columns.length][];
+    ListInterface<String>[] processedCellLines = new ListInterface[columns.length];
     int maxLinesRequired = 0;
 
     for (int i = 0; i < columns.length; i++) {
@@ -152,19 +155,21 @@ public class TableUtil {
       int width = settings.colWidths[i];
       int customLimit = settings.customOverflowLimits[i];
 
-      String[] lines;
+      ListInterface<String> lines;
       if (mode == OverflowMode.TRUNCATE) {
-        lines = new String[] {TextUtil.truncate(text, width)};
+        lines = new adt.LinkedList<>();
+        lines.add(TextUtil.truncate(text, width));
       } else if (mode == OverflowMode.TRUNCATE_AT) {
-        lines = new String[] {TextUtil.truncate(text, customLimit)};
+        lines = new adt.LinkedList<>();
+        lines.add(TextUtil.truncate(text, customLimit));
       } else {
         lines = TextUtil.wrapText(text, width);
       }
 
       processedCellLines[i] = lines;
 
-      if (lines.length > maxLinesRequired) {
-        maxLinesRequired = lines.length;
+      if (lines.getNumberOfEntries() > maxLinesRequired) {
+        maxLinesRequired = lines.getNumberOfEntries();
       }
     }
 
@@ -172,8 +177,8 @@ public class TableUtil {
       for (int colIndex = 0; colIndex < columns.length; colIndex++) {
         System.out.print("║");
 
-        String[] colLines = processedCellLines[colIndex];
-        int totalLinesInCell = colLines.length;
+        ListInterface<String> colLines = processedCellLines[colIndex];
+        int totalLinesInCell = (colLines != null) ? colLines.getNumberOfEntries() : 0;
 
         int totalWidth = settings.colWidths[colIndex];
         int printableWidth = totalWidth - 2;
@@ -185,19 +190,25 @@ public class TableUtil {
 
         int totalBlankLines = maxLinesRequired - totalLinesInCell;
         if (vAlign == VAlign.BOTTOM) {
-          if (lineIndex >= totalBlankLines) {
-            cellText = colLines[lineIndex - totalBlankLines];
+          if (lineIndex >= totalBlankLines && colLines != null) {
+            cellText = colLines.getEntry(lineIndex - totalBlankLines + 1);
           }
         } else if (vAlign == VAlign.CENTER) {
           int blankLinesBefore = totalBlankLines / 2;
           int blankLinesAfter = totalBlankLines - blankLinesBefore;
-          if (lineIndex >= blankLinesBefore && lineIndex < (maxLinesRequired - blankLinesAfter)) {
-            cellText = colLines[lineIndex - blankLinesBefore];
+          if (lineIndex >= blankLinesBefore
+              && lineIndex < (maxLinesRequired - blankLinesAfter)
+              && colLines != null) {
+            cellText = colLines.getEntry(lineIndex - blankLinesBefore + 1);
           }
         } else {
-          if (lineIndex < totalLinesInCell) {
-            cellText = colLines[lineIndex];
+          if (lineIndex < totalLinesInCell && colLines != null) {
+            cellText = colLines.getEntry(lineIndex + 1);
           }
+        }
+
+        if (cellText == null) {
+          cellText = "";
         }
 
         if (cellText.length() > printableWidth) {
