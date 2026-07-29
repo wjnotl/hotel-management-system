@@ -58,8 +58,7 @@ public class HouseKeepingController {
 
         // 2. Filter & Sort
         ListInterface<HousekeepingTask> filteredList =
-            filterAndSortList(
-                orderedList, searchQuery, taskTypeFilter, statusFilter, displayOrder);
+            filterAndSortList(orderedList, searchQuery, taskTypeFilter, statusFilter, displayOrder);
 
         // 3. Render Task Board Screen
         ConsoleUtil.GetMenuInputResult result =
@@ -179,11 +178,7 @@ public class HouseKeepingController {
         ConsoleUtil.clearScreen();
         System.out.println(" >> STATUS: [\u2713] SUCCESS");
         System.out.println(
-            " Next task dequeued: "
-                + top.getTaskId()
-                + " (Room "
-                + top.getRoomNumber()
-                + ")\n");
+            " Next task dequeued: " + top.getTaskId() + " (Room " + top.getRoomNumber() + ")\n");
         ConsoleUtil.printContinueMessage();
       } else {
         ConsoleUtil.printError("Task board is currently empty!");

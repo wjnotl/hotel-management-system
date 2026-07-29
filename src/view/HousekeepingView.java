@@ -39,8 +39,10 @@ public class HousekeepingView {
     // Banner Metadata
     System.out.println(
         " SEARCH QUERY   : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
-    System.out.println(" TASK TYPE      : [ " + (taskTypeFilter == null ? "ALL" : taskTypeFilter) + " ]");
-    System.out.println(" STATUS FILTER  : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
+    System.out.println(
+        " TASK TYPE      : [ " + (taskTypeFilter == null ? "ALL" : taskTypeFilter) + " ]");
+    System.out.println(
+        " STATUS FILTER  : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
     System.out.println(" DISPLAY ORDER  : [ " + displayOrder + " ]");
     System.out.println("------------------------------------------------------");
 
@@ -177,7 +179,9 @@ public class HousekeepingView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH QUERY SUBMENU");
     System.out.println(
-        " Current Query: [ " + (currentQuery == null ? "None" : "\"" + currentQuery + "\"") + " ]\n");
+        " Current Query: [ "
+            + (currentQuery == null ? "None" : "\"" + currentQuery + "\"")
+            + " ]\n");
     System.out.println(" 1. Enter / Change Search Term");
     System.out.println(" 2. Clear Search Term");
     System.out.println(" 3. Back to Filter Management\n");
