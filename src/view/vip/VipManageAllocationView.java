@@ -56,8 +56,7 @@ public class VipManageAllocationView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"NO.", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"},
-        headerSettings);
+        new String[] {"NO.", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"}, headerSettings);
 
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
