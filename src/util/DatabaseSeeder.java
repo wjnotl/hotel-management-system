@@ -1,10 +1,13 @@
 package util;
 
+import entity.Billing;
 import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import entity.Room;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import repo.BillingRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
@@ -13,12 +16,19 @@ import repo.VipReservationRepo;
 public class DatabaseSeeder {
 
   private static int resCounter = 10001;
+  private static int billingCounter = 1001;
+
+  // Representative nightly rates (RM) used only for seeding sample billing data.
+  private static final double LUXURY_RATE = 850.00;
+  private static final double SUITE_RATE = 550.00;
+  private static final double STANDARD_RATE = 250.00;
 
   public static void seedIfEmpty() {
     GuestRepo guestRepo = new GuestRepo();
     MemberRepo memberRepo = new MemberRepo();
     RoomRepo roomRepo = new RoomRepo();
     VipReservationRepo vipRepo = new VipReservationRepo();
+    BillingRepo billingRepo = new BillingRepo();
 
     if (guestRepo.getGuestList().isEmpty()) {
       System.out.println("Seeding expanded mock database...");
@@ -127,20 +137,28 @@ public class DatabaseSeeder {
       LocalDateTime now = LocalDateTime.now();
 
       // --- LUXURY QUEUE (5 Reservations) ---
-      addRes(vipRepo, "G-101", Room.RoomType.LUXURY, 9500, true, now.minusMinutes(50));
-      addRes(vipRepo, "G-102", Room.RoomType.LUXURY, 9100, false, now.minusMinutes(40));
+      Reservation res101Luxury =
+          addRes(vipRepo, "G-101", Room.RoomType.LUXURY, 9500, true, now.minusMinutes(50));
+      Reservation res102Luxury =
+          addRes(vipRepo, "G-102", Room.RoomType.LUXURY, 9100, false, now.minusMinutes(40));
       addRes(vipRepo, "G-101", Room.RoomType.LUXURY, 8800, true, now.minusMinutes(35));
-      addRes(vipRepo, "G-103", Room.RoomType.LUXURY, 7600, false, now.minusMinutes(25));
+      Reservation res103Luxury =
+          addRes(vipRepo, "G-103", Room.RoomType.LUXURY, 7600, false, now.minusMinutes(25));
       addRes(vipRepo, "G-104", Room.RoomType.LUXURY, 7100, false, now.minusMinutes(15));
 
       // --- SUITE QUEUE (11 Reservations) ---
-      addRes(vipRepo, "G-102", Room.RoomType.SUITE, 9300, true, now.minusMinutes(60));
-      addRes(vipRepo, "G-101", Room.RoomType.SUITE, 8900, false, now.minusMinutes(45));
+      Reservation res101Suite =
+          addRes(vipRepo, "G-101", Room.RoomType.SUITE, 8900, false, now.minusMinutes(45));
+      Reservation res102Suite =
+          addRes(vipRepo, "G-102", Room.RoomType.SUITE, 9300, true, now.minusMinutes(60));
       addRes(vipRepo, "G-103", Room.RoomType.SUITE, 7800, true, now.minusMinutes(42));
-      addRes(vipRepo, "G-104", Room.RoomType.SUITE, 7400, false, now.minusMinutes(38));
+      Reservation res104Suite =
+          addRes(vipRepo, "G-104", Room.RoomType.SUITE, 7400, false, now.minusMinutes(38));
       addRes(vipRepo, "G-102", Room.RoomType.SUITE, 7200, false, now.minusMinutes(30));
-      addRes(vipRepo, "G-105", Room.RoomType.SUITE, 5800, true, now.minusMinutes(28));
-      addRes(vipRepo, "G-106", Room.RoomType.SUITE, 4900, false, now.minusMinutes(25));
+      Reservation res105Suite =
+          addRes(vipRepo, "G-105", Room.RoomType.SUITE, 5800, true, now.minusMinutes(28));
+      Reservation res106Suite =
+          addRes(vipRepo, "G-106", Room.RoomType.SUITE, 4900, false, now.minusMinutes(25));
       addRes(vipRepo, "G-103", Room.RoomType.SUITE, 4600, false, now.minusMinutes(20));
       addRes(vipRepo, "G-105", Room.RoomType.SUITE, 4300, false, now.minusMinutes(18));
       addRes(vipRepo, "G-106", Room.RoomType.SUITE, 4100, false, now.minusMinutes(12));
@@ -148,11 +166,13 @@ public class DatabaseSeeder {
 
       // --- STANDARD QUEUE (19 Reservations) ---
       addRes(vipRepo, "G-101", Room.RoomType.STANDARD, 9000, true, now.minusMinutes(70));
-      addRes(vipRepo, "G-102", Room.RoomType.STANDARD, 8700, false, now.minusMinutes(65));
+      Reservation res102Standard =
+          addRes(vipRepo, "G-102", Room.RoomType.STANDARD, 8700, false, now.minusMinutes(65));
       addRes(vipRepo, "G-103", Room.RoomType.STANDARD, 7900, true, now.minusMinutes(58));
       addRes(vipRepo, "G-104", Room.RoomType.STANDARD, 7300, false, now.minusMinutes(55));
       addRes(vipRepo, "G-101", Room.RoomType.STANDARD, 7100, false, now.minusMinutes(50));
-      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 5900, true, now.minusMinutes(48));
+      Reservation res105Standard =
+          addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 5900, true, now.minusMinutes(48));
       addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 5200, false, now.minusMinutes(44));
       addRes(vipRepo, "G-102", Room.RoomType.STANDARD, 5000, false, now.minusMinutes(40));
       addRes(vipRepo, "G-103", Room.RoomType.STANDARD, 4800, false, now.minusMinutes(36));
@@ -167,11 +187,137 @@ public class DatabaseSeeder {
       addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 2800, false, now.minusMinutes(6));
       addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 2500, false, now.minusMinutes(2));
 
+      // ==========================================
+      // 5. SEED BILLING / STAY HISTORY
+      // (Sample front-desk data - each record represents one completed or
+      // in-progress stay: a room assignment + check-in/out dates + charges.
+      // This is what the Guest Information module reads for booking/room/
+      // billing details, since AllocationRepo only tracks *active, unexpired*
+      // room holds and cannot be used to reconstruct past stays.)
+      // ==========================================
+      LocalDate today = LocalDate.now();
+
+      addBilling(
+          billingRepo,
+          "G-101",
+          res101Luxury,
+          "L-801",
+          Room.RoomType.LUXURY,
+          today.minusDays(10),
+          today.minusDays(7),
+          LUXURY_RATE,
+          Billing.Status.PAID,
+          now.minusDays(10));
+      addBilling(
+          billingRepo,
+          "G-101",
+          res101Suite,
+          "S-501",
+          Room.RoomType.SUITE,
+          today.minusDays(2),
+          today.plusDays(1),
+          SUITE_RATE,
+          Billing.Status.UNPAID,
+          now.minusDays(2));
+      addBilling(
+          billingRepo,
+          "G-102",
+          res102Suite,
+          "S-502",
+          Room.RoomType.SUITE,
+          today.minusDays(2),
+          today.plusDays(1),
+          SUITE_RATE,
+          Billing.Status.UNPAID,
+          now.minusDays(2));
+
+      addBilling(
+          billingRepo,
+          "G-102",
+          res102Luxury,
+          "L-802",
+          Room.RoomType.LUXURY,
+          today.minusDays(20),
+          today.minusDays(18),
+          LUXURY_RATE,
+          Billing.Status.PAID,
+          now.minusDays(20));
+      addBilling(
+          billingRepo,
+          "G-102",
+          res102Standard,
+          "ST-101",
+          Room.RoomType.STANDARD,
+          today.minusDays(5),
+          today.minusDays(3),
+          STANDARD_RATE,
+          Billing.Status.PAID,
+          now.minusDays(5));
+
+      addBilling(
+          billingRepo,
+          "G-103",
+          res103Luxury,
+          "S-502",
+          Room.RoomType.SUITE,
+          today.minusDays(15),
+          today.minusDays(12),
+          SUITE_RATE,
+          Billing.Status.PAID,
+          now.minusDays(15));
+
+      addBilling(
+          billingRepo,
+          "G-104",
+          res104Suite,
+          "ST-102",
+          Room.RoomType.STANDARD,
+          today.minusDays(6),
+          today.minusDays(4),
+          STANDARD_RATE,
+          Billing.Status.UNPAID,
+          now.minusDays(6));
+
+      addBilling(
+          billingRepo,
+          "G-105",
+          res105Suite,
+          "L-801",
+          Room.RoomType.LUXURY,
+          today.minusDays(30),
+          today.minusDays(27),
+          LUXURY_RATE,
+          Billing.Status.PAID,
+          now.minusDays(30));
+      addBilling(
+          billingRepo,
+          "G-105",
+          res105Standard,
+          "S-501",
+          Room.RoomType.SUITE,
+          today.minusDays(1),
+          today.plusDays(2),
+          SUITE_RATE,
+          Billing.Status.UNPAID,
+          now.minusDays(1));
+
+      addBilling(
+          billingRepo,
+          "G-106",
+          res106Suite,
+          "ST-101",
+          Room.RoomType.STANDARD,
+          today.minusDays(9),
+          today.minusDays(7),
+          STANDARD_RATE,
+          Billing.Status.PAID,
+          now.minusDays(9));
+
       System.out.println("Mock database seeded successfully!");
     }
   }
 
-  private static void addRes(
+  private static Reservation addRes(
       VipReservationRepo repo,
       String guestId,
       Room.RoomType roomType,
@@ -194,5 +340,36 @@ public class DatabaseSeeder {
             arrivalTime);
 
     repo.addReservation(r, priorityScore);
+    return r;
+  }
+
+  private static void addBilling(
+      BillingRepo repo,
+      String guestId,
+      Reservation reservation,
+      String roomNumber,
+      Room.RoomType roomType,
+      LocalDate checkInDate,
+      LocalDate checkOutDate,
+      double ratePerNight,
+      Billing.Status status,
+      LocalDateTime createdAt) {
+
+    String billingId = "BILL-" + (billingCounter++);
+
+    Billing billing =
+        new Billing(
+            billingId,
+            guestId,
+            (reservation != null) ? reservation.getReservationId() : null,
+            roomNumber,
+            roomType,
+            checkInDate,
+            checkOutDate,
+            ratePerNight,
+            status,
+            createdAt);
+
+    repo.addBilling(billing);
   }
 }

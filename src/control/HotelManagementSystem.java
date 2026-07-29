@@ -1,5 +1,6 @@
 package control;
 
+import control.frontdesk.FrontDeskController;
 import control.vip.VipController;
 import util.ConsoleUtil;
 import util.DatabaseSeeder;
@@ -22,6 +23,8 @@ public class HotelManagementSystem {
 
         if ("2".equals(choice)) {
           new VipController().start();
+        } else if ("4".equals(choice)) {
+          new FrontDeskController().start();
         } else if ("5".equals(choice)) {
           if (ConsoleUtil.showConfirmMessage("Are you sure you want to exit?")) {
             mainMenuView.displayExitMessage();
