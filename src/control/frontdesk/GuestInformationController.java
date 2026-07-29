@@ -20,7 +20,7 @@ public class GuestInformationController {
   private final VipReservationRepo reservationRepo = new VipReservationRepo();
   private final BillingRepo billingRepo = new BillingRepo();
 
-    public void start() {
+  public void start() {
     while (true) {
       try {
         String rawId = frontDeskView.promptGuestIdInput();

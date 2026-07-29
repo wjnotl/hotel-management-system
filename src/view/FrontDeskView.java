@@ -46,7 +46,8 @@ public class FrontDeskView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
-  public void displayGuestDetails(Guest guest, Reservation latestReservation, Billing latestBilling) {
+  public void displayGuestDetails(
+      Guest guest, Reservation latestReservation, Billing latestBilling) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST DETAILS", 98);
 
@@ -63,19 +64,15 @@ public class FrontDeskView {
             .setHAlign(6, TableUtil.Align.LEFT)
             .setHAlign(7, TableUtil.Align.LEFT);
 
-    String bookingId =
-        (latestReservation != null) ? latestReservation.getReservationId() : "N/A";
+    String bookingId = (latestReservation != null) ? latestReservation.getReservationId() : "N/A";
     String roomNo = (latestBilling != null) ? latestBilling.getRoomNumber() : "N/A";
     String roomType =
         (latestBilling != null && latestBilling.getRoomType() != null)
             ? latestBilling.getRoomType().name()
             : "N/A";
-    String checkIn =
-        (latestBilling != null) ? formatDate(latestBilling.getCheckInDate()) : "N/A";
-    String checkOut =
-        (latestBilling != null) ? formatDate(latestBilling.getCheckOutDate()) : "N/A";
-    String billingStatus =
-        (latestBilling != null) ? latestBilling.getStatus().name() : "N/A";
+    String checkIn = (latestBilling != null) ? formatDate(latestBilling.getCheckInDate()) : "N/A";
+    String checkOut = (latestBilling != null) ? formatDate(latestBilling.getCheckOutDate()) : "N/A";
+    String billingStatus = (latestBilling != null) ? latestBilling.getStatus().name() : "N/A";
 
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
@@ -87,8 +84,14 @@ public class FrontDeskView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          guest.getGuestId(), guest.getName(), bookingId, roomNo,
-          roomType, checkIn, checkOut, billingStatus
+          guest.getGuestId(),
+          guest.getName(),
+          bookingId,
+          roomNo,
+          roomType,
+          checkIn,
+          checkOut,
+          billingStatus
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
@@ -159,7 +162,9 @@ public class FrontDeskView {
 
     System.out.println("\nSelect a Billing record number to view its receipt, or 'C' to cancel.\n");
 
-    return ConsoleUtil.getMenuInput("Enter Billing No or 'C' to cancel: ", 1, total, new char[] {'C'}).input;
+    return ConsoleUtil.getMenuInput(
+            "Enter Billing No or 'C' to cancel: ", 1, total, new char[] {'C'})
+        .input;
   }
 
   public void displayReceipt(Guest guest, Billing billing) {

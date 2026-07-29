@@ -2,6 +2,7 @@ package control.frontdesk;
 
 import util.ConsoleUtil;
 import view.FrontDeskView;
+
 public class FrontDeskController {
   private final FrontDeskView frontDeskView = new FrontDeskView();
   private final GuestInformationController GuestInfoController = new GuestInformationController();
@@ -22,4 +23,3 @@ public class FrontDeskController {
     }
   }
 }
-
