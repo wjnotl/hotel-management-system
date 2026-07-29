@@ -1,6 +1,7 @@
 package control;
 
 import control.frontdesk.FrontDeskController;
+import control.housekeeping.HouseKeepingController;
 import control.vip.VipController;
 import util.ConsoleUtil;
 import util.DatabaseSeeder;
@@ -23,6 +24,8 @@ public class HotelManagementSystem {
 
         if ("2".equals(choice)) {
           new VipController().start();
+        } else if ("3".equals(choice)) {
+          new HouseKeepingController().start();
         } else if ("4".equals(choice)) {
           new FrontDeskController().start();
         } else if ("5".equals(choice)) {
