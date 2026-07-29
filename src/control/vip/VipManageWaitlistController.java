@@ -19,34 +19,19 @@ import view.VipView;
 
 public class VipManageWaitlistController {
 
-  private final VipView vipView;
-  private final VipReservationRepo vipReservationRepo;
-  private final GuestRepo guestRepo;
-  private final MemberRepo memberRepo;
-  private final RoomRepo roomRepo;
-  private final AllocationRepo allocationRepo;
-
-  public VipManageWaitlistController(
-      VipView vipView,
-      VipReservationRepo vipReservationRepo,
-      GuestRepo guestRepo,
-      MemberRepo memberRepo,
-      RoomRepo roomRepo,
-      AllocationRepo allocationRepo) {
-    this.vipView = vipView;
-    this.vipReservationRepo = vipReservationRepo;
-    this.guestRepo = guestRepo;
-    this.memberRepo = memberRepo;
-    this.roomRepo = roomRepo;
-    this.allocationRepo = allocationRepo;
-  }
+  private final VipView vipView = new VipView();
+  private final VipReservationRepo vipReservationRepo = new VipReservationRepo();
+  private final GuestRepo guestRepo = new GuestRepo();
+  private final MemberRepo memberRepo = new MemberRepo();
+  private final RoomRepo roomRepo = new RoomRepo();
+  private final AllocationRepo allocationRepo = new AllocationRepo();
 
   public void startWaitlistManagement() {
     while (true) {
       try {
         Room.RoomType selectedRoomQueue = vipView.displayWaitlistQueueSelectionMenu();
         if (selectedRoomQueue == null) {
-          return; // Return to VIP Main Menu
+          return;
         }
 
         manageSpecificQueue(selectedRoomQueue);
@@ -131,73 +116,62 @@ public class VipManageWaitlistController {
       try {
         String inputId = vipView.promptAddGuestInput();
         if (inputId == null || inputId.trim().isEmpty() || "C".equalsIgnoreCase(inputId.trim())) {
-          return; // Cancelled
+          return;
         }
 
         String searchId = inputId.trim();
 
-        // 1. Search Guest directly using GuestRepo
         Guest guest = guestRepo.findById(searchId);
         if (guest == null) {
           guest = findGuestByName(guestRepo.getGuestList(), searchId);
         }
 
-        // EDGE CASE A: Guest Not Found in Database
         if (guest == null) {
           vipView.displayGuestNotFoundErrorScreen(searchId);
-          continue; // Re-prompt
+          continue;
         }
 
-        // 2. Fetch linked Member details from MemberRepo
         Member member =
             (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
 
-        // EDGE CASE B: Max Strike Limit Exceeded (3 or more strikes)
         if (guest.getStrikeCount() >= 3) {
           int choice = vipView.displayMaxStrikeWarningScreen(guest, member);
 
           if (choice == 1) {
-            // Authorize Override: Reset strikes to 0 and persist change
             guest.setStrikeCount(0);
-            guestRepo.addGuest(guest); // Re-add to trigger file save
+            guestRepo.addGuest(guest);
             ConsoleUtil.clearScreen();
             System.out.println(
                 ">> OVERRIDE AUTHORIZED: Strike count reset to 0 for " + guest.getName() + ".\n");
             ConsoleUtil.printContinueMessage();
           } else if (choice == 2) {
-            // Enforce Lockout: Deny waitlist check-in
             ConsoleUtil.printError("Eviction lockout enforced. Guest entry denied.");
             return;
           } else {
-            return; // Exit back to queue menu
+            return;
           }
         }
 
-        // EDGE CASE C: Unassigned / Null Membership Tier
         if (member == null || member.getTier() == null) {
           boolean proceed = vipView.displayUnassignedTierWarningScreen(guest);
           if (!proceed) {
-            continue; // Staff selected 'N'
+            continue;
           }
         }
 
-        // 3. Dynamic Priority Score Calculation
         int baseScore = calculateDynamicPriorityScore(guest, member);
 
-        // 4. Display Full Guest & Loyalty Details Preview Confirmation Screen
         boolean confirmed =
             vipView.displayAddGuestConfirmationScreen(guest, member, roomType, baseScore);
         if (!confirmed) {
-          continue; // Staff selected 'N'
+          continue;
         }
 
-        // 5. Generate Dynamic Guaranteed Unique Identifiers
         String resId = generateUniqueReservationId();
         String confNum = generateUniqueConfirmationNumber();
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 6. Create & Persist Reservation Entity
         Reservation newRes =
             new Reservation(
                 resId,
@@ -269,7 +243,6 @@ public class VipManageWaitlistController {
     Reservation selected = list.getEntry(actualIndex);
     if (selected == null) return;
 
-    // Persistent Submenu Loop
     while (true) {
       try {
         int action = vipView.displayGuestActionSubmenu(selected);
@@ -277,9 +250,8 @@ public class VipManageWaitlistController {
         if (action == 1) {
           boolean completed = processGuestDequeue(selected, roomType);
           if (completed) {
-            break; // Operation completed -> Exit submenu to main table
+            break;
           }
-          // Chosen 'N' on confirmation -> Stay inside guest action submenu!
         } else if (action == 2) {
           Guest g = guestRepo.findById(selected.getGuestId());
           Member m =
@@ -296,11 +268,10 @@ public class VipManageWaitlistController {
                     + selected.getReservationId()
                     + " has been removed from the waitlist.\n");
             ConsoleUtil.printContinueMessage();
-            break; // Removed -> Exit submenu to main table
+            break;
           }
-          // Chosen 'N' on cancel confirmation -> Stay inside guest action submenu!
         } else if (action == 3) {
-          break; // Exit submenu to main table
+          break;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -309,24 +280,21 @@ public class VipManageWaitlistController {
   }
 
   private boolean processGuestDequeue(Reservation reservation, Room.RoomType roomType) {
-    // 1. Query RoomRepo for a real VACANT & CLEAN room matching requested RoomType
     Room vacantRoom = roomRepo.findVacantCleanRoom(roomType);
     if (vacantRoom == null) {
       ConsoleUtil.printError(
           "No VACANT & CLEAN " + roomType.name() + " rooms available for allocation!");
-      return false; // Stay inside guest action submenu!
+      return false;
     }
 
     Guest g = guestRepo.findById(reservation.getGuestId());
     Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
-    // 2. Full Details Confirmation Screen
     boolean confirmed = vipView.displayDequeueConfirmationScreen(reservation, g, m, vacantRoom);
     if (!confirmed) {
-      return false; // Selected 'N' -> Stay inside guest action submenu!
+      return false;
     }
 
-    // 3. Create Real AllocationEntry (15 Minute Hold Expiration)
     long holdDurationMs = 15 * 60 * 1000L;
     AllocationEntry entry =
         new AllocationEntry(
@@ -336,12 +304,10 @@ public class VipManageWaitlistController {
 
     allocationRepo.addAllocationEntry(entry);
 
-    // 4. Update Room and Reservation Entities Real-Time State
     vacantRoom.setStatus(Room.Status.OCCUPIED);
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
     reservation.setStatus(Reservation.Status.ALLOCATED);
 
-    // Remove from active queue
     vipReservationRepo.cancelReservation(reservation);
     int remainingCount = vipReservationRepo.getListByRoomType(roomType).getNumberOfEntries();
 
@@ -396,7 +362,7 @@ public class VipManageWaitlistController {
 
   private int calculateDynamicPriorityScore(Guest guest, Member member) {
     if (member == null || member.getTier() == null) {
-      return 1000; // Base non-member score
+      return 1000;
     }
 
     int tierBase;
