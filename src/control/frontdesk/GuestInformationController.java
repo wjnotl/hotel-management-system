@@ -122,12 +122,6 @@ public class GuestInformationController {
   }
 
   // --- STACK-BASED HISTORY BUILDERS (NEW -> OLD) ---
-  //
-  // Both histories are built the same way: collect the guest's matching records,
-  // sort them oldest-first, then PUSH them onto a Stack ADT in that order. Because
-  // a stack is LIFO, the most recently pushed (i.e. most recent) record ends up on
-  // top. Popping the stack until it is empty then naturally yields the records in
-  // newest-to-oldest order, which is what the front desk view displays.
 
   private ListInterface<Billing> getGuestBillingHistoryNewToOld(String guestId) {
     ListInterface<Billing> matches = billingRepo.findByGuestId(guestId);
