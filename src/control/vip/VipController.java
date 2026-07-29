@@ -5,7 +5,6 @@ import view.VipView;
 
 public class VipController {
   private final VipView vipView = new VipView();
-  private final VipManageWaitlistController waitlistController = new VipManageWaitlistController();
 
   public void start() {
     while (true) {
@@ -13,7 +12,9 @@ public class VipController {
         String choice = vipView.displayMenu();
 
         if ("1".equals(choice)) {
-          waitlistController.startWaitlistManagement();
+          new VipManageWaitlistController().startWaitlistManagement();
+        } else if ("2".equals(choice)) {
+          new VipManageAllocationController().startAllocationManagement();
         } else if ("5".equals(choice)) {
           return;
         }

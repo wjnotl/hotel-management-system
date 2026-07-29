@@ -26,12 +26,33 @@ public class MemberRepo {
   }
 
   public void addMember(Member member) {
+    if (member == null) return;
     memberList.add(member);
     save();
   }
 
+  public boolean updateMember(Member updatedMember) {
+    if (updatedMember == null || memberList == null) return false;
+
+    for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
+      Member existing = memberList.getEntry(i);
+      if (existing != null && existing.equals(updatedMember)) {
+        memberList.replace(i, updatedMember);
+        save();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public void addOrUpdateMember(Member member) {
+    if (!updateMember(member)) {
+      addMember(member);
+    }
+  }
+
   public Member findById(String memberId) {
-    if (memberId == null) return null;
+    if (memberId == null || memberList == null) return null;
     for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
       Member m = memberList.getEntry(i);
       if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) {

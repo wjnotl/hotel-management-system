@@ -14,7 +14,7 @@ public class AllocationRepo {
     load();
   }
 
-  private void load() {
+  public void load() {
     this.allocationList = fileUtil.retrieveFromFile();
     if (this.allocationList == null) {
       this.allocationList = new ArrayList<>();
@@ -26,10 +26,9 @@ public class AllocationRepo {
   }
 
   public void addAllocationEntry(AllocationEntry entry) {
-    if (entry != null) {
-      allocationList.add(entry);
-      save();
-    }
+    if (entry == null) return;
+    allocationList.add(entry);
+    save();
   }
 
   public boolean removeAllocationEntry(AllocationEntry entry) {
@@ -46,38 +45,8 @@ public class AllocationRepo {
     return false;
   }
 
-  public AllocationEntry findByConfirmationNumber(String confNum) {
-    if (confNum == null || allocationList == null) return null;
-    for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
-      AllocationEntry entry = allocationList.getEntry(i);
-      if (entry != null && confNum.equalsIgnoreCase(entry.getReservationConfirmationNumber())) {
-        return entry;
-      }
-    }
-    return null;
-  }
-
   public ListInterface<AllocationEntry> getAllocationList() {
-    // Automatically clean expired entries whenever accessed
-    cleanExpiredEntries();
+    load(); // Always fetch fresh disk state
     return allocationList;
-  }
-
-  public void cleanExpiredEntries() {
-    if (allocationList == null) return;
-    long currentMs = System.currentTimeMillis();
-    boolean changed = false;
-
-    for (int i = allocationList.getNumberOfEntries(); i >= 1; i--) {
-      AllocationEntry entry = allocationList.getEntry(i);
-      if (entry != null && currentMs > entry.getExpirationTimestamp()) {
-        allocationList.removeAt(i);
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      save();
-    }
   }
 }
