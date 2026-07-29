@@ -139,7 +139,7 @@ public class VipManageWaitlistController {
 
           if (choice == 1) {
             guest.setStrikeCount(0);
-            guestRepo.addGuest(guest);
+            guestRepo.updateGuest(guest);
             ConsoleUtil.clearScreen();
             System.out.println(
                 ">> OVERRIDE AUTHORIZED: Strike count reset to 0 for " + guest.getName() + ".\n");
@@ -298,7 +298,7 @@ public class VipManageWaitlistController {
     long holdDurationMs = 15 * 60 * 1000L;
     AllocationEntry entry =
         new AllocationEntry(
-            reservation.getConfirmationNumber(),
+            reservation.getReservationId(),
             vacantRoom.getRoomNumber(),
             System.currentTimeMillis() + holdDurationMs);
 
@@ -306,7 +306,10 @@ public class VipManageWaitlistController {
 
     vacantRoom.setStatus(Room.Status.OCCUPIED);
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
+    roomRepo.updateRoom(vacantRoom);
+
     reservation.setStatus(Reservation.Status.ALLOCATED);
+    vipReservationRepo.updateReservation(reservation);
 
     vipReservationRepo.cancelReservation(reservation);
     int remainingCount = vipReservationRepo.getListByRoomType(roomType).getNumberOfEntries();

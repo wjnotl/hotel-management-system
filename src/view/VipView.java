@@ -432,7 +432,7 @@ public class VipView {
     TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Confirmation Code", entry.getReservationConfirmationNumber()}, kvSettings);
+        new String[] {"Confirmation Code", r.getConfirmationNumber()}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);

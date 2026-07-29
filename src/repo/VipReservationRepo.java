@@ -33,27 +33,22 @@ public class VipReservationRepo {
       this.masterList = new ArrayList<>(25, true);
     }
 
-    // Initialize 3 separate lists
     this.luxuryList = new ArrayList<>();
     this.suiteList = new ArrayList<>();
     this.standardList = new ArrayList<>();
 
-    // Initialize 3 separate max heaps
     this.luxuryHeap = new BinaryHeapPriorityQueue<>(true);
     this.suiteHeap = new BinaryHeapPriorityQueue<>(true);
     this.standardHeap = new BinaryHeapPriorityQueue<>(true);
 
-    // Populate dedicated lists and heaps from master storage
     for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
       Reservation r = masterList.getEntry(i);
-      if (r != null && r.getRoomType() != null) {
+      if (r != null && r.getRoomType() != null && r.getStatus() == Reservation.Status.WAITING) {
         getListByRoomType(r.getRoomType()).add(r);
         getHeapByRoomType(r.getRoomType()).enqueue(r, r.getPriorityScore());
       }
     }
   }
-
-  // --- ROOM QUEUE HELPER RESOLVERS ---
 
   public ListInterface<Reservation> getListByRoomType(Room.RoomType roomType) {
     if (roomType == Room.RoomType.LUXURY) return luxuryList;
@@ -71,45 +66,62 @@ public class VipReservationRepo {
     fileUtil.saveToFile(masterList);
   }
 
-  // --- CRUD OPERATIONS ---
-
   public void addReservation(Reservation reservation, int priority) {
     if (reservation == null || reservation.getRoomType() == null) return;
 
-    masterList.add(reservation);
-    getListByRoomType(reservation.getRoomType()).add(reservation);
-    getHeapByRoomType(reservation.getRoomType()).enqueue(reservation, priority);
+    if (!masterList.contains(reservation)) {
+      masterList.add(reservation);
+    } else {
+      updateReservation(reservation);
+    }
+
+    if (reservation.getStatus() == Reservation.Status.WAITING) {
+      getListByRoomType(reservation.getRoomType()).add(reservation);
+      getHeapByRoomType(reservation.getRoomType()).enqueue(reservation, priority);
+    }
 
     save();
   }
 
-  public Reservation dequeueNextVip(Room.RoomType roomType) {
-    PriorityQueueInterface<Reservation> heap = getHeapByRoomType(roomType);
-    ListInterface<Reservation> list = getListByRoomType(roomType);
+  public boolean updateReservation(Reservation updatedRes) {
+    if (updatedRes == null || masterList == null) return false;
 
-    Reservation top = heap.dequeue();
-
-    if (top != null) {
-      masterList.remove(top);
-      list.remove(top);
-      save();
+    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
+      Reservation existing = masterList.getEntry(i);
+      if (existing != null && existing.equals(updatedRes)) {
+        masterList.replace(i, updatedRes);
+        save();
+        return true;
+      }
     }
-    return top;
+    return false;
   }
 
   public boolean cancelReservation(Reservation reservation) {
     if (reservation == null || reservation.getRoomType() == null) return false;
 
     Room.RoomType type = reservation.getRoomType();
+
+    // Remove from active queue & heap
     boolean heapRemoved = getHeapByRoomType(type).remove(reservation);
     boolean listRemoved = getListByRoomType(type).remove(reservation);
-    boolean masterRemoved = masterList.remove(reservation);
 
-    if (heapRemoved || listRemoved || masterRemoved) {
-      save();
-      return true;
+    // Mark status as CANCELLED in masterList (do NOT delete it from masterList!)
+    reservation.setStatus(Reservation.Status.CANCELLED);
+    boolean updatedInMaster = updateReservation(reservation);
+
+    return heapRemoved || listRemoved || updatedInMaster;
+  }
+
+  public Reservation findById(String reservationId) {
+    if (reservationId == null || masterList == null) return null;
+    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
+      Reservation r = masterList.getEntry(i);
+      if (r != null && reservationId.equalsIgnoreCase(r.getReservationId())) {
+        return r;
+      }
     }
-    return false;
+    return null;
   }
 
   public ListInterface<Reservation> getAllReservations() {

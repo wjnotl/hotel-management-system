@@ -5,19 +5,19 @@ import java.io.Serializable;
 public class AllocationEntry implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  private String reservationConfirmationNumber; // References Reservation.confirmationNumber
+  private String reservationId; // References Reservation.reservationId
   private String assignedRoomNumber; // References Room.roomNumber
   private long expirationTimestamp; // Millisecond target timestamp
 
   public AllocationEntry(
-      String reservationConfirmationNumber, String assignedRoomNumber, long expirationTimestamp) {
-    this.reservationConfirmationNumber = reservationConfirmationNumber;
+      String reservationId, String assignedRoomNumber, long expirationTimestamp) {
+    this.reservationId = reservationId;
     this.assignedRoomNumber = assignedRoomNumber;
     this.expirationTimestamp = expirationTimestamp;
   }
 
-  public String getReservationConfirmationNumber() {
-    return reservationConfirmationNumber;
+  public String getReservationId() {
+    return reservationId;
   }
 
   public String getAssignedRoomNumber() {
@@ -28,8 +28,8 @@ public class AllocationEntry implements Serializable {
     return expirationTimestamp;
   }
 
-  public void setReservationConfirmationNumber(String reservationConfirmationNumber) {
-    this.reservationConfirmationNumber = reservationConfirmationNumber;
+  public void setReservationId(String reservationId) {
+    this.reservationId = reservationId;
   }
 
   public void setAssignedRoomNumber(String assignedRoomNumber) {
@@ -45,18 +45,15 @@ public class AllocationEntry implements Serializable {
     if (this == obj) return true;
     if (obj == null || getClass() != obj.getClass()) return false;
     AllocationEntry other = (AllocationEntry) obj;
-    boolean sameConf =
-        reservationConfirmationNumber != null
-            && reservationConfirmationNumber.equals(other.reservationConfirmationNumber);
+    boolean sameRes = reservationId != null && reservationId.equalsIgnoreCase(other.reservationId);
     boolean sameRoom =
         assignedRoomNumber != null && assignedRoomNumber.equals(other.assignedRoomNumber);
-    return sameConf && sameRoom;
+    return sameRes && sameRoom;
   }
 
   @Override
   public int hashCode() {
-    int result =
-        reservationConfirmationNumber != null ? reservationConfirmationNumber.hashCode() : 0;
+    int result = reservationId != null ? reservationId.toLowerCase().hashCode() : 0;
     result = 31 * result + (assignedRoomNumber != null ? assignedRoomNumber.hashCode() : 0);
     return result;
   }

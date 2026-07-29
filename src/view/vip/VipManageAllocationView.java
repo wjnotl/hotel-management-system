@@ -1,0 +1,301 @@
+package view.vip;
+
+import adt.ListInterface;
+import entity.AllocationEntry;
+import entity.Guest;
+import entity.Member;
+import entity.Reservation;
+import entity.Room;
+import util.ConsoleUtil;
+import util.ConsoleUtil.GetMenuInputResult;
+import util.TableUtil;
+
+public class VipManageAllocationView {
+
+  public GetMenuInputResult renderAllocationScreen(
+      ListInterface<AllocationEntry> list,
+      ListInterface<Reservation> reservationList,
+      ListInterface<Guest> guestList,
+      ListInterface<Member> memberList,
+      String search,
+      String tier,
+      String sort,
+      int currentPage,
+      int pageSize) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("MANAGE ALLOCATION (PENDING CHECK-IN)");
+
+    System.out.println(
+        "SEARCH QUERY   : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
+    System.out.println("TIER FILTER    : [ " + (tier == null ? "ALL" : tier) + " ]");
+    System.out.println("SORT CRITERIA  : [ " + sort + " ]");
+
+    int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
+    int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+
+    int[] columnWidths = {4, 25, 12, 18, 18};
+
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.LEFT)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setTruncate(1);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setTruncate(1);
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"NO.", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"},
+        headerSettings);
+
+    if (list == null || totalMatches == 0) {
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+      TableUtil.TableSettings emptySettings =
+          new TableUtil.TableSettings(new int[] {81}).setHAlign(0, TableUtil.Align.CENTER);
+
+      String emptyMsg =
+          (search != null || tier != null)
+              ? "*** NO PENDING ALLOCATIONS FOUND FOR ACTIVE FILTERS ***"
+              : "*** NO ROOM ALLOCATIONS PENDING ***";
+
+      TableUtil.printTableRow(new String[] {emptyMsg}, emptySettings);
+      TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+
+      System.out.println("Page 0 / 0 (Total Allocated Matches: 0)\n");
+      System.out.println("[S] Search Guests      [O] Change Sort Order   [R] Refresh Table");
+      System.out.println("[E] Exit to VIP Menu\n");
+
+      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'O', 'R', 'E'});
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      AllocationEntry entry = list.getEntry(i);
+      if (entry == null) continue;
+
+      Reservation r = findReservationById(reservationList, entry.getReservationId());
+      Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
+      Member m =
+          (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+
+      int displayNum = i - startIndex + 1;
+      String guestName = (g != null) ? g.getName() : "N/A";
+      String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+      String roomAssigned = "Room " + entry.getAssignedRoomNumber();
+      String graceTimer = formatTimerCountdown(entry.getExpirationTimestamp());
+
+      TableUtil.printTableRow(
+          new String[] {String.valueOf(displayNum), guestName, tierStr, roomAssigned, graceTimer},
+          settings);
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    System.out.printf(
+        "Page %d / %d (Total Allocated Matches: %d)\n\n", currentPage, totalPages, totalMatches);
+    System.out.println("[S] Search Guests      [O] Change Sort Order   [R] Refresh Table");
+    System.out.println("[P] Prev Page          [N] Next Page           [E] Exit to VIP Menu\n");
+
+    int maxOptionNum = endIndex - startIndex + 1;
+    String rangeStr = (maxOptionNum == 1) ? "1" : "1-" + maxOptionNum;
+    String promptText = "Select a pending guest number to handle (" + rangeStr + "): ";
+
+    return ConsoleUtil.getMenuInput(
+        promptText, 1, maxOptionNum, new char[] {'S', 'O', 'R', 'P', 'N', 'E'});
+  }
+
+  public int displaySettleAllocationSubmenu(Guest g) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SETTLE ALLOCATION: " + (g != null ? g.getName() : "GUEST"));
+    System.out.println("The guest has been summoned to the counter.\n");
+    System.out.println("1. Confirm Allocate (Guest arrived, complete check-in)");
+    System.out.println("2. Cancel Allocate  (Guest did not show up / window expired)");
+    System.out.println("3. Return to List\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public int displayCancelResolutionMenu(Guest g, Member m, int maxStrikes) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CANCEL ALLOCATION RESOLUTION PATHS");
+
+    int[] fullWidth = {81};
+    int[] kvWidths = {20, 60};
+
+    TableUtil.TableSettings fullSettings =
+        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings kvSettings =
+        new TableUtil.TableSettings(kvWidths)
+            .setHAlign(0, TableUtil.Align.LEFT)
+            .setHAlign(1, TableUtil.Align.LEFT);
+
+    TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"NO-SHOW EVICTION PROCESSING"}, fullSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+
+    TableUtil.printTableRow(
+        new String[] {
+          "Target Profile",
+          (g != null ? g.getName() : "N/A") + " (" + (g != null ? g.getGuestId() : "N/A") + ")"
+        },
+        kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableRow(
+        new String[] {"Member Tier", (m != null ? m.getTier().name() : "NON-MEMBER")}, kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableRow(
+        new String[] {
+          "Strike Count", String.valueOf(g != null ? g.getStrikeCount() : 0) + " / " + maxStrikes
+        },
+        kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
+
+    System.out.println("\nSelect how to handle the no-show guest:");
+    System.out.println("1. Issue Strike & Send Back to Waitlist Queue");
+    System.out.println(
+        "   -> Increments strike count by 1. Re-enters queue using calculated score.");
+    System.out.println(
+        "   -> Note: Reaching " + maxStrikes + " strikes triggers automatic eviction lockout.");
+    System.out.println("2. Evict & Remove Guest Entirely From System");
+    System.out.println("   -> Cancels reservation permanently and frees the room.");
+    System.out.println("3. Go Back to Allocation Settle Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public void displayCheckInSuccessScreen(Reservation r, Guest g, Room room) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CHECK-IN COMPLETE");
+
+    int[] fullWidth = {81};
+    int[] kvWidths = {20, 60};
+
+    TableUtil.TableSettings fullSettings =
+        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings kvSettings =
+        new TableUtil.TableSettings(kvWidths)
+            .setHAlign(0, TableUtil.Align.LEFT)
+            .setHAlign(1, TableUtil.Align.LEFT);
+
+    TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"STATUS: GUEST CHECKED-IN TO ROOM"}, fullSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+
+    TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableRow(
+        new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableRow(
+        new String[] {"Room Number", (room != null ? room.getRoomNumber() : "N/A")}, kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableRow(new String[] {"Room Status", "OCCUPIED"}, kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
+
+    System.out.println();
+    ConsoleUtil.printContinueMessage("Press Enter to return...");
+  }
+
+  public int displayFilterMainMenu(String search, String tier) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("FILTER & SEARCH ALLOCATIONS");
+    System.out.println("Active Search : [ " + (search == null ? "None" : search) + " ]");
+    System.out.println("Active Tier   : [ " + (tier == null ? "ALL" : tier) + " ]\n");
+
+    System.out.println("1. Search Pending Guest Name / Room");
+    System.out.println("2. Filter by Membership Tier");
+    System.out.println("3. Clear All Allocation Filters");
+    System.out.println("4. Back to Allocation Board\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+  }
+
+  public String promptSearchInput() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH PENDING ALLOCATIONS");
+    System.out.println("Enter the guest name or room string to look up in holding bay:\n");
+    return ConsoleUtil.getStringInput("[ Search Query ]: ");
+  }
+
+  public int displayTierSubmenu(String currentTier) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("FILTER ALLOCATIONS BY TIER");
+    System.out.println(
+        "Current Selected Tier: [ " + (currentTier == null ? "ALL" : currentTier) + " ]\n");
+
+    System.out.println("1. DIAMOND ONLY");
+    System.out.println("2. GOLD ONLY");
+    System.out.println("3. SILVER ONLY");
+    System.out.println("4. Show All Tiers\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+  }
+
+  public String displaySortMenu() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CHANGE ALLOCATION SORT ORDER");
+    System.out.println("1. Time Remaining / Grace Timer Countdown (Low to High)");
+    System.out.println("2. Guest Name Alphabetical (A -> Z)");
+    System.out.println("3. Room Number Order (Low to High)");
+    System.out.println("4. Back\n");
+
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+    if (choice == 1) return "TIME REMAINING (LOW -> HIGH)";
+    if (choice == 2) return "GUEST NAME (A -> Z)";
+    if (choice == 3) return "ROOM NUMBER (LOW -> HIGH)";
+    return null;
+  }
+
+  private String formatTimerCountdown(long expirationMs) {
+    long diffMs = expirationMs - System.currentTimeMillis();
+    if (diffMs <= 0) {
+      return "00:00 (EXPIRED)";
+    }
+    long totalSec = diffMs / 1000;
+    long mins = totalSec / 60;
+    long secs = totalSec % 60;
+    return String.format("%02d:%02d LEFT", mins, secs);
+  }
+
+  private Reservation findReservationById(ListInterface<Reservation> list, String resId) {
+    if (list == null || resId == null) return null;
+    for (int i = 1; i <= list.getNumberOfEntries(); i++) {
+      Reservation r = list.getEntry(i);
+      if (r != null && resId.equalsIgnoreCase(r.getReservationId())) return r;
+    }
+    return null;
+  }
+
+  private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
+    if (guestList == null || guestId == null) return null;
+    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
+      Guest g = guestList.getEntry(i);
+      if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) return g;
+    }
+    return null;
+  }
+
+  private Member findMember(ListInterface<Member> memberList, String memberId) {
+    if (memberList == null || memberId == null) return null;
+    for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
+      Member m = memberList.getEntry(i);
+      if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) return m;
+    }
+    return null;
+  }
+}
