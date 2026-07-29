@@ -1,25 +1,24 @@
 package control.housekeeping;
 
-import java.time.LocalDateTime;
-import java.util.Iterator;
-
 import adt.ArrayList;
 import adt.ListInterface;
 import entity.HousekeepingStaff;
 import entity.HousekeepingTask;
+import java.time.LocalDateTime;
+import java.util.Iterator;
 import repo.HousekeepingStaffRepo;
 import repo.HousekeepingTaskRepo;
 import util.ConsoleUtil;
 import util.NumberUtil;
-import view.HouseKeepingView;
+import view.HousekeepingView;
 
 public class HouseKeepingController {
-  private final HouseKeepingView houseKeepingView;
+  private final HousekeepingView houseKeepingView;
   private final HousekeepingTaskRepo taskRepo;
   private final HousekeepingStaffRepo staffRepo;
 
   public HouseKeepingController() {
-    this.houseKeepingView = new HouseKeepingView();
+    this.houseKeepingView = new HousekeepingView();
     this.taskRepo = new HousekeepingTaskRepo();
     this.staffRepo = new HousekeepingStaffRepo();
   }

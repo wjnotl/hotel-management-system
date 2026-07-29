@@ -7,23 +7,23 @@ import java.io.Serializable;
 public class HousekeepingStaff implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  public static enum Shift {
+  public enum Shift {
     MORNING,
     AFTERNOON,
     NIGHT
   }
 
-  public static enum Availability {
+  public enum Availability {
     AVAILABLE,
     ON_TASK,
     OFF_DUTY
   }
 
-  private String staffId; // Unique staff ID (e.g., "HK-004")
+  private String staffId;
   private String name;
   private Shift shift;
   private Availability availability;
-  private ListInterface<String> assignedRoomNumbers; // Rooms currently assigned to this staff
+  private ListInterface<String> assignedRoomNumbers;
 
   public HousekeepingStaff(String staffId, String name, Shift shift, Availability availability) {
     this.staffId = staffId;

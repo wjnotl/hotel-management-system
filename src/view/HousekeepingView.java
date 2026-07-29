@@ -7,8 +7,7 @@ import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 
-public class HouseKeepingView {
-
+public class HousekeepingView {
   public String displayMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("Housekeeping & Task Log");

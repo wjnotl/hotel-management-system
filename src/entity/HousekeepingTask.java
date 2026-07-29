@@ -6,27 +6,27 @@ import java.time.LocalDateTime;
 public class HousekeepingTask implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  public static enum TaskType {
+  public enum TaskType {
     STANDARD_CLEAN,
     DEEP_CLEAN,
     TURNOVER,
     MAINTENANCE_CHECK
   }
 
-  public static enum Status {
+  public enum Status {
     PENDING,
     IN_PROGRESS,
     COMPLETED,
     SKIPPED
   }
 
-  private String taskId; // Unique task ID (e.g., "T-10023")
-  private String roomNumber; // Links to Room.roomNumber
+  private String taskId;
+  private String roomNumber;
   private TaskType taskType;
   private Status status;
-  private String assignedStaffId; // Links to HousekeepingStaff.staffId (null if unassigned)
-  private boolean isUrgent; // True if pushed to the front of the deque (VIP/complaint/etc.)
-  private LocalDateTime createdAt; // When the task entered the queue
+  private String assignedStaffId;
+  private boolean isUrgent;
+  private LocalDateTime createdAt;
 
   public HousekeepingTask(
       String taskId,
