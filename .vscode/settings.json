@@ -22,7 +22,8 @@
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
-    "br.bat": "build.bat,run.bat,ci.bat,format.bat,seed.bat"
+    "br.bat": "build.bat,run.bat,ci.bat,format.bat,seed.bat",
+    "guests.dat": "*.dat"
   },
   "files.eol": "\n",
   "files.insertFinalNewline": true,
