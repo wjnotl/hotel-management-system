@@ -1,7 +1,9 @@
 package control.vip;
 
 import adt.ArrayList;
+import adt.LinkedStack;
 import adt.ListInterface;
+import adt.StackInterface;
 import entity.VipSystemConfig;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
@@ -46,7 +48,7 @@ public class VipSettingsController {
         } else if (choice == 2) {
           handleWizardBuilder();
         } else if (choice == 3) {
-          break; // Back to Master Settings
+          break;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -62,23 +64,21 @@ public class VipSettingsController {
 
         if (preset == 1) {
           config.setActiveStrategyName("Strict Loyalty Focus");
-          config.setActiveFormulaInfix("TIER * W_TIER + WAIT");
+          config.setActiveFormulaInfix("TIER - ( STRIKES * W_STRIKE )");
         } else if (preset == 2) {
           config.setActiveStrategyName("Balanced Lobby Flow");
-          config.setActiveFormulaInfix(
-              "( TIER * W_TIER ) + ( WAIT * W_TIME ) - ( STRIKES * W_STRIKE )");
+          config.setActiveFormulaInfix("TIER + ( BOILING * W_BOILING ) - ( STRIKES * W_STRIKE )");
         } else if (preset == 3) {
           config.setActiveStrategyName("Emergency Customer Care");
-          config.setActiveFormulaInfix("( TIER * W_TIER ) + ( BOILING * W_BOILING )");
+          config.setActiveFormulaInfix("TIER + ( BOILING * W_BOILING )");
         } else if (preset == 4) {
-          break; // Back to Strategy Engine Menu
+          break;
         }
 
         configRepo.updateConfig(config);
-        break; // Save and return after valid selection
+        break;
       } catch (Exception e) {
-        ConsoleUtil.printError(
-            e.getMessage()); // Re-prompts the SAME Preset Strategy Menu on error!
+        ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -87,6 +87,10 @@ public class VipSettingsController {
     VipSystemConfig config = configRepo.getConfig();
     ListInterface<String> tokens = new ArrayList<>();
 
+    // Stack-based Undo/Redo Engine
+    StackInterface<String> undoStack = new LinkedStack<>();
+    StackInterface<String> redoStack = new LinkedStack<>();
+
     while (true) {
       try {
         StringBuilder currentInfix = new StringBuilder();
@@ -94,51 +98,246 @@ public class VipSettingsController {
           currentInfix.append(tokens.getEntry(i)).append(" ");
         }
 
-        int choice = settingsView.displayWizardComponentTypeMenu(currentInfix.toString().trim());
+        // --- Contextual Rule State Engine ---
+        int size = tokens.getNumberOfEntries();
+        String lastToken = (size > 0) ? tokens.getEntry(size) : null;
 
-        if (choice == 1) {
-          int v = settingsView.displaySystemVariableSubmenu();
-          if (v == 1) tokens.add("TIER");
-          else if (v == 2) tokens.add("WAIT");
-          else if (v == 3) tokens.add("STRIKES");
-          else if (v == 4) tokens.add("BOILING");
-        } else if (choice == 2) {
-          int w = settingsView.displayWeightVariableSubmenu();
-          if (w == 1) tokens.add("W_TIER");
-          else if (w == 2) tokens.add("W_TIME");
-          else if (w == 3) tokens.add("W_BOILING");
-          else if (w == 4) tokens.add("W_STRIKE");
-        } else if (choice == 3) {
-          int op = settingsView.displayOperatorSubmenu();
-          if (op == 1) tokens.add("+");
-          else if (op == 2) tokens.add("-");
-          else if (op == 3) tokens.add("*");
-          else if (op == 4) tokens.add("/");
-        } else if (choice == 4) {
-          String num = settingsView.promptNumericInput();
-          if (num != null && !num.trim().isEmpty()) {
-            tokens.add(num.trim());
-          }
-        } else if (choice == 5) {
-          int b = settingsView.displayBracketSubmenu();
-          if (b == 1) tokens.add("(");
-          else if (b == 2) tokens.add(")");
-        } else if (choice == 6) {
-          if (tokens.isEmpty()) {
-            ConsoleUtil.printError("Cannot save an empty formula!");
+        int openCount = 0;
+        int closeCount = 0;
+        for (int i = 1; i <= size; i++) {
+          if ("(".equals(tokens.getEntry(i))) openCount++;
+          if (")".equals(tokens.getEntry(i))) closeCount++;
+        }
+
+        boolean isLastOperatorOrBracket =
+            (lastToken == null || isOperator(lastToken) || "(".equals(lastToken));
+        boolean isLastOperandOrBracket =
+            (lastToken != null && (isOperand(lastToken) || ")".equals(lastToken)));
+
+        boolean allowOperand = isLastOperatorOrBracket;
+        boolean allowOperator = isLastOperandOrBracket;
+        boolean allowOpenBracket = isLastOperatorOrBracket;
+        boolean allowCloseBracket = isLastOperandOrBracket && (openCount > closeCount);
+        boolean allowUndo = !undoStack.isEmpty();
+        boolean allowRedo = !redoStack.isEmpty();
+        boolean allowSave = isLastOperandOrBracket && (openCount == closeCount);
+
+        int choice =
+            settingsView.displayWizardComponentTypeMenu(
+                currentInfix.toString().trim(),
+                allowOperand,
+                allowOperator,
+                allowOpenBracket,
+                allowCloseBracket,
+                allowUndo,
+                allowRedo,
+                allowSave);
+
+        int optionIndex = 1;
+
+        if (allowOperand) {
+          // 1. System Variable Submenu
+          if (choice == optionIndex++) {
+            String token = selectSystemVariable();
+            if (token != null) {
+              tokens.add(token);
+              undoStack.push(token);
+              redoStack.clear();
+            }
             continue;
           }
-          config.setActiveStrategyName("Custom Wizard Formula");
-          config.setActiveFormulaInfix(currentInfix.toString().trim());
-          configRepo.updateConfig(config);
-          break;
-        } else if (choice == 7) {
+
+          // 2. Weight Variable Submenu
+          if (choice == optionIndex++) {
+            String token = selectWeightVariable();
+            if (token != null) {
+              tokens.add(token);
+              undoStack.push(token);
+              redoStack.clear();
+            }
+            continue;
+          }
+
+          // 3. Numeric Value Prompt
+          if (choice == optionIndex++) {
+            String token = promptNumericValue();
+            if (token != null) {
+              tokens.add(token);
+              undoStack.push(token);
+              redoStack.clear();
+            }
+            continue;
+          }
+        }
+
+        if (allowOperator) {
+          // 4. Operator Submenu
+          if (choice == optionIndex++) {
+            String token = selectOperator();
+            if (token != null) {
+              tokens.add(token);
+              undoStack.push(token);
+              redoStack.clear();
+            }
+            continue;
+          }
+        }
+
+        if (allowOpenBracket) {
+          if (choice == optionIndex++) {
+            tokens.add("(");
+            undoStack.push("(");
+            redoStack.clear();
+            continue;
+          }
+        }
+
+        if (allowCloseBracket) {
+          if (choice == optionIndex++) {
+            tokens.add(")");
+            undoStack.push(")");
+            redoStack.clear();
+            continue;
+          }
+        }
+
+        // UNDO ACTION
+        if (allowUndo) {
+          if (choice == optionIndex++) {
+            String popped = undoStack.pop();
+            redoStack.push(popped);
+            tokens.removeAt(tokens.getNumberOfEntries());
+            continue;
+          }
+        }
+
+        // REDO ACTION
+        if (allowRedo) {
+          if (choice == optionIndex++) {
+            String restored = redoStack.pop();
+            undoStack.push(restored);
+            tokens.add(restored);
+            continue;
+          }
+        }
+
+        // SAVE ACTION
+        if (allowSave) {
+          if (choice == optionIndex++) {
+            validateFormulaTokens(tokens);
+
+            config.setActiveStrategyName("Custom Wizard Formula");
+            config.setActiveFormulaInfix(currentInfix.toString().trim());
+            configRepo.updateConfig(config);
+            break;
+          }
+        }
+
+        // Final option: Back
+        if (choice == optionIndex) {
+          if (!tokens.isEmpty()) {
+            boolean confirmExit =
+                ConsoleUtil.showConfirmMessage(
+                    "You have unsaved formula changes! Are you sure you want to discard and exit?");
+            if (!confirmExit) {
+              continue;
+            }
+          }
           break;
         }
+
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  private String selectSystemVariable() {
+    while (true) {
+      try {
+        int v = settingsView.displaySystemVariableSubmenu();
+        if (v == 1) return "TIER";
+        if (v == 2) return "STRIKES";
+        if (v == 3) return "BOILING";
+        if (v == 4) return null; // Back
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String selectWeightVariable() {
+    while (true) {
+      try {
+        int w = settingsView.displayWeightVariableSubmenu();
+        if (w == 1) return "W_BOILING";
+        if (w == 2) return "W_STRIKE";
+        if (w == 3) return null; // Back
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String selectOperator() {
+    while (true) {
+      try {
+        int op = settingsView.displayOperatorSubmenu();
+        if (op == 1) return "+";
+        if (op == 2) return "-";
+        if (op == 3) return "*";
+        if (op == 4) return "/";
+        if (op == 5) return null; // Back
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String promptNumericValue() {
+    while (true) {
+      try {
+        String num = settingsView.promptNumericInput();
+        if (num == null || num.trim().isEmpty() || "C".equalsIgnoreCase(num.trim())) {
+          return null; // Cancel
+        }
+        Double.parseDouble(num.trim()); // Validate number format
+        return num.trim();
+      } catch (NumberFormatException e) {
+        ConsoleUtil.printError("Invalid numeric format! Enter a valid number or 'C' to cancel.");
+      }
+    }
+  }
+
+  private void validateFormulaTokens(ListInterface<String> tokens) {
+    if (tokens.isEmpty()) {
+      throw new IllegalArgumentException("Cannot save an empty formula!");
+    }
+
+    for (int i = 1; i <= tokens.getNumberOfEntries(); i++) {
+      String current = tokens.getEntry(i);
+      String next = (i < tokens.getNumberOfEntries()) ? tokens.getEntry(i + 1) : null;
+
+      if ("/".equals(current) && next != null) {
+        try {
+          double divisor = Double.parseDouble(next);
+          if (divisor == 0.0) {
+            throw new IllegalArgumentException(
+                "Mathematical Error: Division by zero is not allowed!");
+          }
+        } catch (NumberFormatException ignored) {
+          // Non-static variables are evaluated safely at runtime
+        }
+      }
+    }
+  }
+
+  private boolean isOperator(String token) {
+    return "+".equals(token) || "-".equals(token) || "*".equals(token) || "/".equals(token);
+  }
+
+  private boolean isOperand(String token) {
+    return !isOperator(token) && !"(".equals(token) && !")".equals(token);
   }
 
   // --- SUBMODULE 2: OPERATIONAL RULES ENGINE ---
@@ -201,9 +400,9 @@ public class VipSettingsController {
             else if (tier == 3) config.setSilverMaxStrikes(newVal);
             configRepo.updateConfig(config);
           }
-          break; // Success or cancelled -> return to Tier Menu
+          break;
         } catch (Exception e) {
-          ConsoleUtil.printError(e.getMessage()); // Re-prompts the SAME modify screen!
+          ConsoleUtil.printError(e.getMessage());
         }
       }
     }
@@ -313,12 +512,10 @@ public class VipSettingsController {
         if (choice == 1) {
           manageBaseValues(config);
         } else if (choice == 2) {
-          manageTimeWeights(config);
-        } else if (choice == 3) {
           manageBoilingBoosts(config);
-        } else if (choice == 4) {
+        } else if (choice == 3) {
           manageStrikePenalties(config);
-        } else if (choice == 5) {
+        } else if (choice == 4) {
           break;
         }
       } catch (Exception e) {
@@ -360,52 +557,6 @@ public class VipSettingsController {
             if (tier == 1) config.setDiamondBaseValue(newVal);
             else if (tier == 2) config.setGoldBaseValue(newVal);
             else if (tier == 3) config.setSilverBaseValue(newVal);
-            configRepo.updateConfig(config);
-          }
-          break;
-        } catch (Exception e) {
-          ConsoleUtil.printError(e.getMessage());
-        }
-      }
-    }
-  }
-
-  private void manageTimeWeights(VipSystemConfig config) {
-    while (true) {
-      int tier;
-      try {
-        tier =
-            settingsView.displayTierSelectionMenu(
-                "PATIENCE ACCUMULATION (W_TIME)",
-                config.getDiamondTimeWeight() + " pts/min",
-                config.getGoldTimeWeight() + " pts/min",
-                config.getSilverTimeWeight() + " pts/min");
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-        continue;
-      }
-
-      if (tier == 4) break;
-
-      while (true) {
-        try {
-          Double newVal = null;
-          if (tier == 1)
-            newVal =
-                settingsView.promptRuleDoubleInput(
-                    "Diamond Time Weight", config.getDiamondTimeWeight());
-          else if (tier == 2)
-            newVal =
-                settingsView.promptRuleDoubleInput("Gold Time Weight", config.getGoldTimeWeight());
-          else if (tier == 3)
-            newVal =
-                settingsView.promptRuleDoubleInput(
-                    "Silver Time Weight", config.getSilverTimeWeight());
-
-          if (newVal != null) {
-            if (tier == 1) config.setDiamondTimeWeight(newVal);
-            else if (tier == 2) config.setGoldTimeWeight(newVal);
-            else if (tier == 3) config.setSilverTimeWeight(newVal);
             configRepo.updateConfig(config);
           }
           break;

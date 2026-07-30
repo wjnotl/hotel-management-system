@@ -109,7 +109,7 @@ public class VipReservationRepo {
     boolean heapRemoved = getHeapByRoomType(type).remove(reservation);
     boolean listRemoved = getListByRoomType(type).remove(reservation);
 
-    // Mark status as CANCELLED in masterList (do NOT delete it from masterList!)
+    // Mark status as CANCELLED in masterList
     reservation.setStatus(Reservation.Status.CANCELLED);
     boolean updatedInMaster = updateReservation(reservation);
 
@@ -150,28 +150,17 @@ public class VipReservationRepo {
                       : (tier == Member.LoyaltyTier.SILVER)
                           ? (double) config.getSilverBaseValue()
                           : 1000.0;
-            case "W_TIER":
-              return 1.0;
-            case "WAIT":
-              if (reservation == null || reservation.getQueueArrivalTime() == null) return 0.0;
-              return (double)
-                  java.time.Duration.between(
-                          reservation.getQueueArrivalTime(), java.time.LocalDateTime.now())
-                      .toMinutes();
-            case "W_TIME":
-              return (tier == Member.LoyaltyTier.DIAMOND)
-                  ? config.getDiamondTimeWeight()
-                  : (tier == Member.LoyaltyTier.GOLD)
-                      ? config.getGoldTimeWeight()
-                      : config.getSilverTimeWeight();
+
             case "STRIKES":
               return (guest != null) ? (double) guest.getStrikeCount() : 0.0;
+
             case "W_STRIKE":
               return (tier == Member.LoyaltyTier.DIAMOND)
                   ? config.getDiamondStrikePenalty()
                   : (tier == Member.LoyaltyTier.GOLD)
                       ? config.getGoldStrikePenalty()
                       : config.getSilverStrikePenalty();
+
             case "BOILING":
               double wait =
                   (reservation != null && reservation.getQueueArrivalTime() != null)
@@ -188,12 +177,14 @@ public class VipReservationRepo {
               boolean isBoiling = wait >= patienceLimit;
               if (reservation != null) reservation.setBoiling(isBoiling);
               return isBoiling ? 1.0 : 0.0;
+
             case "W_BOILING":
               return (tier == Member.LoyaltyTier.DIAMOND)
                   ? config.getDiamondBoilingBoost()
                   : (tier == Member.LoyaltyTier.GOLD)
                       ? config.getGoldBoilingBoost()
                       : config.getSilverBoilingBoost();
+
             default:
               return 0.0;
           }

@@ -28,11 +28,6 @@ public class VipSystemConfig implements Serializable {
   private int goldBaseValue;
   private int silverBaseValue;
 
-  // Tier Patience Accumulation Rates (W_time)
-  private double diamondTimeWeight;
-  private double goldTimeWeight;
-  private double silverTimeWeight;
-
   // Tier Boiling Boosts (W_boiling)
   private double diamondBoilingBoost;
   private double goldBoilingBoost;
@@ -44,9 +39,8 @@ public class VipSystemConfig implements Serializable {
   private double silverStrikePenalty;
 
   public VipSystemConfig() {
-    // Default baseline initializations based on blueprint
     this.activeStrategyName = "Balanced Lobby Flow";
-    this.activeFormulaInfix = "( TIER * W_TIER ) + ( WAIT * W_TIME ) - ( STRIKES * W_STRIKE )";
+    this.activeFormulaInfix = "TIER + ( BOILING * W_BOILING ) - ( STRIKES * W_STRIKE )";
 
     this.diamondPatienceLimitMins = 30;
     this.goldPatienceLimitMins = 45;
@@ -63,10 +57,6 @@ public class VipSystemConfig implements Serializable {
     this.diamondBaseValue = 9000;
     this.goldBaseValue = 7000;
     this.silverBaseValue = 5000;
-
-    this.diamondTimeWeight = 25.0;
-    this.goldTimeWeight = 15.0;
-    this.silverTimeWeight = 10.0;
 
     this.diamondBoilingBoost = 5000.0;
     this.goldBoilingBoost = 3000.0;
@@ -188,30 +178,6 @@ public class VipSystemConfig implements Serializable {
 
   public void setSilverBaseValue(int val) {
     this.silverBaseValue = val;
-  }
-
-  public double getDiamondTimeWeight() {
-    return diamondTimeWeight;
-  }
-
-  public void setDiamondTimeWeight(double val) {
-    this.diamondTimeWeight = val;
-  }
-
-  public double getGoldTimeWeight() {
-    return goldTimeWeight;
-  }
-
-  public void setGoldTimeWeight(double val) {
-    this.goldTimeWeight = val;
-  }
-
-  public double getSilverTimeWeight() {
-    return silverTimeWeight;
-  }
-
-  public void setSilverTimeWeight(double val) {
-    this.silverTimeWeight = val;
   }
 
   public double getDiamondBoilingBoost() {

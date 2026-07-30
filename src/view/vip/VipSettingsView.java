@@ -34,18 +34,26 @@ public class VipSettingsView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SELECT PRESET STRATEGY");
     System.out.println("1. Strict Loyalty Focus");
-    System.out.println("   Equation: TIER * W_TIER + WAIT\n");
+    System.out.println("   Equation: TIER - ( STRIKES * W_STRIKE )\n");
     System.out.println("2. Balanced Lobby Flow");
-    System.out.println(
-        "   Equation: ( TIER * W_TIER ) + ( WAIT * W_TIME ) - ( STRIKES * W_STRIKE )\n");
+    System.out.println("   Equation: TIER + ( BOILING * W_BOILING ) - ( STRIKES * W_STRIKE )\n");
     System.out.println("3. Emergency Customer Care");
-    System.out.println("   Equation: ( TIER * W_TIER ) + ( BOILING * W_BOILING )\n");
+    System.out.println("   Equation: TIER + ( BOILING * W_BOILING )\n");
     System.out.println("4. Back\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
-  public int displayWizardComponentTypeMenu(String currentFormula) {
+  public int displayWizardComponentTypeMenu(
+      String currentFormula,
+      boolean allowOperand,
+      boolean allowOperator,
+      boolean allowOpenBracket,
+      boolean allowCloseBracket,
+      boolean allowUndo,
+      boolean allowRedo,
+      boolean allowSave) {
+
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("STEP-BY-STEP FORMULA WIZARD");
     System.out.println(" [ CURRENT FORMULA ]");
@@ -53,39 +61,64 @@ public class VipSettingsView {
     System.out.println("------------------------------------------------------");
     System.out.println("Select component type to append:");
     System.out.println("------------------------------------------------------");
-    System.out.println("1. [System Variable]         -> TIER, WAIT, STRIKES, BOILING");
-    System.out.println("2. [Weight Variable]         -> W_TIER, W_TIME, W_BOILING, W_STRIKE");
-    System.out.println("3. [Math Operator]           -> +, -, *, /");
-    System.out.println("4. [Numeric Value]           -> Static constant");
-    System.out.println("5. [Grouping Bracket]        -> ( / )");
-    System.out.println("6. Save & Apply Formula");
-    System.out.println("7. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
+    int optionNum = 1;
+
+    if (allowOperand) {
+      System.out.println(optionNum++ + ". [System Variable]         -> TIER, STRIKES, BOILING");
+      System.out.println(optionNum++ + ". [Weight Variable]         -> W_BOILING, W_STRIKE");
+      System.out.println(optionNum++ + ". [Numeric Value]           -> Static constant");
+    }
+
+    if (allowOperator) {
+      System.out.println(optionNum++ + ". [Math Operator]           -> +, -, *, /");
+    }
+
+    if (allowOpenBracket) {
+      System.out.println(optionNum++ + ". [Grouping Bracket '(']    -> Open parenthesis");
+    }
+
+    if (allowCloseBracket) {
+      System.out.println(optionNum++ + ". [Grouping Bracket ')']    -> Close parenthesis");
+    }
+
+    if (allowUndo) {
+      System.out.println(optionNum++ + ". Undo Last Action");
+    }
+
+    if (allowRedo) {
+      System.out.println(optionNum++ + ". Redo Action");
+    }
+
+    if (allowSave) {
+      System.out.println(optionNum++ + ". Save & Apply Formula");
+    }
+
+    System.out.println(optionNum + ". Back\n");
+
+    int maxOptions = optionNum;
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, maxOptions).getAsInt();
   }
 
   public int displaySystemVariableSubmenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SELECT SYSTEM VARIABLE");
-    System.out.println("1. TIER    -> Numerical priority mapped to member tier");
-    System.out.println("2. WAIT    -> Physical minutes waiting in lobby queue");
-    System.out.println("3. STRIKES -> Accumulated no-show penalty count");
-    System.out.println("4. BOILING -> Starvation flag (1 if wait > limit, else 0)");
-    System.out.println("5. Back\n");
+    System.out.println("1. TIER    -> Numerical base priority value mapped to member tier");
+    System.out.println("2. STRIKES -> Accumulated no-show penalty count");
+    System.out.println("3. BOILING -> Starvation flag (1 if wait >= patience limit, else 0)");
+    System.out.println("4. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   public int displayWeightVariableSubmenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SELECT DYNAMIC WEIGHT VARIABLE");
-    System.out.println("1. W_TIER    -> Baseline tier weight modifier");
-    System.out.println("2. W_TIME    -> Points accumulated per minute waiting");
-    System.out.println("3. W_BOILING -> Point boost when patience limit exceeds");
-    System.out.println("4. W_STRIKE  -> Point deduction applied per logged strike");
-    System.out.println("5. Back\n");
+    System.out.println("1. W_BOILING -> Point boost when patience limit is exceeded");
+    System.out.println("2. W_STRIKE  -> Point deduction applied per logged strike");
+    System.out.println("3. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
   public int displayOperatorSubmenu() {
@@ -103,26 +136,18 @@ public class VipSettingsView {
   public String promptNumericInput() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ENTER NUMERIC VALUE");
-    System.out.println("Enter static integer or decimal constant to inject:\n");
-    return ConsoleUtil.getStringInput("Choose an option: ");
-  }
-
-  public int displayBracketSubmenu() {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("SELECT GROUPING BRACKET");
-    System.out.println("1. Open Parenthesis ( ");
-    System.out.println("2. Close Parenthesis ) ");
-    System.out.println("3. Back\n");
-
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+    System.out.println("Enter static integer or decimal constant to inject:");
+    System.out.println("------------------------------------------------------");
+    System.out.println(" Press ENTER / 'C' to Cancel\n");
+    return ConsoleUtil.getStringInput(" [ New Numeric Value ]: ");
   }
 
   public int displayOperationalRulesMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("OPERATIONAL RULES MANAGEMENT");
-    System.out.println("1. Max No-Show Strike Limits (By Tier)");
-    System.out.println("2. Starvation Patience Limits (By Tier)");
-    System.out.println("3. No-Show Grace Periods (By Tier)");
+    System.out.println("1. Max No-Show Strike Limits");
+    System.out.println("2. Boiling Point Thresholds");
+    System.out.println("3. No-Show Grace Periods");
     System.out.println("4. Back\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
@@ -145,7 +170,7 @@ public class VipSettingsView {
     System.out.println(" Target Variable : " + targetVar);
     System.out.println(" Current Value   : " + currentVal + "\n");
     System.out.println("------------------------------------------------------");
-    System.out.println(" [Press ENTER / 'C' to Keep Current Value]\n");
+    System.out.println(" Press ENTER / 'C' to Keep Current Value\n");
 
     return ConsoleUtil.getIntegerInput(" [ New Value ]: ", 0);
   }
@@ -156,7 +181,7 @@ public class VipSettingsView {
     System.out.println(" Target Variable : " + targetVar);
     System.out.println(" Current Value   : " + currentVal + "\n");
     System.out.println("------------------------------------------------------");
-    System.out.println(" [Press ENTER / 'C' to Keep Current Value]\n");
+    System.out.println(" Press ENTER / 'C' to Keep Current Value\n");
 
     return ConsoleUtil.getDoubleInput(" [ New Value ]: ", 0.0);
   }
@@ -165,11 +190,10 @@ public class VipSettingsView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("BUSINESS COMPONENT WEIGHT CONFIG");
     System.out.println("1. Tier Base Values (TIER)");
-    System.out.println("2. Patience Accumulation Rates (W_TIME)");
-    System.out.println("3. Boiling Point Boosts (W_BOILING)");
-    System.out.println("4. Strike Penalties (W_STRIKE)");
-    System.out.println("5. Back\n");
+    System.out.println("2. Boiling Point Boosts (W_BOILING)");
+    System.out.println("3. Strike Penalties (W_STRIKE)");
+    System.out.println("4. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 }
