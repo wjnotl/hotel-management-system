@@ -1,5 +1,7 @@
 package control.vip;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import repo.AllocationRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
@@ -7,6 +9,7 @@ import repo.RoomRepo;
 import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
+import util.TaskSchedulerUtil;
 import view.vip.VipView;
 
 public class VipController {
@@ -66,5 +69,21 @@ public class VipController {
         ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  public static void startMidnightStrikeResetScheduler(GuestRepo guestRepo) {
+    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay();
+    long minutesUntilMidnight = Duration.between(now, nextMidnight).toMinutes();
+
+    TaskSchedulerUtil.scheduleEvery(
+        minutesUntilMidnight,
+        24 * 60,
+        () -> {
+          try {
+            guestRepo.resetAllGuestStrikes();
+          } catch (Exception e) {
+          }
+        });
   }
 }

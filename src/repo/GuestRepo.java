@@ -65,4 +65,23 @@ public class GuestRepo {
   public ListInterface<Guest> getGuestList() {
     return guestList;
   }
+
+  public void resetAllGuestStrikes() {
+    if (guestList == null || guestList.isEmpty()) return;
+
+    boolean needSave = false;
+    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
+      Guest g = guestList.getEntry(i);
+      if (g != null && g.getStrikeCount() > 0) {
+        g.setStrikeCount(0);
+        if (!needSave) {
+          needSave = true;
+        }
+      }
+    }
+
+    if (needSave) {
+      save();
+    }
+  }
 }

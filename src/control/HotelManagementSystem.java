@@ -30,6 +30,7 @@ public class HotelManagementSystem {
 
     allocationRepo.scheduleNextAutoExpirationTask(
         roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+    VipController.startMidnightStrikeResetScheduler(guestRepo);
 
     while (true) {
       try {
