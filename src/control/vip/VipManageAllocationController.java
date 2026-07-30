@@ -19,11 +19,24 @@ import view.vip.VipManageAllocationView;
 public class VipManageAllocationController {
 
   private final VipManageAllocationView allocationView = new VipManageAllocationView();
-  private final AllocationRepo allocationRepo = new AllocationRepo();
-  private final VipReservationRepo vipReservationRepo = new VipReservationRepo();
-  private final GuestRepo guestRepo = new GuestRepo();
-  private final MemberRepo memberRepo = new MemberRepo();
-  private final RoomRepo roomRepo = new RoomRepo();
+  private final AllocationRepo allocationRepo;
+  private final VipReservationRepo vipReservationRepo;
+  private final GuestRepo guestRepo;
+  private final MemberRepo memberRepo;
+  private final RoomRepo roomRepo;
+
+  public VipManageAllocationController(
+      AllocationRepo allocationRepo,
+      VipReservationRepo vipReservationRepo,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      RoomRepo roomRepo) {
+    this.allocationRepo = allocationRepo;
+    this.vipReservationRepo = vipReservationRepo;
+    this.guestRepo = guestRepo;
+    this.memberRepo = memberRepo;
+    this.roomRepo = roomRepo;
+  }
 
   public void startAllocationManagement() {
     int currentPage = 1;
@@ -146,7 +159,8 @@ public class VipManageAllocationController {
     vipReservationRepo.updateReservation(reservation);
 
     // 3. Remove hold entry from AllocationRepo
-    allocationRepo.removeAllocationEntry(entry);
+    allocationRepo.removeAllocationEntry(
+        entry, roomRepo, vipReservationRepo, guestRepo, memberRepo);
     vipReservationRepo.getAllReservations(); // Persists state updates
 
     allocationView.displayCheckInSuccessScreen(reservation, guest, room);
@@ -179,7 +193,8 @@ public class VipManageAllocationController {
             }
 
             freeHeldRoom(entry);
-            allocationRepo.removeAllocationEntry(entry);
+            allocationRepo.removeAllocationEntry(
+                entry, roomRepo, vipReservationRepo, guestRepo, memberRepo);
 
             ConsoleUtil.clearScreen();
             System.out.println(">> STATUS: EVICTION LOCKOUT ENFORCED");
@@ -207,7 +222,8 @@ public class VipManageAllocationController {
 
           // Free hold room
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(entry);
+          allocationRepo.removeAllocationEntry(
+              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo);
 
           ConsoleUtil.clearScreen();
           System.out.println(">> STATUS: STRIKE ISSUED & RE-QUEUED");
@@ -228,7 +244,8 @@ public class VipManageAllocationController {
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(entry);
+          allocationRepo.removeAllocationEntry(
+              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo);
 
           ConsoleUtil.clearScreen();
           System.out.println(">> STATUS: EVICTION COMPLETED");
