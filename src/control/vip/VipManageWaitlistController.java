@@ -20,11 +20,24 @@ import view.vip.VipManageWaitlistView;
 public class VipManageWaitlistController {
 
   private final VipManageWaitlistView waitlistView = new VipManageWaitlistView();
-  private final VipReservationRepo vipReservationRepo = new VipReservationRepo();
-  private final GuestRepo guestRepo = new GuestRepo();
-  private final MemberRepo memberRepo = new MemberRepo();
-  private final RoomRepo roomRepo = new RoomRepo();
-  private final AllocationRepo allocationRepo = new AllocationRepo();
+  private final VipReservationRepo vipReservationRepo;
+  private final GuestRepo guestRepo;
+  private final MemberRepo memberRepo;
+  private final RoomRepo roomRepo;
+  private final AllocationRepo allocationRepo;
+
+  public VipManageWaitlistController(
+      VipReservationRepo vipReservationRepo,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      RoomRepo roomRepo,
+      AllocationRepo allocationRepo) {
+    this.vipReservationRepo = vipReservationRepo;
+    this.guestRepo = guestRepo;
+    this.memberRepo = memberRepo;
+    this.roomRepo = roomRepo;
+    this.allocationRepo = allocationRepo;
+  }
 
   public void startWaitlistManagement() {
     while (true) {
@@ -303,7 +316,7 @@ public class VipManageWaitlistController {
             vacantRoom.getRoomNumber(),
             System.currentTimeMillis() + holdDurationMs);
 
-    allocationRepo.addAllocationEntry(entry);
+    allocationRepo.addAllocationEntry(entry, roomRepo, vipReservationRepo, guestRepo, memberRepo);
 
     vacantRoom.setStatus(Room.Status.OCCUPIED);
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
