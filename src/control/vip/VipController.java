@@ -1,7 +1,7 @@
 package control.vip;
 
 import util.ConsoleUtil;
-import view.VipView;
+import view.vip.VipView;
 
 public class VipController {
   private final VipView vipView = new VipView();
