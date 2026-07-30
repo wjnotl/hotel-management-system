@@ -39,6 +39,10 @@ public class VipSystemConfig implements Serializable {
   private double silverStrikePenalty;
 
   public VipSystemConfig() {
+    resetToDefaults();
+  }
+
+  public void resetToDefaults() {
     this.activeStrategyName = "Balanced Lobby Flow";
     this.activeFormulaInfix = "TIER + ( BOILING * W_BOILING ) - ( STRIKES * W_STRIKE )";
 

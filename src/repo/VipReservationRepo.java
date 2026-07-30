@@ -194,4 +194,79 @@ public class VipReservationRepo {
         util.ExpressionEvaluator.evaluateInfix(config.getActiveFormulaInfix(), resolver);
     return (int) Math.max(1000, Math.round(result));
   }
+
+  public int applySettingsToQueue(
+      VipSystemConfig config,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      boolean evictOverStrikes,
+      boolean forceBoilingCheck) {
+
+    if (masterList == null || config == null) return 0;
+
+    int affectedCount = 0;
+
+    // 1. Clear active Priority Queues (Max Heaps) and Category Lists
+    luxuryList.clear();
+    suiteList.clear();
+    standardList.clear();
+
+    luxuryHeap.clear();
+    suiteHeap.clear();
+    standardHeap.clear();
+
+    // 2. Iterate through master list and process WAITING reservations
+    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
+      Reservation r = masterList.getEntry(i);
+
+      if (r != null && r.getStatus() == Reservation.Status.WAITING) {
+        Guest guest = (guestRepo != null) ? guestRepo.findById(r.getGuestId()) : null;
+        Member member =
+            (memberRepo != null && guest != null) ? memberRepo.findById(guest.getMemberId()) : null;
+
+        // Resolve max strikes limit for member tier
+        Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+        int maxStrikes =
+            (tier == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondMaxStrikes()
+                : (tier == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldMaxStrikes()
+                    : config.getSilverMaxStrikes();
+
+        // CHOICE 1: Handle guests exceeding new strike thresholds
+        if (evictOverStrikes && guest != null && guest.getStrikeCount() >= maxStrikes) {
+          r.setStatus(Reservation.Status.NO_SHOW);
+          updateReservation(r);
+          affectedCount++;
+          continue; // Evicted! Do NOT re-enqueue in priority heap
+        }
+
+        // CHOICE 2: Force Boiling Status Update based on queue arrival time
+        if (forceBoilingCheck && r.getQueueArrivalTime() != null) {
+          double waitMins =
+              java.time.Duration.between(r.getQueueArrivalTime(), java.time.LocalDateTime.now())
+                  .toMinutes();
+          double patienceLimit =
+              (tier == Member.LoyaltyTier.DIAMOND)
+                  ? config.getDiamondPatienceLimitMins()
+                  : (tier == Member.LoyaltyTier.GOLD)
+                      ? config.getGoldPatienceLimitMins()
+                      : config.getSilverPatienceLimitMins();
+          r.setBoiling(waitMins >= patienceLimit);
+        }
+
+        // Calculate NEW priority score with current formula & weights
+        int newScore = calculatePriorityScore(r, guest, member, config);
+        r.setPriorityScore(newScore);
+
+        // Re-enqueue into heap & list with updated priority score
+        getListByRoomType(r.getRoomType()).add(r);
+        getHeapByRoomType(r.getRoomType()).enqueue(r, newScore);
+        affectedCount++;
+      }
+    }
+
+    save();
+    return affectedCount;
+  }
 }

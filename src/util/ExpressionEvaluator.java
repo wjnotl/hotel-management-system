@@ -104,7 +104,10 @@ public class ExpressionEvaluator {
       case "*":
         return a * b;
       case "/":
-        return (b == 0) ? 0 : a / b;
+        if (b == 0) {
+          throw new ArithmeticException("Division by zero");
+        }
+        return a / b;
       default:
         return 0.0;
     }

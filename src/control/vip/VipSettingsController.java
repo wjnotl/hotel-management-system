@@ -5,6 +5,9 @@ import adt.LinkedStack;
 import adt.ListInterface;
 import adt.StackInterface;
 import entity.VipSystemConfig;
+import repo.GuestRepo;
+import repo.MemberRepo;
+import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
 import view.vip.VipSettingsView;
@@ -13,9 +16,19 @@ public class VipSettingsController {
 
   private final VipSettingsView settingsView = new VipSettingsView();
   private final VipSystemConfigRepo configRepo;
+  private final VipReservationRepo vipReservationRepo;
+  private final GuestRepo guestRepo;
+  private final MemberRepo memberRepo;
 
-  public VipSettingsController(VipSystemConfigRepo configRepo) {
+  public VipSettingsController(
+      VipSystemConfigRepo configRepo,
+      VipReservationRepo vipReservationRepo,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo) {
     this.configRepo = configRepo;
+    this.vipReservationRepo = vipReservationRepo;
+    this.guestRepo = guestRepo;
+    this.memberRepo = memberRepo;
   }
 
   public void startSettingsManagement() {
@@ -31,6 +44,10 @@ public class VipSettingsController {
         } else if (choice == 3) {
           handleComponentWeights();
         } else if (choice == 4) {
+          handleApplyToQueue();
+        } else if (choice == 5) {
+          handleResetToDefaults();
+        } else if (choice == 6) {
           break;
         }
       } catch (Exception e) {
@@ -62,20 +79,28 @@ public class VipSettingsController {
       try {
         int preset = settingsView.displayPresetStrategyMenu();
 
+        String targetFormula = null;
+        String strategyName = null;
+
         if (preset == 1) {
-          config.setActiveStrategyName("Strict Loyalty Focus");
-          config.setActiveFormulaInfix("TIER - ( STRIKES * W_STRIKE )");
+          strategyName = "Strict Loyalty Focus";
+          targetFormula = "TIER - ( STRIKES * W_STRIKE )";
         } else if (preset == 2) {
-          config.setActiveStrategyName("Balanced Lobby Flow");
-          config.setActiveFormulaInfix("TIER + ( BOILING * W_BOILING ) - ( STRIKES * W_STRIKE )");
+          strategyName = "Balanced Lobby Flow";
+          targetFormula = "TIER + ( BOILING * W_BOILING ) - ( STRIKES * W_STRIKE )";
         } else if (preset == 3) {
-          config.setActiveStrategyName("Emergency Customer Care");
-          config.setActiveFormulaInfix("TIER + ( BOILING * W_BOILING )");
+          strategyName = "Emergency Customer Care";
+          targetFormula = "TIER + ( BOILING * W_BOILING )";
         } else if (preset == 4) {
           break;
         }
 
-        configRepo.updateConfig(config);
+        if (targetFormula != null) {
+          validateInfixFormulaWithConfig(targetFormula, config);
+          config.setActiveStrategyName(strategyName);
+          config.setActiveFormulaInfix(targetFormula);
+          configRepo.updateConfig(config);
+        }
         break;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -87,7 +112,6 @@ public class VipSettingsController {
     VipSystemConfig config = configRepo.getConfig();
     ListInterface<String> tokens = new ArrayList<>();
 
-    // Stack-based Undo/Redo Engine
     StackInterface<String> undoStack = new LinkedStack<>();
     StackInterface<String> redoStack = new LinkedStack<>();
 
@@ -98,7 +122,6 @@ public class VipSettingsController {
           currentInfix.append(tokens.getEntry(i)).append(" ");
         }
 
-        // --- Contextual Rule State Engine ---
         int size = tokens.getNumberOfEntries();
         String lastToken = (size > 0) ? tokens.getEntry(size) : null;
 
@@ -136,7 +159,6 @@ public class VipSettingsController {
         int optionIndex = 1;
 
         if (allowOperand) {
-          // 1. System Variable Submenu
           if (choice == optionIndex++) {
             String token = selectSystemVariable();
             if (token != null) {
@@ -147,7 +169,6 @@ public class VipSettingsController {
             continue;
           }
 
-          // 2. Weight Variable Submenu
           if (choice == optionIndex++) {
             String token = selectWeightVariable();
             if (token != null) {
@@ -158,7 +179,6 @@ public class VipSettingsController {
             continue;
           }
 
-          // 3. Numeric Value Prompt
           if (choice == optionIndex++) {
             String token = promptNumericValue();
             if (token != null) {
@@ -171,7 +191,6 @@ public class VipSettingsController {
         }
 
         if (allowOperator) {
-          // 4. Operator Submenu
           if (choice == optionIndex++) {
             String token = selectOperator();
             if (token != null) {
@@ -201,7 +220,6 @@ public class VipSettingsController {
           }
         }
 
-        // UNDO ACTION
         if (allowUndo) {
           if (choice == optionIndex++) {
             String popped = undoStack.pop();
@@ -211,7 +229,6 @@ public class VipSettingsController {
           }
         }
 
-        // REDO ACTION
         if (allowRedo) {
           if (choice == optionIndex++) {
             String restored = redoStack.pop();
@@ -221,10 +238,9 @@ public class VipSettingsController {
           }
         }
 
-        // SAVE ACTION
         if (allowSave) {
           if (choice == optionIndex++) {
-            validateFormulaTokens(tokens);
+            validateFormulaTokens(tokens, config);
 
             config.setActiveStrategyName("Custom Wizard Formula");
             config.setActiveFormulaInfix(currentInfix.toString().trim());
@@ -233,7 +249,6 @@ public class VipSettingsController {
           }
         }
 
-        // Final option: Back
         if (choice == optionIndex) {
           if (!tokens.isEmpty()) {
             boolean confirmExit =
@@ -259,7 +274,7 @@ public class VipSettingsController {
         if (v == 1) return "TIER";
         if (v == 2) return "STRIKES";
         if (v == 3) return "BOILING";
-        if (v == 4) return null; // Back
+        if (v == 4) return null;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -272,7 +287,7 @@ public class VipSettingsController {
         int w = settingsView.displayWeightVariableSubmenu();
         if (w == 1) return "W_BOILING";
         if (w == 2) return "W_STRIKE";
-        if (w == 3) return null; // Back
+        if (w == 3) return null;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -287,7 +302,7 @@ public class VipSettingsController {
         if (op == 2) return "-";
         if (op == 3) return "*";
         if (op == 4) return "/";
-        if (op == 5) return null; // Back
+        if (op == 5) return null;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -299,9 +314,10 @@ public class VipSettingsController {
       try {
         String num = settingsView.promptNumericInput();
         if (num == null || num.trim().isEmpty() || "C".equalsIgnoreCase(num.trim())) {
-          return null; // Cancel
+          return null;
         }
-        Double.parseDouble(num.trim()); // Validate number format
+
+        Double.parseDouble(num.trim());
         return num.trim();
       } catch (NumberFormatException e) {
         ConsoleUtil.printError("Invalid numeric format! Enter a valid number or 'C' to cancel.");
@@ -309,24 +325,125 @@ public class VipSettingsController {
     }
   }
 
-  private void validateFormulaTokens(ListInterface<String> tokens) {
-    if (tokens.isEmpty()) {
+  private void validateFormulaTokens(ListInterface<String> tokens, VipSystemConfig config) {
+    if (tokens == null || tokens.isEmpty()) {
       throw new IllegalArgumentException("Cannot save an empty formula!");
     }
 
-    for (int i = 1; i <= tokens.getNumberOfEntries(); i++) {
-      String current = tokens.getEntry(i);
-      String next = (i < tokens.getNumberOfEntries()) ? tokens.getEntry(i + 1) : null;
+    StringBuilder infixBuilder = new StringBuilder();
+    boolean hasDivision = false;
 
-      if ("/".equals(current) && next != null) {
-        try {
-          double divisor = Double.parseDouble(next);
-          if (divisor == 0.0) {
+    for (int i = 1; i <= tokens.getNumberOfEntries(); i++) {
+      String t = tokens.getEntry(i);
+      if ("/".equals(t)) {
+        hasDivision = true;
+      }
+      infixBuilder.append(t).append(" ");
+    }
+
+    if (!hasDivision) {
+      return;
+    }
+
+    String formulaInfix = infixBuilder.toString().trim();
+    validateInfixFormulaWithConfig(formulaInfix, config);
+  }
+
+  public static void validateInfixFormulaWithConfig(String formulaInfix, VipSystemConfig config) {
+    if (formulaInfix == null || !formulaInfix.contains("/")) {
+      return;
+    }
+
+    double[][] tierProfiles = {
+      {
+        config.getSilverBaseValue(),
+        config.getSilverBoilingBoost(),
+        config.getSilverStrikePenalty(),
+        config.getSilverMaxStrikes()
+      },
+      {
+        config.getGoldBaseValue(),
+        config.getGoldBoilingBoost(),
+        config.getGoldStrikePenalty(),
+        config.getGoldMaxStrikes()
+      },
+      {
+        config.getDiamondBaseValue(),
+        config.getDiamondBoilingBoost(),
+        config.getDiamondStrikePenalty(),
+        config.getDiamondMaxStrikes()
+      }
+    };
+    String[] tierNames = {"Silver", "Gold", "Diamond"};
+
+    class EvaluationContext {
+      double tVal, wBVal, wSVal, bVal, sVal;
+
+      double resolve(String var) {
+        if (var == null || var.trim().isEmpty()) return 0.0;
+        String cleanVar = var.trim().toUpperCase();
+
+        switch (cleanVar) {
+          case "TIER":
+            return tVal;
+          case "W_BOILING":
+            return wBVal;
+          case "W_STRIKE":
+            return wSVal;
+          case "BOILING":
+            return bVal;
+          case "STRIKES":
+            return sVal;
+          default:
+            try {
+              return Double.parseDouble(cleanVar);
+            } catch (NumberFormatException e) {
+              return 0.0;
+            }
+        }
+      }
+    }
+
+    EvaluationContext ctx = new EvaluationContext();
+    java.util.function.Function<String, Double> resolver = ctx::resolve;
+
+    // Sweep every single tier profile + ALL possible runtime strike counts [0 ... max strikes]
+    for (int t = 0; t < tierProfiles.length; t++) {
+      ctx.tVal = tierProfiles[t][0];
+      ctx.wBVal = tierProfiles[t][1];
+      ctx.wSVal = tierProfiles[t][2];
+      int tierMaxStrikes = (int) tierProfiles[t][3];
+      String tName = tierNames[t];
+
+      for (int boilingState = 0; boilingState <= 1; boilingState++) {
+        ctx.bVal = boilingState;
+
+        // Exhaustive check across EVERY single integer value of STRIKES (e.g., STRIKES = 1, STRIKES
+        // = 2, ...)
+        for (int strikeCount = 0; strikeCount <= tierMaxStrikes; strikeCount++) {
+          ctx.sVal = strikeCount;
+
+          try {
+            double result = util.ExpressionEvaluator.evaluateInfix(formulaInfix, resolver);
+
+            if (Double.isInfinite(result) || Double.isNaN(result)) {
+              throw new ArithmeticException("Division by zero");
+            }
+          } catch (ArithmeticException e) {
             throw new IllegalArgumentException(
-                "Mathematical Error: Division by zero is not allowed!");
+                "Mathematical Error: Formula results in division by zero for "
+                    + tName
+                    + " Tier! "
+                    + "(Triggered when STRIKES="
+                    + strikeCount
+                    + ", BOILING="
+                    + boilingState
+                    + ")");
+          } catch (IllegalArgumentException e) {
+            throw e;
+          } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid Formula Expression: " + e.getMessage());
           }
-        } catch (NumberFormatException ignored) {
-          // Non-static variables are evaluated safely at runtime
         }
       }
     }
@@ -340,8 +457,6 @@ public class VipSettingsController {
     return !isOperator(token) && !"(".equals(token) && !")".equals(token);
   }
 
-  // --- SUBMODULE 2: OPERATIONAL RULES ENGINE ---
-
   private void handleOperationalRules() {
     while (true) {
       try {
@@ -351,7 +466,7 @@ public class VipSettingsController {
         if (choice == 1) {
           manageStrikeLimits(config);
         } else if (choice == 2) {
-          managePatienceLimits(config);
+          manageBoilingPointThreshold(config);
         } else if (choice == 3) {
           manageGraceWindows(config);
         } else if (choice == 4) {
@@ -386,19 +501,35 @@ public class VipSettingsController {
           if (tier == 1)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Diamond Max Strikes", config.getDiamondMaxStrikes());
+                    "Diamond Max Strikes", config.getDiamondMaxStrikes(), 0, 10);
           else if (tier == 2)
             newVal =
-                settingsView.promptRuleIntInput("Gold Max Strikes", config.getGoldMaxStrikes());
+                settingsView.promptRuleIntInput(
+                    "Gold Max Strikes", config.getGoldMaxStrikes(), 0, 10);
           else if (tier == 3)
             newVal =
-                settingsView.promptRuleIntInput("Silver Max Strikes", config.getSilverMaxStrikes());
+                settingsView.promptRuleIntInput(
+                    "Silver Max Strikes", config.getSilverMaxStrikes(), 0, 10);
 
           if (newVal != null) {
+            int oldVal =
+                (tier == 1)
+                    ? config.getDiamondMaxStrikes()
+                    : (tier == 2) ? config.getGoldMaxStrikes() : config.getSilverMaxStrikes();
+
             if (tier == 1) config.setDiamondMaxStrikes(newVal);
             else if (tier == 2) config.setGoldMaxStrikes(newVal);
             else if (tier == 3) config.setSilverMaxStrikes(newVal);
-            configRepo.updateConfig(config);
+
+            try {
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              configRepo.updateConfig(config);
+            } catch (Exception e) {
+              if (tier == 1) config.setDiamondMaxStrikes(oldVal);
+              else if (tier == 2) config.setGoldMaxStrikes(oldVal);
+              else if (tier == 3) config.setSilverMaxStrikes(oldVal);
+              throw e;
+            }
           }
           break;
         } catch (Exception e) {
@@ -408,7 +539,7 @@ public class VipSettingsController {
     }
   }
 
-  private void managePatienceLimits(VipSystemConfig config) {
+  private void manageBoilingPointThreshold(VipSystemConfig config) {
     while (true) {
       int tier;
       try {
@@ -431,21 +562,37 @@ public class VipSettingsController {
           if (tier == 1)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Diamond Patience Mins", config.getDiamondPatienceLimitMins());
+                    "Diamond Patience Mins", config.getDiamondPatienceLimitMins(), 1, 180);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Gold Patience Mins", config.getGoldPatienceLimitMins());
+                    "Gold Patience Mins", config.getGoldPatienceLimitMins(), 1, 180);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Silver Patience Mins", config.getSilverPatienceLimitMins());
+                    "Silver Patience Mins", config.getSilverPatienceLimitMins(), 1, 180);
 
           if (newVal != null) {
+            int oldVal =
+                (tier == 1)
+                    ? config.getDiamondPatienceLimitMins()
+                    : (tier == 2)
+                        ? config.getGoldPatienceLimitMins()
+                        : config.getSilverPatienceLimitMins();
+
             if (tier == 1) config.setDiamondPatienceLimitMins(newVal);
             else if (tier == 2) config.setGoldPatienceLimitMins(newVal);
             else if (tier == 3) config.setSilverPatienceLimitMins(newVal);
-            configRepo.updateConfig(config);
+
+            try {
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              configRepo.updateConfig(config);
+            } catch (Exception e) {
+              if (tier == 1) config.setDiamondPatienceLimitMins(oldVal);
+              else if (tier == 2) config.setGoldPatienceLimitMins(oldVal);
+              else if (tier == 3) config.setSilverPatienceLimitMins(oldVal);
+              throw e;
+            }
           }
           break;
         } catch (Exception e) {
@@ -478,14 +625,15 @@ public class VipSettingsController {
           if (tier == 1)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Diamond Grace Mins", config.getDiamondGraceWindowMins());
+                    "Diamond Grace Mins", config.getDiamondGraceWindowMins(), 1, 60);
           else if (tier == 2)
             newVal =
-                settingsView.promptRuleIntInput("Gold Grace Mins", config.getGoldGraceWindowMins());
+                settingsView.promptRuleIntInput(
+                    "Gold Grace Mins", config.getGoldGraceWindowMins(), 1, 60);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Silver Grace Mins", config.getSilverGraceWindowMins());
+                    "Silver Grace Mins", config.getSilverGraceWindowMins(), 1, 60);
 
           if (newVal != null) {
             if (tier == 1) config.setDiamondGraceWindowMins(newVal);
@@ -500,8 +648,6 @@ public class VipSettingsController {
       }
     }
   }
-
-  // --- SUBMODULE 3: COMPONENT WEIGHTS ENGINE ---
 
   private void handleComponentWeights() {
     while (true) {
@@ -546,18 +692,36 @@ public class VipSettingsController {
           Integer newVal = null;
           if (tier == 1)
             newVal =
-                settingsView.promptRuleIntInput("Diamond Base Score", config.getDiamondBaseValue());
+                settingsView.promptRuleIntInput(
+                    "Diamond Base Score", config.getDiamondBaseValue(), 1, 100000);
           else if (tier == 2)
-            newVal = settingsView.promptRuleIntInput("Gold Base Score", config.getGoldBaseValue());
+            newVal =
+                settingsView.promptRuleIntInput(
+                    "Gold Base Score", config.getGoldBaseValue(), 1, 100000);
           else if (tier == 3)
             newVal =
-                settingsView.promptRuleIntInput("Silver Base Score", config.getSilverBaseValue());
+                settingsView.promptRuleIntInput(
+                    "Silver Base Score", config.getSilverBaseValue(), 1, 100000);
 
           if (newVal != null) {
+            int oldVal =
+                (tier == 1)
+                    ? config.getDiamondBaseValue()
+                    : (tier == 2) ? config.getGoldBaseValue() : config.getSilverBaseValue();
+
             if (tier == 1) config.setDiamondBaseValue(newVal);
             else if (tier == 2) config.setGoldBaseValue(newVal);
             else if (tier == 3) config.setSilverBaseValue(newVal);
-            configRepo.updateConfig(config);
+
+            try {
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              configRepo.updateConfig(config);
+            } catch (Exception e) {
+              if (tier == 1) config.setDiamondBaseValue(oldVal);
+              else if (tier == 2) config.setGoldBaseValue(oldVal);
+              else if (tier == 3) config.setSilverBaseValue(oldVal);
+              throw e;
+            }
           }
           break;
         } catch (Exception e) {
@@ -590,21 +754,35 @@ public class VipSettingsController {
           if (tier == 1)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Diamond Boiling Boost", config.getDiamondBoilingBoost());
+                    "Diamond Boiling Boost", config.getDiamondBoilingBoost(), 0.01, 50000.0);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Gold Boiling Boost", config.getGoldBoilingBoost());
+                    "Gold Boiling Boost", config.getGoldBoilingBoost(), 0.01, 50000.0);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Silver Boiling Boost", config.getSilverBoilingBoost());
+                    "Silver Boiling Boost", config.getSilverBoilingBoost(), 0.01, 50000.0);
 
           if (newVal != null) {
+            double oldVal =
+                (tier == 1)
+                    ? config.getDiamondBoilingBoost()
+                    : (tier == 2) ? config.getGoldBoilingBoost() : config.getSilverBoilingBoost();
+
             if (tier == 1) config.setDiamondBoilingBoost(newVal);
             else if (tier == 2) config.setGoldBoilingBoost(newVal);
             else if (tier == 3) config.setSilverBoilingBoost(newVal);
-            configRepo.updateConfig(config);
+
+            try {
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              configRepo.updateConfig(config);
+            } catch (Exception e) {
+              if (tier == 1) config.setDiamondBoilingBoost(oldVal);
+              else if (tier == 2) config.setGoldBoilingBoost(oldVal);
+              else if (tier == 3) config.setSilverBoilingBoost(oldVal);
+              throw e;
+            }
           }
           break;
         } catch (Exception e) {
@@ -637,27 +815,111 @@ public class VipSettingsController {
           if (tier == 1)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Diamond Strike Penalty", config.getDiamondStrikePenalty());
+                    "Diamond Strike Penalty", config.getDiamondStrikePenalty(), 0.01, 50000.0);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Gold Strike Penalty", config.getGoldStrikePenalty());
+                    "Gold Strike Penalty", config.getGoldStrikePenalty(), 0.01, 50000.0);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Silver Strike Penalty", config.getSilverStrikePenalty());
+                    "Silver Strike Penalty", config.getSilverStrikePenalty(), 0.01, 50000.0);
 
           if (newVal != null) {
+            double oldVal =
+                (tier == 1)
+                    ? config.getDiamondStrikePenalty()
+                    : (tier == 2) ? config.getGoldStrikePenalty() : config.getSilverStrikePenalty();
+
             if (tier == 1) config.setDiamondStrikePenalty(newVal);
             else if (tier == 2) config.setGoldStrikePenalty(newVal);
             else if (tier == 3) config.setSilverStrikePenalty(newVal);
-            configRepo.updateConfig(config);
+
+            try {
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              configRepo.updateConfig(config);
+            } catch (Exception e) {
+              if (tier == 1) config.setDiamondStrikePenalty(oldVal);
+              else if (tier == 2) config.setGoldStrikePenalty(oldVal);
+              else if (tier == 3) config.setSilverStrikePenalty(oldVal);
+              throw e;
+            }
           }
           break;
         } catch (Exception e) {
           ConsoleUtil.printError(e.getMessage());
         }
       }
+    }
+  }
+
+  private void handleApplyToQueue() {
+    VipSystemConfig config = configRepo.getConfig();
+
+    while (true) { // Wizard Loop to prevent getting kicked out
+      try {
+        // STEP 1: Question about Evicting Over-Strike Members
+        int choice1 =
+            settingsView.promptApplyOptionWithBack(
+                "STRIKE THRESHOLD EVICTION",
+                "Automatically cancel and evict waiting guests who exceed the active Tier Strike"
+                    + " Limits?");
+
+        if (choice1 == 3) {
+          return; // Safely exit wizard and return to Master Settings
+        }
+        boolean evictOverStrikes = (choice1 == 1);
+
+        // STEP 2: Question about Boiling Status Recalculation
+        int choice2 =
+            settingsView.promptApplyOptionWithBack(
+                "BOILING STATUS RE-EVALUATION",
+                "Re-evaluate live wait times against active Patience Thresholds and update BOILING"
+                    + " flags?");
+
+        if (choice2 == 3) {
+          return; // Safely exit wizard and return to Master Settings
+        }
+        boolean forceBoilingCheck = (choice2 == 1);
+
+        // STEP 3: Final Confirmation Prompt before execution
+        boolean confirmExecution =
+            ConsoleUtil.showConfirmMessage(
+                "Proceed with recalculating priority scores and re-sorting all active waiting queues?");
+
+        if (!confirmExecution) {
+          return; // Safely exit wizard and return to Master Settings
+        }
+
+        // STEP 4: Execute Batch Queue Reconciliation
+        int processedCount =
+            vipReservationRepo.applySettingsToQueue(
+                config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck);
+
+        settingsView.displayApplySuccessScreen(processedCount);
+        break; // Successfully completed! Exit wizard loop back to Master Settings.
+
+      } catch (Exception e) {
+        // Catch any exception locally so the manager stays in the wizard loop on failure
+        ConsoleUtil.printError("Failed to apply settings: " + e.getMessage());
+      }
+    }
+  }
+
+  private void handleResetToDefaults() {
+    boolean confirmed =
+        ConsoleUtil.showConfirmMessage(
+            "Are you sure you want to reset all VIP rules, weights, and strategies to factory"
+                + " defaults?");
+
+    if (confirmed) {
+      VipSystemConfig config = configRepo.getConfig();
+      config.resetToDefaults();
+      configRepo.updateConfig(config);
+
+      ConsoleUtil.clearScreen();
+      System.out.println(">> SUCCESS: System settings reset to baseline factory defaults.\n");
+      ConsoleUtil.printContinueMessage();
     }
   }
 }

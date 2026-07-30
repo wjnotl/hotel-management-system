@@ -253,7 +253,7 @@ public class ConsoleUtil {
     return scanner.nextLine().trim();
   }
 
-  public static Integer getIntegerInput(String prompt, int min) {
+  public static Integer getIntegerInput(String prompt, int min, int max) {
     System.out.print(prompt);
     String rawInput = scanner.nextLine().trim();
 
@@ -269,8 +269,9 @@ public class ConsoleUtil {
             "Invalid input format! Number must not include leading zeros.");
       }
 
-      if (choice < min) {
-        throw new IllegalArgumentException("Invalid input! Value must be at least " + min + ".");
+      if (choice < min || choice > max) {
+        throw new IllegalArgumentException(
+            "Invalid input! Value must be between " + min + " and " + max + ".");
       }
 
       return choice;
@@ -279,7 +280,7 @@ public class ConsoleUtil {
     }
   }
 
-  public static Double getDoubleInput(String prompt, double min) {
+  public static Double getDoubleInput(String prompt, double min, double max) {
     System.out.print(prompt);
     String rawInput = scanner.nextLine().trim();
 
@@ -290,8 +291,9 @@ public class ConsoleUtil {
     try {
       double choice = Double.parseDouble(rawInput);
 
-      if (choice < min) {
-        throw new IllegalArgumentException("Invalid input! Value must be at least " + min + ".");
+      if (choice < min || choice > max) {
+        throw new IllegalArgumentException(
+            "Invalid input! Value must be between " + min + " and " + max + ".");
       }
 
       return choice;

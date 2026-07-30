@@ -15,9 +15,32 @@ public class VipSettingsView {
     System.out.println("1. Manage Scoring Strategies");
     System.out.println("2. Tweak Operational Rules");
     System.out.println("3. Adjust Component Weights");
-    System.out.println("4. Back\n");
+    System.out.println("4. Apply Settings to Active Queue");
+    System.out.println("5. Reset to Factory Default Settings");
+    System.out.println("6. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
+
+  public int promptApplyOptionWithBack(String title, String description) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("QUEUE RECONCILIATION WIZARD");
+    System.out.println(" [ " + title + " ]");
+    System.out.println(" " + description + "\n");
+    System.out.println("------------------------------------------------------");
+    System.out.println("1. Yes (Enforce)");
+    System.out.println("2. No  (Skip)");
+    System.out.println("3. Back (Cancel Apply Wizard)\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public void displayApplySuccessScreen(int processedCount) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("QUEUE RECONCILIATION COMPLETE");
+    System.out.println(" >> SUCCESS: Active queues recalculated and re-sorted successfully!");
+    System.out.println(" >> Total Waiting Reservations Processed: " + processedCount + "\n");
+    ConsoleUtil.printContinueMessage();
   }
 
   public int displayStrategyEngineMenu() {
@@ -164,26 +187,28 @@ public class VipSettingsView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
-  public Integer promptRuleIntInput(String targetVar, int currentVal) {
+  public Integer promptRuleIntInput(String targetVar, int currentVal, int min, int max) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("MODIFY " + targetVar.toUpperCase());
     System.out.println(" Target Variable : " + targetVar);
-    System.out.println(" Current Value   : " + currentVal + "\n");
+    System.out.println(" Current Value   : " + currentVal);
+    System.out.println(" Allowed Range   : [" + min + " - " + max + "]\n");
     System.out.println("------------------------------------------------------");
     System.out.println(" Press ENTER / 'C' to Keep Current Value\n");
 
-    return ConsoleUtil.getIntegerInput(" [ New Value ]: ", 0);
+    return ConsoleUtil.getIntegerInput(" [ New Value ]: ", min, max);
   }
 
-  public Double promptRuleDoubleInput(String targetVar, double currentVal) {
+  public Double promptRuleDoubleInput(String targetVar, double currentVal, double min, double max) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("MODIFY " + targetVar.toUpperCase());
     System.out.println(" Target Variable : " + targetVar);
-    System.out.println(" Current Value   : " + currentVal + "\n");
+    System.out.println(" Current Value   : " + currentVal);
+    System.out.println(" Allowed Range   : [" + min + " - " + max + "]\n");
     System.out.println("------------------------------------------------------");
     System.out.println(" Press ENTER / 'C' to Keep Current Value\n");
 
-    return ConsoleUtil.getDoubleInput(" [ New Value ]: ", 0.0);
+    return ConsoleUtil.getDoubleInput(" [ New Value ]: ", min, max);
   }
 
   public int displayComponentWeightsMenu() {
