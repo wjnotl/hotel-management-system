@@ -40,4 +40,4 @@ jobs:
 
       # 4. Compile the application with Ant
       - name: Build JAR with Ant
-        run: ant jar
+        run: ant clean jar

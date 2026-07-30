@@ -9,6 +9,7 @@ import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import entity.Room;
+import entity.VipSystemConfig;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 import util.BinaryFileUtil;
@@ -53,7 +54,8 @@ public class AllocationRepo {
       RoomRepo roomRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
-      MemberRepo memberRepo) {
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
     if (entry == null) return;
 
     allocationList.add(entry);
@@ -61,7 +63,7 @@ public class AllocationRepo {
     save();
 
     // Re-arm scheduler when new entry is added
-    scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo);
+    scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
   }
 
   public boolean removeAllocationEntry(
@@ -69,7 +71,8 @@ public class AllocationRepo {
       RoomRepo roomRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
-      MemberRepo memberRepo) {
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
     if (entry == null || allocationList == null) return false;
 
     boolean removed = false;
@@ -87,7 +90,8 @@ public class AllocationRepo {
       save();
 
       // Re-arm scheduler when an entry is removed early
-      scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo);
+      scheduleNextAutoExpirationTask(
+          roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
     }
     return removed;
   }
@@ -100,7 +104,8 @@ public class AllocationRepo {
       RoomRepo roomRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
-      MemberRepo memberRepo) {
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
 
     // 1. Check if the Queue is empty using Queue ADT
     if (allocationQueue == null || allocationQueue.isEmpty()) return;
@@ -149,7 +154,15 @@ public class AllocationRepo {
                           ? memberRepo.findById(guest.getMemberId())
                           : null;
 
-                  if (guest.getStrikeCount() >= 3) {
+                  VipSystemConfig config = configRepo.getConfig();
+                  int maxStrikes =
+                      (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
+                          ? config.getDiamondMaxStrikes()
+                          : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
+                              ? config.getGoldMaxStrikes()
+                              : config.getSilverMaxStrikes();
+
+                  if (guest.getStrikeCount() >= maxStrikes) {
                     res.setStatus(Reservation.Status.NO_SHOW);
                   } else {
                     int newScore = calculateDynamicPriorityScore(guest, member);
@@ -170,7 +183,8 @@ public class AllocationRepo {
           } catch (Exception ignored) {
           } finally {
             // 6. CHAIN: Re-arm for whatever item is now at the front of the queue!
-            scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo);
+            scheduleNextAutoExpirationTask(
+                roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
           }
         });
   }
