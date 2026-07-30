@@ -7,12 +7,14 @@ import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import entity.Room;
+import entity.VipSystemConfig;
 import java.time.LocalDateTime;
 import repo.AllocationRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.VipReservationRepo;
+import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
 import util.NumberUtil;
 import view.vip.VipManageWaitlistView;
@@ -25,18 +27,21 @@ public class VipManageWaitlistController {
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
   private final AllocationRepo allocationRepo;
+  private final VipSystemConfigRepo vipSystemConfigRepo;
 
   public VipManageWaitlistController(
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       RoomRepo roomRepo,
-      AllocationRepo allocationRepo) {
+      AllocationRepo allocationRepo,
+      VipSystemConfigRepo vipSystemConfigRepo) {
     this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
     this.allocationRepo = allocationRepo;
+    this.vipSystemConfigRepo = vipSystemConfigRepo;
   }
 
   public void startWaitlistManagement() {
@@ -125,6 +130,8 @@ public class VipManageWaitlistController {
   }
 
   private void handleAddGuest(Room.RoomType roomType) {
+    VipSystemConfig config = vipSystemConfigRepo.getConfig();
+
     while (true) {
       try {
         String inputId = waitlistView.promptAddGuestInput();
@@ -146,9 +153,15 @@ public class VipManageWaitlistController {
 
         Member member =
             (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
+        int maxStrikes =
+            (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondMaxStrikes()
+                : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldMaxStrikes()
+                    : config.getSilverMaxStrikes();
 
-        if (guest.getStrikeCount() >= 3) {
-          int choice = waitlistView.displayMaxStrikeWarningScreen(guest, member);
+        if (guest.getStrikeCount() >= maxStrikes) {
+          int choice = waitlistView.displayMaxStrikeWarningScreen(guest, member, maxStrikes);
 
           if (choice == 1) {
             guest.setStrikeCount(0);
@@ -172,7 +185,9 @@ public class VipManageWaitlistController {
           }
         }
 
-        int baseScore = calculateDynamicPriorityScore(guest, member);
+        int baseScore =
+            vipReservationRepo.calculatePriorityScore(
+                null, guest, member, vipSystemConfigRepo.getConfig());
 
         boolean confirmed =
             waitlistView.displayAddGuestConfirmationScreen(guest, member, roomType, baseScore);
@@ -316,7 +331,8 @@ public class VipManageWaitlistController {
             vacantRoom.getRoomNumber(),
             System.currentTimeMillis() + holdDurationMs);
 
-    allocationRepo.addAllocationEntry(entry, roomRepo, vipReservationRepo, guestRepo, memberRepo);
+    allocationRepo.addAllocationEntry(
+        entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     vacantRoom.setStatus(Room.Status.OCCUPIED);
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
@@ -375,33 +391,6 @@ public class VipManageWaitlistController {
     }
 
     return "RES-" + (maxIdNum + 1);
-  }
-
-  private int calculateDynamicPriorityScore(Guest guest, Member member) {
-    if (member == null || member.getTier() == null) {
-      return 1000;
-    }
-
-    int tierBase;
-    switch (member.getTier()) {
-      case DIAMOND:
-        tierBase = 9000;
-        break;
-      case GOLD:
-        tierBase = 7000;
-        break;
-      case SILVER:
-        tierBase = 5000;
-        break;
-      default:
-        tierBase = 1000;
-        break;
-    }
-
-    int pointsBonus = Math.min(member.getPoints() / 10, 800);
-    int strikePenalty = (guest != null) ? (guest.getStrikeCount() * 500) : 0;
-
-    return Math.max(1000, tierBase + pointsBonus - strikePenalty);
   }
 
   private Guest findGuestByName(ListInterface<Guest> guestList, String name) {

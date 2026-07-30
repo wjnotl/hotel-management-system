@@ -4,8 +4,11 @@ import adt.ArrayList;
 import adt.BinaryHeapPriorityQueue;
 import adt.ListInterface;
 import adt.PriorityQueueInterface;
+import entity.Guest;
+import entity.Member;
 import entity.Reservation;
 import entity.Room;
+import entity.VipSystemConfig;
 import util.BinaryFileUtil;
 
 public class VipReservationRepo {
@@ -126,5 +129,78 @@ public class VipReservationRepo {
 
   public ListInterface<Reservation> getAllReservations() {
     return masterList;
+  }
+
+  public int calculatePriorityScore(
+      Reservation reservation, Guest guest, Member member, VipSystemConfig config) {
+
+    if (config == null) return 1000;
+
+    Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+
+    // Resolve variable names to dynamic values
+    java.util.function.Function<String, Double> resolver =
+        (var) -> {
+          switch (var.toUpperCase()) {
+            case "TIER":
+              return (tier == Member.LoyaltyTier.DIAMOND)
+                  ? (double) config.getDiamondBaseValue()
+                  : (tier == Member.LoyaltyTier.GOLD)
+                      ? (double) config.getGoldBaseValue()
+                      : (tier == Member.LoyaltyTier.SILVER)
+                          ? (double) config.getSilverBaseValue()
+                          : 1000.0;
+            case "W_TIER":
+              return 1.0;
+            case "WAIT":
+              if (reservation == null || reservation.getQueueArrivalTime() == null) return 0.0;
+              return (double)
+                  java.time.Duration.between(
+                          reservation.getQueueArrivalTime(), java.time.LocalDateTime.now())
+                      .toMinutes();
+            case "W_TIME":
+              return (tier == Member.LoyaltyTier.DIAMOND)
+                  ? config.getDiamondTimeWeight()
+                  : (tier == Member.LoyaltyTier.GOLD)
+                      ? config.getGoldTimeWeight()
+                      : config.getSilverTimeWeight();
+            case "STRIKES":
+              return (guest != null) ? (double) guest.getStrikeCount() : 0.0;
+            case "W_STRIKE":
+              return (tier == Member.LoyaltyTier.DIAMOND)
+                  ? config.getDiamondStrikePenalty()
+                  : (tier == Member.LoyaltyTier.GOLD)
+                      ? config.getGoldStrikePenalty()
+                      : config.getSilverStrikePenalty();
+            case "BOILING":
+              double wait =
+                  (reservation != null && reservation.getQueueArrivalTime() != null)
+                      ? java.time.Duration.between(
+                              reservation.getQueueArrivalTime(), java.time.LocalDateTime.now())
+                          .toMinutes()
+                      : 0.0;
+              double patienceLimit =
+                  (tier == Member.LoyaltyTier.DIAMOND)
+                      ? config.getDiamondPatienceLimitMins()
+                      : (tier == Member.LoyaltyTier.GOLD)
+                          ? config.getGoldPatienceLimitMins()
+                          : config.getSilverPatienceLimitMins();
+              boolean isBoiling = wait >= patienceLimit;
+              if (reservation != null) reservation.setBoiling(isBoiling);
+              return isBoiling ? 1.0 : 0.0;
+            case "W_BOILING":
+              return (tier == Member.LoyaltyTier.DIAMOND)
+                  ? config.getDiamondBoilingBoost()
+                  : (tier == Member.LoyaltyTier.GOLD)
+                      ? config.getGoldBoilingBoost()
+                      : config.getSilverBoilingBoost();
+            default:
+              return 0.0;
+          }
+        };
+
+    double result =
+        util.ExpressionEvaluator.evaluateInfix(config.getActiveFormulaInfix(), resolver);
+    return (int) Math.max(1000, Math.round(result));
   }
 }

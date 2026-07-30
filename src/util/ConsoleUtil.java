@@ -252,4 +252,51 @@ public class ConsoleUtil {
     System.out.print(prompt);
     return scanner.nextLine().trim();
   }
+
+  public static Integer getIntegerInput(String prompt, int min) {
+    System.out.print(prompt);
+    String rawInput = scanner.nextLine().trim();
+
+    if (rawInput.isEmpty() || "C".equalsIgnoreCase(rawInput)) {
+      return null; // Signals keep current value / cancel
+    }
+
+    try {
+      int choice = Integer.parseInt(rawInput);
+
+      if (rawInput.length() > 1 && rawInput.startsWith("0")) {
+        throw new IllegalArgumentException(
+            "Invalid input format! Number must not include leading zeros.");
+      }
+
+      if (choice < min) {
+        throw new IllegalArgumentException("Invalid input! Value must be at least " + min + ".");
+      }
+
+      return choice;
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Invalid input! Please provide a valid integer.");
+    }
+  }
+
+  public static Double getDoubleInput(String prompt, double min) {
+    System.out.print(prompt);
+    String rawInput = scanner.nextLine().trim();
+
+    if (rawInput.isEmpty() || "C".equalsIgnoreCase(rawInput)) {
+      return null;
+    }
+
+    try {
+      double choice = Double.parseDouble(rawInput);
+
+      if (choice < min) {
+        throw new IllegalArgumentException("Invalid input! Value must be at least " + min + ".");
+      }
+
+      return choice;
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Invalid input! Please provide a valid decimal number.");
+    }
+  }
 }

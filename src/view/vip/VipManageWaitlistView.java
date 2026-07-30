@@ -435,7 +435,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  public int displayMaxStrikeWarningScreen(Guest g, Member m) {
+  public int displayMaxStrikeWarningScreen(Guest g, Member m, int maxStrikes) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("WARNING: MAX STRIKE LIMIT EXCEEDED");
 
@@ -462,7 +462,7 @@ public class VipManageWaitlistView {
         new String[] {"Member Tier", (m != null ? m.getTier().name() : "NON-MEMBER")}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Strikes Today", g.getStrikeCount() + " / 3"}, kvSettings);
+        new String[] {"Strikes Today", g.getStrikeCount() + " / " + maxStrikes}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
