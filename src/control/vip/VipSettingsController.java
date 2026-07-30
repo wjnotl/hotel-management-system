@@ -498,18 +498,19 @@ public class VipSettingsController {
       while (true) {
         try {
           Integer newVal = null;
+          String formula = config.getActiveFormulaInfix();
           if (tier == 1)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Diamond Max Strikes", config.getDiamondMaxStrikes(), 0, 10);
+                    "Diamond Max Strikes", config.getDiamondMaxStrikes(), 0, 10, formula);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Gold Max Strikes", config.getGoldMaxStrikes(), 0, 10);
+                    "Gold Max Strikes", config.getGoldMaxStrikes(), 0, 10, formula);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Silver Max Strikes", config.getSilverMaxStrikes(), 0, 10);
+                    "Silver Max Strikes", config.getSilverMaxStrikes(), 0, 10, formula);
 
           if (newVal != null) {
             int oldVal =
@@ -559,18 +560,19 @@ public class VipSettingsController {
       while (true) {
         try {
           Integer newVal = null;
+          String formula = config.getActiveFormulaInfix();
           if (tier == 1)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Diamond Patience Mins", config.getDiamondPatienceLimitMins(), 1, 180);
+                    "Diamond Patience Mins", config.getDiamondPatienceLimitMins(), 1, 180, formula);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Gold Patience Mins", config.getGoldPatienceLimitMins(), 1, 180);
+                    "Gold Patience Mins", config.getGoldPatienceLimitMins(), 1, 180, formula);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Silver Patience Mins", config.getSilverPatienceLimitMins(), 1, 180);
+                    "Silver Patience Mins", config.getSilverPatienceLimitMins(), 1, 180, formula);
 
           if (newVal != null) {
             int oldVal =
@@ -622,18 +624,19 @@ public class VipSettingsController {
       while (true) {
         try {
           Integer newVal = null;
+          String formula = config.getActiveFormulaInfix();
           if (tier == 1)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Diamond Grace Mins", config.getDiamondGraceWindowMins(), 1, 60);
+                    "Diamond Grace Mins", config.getDiamondGraceWindowMins(), 1, 60, formula);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Gold Grace Mins", config.getGoldGraceWindowMins(), 1, 60);
+                    "Gold Grace Mins", config.getGoldGraceWindowMins(), 1, 60, formula);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Silver Grace Mins", config.getSilverGraceWindowMins(), 1, 60);
+                    "Silver Grace Mins", config.getSilverGraceWindowMins(), 1, 60, formula);
 
           if (newVal != null) {
             if (tier == 1) config.setDiamondGraceWindowMins(newVal);
@@ -690,18 +693,19 @@ public class VipSettingsController {
       while (true) {
         try {
           Integer newVal = null;
+          String formula = config.getActiveFormulaInfix();
           if (tier == 1)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Diamond Base Score", config.getDiamondBaseValue(), 1, 100000);
+                    "Diamond Base Score", config.getDiamondBaseValue(), 1, 100000, formula);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Gold Base Score", config.getGoldBaseValue(), 1, 100000);
+                    "Gold Base Score", config.getGoldBaseValue(), 1, 100000, formula);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleIntInput(
-                    "Silver Base Score", config.getSilverBaseValue(), 1, 100000);
+                    "Silver Base Score", config.getSilverBaseValue(), 1, 100000, formula);
 
           if (newVal != null) {
             int oldVal =
@@ -751,18 +755,23 @@ public class VipSettingsController {
       while (true) {
         try {
           Double newVal = null;
+          String formula = config.getActiveFormulaInfix();
           if (tier == 1)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Diamond Boiling Boost", config.getDiamondBoilingBoost(), 0.01, 50000.0);
+                    "Diamond Boiling Boost",
+                    config.getDiamondBoilingBoost(),
+                    0.01,
+                    50000.0,
+                    formula);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Gold Boiling Boost", config.getGoldBoilingBoost(), 0.01, 50000.0);
+                    "Gold Boiling Boost", config.getGoldBoilingBoost(), 0.01, 50000.0, formula);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Silver Boiling Boost", config.getSilverBoilingBoost(), 0.01, 50000.0);
+                    "Silver Boiling Boost", config.getSilverBoilingBoost(), 0.01, 50000.0, formula);
 
           if (newVal != null) {
             double oldVal =
@@ -812,18 +821,27 @@ public class VipSettingsController {
       while (true) {
         try {
           Double newVal = null;
+          String formula = config.getActiveFormulaInfix();
           if (tier == 1)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Diamond Strike Penalty", config.getDiamondStrikePenalty(), 0.01, 50000.0);
+                    "Diamond Strike Penalty",
+                    config.getDiamondStrikePenalty(),
+                    0.01,
+                    50000.0,
+                    formula);
           else if (tier == 2)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Gold Strike Penalty", config.getGoldStrikePenalty(), 0.01, 50000.0);
+                    "Gold Strike Penalty", config.getGoldStrikePenalty(), 0.01, 50000.0, formula);
           else if (tier == 3)
             newVal =
                 settingsView.promptRuleDoubleInput(
-                    "Silver Strike Penalty", config.getSilverStrikePenalty(), 0.01, 50000.0);
+                    "Silver Strike Penalty",
+                    config.getSilverStrikePenalty(),
+                    0.01,
+                    50000.0,
+                    formula);
 
           if (newVal != null) {
             double oldVal =
@@ -856,9 +874,8 @@ public class VipSettingsController {
   private void handleApplyToQueue() {
     VipSystemConfig config = configRepo.getConfig();
 
-    while (true) { // Wizard Loop to prevent getting kicked out
+    while (true) {
       try {
-        // STEP 1: Question about Evicting Over-Strike Members
         int choice1 =
             settingsView.promptApplyOptionWithBack(
                 "STRIKE THRESHOLD EVICTION",
@@ -866,11 +883,10 @@ public class VipSettingsController {
                     + " Limits?");
 
         if (choice1 == 3) {
-          return; // Safely exit wizard and return to Master Settings
+          return;
         }
         boolean evictOverStrikes = (choice1 == 1);
 
-        // STEP 2: Question about Boiling Status Recalculation
         int choice2 =
             settingsView.promptApplyOptionWithBack(
                 "BOILING STATUS RE-EVALUATION",
@@ -878,29 +894,27 @@ public class VipSettingsController {
                     + " flags?");
 
         if (choice2 == 3) {
-          return; // Safely exit wizard and return to Master Settings
+          return;
         }
         boolean forceBoilingCheck = (choice2 == 1);
 
-        // STEP 3: Final Confirmation Prompt before execution
         boolean confirmExecution =
             ConsoleUtil.showConfirmMessage(
-                "Proceed with recalculating priority scores and re-sorting all active waiting queues?");
+                "Proceed with recalculating priority scores and re-sorting all active waiting"
+                    + " queues?");
 
         if (!confirmExecution) {
-          return; // Safely exit wizard and return to Master Settings
+          return;
         }
 
-        // STEP 4: Execute Batch Queue Reconciliation
         int processedCount =
             vipReservationRepo.applySettingsToQueue(
                 config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck);
 
         settingsView.displayApplySuccessScreen(processedCount);
-        break; // Successfully completed! Exit wizard loop back to Master Settings.
+        break;
 
       } catch (Exception e) {
-        // Catch any exception locally so the manager stays in the wizard loop on failure
         ConsoleUtil.printError("Failed to apply settings: " + e.getMessage());
       }
     }

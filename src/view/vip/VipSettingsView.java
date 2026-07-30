@@ -187,9 +187,11 @@ public class VipSettingsView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
-  public Integer promptRuleIntInput(String targetVar, int currentVal, int min, int max) {
+  public Integer promptRuleIntInput(
+      String targetVar, int currentVal, int min, int max, String activeFormula) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("MODIFY " + targetVar.toUpperCase());
+    System.out.println(" Active Formula  : " + activeFormula);
     System.out.println(" Target Variable : " + targetVar);
     System.out.println(" Current Value   : " + currentVal);
     System.out.println(" Allowed Range   : [" + min + " - " + max + "]\n");
@@ -199,9 +201,11 @@ public class VipSettingsView {
     return ConsoleUtil.getIntegerInput(" [ New Value ]: ", min, max);
   }
 
-  public Double promptRuleDoubleInput(String targetVar, double currentVal, double min, double max) {
+  public Double promptRuleDoubleInput(
+      String targetVar, double currentVal, double min, double max, String activeFormula) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("MODIFY " + targetVar.toUpperCase());
+    System.out.println(" Active Formula  : " + activeFormula);
     System.out.println(" Target Variable : " + targetVar);
     System.out.println(" Current Value   : " + currentVal);
     System.out.println(" Allowed Range   : [" + min + " - " + max + "]\n");
