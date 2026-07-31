@@ -49,10 +49,7 @@ public class HotelManagementSystem {
               .start();
         } else if ("3".equals(choice)) {
           new HouseKeepingController(
-                  houseKeepingTaskRepo,
-                  housekeepingStaffRepo,
-                  roomRepo,
-                  roomStatusHistoryRepo)
+                  houseKeepingTaskRepo, housekeepingStaffRepo, roomRepo, roomStatusHistoryRepo)
               .start();
         } else if ("4".equals(choice)) {
           new FrontDeskController().start();
