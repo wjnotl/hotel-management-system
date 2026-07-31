@@ -1,19 +1,22 @@
 package control.frontdesk;
 
 import util.ConsoleUtil;
-import view.FrontDeskView;
+import view.frontdesk.FrontDeskView;
 
 public class FrontDeskController {
   private final FrontDeskView frontDeskView = new FrontDeskView();
-  private final GuestInformationController GuestInfoController = new GuestInformationController();
-
+  private final GuestInformationController guestInfoController = new GuestInformationController();
+  private final ManageGuestCheckOutController manageGuestCheckOutController = new ManageGuestCheckOutController();
+  
   public void start() {
     while (true) {
       try {
         String choice = frontDeskView.displayMenu();
 
         if ("1".equals(choice)) {
-          GuestInfoController.start();
+          guestInfoController.start();
+        } else if ("2".equals(choice)) {
+          manageGuestCheckOutController.start();
         } else if ("5".equals(choice)) {
           return;
         }

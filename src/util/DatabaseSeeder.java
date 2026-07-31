@@ -1,5 +1,6 @@
 package util;
 
+import adt.ListInterface;
 import entity.Billing;
 import entity.Guest;
 import entity.HousekeepingStaff;
@@ -318,6 +319,21 @@ public class DatabaseSeeder {
           roomST101.getPrice(),
           Billing.Status.PAID,
           now.minusDays(9));
+      // ==========================================
+      // 5b. MARK ROOMS WITH AN ACTIVE STAY AS OCCUPIED
+      // ==========================================
+      ListInterface<Billing> seededBillings = billingRepo.getBillingList();
+      for (int i = 1; i <= seededBillings.getNumberOfEntries(); i++) {
+        Billing b = seededBillings.getEntry(i);
+        if (b == null || b.getCheckOutDate() == null) continue;
+        if (b.getCheckOutDate().isBefore(today)) continue; // already checked out - historical
+
+        Room activeRoom = roomRepo.findByRoomNumber(b.getRoomNumber());
+        if (activeRoom != null && activeRoom.getStatus() != Room.Status.OCCUPIED) {
+          activeRoom.setStatus(Room.Status.OCCUPIED);
+          roomRepo.updateRoom(activeRoom);
+        }
+      }
 
       // ==========================================
       // 6. SEED HOUSEKEEPING STAFF

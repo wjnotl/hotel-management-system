@@ -12,12 +12,12 @@ import repo.BillingRepo;
 import repo.GuestRepo;
 import repo.VipReservationRepo;
 import util.ConsoleUtil;
-import view.FrontDeskView;
+import view.frontdesk.GuestInformationView;
 
 public class GuestInformationController {
   private static final int PAGE_SIZE = 10;
 
-  private final FrontDeskView frontDeskView = new FrontDeskView();
+  private final GuestInformationView guestInformationView = new GuestInformationView();
   private final GuestRepo guestRepo = new GuestRepo();
   private final VipReservationRepo reservationRepo = new VipReservationRepo();
   private final BillingRepo billingRepo = new BillingRepo();
@@ -25,7 +25,7 @@ public class GuestInformationController {
   public void start() {
     while (true) {
       try {
-        String rawId = frontDeskView.promptGuestIdInput();
+        String rawId = guestInformationView.promptGuestIdInput();
 
         if (rawId == null || rawId.trim().isEmpty() || "C".equalsIgnoreCase(rawId.trim())) {
           return;
@@ -36,7 +36,7 @@ public class GuestInformationController {
         Guest guest = guestRepo.findById(guestId);
 
         if (guest == null) {
-          frontDeskView.displayGuestNotFound(guestId);
+          guestInformationView.displayGuestNotFound(guestId);
           continue;
         }
 
@@ -50,12 +50,12 @@ public class GuestInformationController {
   private void handleGuestActionSubmenu(Guest guest) {
     while (true) {
       try {
-        int action = frontDeskView.displayGuestActionSubmenu(guest);
+        int action = guestInformationView.displayGuestActionSubmenu(guest);
 
         if (action == 1) {
           Reservation latestReservation = findLatestReservationForGuest(guest.getGuestId());
           Billing latestBilling = findLatestBillingForGuest(guest.getGuestId());
-          frontDeskView.displayGuestDetails(guest, latestReservation, latestBilling);
+          guestInformationView.displayGuestDetails(guest, latestReservation, latestBilling);
         } else if (action == 2) {
           handleViewBillingHistory(guest);
         } else if (action == 3) {
@@ -78,7 +78,7 @@ public class GuestInformationController {
     while (true) {
       int total = billingHistory.getNumberOfEntries();
       ConsoleUtil.GetMenuInputResult result =
-          frontDeskView.displayBillingHistory(guest, billingHistory, currentPage, PAGE_SIZE);
+          guestInformationView.displayBillingHistory(guest, billingHistory, currentPage, PAGE_SIZE);
 
       if ("C".equalsIgnoreCase(result.input)) {
         return;
@@ -98,7 +98,7 @@ public class GuestInformationController {
       } else if (result.isNumber) {
         int index = Integer.parseInt(result.input);
         Billing selected = billingHistory.getEntry(index);
-        frontDeskView.displayReceipt(guest, selected);
+        guestInformationView.displayReceipt(guest, selected);
         return;
       }
     }
@@ -111,7 +111,7 @@ public class GuestInformationController {
     while (true) {
       int total = roomHistory.getNumberOfEntries();
       ConsoleUtil.GetMenuInputResult result =
-          frontDeskView.displayAssignedRoomHistory(guest, roomHistory, currentPage, PAGE_SIZE);
+          guestInformationView.displayAssignedRoomHistory(guest, roomHistory, currentPage, PAGE_SIZE);
 
       if ("C".equalsIgnoreCase(result.input)) {
         return;
@@ -140,7 +140,7 @@ public class GuestInformationController {
     while (true) {
       int total = reservationHistory.getNumberOfEntries();
       ConsoleUtil.GetMenuInputResult result =
-          frontDeskView.displayReservationHistory(
+          guestInformationView.displayReservationHistory(
               guest, reservationHistory, currentPage, PAGE_SIZE);
 
       if ("C".equalsIgnoreCase(result.input)) {
