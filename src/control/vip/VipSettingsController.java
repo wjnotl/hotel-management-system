@@ -5,6 +5,7 @@ import adt.LinkedStack;
 import adt.ListInterface;
 import adt.StackInterface;
 import entity.VipSystemConfig;
+import repo.AllocationRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.VipReservationRepo;
@@ -19,16 +20,19 @@ public class VipSettingsController {
   private final VipReservationRepo vipReservationRepo;
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
+  private final AllocationRepo allocationRepo;
 
   public VipSettingsController(
       VipSystemConfigRepo configRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
-      MemberRepo memberRepo) {
+      MemberRepo memberRepo,
+      AllocationRepo allocationRepo) {
     this.configRepo = configRepo;
     this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
+    this.allocationRepo = allocationRepo;
   }
 
   public void startSettingsManagement() {
@@ -876,42 +880,53 @@ public class VipSettingsController {
 
     while (true) {
       try {
+        // Step 1: Strike eviction rule
         int choice1 =
             settingsView.promptApplyOptionWithBack(
                 "STRIKE THRESHOLD EVICTION",
                 "Automatically cancel and evict waiting guests who exceed the active Tier Strike"
                     + " Limits?");
-
-        if (choice1 == 3) {
-          return;
-        }
+        if (choice1 == 3) return; // Cancel
         boolean evictOverStrikes = (choice1 == 1);
 
+        // Step 2: Boiling point re-check rule
         int choice2 =
             settingsView.promptApplyOptionWithBack(
                 "BOILING STATUS RE-EVALUATION",
                 "Re-evaluate live wait times against active Patience Thresholds and update BOILING"
                     + " flags?");
-
-        if (choice2 == 3) {
-          return;
-        }
+        if (choice2 == 3) return; // Cancel
         boolean forceBoilingCheck = (choice2 == 1);
 
+        // Step 3: Explicit confirmation prompt for Active Holding Bay Timers!
+        int choice3 =
+            settingsView.promptApplyOptionWithBack(
+                "ACTIVE ALLOCATION GRACE TIMERS",
+                "Reset active countdown timers in the Holding Bay using the newly configured Grace"
+                    + " Periods?");
+        if (choice3 == 3) return; // Cancel
+        boolean updateActiveGraceTimers = (choice3 == 1);
+
+        // Final Master Execution Confirmation
         boolean confirmExecution =
             ConsoleUtil.showConfirmMessage(
-                "Proceed with recalculating priority scores and re-sorting all active waiting"
-                    + " queues?");
+                "Confirm execution of selected queue reconciliation rules?");
+        if (!confirmExecution) return;
 
-        if (!confirmExecution) {
-          return;
-        }
-
-        int processedCount =
+        // Execute Waitlist Re-calculation
+        int processedWaitlist =
             vipReservationRepo.applySettingsToQueue(
                 config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck);
 
-        settingsView.displayApplySuccessScreen(processedCount);
+        // Execute Active Holding Bay Recalculation ONLY IF confirmed!
+        int processedAllocations = 0;
+        if (updateActiveGraceTimers) {
+          processedAllocations =
+              allocationRepo.recalculateActiveGraceTimers(
+                  vipReservationRepo, guestRepo, memberRepo, configRepo);
+        }
+
+        settingsView.displayApplySuccessScreen(processedWaitlist + processedAllocations);
         break;
 
       } catch (Exception e) {

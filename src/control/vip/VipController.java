@@ -60,7 +60,8 @@ public class VipController {
                   vipSystemConfigRepo)
               .startAllocationManagement();
         } else if ("3".equals(choice)) {
-          new VipSettingsController(vipSystemConfigRepo, vipReservationRepo, guestRepo, memberRepo)
+          new VipSettingsController(
+                  vipSystemConfigRepo, vipReservationRepo, guestRepo, memberRepo, allocationRepo)
               .startSettingsManagement();
         } else if ("5".equals(choice)) {
           return;
