@@ -242,7 +242,8 @@ public class VipManageWaitlistView {
     return promptConfirm("Add this guest to the " + roomType.name() + " waitlist queue? (Y/N): ");
   }
 
-  public boolean displayDequeueConfirmationScreen(Reservation r, Guest g, Member m, Room room, int graceMins) {
+  public boolean displayDequeueConfirmationScreen(
+      Reservation r, Guest g, Member m, Room room, int graceMins) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CONFIRM VIP ROOM ALLOCATION", 83);
 
