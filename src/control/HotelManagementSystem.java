@@ -1,13 +1,26 @@
 package control;
 
 import control.frontdesk.FrontDeskController;
+import control.housekeeping.HouseKeepingController;
 import control.vip.VipController;
+import repo.*;
 import util.ConsoleUtil;
 import util.DatabaseSeeder;
 import view.MainMenuView;
 
 public class HotelManagementSystem {
   private static MainMenuView mainMenuView = new MainMenuView();
+
+  private static AllocationRepo allocationRepo = new AllocationRepo();
+  private static BillingRepo billingRepo = new BillingRepo();
+  private static GuestRepo guestRepo = new GuestRepo();
+  private static HousekeepingStaffRepo housekeepingStaffRepo = new HousekeepingStaffRepo();
+  private static HousekeepingTaskRepo houseKeepingTaskRepo = new HousekeepingTaskRepo();
+  private static MemberRepo memberRepo = new MemberRepo();
+  private static RoomRepo roomRepo = new RoomRepo();
+  private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
+  private static VipReservationRepo vipReservationRepo = new VipReservationRepo();
+  private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
 
   public static void main(String[] args) {
     // Database Seeder
@@ -16,13 +29,28 @@ public class HotelManagementSystem {
       return;
     }
 
+    allocationRepo.scheduleNextAutoExpirationTask(
+        roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+    VipController.startMidnightStrikeResetScheduler(guestRepo);
+
     while (true) {
       try {
         String choice = mainMenuView.displayMainMenu();
         System.out.println(choice);
 
         if ("2".equals(choice)) {
-          new VipController().start();
+          new VipController(
+                  allocationRepo,
+                  guestRepo,
+                  memberRepo,
+                  roomRepo,
+                  vipReservationRepo,
+                  vipSystemConfigRepo)
+              .start();
+        } else if ("3".equals(choice)) {
+          new HouseKeepingController(
+                  houseKeepingTaskRepo, housekeepingStaffRepo, roomRepo, roomStatusHistoryRepo)
+              .start();
         } else if ("4".equals(choice)) {
           new FrontDeskController().start();
         } else if ("5".equals(choice)) {

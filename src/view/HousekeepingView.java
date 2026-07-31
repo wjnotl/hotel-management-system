@@ -1,0 +1,698 @@
+package view;
+
+import adt.ListInterface;
+import entity.HousekeepingStaff;
+import entity.HousekeepingTask;
+import entity.Room;
+import entity.RoomStatusLogEntry;
+import util.ConsoleUtil;
+import util.ConsoleUtil.GetMenuInputResult;
+import util.TableUtil;
+
+public class HousekeepingView {
+  public String displayMenu() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("Housekeeping & Task Log");
+    System.out.println(" 1. Manage Cleaning Task Board");
+    System.out.println(" 2. Manage Staff Assignments");
+    System.out.println(" 3. Room Status Sync");
+    System.out.println(" 4. Generate Housekeeping Reports");
+    System.out.println(" 5. Settings & Configuration");
+    System.out.println(" 6. Back to Main Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).input;
+  }
+
+  // --- SCREEN 1: MANAGE CLEANING TASK BOARD ---
+
+  public GetMenuInputResult renderTaskBoardScreen(
+      ListInterface<HousekeepingTask> list,
+      ListInterface<HousekeepingStaff> staffList,
+      String search,
+      String taskTypeFilter,
+      String statusFilter,
+      String displayOrder,
+      int currentPage,
+      int pageSize) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("MANAGE CLEANING TASK BOARD");
+
+    // Banner Metadata
+    System.out.println(
+        " SEARCH QUERY   : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
+    System.out.println(
+        " TASK TYPE      : [ " + (taskTypeFilter == null ? "ALL" : taskTypeFilter) + " ]");
+    System.out.println(
+        " STATUS FILTER  : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
+    System.out.println(" DISPLAY ORDER  : [ " + displayOrder + " ]");
+    System.out.println("------------------------------------------------------");
+
+    int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
+    int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+
+    // Columns: NO.(5), ROOM NO.(9), TASK TYPE(17), ASSIGNED STAFF(15), URGENT(9), STATUS(13)
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(new int[] {5, 9, 17, 15, 9, 13})
+            .setHAlign(0, TableUtil.Align.CENTER) // NO.
+            .setHAlign(1, TableUtil.Align.CENTER) // ROOM NO.
+            .setHAlign(4, TableUtil.Align.CENTER) // URGENT
+            .setHAlign(5, TableUtil.Align.CENTER); // STATUS
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"NO.", "ROOM NO.", "TASK TYPE", "ASSIGNED STAFF", "URGENT", "STATUS"},
+        settings);
+
+    // --- EMPTY STATE HANDLING ---
+    if (list == null || totalMatches == 0) {
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+      boolean hasActiveFilters =
+          (search != null && !search.trim().isEmpty())
+              || (taskTypeFilter != null && !taskTypeFilter.trim().isEmpty())
+              || (statusFilter != null && !statusFilter.trim().isEmpty());
+
+      String emptyMessage =
+          hasActiveFilters
+              ? "*** NO MATCHING TASKS FOUND FOR ACTIVE FILTERS ***"
+              : "*** TASK BOARD IS CURRENTLY EMPTY ***";
+
+      TableUtil.TableSettings emptySettings =
+          new TableUtil.TableSettings(new int[] {75}).setHAlign(0, TableUtil.Align.CENTER);
+
+      TableUtil.printTableRow(new String[] {emptyMessage}, emptySettings);
+      TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+
+      System.out.println(" Page 0 / 0 (Total Matches: 0)");
+      System.out.println("----------------------------------------------------------------------");
+      System.out.println(" [A] Add Task           [U] Add Urgent Task     [D] Dequeue Next Task");
+      System.out.println(" [S] Search / Filter    [O] Change Display Order [E] Exit to Menu\n");
+
+      return ConsoleUtil.getMenuInput(
+          "Enter a command: ", new char[] {'A', 'U', 'D', 'S', 'O', 'E'});
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      HousekeepingTask t = list.getEntry(i);
+      if (t == null) continue;
+
+      HousekeepingStaff staff = findStaff(staffList, t.getAssignedStaffId());
+
+      int displayNum = i - startIndex + 1;
+      String staffLabel = (staff != null) ? staff.getName() : "Unassigned";
+      String urgentStr = t.getIsUrgent() ? "[!]" : "[ ]";
+
+      TableUtil.printTableRow(
+          new String[] {
+            String.valueOf(displayNum),
+            t.getRoomNumber(),
+            t.getTaskType().name(),
+            staffLabel,
+            urgentStr,
+            t.getStatus().name()
+          },
+          settings);
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    System.out.printf(" Page %d / %d (Total Matches: %d)\n", currentPage, totalPages, totalMatches);
+    System.out.println("----------------------------------------------------------------------");
+    System.out.println(" [A] Add Task           [U] Add Urgent Task     [D] Dequeue Next Task");
+    System.out.println(" [S] Search / Filter    [O] Change Display Order [E] Exit to Menu");
+    System.out.println(" [N] Next Page          [P] Prev Page\n");
+
+    int maxOptionNum = endIndex - startIndex + 1;
+    String promptText =
+        (maxOptionNum == 1)
+            ? "Enter a command or select task index number (1): "
+            : "Enter a command or select a task index number (1-" + maxOptionNum + "): ";
+
+    return ConsoleUtil.getMenuInput(
+        promptText, 1, maxOptionNum, new char[] {'A', 'U', 'D', 'S', 'O', 'E', 'N', 'P'});
+  }
+
+  // --- ADD TASK PROMPTS ---
+
+  public String promptRoomNumberInput() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("ADD CLEANING TASK");
+    System.out.println(" [Enter 'C' to Cancel and return to Task Board]\n");
+    return ConsoleUtil.getStringInput(" Enter Room Number: ");
+  }
+
+  public int promptTaskTypeInput() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SELECT TASK TYPE");
+    System.out.println(" 1. Standard Clean");
+    System.out.println(" 2. Deep Clean");
+    System.out.println(" 3. Turnover");
+    System.out.println(" 4. Maintenance Check\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+  }
+
+  // --- FILTER SUBMENUS WITH EXITS ---
+
+  public int displayFilterMainMenu(String search, String taskType, String status) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("FILTER & SEARCH MANAGEMENT");
+    System.out.println(
+        " Active Search   : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
+    System.out.println(" Active Task Type: [ " + (taskType == null ? "ALL" : taskType) + " ]");
+    System.out.println(" Active Status   : [ " + (status == null ? "ALL" : status) + " ]");
+    System.out.println("------------------------------------------------------");
+    System.out.println(" 1. Text Search Submenu (Room No. / Staff)");
+    System.out.println(" 2. Task Type Submenu");
+    System.out.println(" 3. Task Status Submenu");
+    System.out.println(" 4. Reset / Clear All Filters");
+    System.out.println(" 5. Apply and Return to Task Board");
+    System.out.println(" 6. Back / Exit Filter Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
+
+  public int displaySearchSubmenu(String currentQuery) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH QUERY SUBMENU");
+    System.out.println(
+        " Current Query: [ "
+            + (currentQuery == null ? "None" : "\"" + currentQuery + "\"")
+            + " ]\n");
+    System.out.println(" 1. Enter / Change Search Term");
+    System.out.println(" 2. Clear Search Term");
+    System.out.println(" 3. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public String promptSearchInput() {
+    System.out.println("\n [Leave blank or type 'C' to Cancel]");
+    return ConsoleUtil.getStringInput("Enter search query (Room Number / Staff Name): ");
+  }
+
+  public int displayTaskTypeSubmenu(String currentType) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("TASK TYPE FILTER SUBMENU");
+    System.out.println(
+        " Current Selected Type: [ " + (currentType == null ? "ALL" : currentType) + " ]\n");
+    System.out.println(" 1. Filter: Standard Clean");
+    System.out.println(" 2. Filter: Deep Clean");
+    System.out.println(" 3. Filter: Turnover");
+    System.out.println(" 4. Filter: Maintenance Check");
+    System.out.println(" 5. Clear Task Type Filter (Show All)");
+    System.out.println(" 6. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
+
+  public int displayStatusSubmenu(String currentStatus) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("TASK STATUS FILTER SUBMENU");
+    System.out.println(
+        " Current Selected Status: [ " + (currentStatus == null ? "ALL" : currentStatus) + " ]\n");
+    System.out.println(" 1. Show PENDING Only");
+    System.out.println(" 2. Show ASSIGNED Only");
+    System.out.println(" 3. Show IN_PROGRESS Only");
+    System.out.println(" 4. Show COMPLETED Only");
+    System.out.println(" 5. Show SKIPPED Only");
+    System.out.println(" 6. Clear Status Filter (Show All)");
+    System.out.println(" 7. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
+  }
+
+  public String displayDisplayOrderMenu() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CHANGE DISPLAY ORDER");
+    System.out.println(" 1. Queue Order (Front -> Back, urgent tasks first)");
+    System.out.println(" 2. Room Number (Ascending)");
+    System.out.println(" 3. Assigned Time (Oldest -> Newest)");
+    System.out.println(" 4. Assigned Time (Newest -> Oldest)");
+    System.out.println(" 5. Back to Task Board (Keep current order)\n");
+
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    if (choice == 2) return "ROOM NUMBER (ASCENDING)";
+    if (choice == 3) return "ASSIGNED TIME (OLDEST -> NEWEST)";
+    if (choice == 4) return "ASSIGNED TIME (NEWEST -> OLDEST)";
+    if (choice == 5) return null; // Keep current order
+    return "QUEUE ORDER (FRONT -> BACK)";
+  }
+
+  // --- ROW ACTION SUBMENU ---
+
+  public int displayTaskActionSubmenu(HousekeepingTask t) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("TASK ACTION: " + t.getTaskId());
+    System.out.println(" Room Number     : " + t.getRoomNumber());
+    System.out.println(" Task Type       : " + t.getTaskType().name());
+    System.out.println(" Status          : " + t.getStatus().name());
+    System.out.println(
+        " Assigned Staff  : " + (t.getAssignedStaffId() == null ? "None" : t.getAssignedStaffId()));
+    System.out.println(" Urgent          : " + (t.getIsUrgent() ? "YES" : "NO") + "\n");
+    System.out.println(" 1. Assign to Staff Member");
+    System.out.println(" 2. Start Cleaning (requires assigned staff)");
+    System.out.println(" 3. Mark Completed");
+    System.out.println(" 4. Mark Skipped");
+    System.out.println(" 5. Escalate to Front of Queue");
+    System.out.println(" 6. Cancel Action and Return\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
+
+  public String promptStaffIdInput() {
+    System.out.println("\n [Leave blank or type 'C' to Cancel]");
+    return ConsoleUtil.getStringInput("Enter Staff ID to assign: ");
+  }
+
+  // --- SCREEN 2: STAFF ASSIGNMENTS ---
+
+  public GetMenuInputResult renderStaffRosterScreen(
+      ListInterface<HousekeepingStaff> list,
+      String search,
+      String shiftFilter,
+      String availabilityFilter,
+      int currentPage,
+      int pageSize) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("MANAGE STAFF ASSIGNMENTS");
+
+    System.out.println(
+        " SEARCH QUERY    : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
+    System.out.println(
+        " SHIFT FILTER    : [ " + (shiftFilter == null ? "ALL" : shiftFilter) + " ]");
+    System.out.println(
+        " AVAILABILITY    : [ " + (availabilityFilter == null ? "ALL" : availabilityFilter) + " ]");
+    System.out.println("------------------------------------------------------");
+
+    int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
+    int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+
+    // Columns: NO.(5), STAFF NAME(16), SHIFT(12), ASSIGNED ROOMS(20), STATUS(11)
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(new int[] {5, 16, 12, 20, 11})
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setTruncate(3);
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"NO.", "STAFF NAME", "SHIFT", "ASSIGNED ROOMS", "STATUS"}, settings);
+
+    if (list == null || totalMatches == 0) {
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+      boolean hasActiveFilters =
+          (search != null && !search.trim().isEmpty())
+              || (shiftFilter != null && !shiftFilter.trim().isEmpty())
+              || (availabilityFilter != null && !availabilityFilter.trim().isEmpty());
+
+      String emptyMessage =
+          hasActiveFilters
+              ? "*** NO MATCHING STAFF FOUND FOR ACTIVE FILTERS ***"
+              : "*** NO STAFF ON RECORD ***";
+
+      TableUtil.TableSettings emptySettings =
+          new TableUtil.TableSettings(new int[] {64}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.printTableRow(new String[] {emptyMessage}, emptySettings);
+      TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+
+      System.out.println(" Page 0 / 0 (Total Matches: 0)");
+      System.out.println("------------------------------------------------------");
+      System.out.println(" [S] Search / Filter    [E] Exit to Menu\n");
+
+      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'E'});
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      HousekeepingStaff s = list.getEntry(i);
+      if (s == null) continue;
+
+      int displayNum = i - startIndex + 1;
+      TableUtil.printTableRow(
+          new String[] {
+            String.valueOf(displayNum),
+            s.getName(),
+            s.getShift().name(),
+            formatAssignedRooms(s.getAssignedRoomNumbers()),
+            s.getAvailability().name()
+          },
+          settings);
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    System.out.printf(" Page %d / %d (Total Matches: %d)\n", currentPage, totalPages, totalMatches);
+    System.out.println("------------------------------------------------------");
+    System.out.println(" [S] Search / Filter    [E] Exit to Menu");
+    System.out.println(" [N] Next Page          [P] Prev Page\n");
+
+    int maxOptionNum = endIndex - startIndex + 1;
+    String promptText =
+        (maxOptionNum == 1)
+            ? "Enter a command or select a staff index number (1): "
+            : "Enter a command or select a staff index number (1-" + maxOptionNum + "): ";
+
+    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P'});
+  }
+
+  private String formatAssignedRooms(ListInterface<String> rooms) {
+    if (rooms == null || rooms.isEmpty()) return "None";
+
+    StringBuilder sb = new StringBuilder();
+    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
+      if (i > 1) sb.append(", ");
+      sb.append(rooms.getEntry(i));
+    }
+    return sb.toString();
+  }
+
+  public int displayStaffFilterMainMenu(
+      String search, String shiftFilter, String availabilityFilter) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("FILTER & SEARCH MANAGEMENT");
+    System.out.println(
+        " Active Search      : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
+    System.out.println(
+        " Active Shift       : [ " + (shiftFilter == null ? "ALL" : shiftFilter) + " ]");
+    System.out.println(
+        " Active Availability: [ "
+            + (availabilityFilter == null ? "ALL" : availabilityFilter)
+            + " ]");
+    System.out.println("------------------------------------------------------");
+    System.out.println(" 1. Text Search Submenu (Staff Name)");
+    System.out.println(" 2. Shift Submenu");
+    System.out.println(" 3. Availability Submenu");
+    System.out.println(" 4. Reset / Clear All Filters");
+    System.out.println(" 5. Apply and Return to Staff Roster");
+    System.out.println(" 6. Back / Exit Filter Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
+
+  public int displayStaffSearchSubmenu(String currentQuery) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH QUERY SUBMENU");
+    System.out.println(
+        " Current Query: [ "
+            + (currentQuery == null ? "None" : "\"" + currentQuery + "\"")
+            + " ]\n");
+    System.out.println(" 1. Enter / Change Search Term");
+    System.out.println(" 2. Clear Search Term");
+    System.out.println(" 3. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public String promptStaffSearchInput() {
+    System.out.println("\n [Leave blank or type 'C' to Cancel]");
+    return ConsoleUtil.getStringInput("Enter search query (Staff Name): ");
+  }
+
+  public int displayShiftFilterSubmenu(String currentShift) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SHIFT FILTER SUBMENU");
+    System.out.println(
+        " Current Selected Shift: [ " + (currentShift == null ? "ALL" : currentShift) + " ]\n");
+    System.out.println(" 1. Show MORNING Only");
+    System.out.println(" 2. Show AFTERNOON Only");
+    System.out.println(" 3. Show NIGHT Only");
+    System.out.println(" 4. Clear Shift Filter (Show All)");
+    System.out.println(" 5. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+  }
+
+  public int displayAvailabilityFilterSubmenu(String currentAvailability) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("AVAILABILITY FILTER SUBMENU");
+    System.out.println(
+        " Current Selected Status: [ "
+            + (currentAvailability == null ? "ALL" : currentAvailability)
+            + " ]\n");
+    System.out.println(" 1. Show AVAILABLE Only");
+    System.out.println(" 2. Show ON_TASK Only");
+    System.out.println(" 3. Show OFF_DUTY Only");
+    System.out.println(" 4. Clear Availability Filter (Show All)");
+    System.out.println(" 5. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+  }
+
+  // --- ROW ACTION SUBMENU (STAFF) ---
+
+  public int displayStaffActionSubmenu(HousekeepingStaff staff) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("STAFF ACTION: " + staff.getStaffId());
+    System.out.println(" Staff Name      : " + staff.getName());
+    System.out.println(" Shift           : " + staff.getShift().name());
+    System.out.println(" Availability    : " + staff.getAvailability().name());
+    System.out.println(
+        " Assigned Rooms  : " + formatAssignedRooms(staff.getAssignedRoomNumbers()) + "\n");
+    System.out.println(" 1. Auto-Assign Next Queued Task (requires AVAILABLE)");
+    System.out.println(" 2. Reassign a Room to Another Staff Member");
+    System.out.println(
+        " 3. "
+            + (staff.getAvailability() == HousekeepingStaff.Availability.OFF_DUTY
+                ? "Mark Available"
+                : "Mark Off Duty / On Break"));
+    System.out.println(" 4. View Today's Task History");
+    System.out.println(" 5. Cancel Action and Return\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+  }
+
+  public String promptRoomNumberForReassign() {
+    System.out.println("\n [Leave blank or type 'C' to Cancel]");
+    return ConsoleUtil.getStringInput("Enter Room Number to reassign: ");
+  }
+
+  public String promptTargetStaffIdInput() {
+    System.out.println("\n [Leave blank or type 'C' to Cancel]");
+    return ConsoleUtil.getStringInput("Enter Staff ID to reassign to: ");
+  }
+
+  public void renderStaffTaskHistoryScreen(
+      HousekeepingStaff staff, ListInterface<HousekeepingTask> history) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("TODAY'S TASK HISTORY: " + staff.getName());
+
+    if (history == null || history.isEmpty()) {
+      System.out.println(" *** NO TASKS ASSIGNED TO THIS STAFF MEMBER TODAY ***\n");
+    } else {
+      for (int i = 1; i <= history.getNumberOfEntries(); i++) {
+        HousekeepingTask t = history.getEntry(i);
+        if (t == null) continue;
+
+        System.out.println(
+            " "
+                + t.getTaskId()
+                + " | Room "
+                + t.getRoomNumber()
+                + " | "
+                + t.getTaskType().name()
+                + " | "
+                + t.getStatus().name());
+      }
+      System.out.println();
+    }
+
+    ConsoleUtil.printContinueMessage();
+  }
+
+  // --- SCREEN 3: ROOM STATUS SYNC ---
+
+  public GetMenuInputResult renderRoomStatusScreen(
+      ListInterface<Room> list, String search, String statusFilter, int currentPage, int pageSize) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("ROOM STATUS SYNC");
+
+    System.out.println(
+        " SEARCH QUERY  : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
+    System.out.println(
+        " STATUS FILTER : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
+    System.out.println("------------------------------------------------------");
+
+    int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
+    int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+
+    // Columns: NO.(5), ROOM NO.(9), ROOM TYPE(12), STATUS(13)
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(new int[] {5, 9, 12, 13})
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"NO.", "ROOM NO.", "ROOM TYPE", "STATUS"}, settings);
+
+    if (list == null || totalMatches == 0) {
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+      TableUtil.TableSettings emptySettings =
+          new TableUtil.TableSettings(new int[] {41}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.printTableRow(new String[] {"*** NO MATCHING ROOMS FOUND ***"}, emptySettings);
+      TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+
+      System.out.println(" Page 0 / 0 (Total Matches: 0)");
+      System.out.println("------------------------------------------------------");
+      System.out.println(" [S] Search / Filter    [E] Exit to Menu\n");
+
+      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'E'});
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      Room r = list.getEntry(i);
+      if (r == null) continue;
+
+      int displayNum = i - startIndex + 1;
+      TableUtil.printTableRow(
+          new String[] {
+            String.valueOf(displayNum),
+            r.getRoomNumber(),
+            r.getRoomType().name(),
+            r.getStatus().name()
+          },
+          settings);
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    System.out.printf(" Page %d / %d (Total Matches: %d)\n", currentPage, totalPages, totalMatches);
+    System.out.println("------------------------------------------------------");
+    System.out.println(" [S] Search / Filter    [E] Exit to Menu");
+    System.out.println(" [N] Next Page          [P] Prev Page\n");
+
+    int maxOptionNum = endIndex - startIndex + 1;
+    String promptText =
+        (maxOptionNum == 1)
+            ? "Enter a command or select room index number (1): "
+            : "Enter a command or select a room index number (1-" + maxOptionNum + "): ";
+
+    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P'});
+  }
+
+  public int displayRoomFilterMainMenu(String search, String statusFilter) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("FILTER & SEARCH MANAGEMENT");
+    System.out.println(
+        " Active Search: [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
+    System.out.println(" Active Status: [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
+    System.out.println("------------------------------------------------------");
+    System.out.println(" 1. Enter / Change Room Number Search");
+    System.out.println(" 2. Filter by Status");
+    System.out.println(" 3. Reset / Clear All Filters");
+    System.out.println(" 4. Apply and Return to Room Status Sync");
+    System.out.println(" 5. Back / Exit Filter Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+  }
+
+  public String promptRoomSearchInput() {
+    System.out.println("\n [Leave blank or type 'C' to Cancel]");
+    return ConsoleUtil.getStringInput("Enter Room Number to search: ");
+  }
+
+  public int displayRoomStatusFilterSubmenu(String currentStatus) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("STATUS FILTER SUBMENU");
+    System.out.println(
+        " Current Selected Status: [ " + (currentStatus == null ? "ALL" : currentStatus) + " ]\n");
+    System.out.println(" 1. Show DIRTY Only");
+    System.out.println(" 2. Show CLEANING Only");
+    System.out.println(" 3. Show INSPECTED Only");
+    System.out.println(" 4. Show VACANT_CLEAN Only");
+    System.out.println(" 5. Show OCCUPIED Only");
+    System.out.println(" 6. Clear Status Filter (Show All)");
+    System.out.println(" 7. Back to Filter Management\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
+  }
+
+  public int displayRoomActionSubmenu(Room room, boolean hasUndoHistory) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("ROOM ACTION: " + room.getRoomNumber());
+    System.out.println(" Room Type   : " + room.getRoomType().name());
+    System.out.println(" Status      : " + room.getStatus().name());
+    System.out.println(
+        " Undo Available: " + (hasUndoHistory ? "YES" : "NO (no prior change on record)") + "\n");
+    System.out.println(" 1. Update Status");
+    System.out.println(" 2. Undo Last Status Change");
+    System.out.println(" 3. View Status History");
+    System.out.println(" 4. Flag Room for Maintenance");
+    System.out.println(" 5. Request Supervisor Inspection");
+    System.out.println(" 6. Cancel Action and Return\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
+
+  public int promptNewStatusInput() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SELECT NEW ROOM STATUS");
+    System.out.println(" 1. Dirty");
+    System.out.println(" 2. Cleaning");
+    System.out.println(" 3. Inspected");
+    System.out.println(" 4. Vacant / Clean");
+    System.out.println(" 5. Occupied\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+  }
+
+  public void renderRoomHistoryScreen(
+      String roomNumber, ListInterface<RoomStatusLogEntry> history) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("STATUS HISTORY: ROOM " + roomNumber);
+
+    if (history == null || history.isEmpty()) {
+      System.out.println(" *** NO HISTORY RECORDED FOR THIS ROOM YET ***\n");
+    } else {
+      for (int i = 1; i <= history.getNumberOfEntries(); i++) {
+        RoomStatusLogEntry entry = history.getEntry(i);
+        if (entry == null) continue;
+
+        String line = " " + entry.getChangedAt() + " - ";
+        if (entry.getNote() != null) {
+          line +=
+              entry.getNote()
+                  + (entry.getToStatus() != null
+                      ? " (reverted to " + entry.getToStatus() + ")"
+                      : "");
+        } else {
+          line += entry.getFromStatus() + " -> " + entry.getToStatus();
+        }
+        System.out.println(line);
+      }
+      System.out.println();
+    }
+
+    ConsoleUtil.printContinueMessage();
+  }
+
+  // --- INTERNAL LOOKUP HELPERS ---
+
+  private HousekeepingStaff findStaff(ListInterface<HousekeepingStaff> staffList, String staffId) {
+    if (staffList == null || staffId == null) return null;
+    for (int i = 1; i <= staffList.getNumberOfEntries(); i++) {
+      HousekeepingStaff s = staffList.getEntry(i);
+      if (s != null && staffId.equals(s.getStaffId())) return s;
+    }
+    return null;
+  }
+}

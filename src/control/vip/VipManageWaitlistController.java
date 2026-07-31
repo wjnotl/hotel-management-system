@@ -7,29 +7,47 @@ import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import entity.Room;
+import entity.VipSystemConfig;
 import java.time.LocalDateTime;
 import repo.AllocationRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.VipReservationRepo;
+import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
 import util.NumberUtil;
-import view.VipView;
+import view.vip.VipManageWaitlistView;
 
 public class VipManageWaitlistController {
 
-  private final VipView vipView = new VipView();
-  private final VipReservationRepo vipReservationRepo = new VipReservationRepo();
-  private final GuestRepo guestRepo = new GuestRepo();
-  private final MemberRepo memberRepo = new MemberRepo();
-  private final RoomRepo roomRepo = new RoomRepo();
-  private final AllocationRepo allocationRepo = new AllocationRepo();
+  private final VipManageWaitlistView waitlistView = new VipManageWaitlistView();
+  private final VipReservationRepo vipReservationRepo;
+  private final GuestRepo guestRepo;
+  private final MemberRepo memberRepo;
+  private final RoomRepo roomRepo;
+  private final AllocationRepo allocationRepo;
+  private final VipSystemConfigRepo vipSystemConfigRepo;
+
+  public VipManageWaitlistController(
+      VipReservationRepo vipReservationRepo,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      RoomRepo roomRepo,
+      AllocationRepo allocationRepo,
+      VipSystemConfigRepo vipSystemConfigRepo) {
+    this.vipReservationRepo = vipReservationRepo;
+    this.guestRepo = guestRepo;
+    this.memberRepo = memberRepo;
+    this.roomRepo = roomRepo;
+    this.allocationRepo = allocationRepo;
+    this.vipSystemConfigRepo = vipSystemConfigRepo;
+  }
 
   public void startWaitlistManagement() {
     while (true) {
       try {
-        Room.RoomType selectedRoomQueue = vipView.displayWaitlistQueueSelectionMenu();
+        Room.RoomType selectedRoomQueue = waitlistView.displayWaitlistQueueSelectionMenu();
         if (selectedRoomQueue == null) {
           return;
         }
@@ -58,7 +76,7 @@ public class VipManageWaitlistController {
             filterAndSortList(rawList, searchQuery, tierFilter, boilingFilter, sortCriteria);
 
         ConsoleUtil.GetMenuInputResult result =
-            vipView.renderWaitlistScreen(
+            waitlistView.renderWaitlistScreen(
                 filteredList,
                 guestRepo.getGuestList(),
                 memberRepo.getMemberList(),
@@ -112,9 +130,11 @@ public class VipManageWaitlistController {
   }
 
   private void handleAddGuest(Room.RoomType roomType) {
+    VipSystemConfig config = vipSystemConfigRepo.getConfig();
+
     while (true) {
       try {
-        String inputId = vipView.promptAddGuestInput();
+        String inputId = waitlistView.promptAddGuestInput();
         if (inputId == null || inputId.trim().isEmpty() || "C".equalsIgnoreCase(inputId.trim())) {
           return;
         }
@@ -127,19 +147,25 @@ public class VipManageWaitlistController {
         }
 
         if (guest == null) {
-          vipView.displayGuestNotFoundErrorScreen(searchId);
+          waitlistView.displayGuestNotFoundErrorScreen(searchId);
           continue;
         }
 
         Member member =
             (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
+        int maxStrikes =
+            (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondMaxStrikes()
+                : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldMaxStrikes()
+                    : config.getSilverMaxStrikes();
 
-        if (guest.getStrikeCount() >= 3) {
-          int choice = vipView.displayMaxStrikeWarningScreen(guest, member);
+        if (guest.getStrikeCount() >= maxStrikes) {
+          int choice = waitlistView.displayMaxStrikeWarningScreen(guest, member, maxStrikes);
 
           if (choice == 1) {
             guest.setStrikeCount(0);
-            guestRepo.addGuest(guest);
+            guestRepo.updateGuest(guest);
             ConsoleUtil.clearScreen();
             System.out.println(
                 ">> OVERRIDE AUTHORIZED: Strike count reset to 0 for " + guest.getName() + ".\n");
@@ -153,16 +179,18 @@ public class VipManageWaitlistController {
         }
 
         if (member == null || member.getTier() == null) {
-          boolean proceed = vipView.displayUnassignedTierWarningScreen(guest);
+          boolean proceed = waitlistView.displayUnassignedTierWarningScreen(guest);
           if (!proceed) {
             continue;
           }
         }
 
-        int baseScore = calculateDynamicPriorityScore(guest, member);
+        int baseScore =
+            vipReservationRepo.calculatePriorityScore(
+                null, guest, member, vipSystemConfigRepo.getConfig());
 
         boolean confirmed =
-            vipView.displayAddGuestConfirmationScreen(guest, member, roomType, baseScore);
+            waitlistView.displayAddGuestConfirmationScreen(guest, member, roomType, baseScore);
         if (!confirmed) {
           continue;
         }
@@ -245,7 +273,7 @@ public class VipManageWaitlistController {
 
     while (true) {
       try {
-        int action = vipView.displayGuestActionSubmenu(selected);
+        int action = waitlistView.displayGuestActionSubmenu(selected);
 
         if (action == 1) {
           boolean completed = processGuestDequeue(selected, roomType);
@@ -257,7 +285,7 @@ public class VipManageWaitlistController {
           Member m =
               (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
-          boolean confirmed = vipView.displayCancelConfirmationScreen(selected, g, m);
+          boolean confirmed = waitlistView.displayCancelConfirmationScreen(selected, g, m);
 
           if (confirmed) {
             vipReservationRepo.cancelReservation(selected);
@@ -290,7 +318,8 @@ public class VipManageWaitlistController {
     Guest g = guestRepo.findById(reservation.getGuestId());
     Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
-    boolean confirmed = vipView.displayDequeueConfirmationScreen(reservation, g, m, vacantRoom);
+    boolean confirmed =
+        waitlistView.displayDequeueConfirmationScreen(reservation, g, m, vacantRoom);
     if (!confirmed) {
       return false;
     }
@@ -298,20 +327,24 @@ public class VipManageWaitlistController {
     long holdDurationMs = 15 * 60 * 1000L;
     AllocationEntry entry =
         new AllocationEntry(
-            reservation.getConfirmationNumber(),
+            reservation.getReservationId(),
             vacantRoom.getRoomNumber(),
             System.currentTimeMillis() + holdDurationMs);
 
-    allocationRepo.addAllocationEntry(entry);
+    allocationRepo.addAllocationEntry(
+        entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     vacantRoom.setStatus(Room.Status.OCCUPIED);
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
+    roomRepo.updateRoom(vacantRoom);
+
     reservation.setStatus(Reservation.Status.ALLOCATED);
+    vipReservationRepo.updateReservation(reservation);
 
     vipReservationRepo.cancelReservation(reservation);
     int remainingCount = vipReservationRepo.getListByRoomType(roomType).getNumberOfEntries();
 
-    vipView.displayDequeueSuccessScreen(
+    waitlistView.displayDequeueSuccessScreen(
         reservation, g, m, vacantRoom.getRoomNumber(), remainingCount, entry);
     return true;
   }
@@ -360,33 +393,6 @@ public class VipManageWaitlistController {
     return "RES-" + (maxIdNum + 1);
   }
 
-  private int calculateDynamicPriorityScore(Guest guest, Member member) {
-    if (member == null || member.getTier() == null) {
-      return 1000;
-    }
-
-    int tierBase;
-    switch (member.getTier()) {
-      case DIAMOND:
-        tierBase = 9000;
-        break;
-      case GOLD:
-        tierBase = 7000;
-        break;
-      case SILVER:
-        tierBase = 5000;
-        break;
-      default:
-        tierBase = 1000;
-        break;
-    }
-
-    int pointsBonus = Math.min(member.getPoints() / 10, 800);
-    int strikePenalty = (guest != null) ? (guest.getStrikeCount() * 500) : 0;
-
-    return Math.max(1000, tierBase + pointsBonus - strikePenalty);
-  }
-
   private Guest findGuestByName(ListInterface<Guest> guestList, String name) {
     if (guestList == null || name == null) return null;
     for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
@@ -406,7 +412,7 @@ public class VipManageWaitlistController {
 
     while (true) {
       try {
-        int choice = vipView.displayFilterMainMenu(search, tier, boiling);
+        int choice = waitlistView.displayFilterMainMenu(search, tier, boiling);
 
         if (choice == 1) {
           search = handleSearchQuerySubmenu(search);
@@ -432,9 +438,9 @@ public class VipManageWaitlistController {
   private String handleSearchQuerySubmenu(String currentSearch) {
     while (true) {
       try {
-        int option = vipView.displaySearchSubmenu(currentSearch);
+        int option = waitlistView.displaySearchSubmenu(currentSearch);
         if (option == 1) {
-          String input = vipView.promptSearchInput();
+          String input = waitlistView.promptSearchInput();
           if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
             return currentSearch;
           }
@@ -453,7 +459,7 @@ public class VipManageWaitlistController {
   private String handleTierFilterSubmenu(String currentTier) {
     while (true) {
       try {
-        int choice = vipView.displayTierSubmenu(currentTier);
+        int choice = waitlistView.displayTierSubmenu(currentTier);
         if (choice == 1) return "DIAMOND";
         if (choice == 2) return "GOLD";
         if (choice == 3) return "SILVER";
@@ -468,7 +474,7 @@ public class VipManageWaitlistController {
   private String handleBoilingFilterSubmenu(String currentBoiling) {
     while (true) {
       try {
-        int choice = vipView.displayBoilingSubmenu(currentBoiling);
+        int choice = waitlistView.displayBoilingSubmenu(currentBoiling);
         if (choice == 1) return "BOILING";
         if (choice == 2) return "NORMAL";
         if (choice == 3) return null;
@@ -482,7 +488,7 @@ public class VipManageWaitlistController {
   private String handleSortMenu(String currentSort) {
     while (true) {
       try {
-        String selectedSort = vipView.displaySortMenu();
+        String selectedSort = waitlistView.displaySortMenu();
         return (selectedSort == null) ? currentSort : selectedSort;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());

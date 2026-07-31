@@ -2,6 +2,7 @@ package util;
 
 import entity.Billing;
 import entity.Guest;
+import entity.HousekeepingStaff;
 import entity.Member;
 import entity.Reservation;
 import entity.Room;
@@ -9,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import repo.BillingRepo;
 import repo.GuestRepo;
+import repo.HousekeepingStaffRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.VipReservationRepo;
@@ -24,6 +26,7 @@ public class DatabaseSeeder {
     RoomRepo roomRepo = new RoomRepo();
     VipReservationRepo vipRepo = new VipReservationRepo();
     BillingRepo billingRepo = new BillingRepo();
+    HousekeepingStaffRepo staffRepo = new HousekeepingStaffRepo();
 
     if (guestRepo.getGuestList().isEmpty()) {
       System.out.println("Seeding expanded mock database...");
@@ -315,6 +318,58 @@ public class DatabaseSeeder {
           roomST101.getPrice(),
           Billing.Status.PAID,
           now.minusDays(9));
+
+      // ==========================================
+      // 6. SEED HOUSEKEEPING STAFF
+      // ==========================================
+      HousekeepingStaff staff1 =
+          new HousekeepingStaff(
+              "EMP-001",
+              "Zhi Kang",
+              HousekeepingStaff.Shift.MORNING,
+              HousekeepingStaff.Availability.AVAILABLE);
+
+      HousekeepingStaff staff2 =
+          new HousekeepingStaff(
+              "EMP-002",
+              "Di Yao",
+              HousekeepingStaff.Shift.MORNING,
+              HousekeepingStaff.Availability.AVAILABLE);
+
+      HousekeepingStaff staff3 =
+          new HousekeepingStaff(
+              "EMP-003",
+              "Jian Chin",
+              HousekeepingStaff.Shift.AFTERNOON,
+              HousekeepingStaff.Availability.AVAILABLE);
+
+      HousekeepingStaff staff4 =
+          new HousekeepingStaff(
+              "EMP-004",
+              "Chu Han",
+              HousekeepingStaff.Shift.AFTERNOON,
+              HousekeepingStaff.Availability.OFF_DUTY);
+
+      HousekeepingStaff staff5 =
+          new HousekeepingStaff(
+              "EMP-005",
+              "Luo Feng",
+              HousekeepingStaff.Shift.NIGHT,
+              HousekeepingStaff.Availability.AVAILABLE);
+
+      HousekeepingStaff staff6 =
+          new HousekeepingStaff(
+              "EMP-006",
+              "Cheng Yu",
+              HousekeepingStaff.Shift.NIGHT,
+              HousekeepingStaff.Availability.AVAILABLE);
+
+      staffRepo.addStaff(staff1);
+      staffRepo.addStaff(staff2);
+      staffRepo.addStaff(staff3);
+      staffRepo.addStaff(staff4);
+      staffRepo.addStaff(staff5);
+      staffRepo.addStaff(staff6);
 
       System.out.println("Mock database seeded successfully!");
     }

@@ -26,12 +26,27 @@ public class RoomRepo {
   }
 
   public void addRoom(Room room) {
+    if (room == null) return;
     roomList.add(room);
     save();
   }
 
+  public boolean updateRoom(Room updatedRoom) {
+    if (updatedRoom == null || roomList == null) return false;
+
+    for (int i = 1; i <= roomList.getNumberOfEntries(); i++) {
+      Room existing = roomList.getEntry(i);
+      if (existing != null && existing.equals(updatedRoom)) {
+        roomList.replace(i, updatedRoom);
+        save();
+        return true;
+      }
+    }
+    return false;
+  }
+
   public Room findByRoomNumber(String roomNumber) {
-    if (roomNumber == null) return null;
+    if (roomNumber == null || roomList == null) return null;
     for (int i = 1; i <= roomList.getNumberOfEntries(); i++) {
       Room r = roomList.getEntry(i);
       if (r != null && roomNumber.equalsIgnoreCase(r.getRoomNumber())) {
@@ -42,7 +57,7 @@ public class RoomRepo {
   }
 
   public Room findVacantCleanRoom(Room.RoomType roomType) {
-    if (roomType == null) return null;
+    if (roomType == null || roomList == null) return null;
     for (int i = 1; i <= roomList.getNumberOfEntries(); i++) {
       Room r = roomList.getEntry(i);
       if (r != null && r.getRoomType() == roomType && r.getStatus() == Room.Status.VACANT_CLEAN) {

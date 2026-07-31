@@ -1,4 +1,4 @@
-package view;
+package view.vip;
 
 import adt.ListInterface;
 import entity.AllocationEntry;
@@ -12,20 +12,7 @@ import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 
-public class VipView {
-
-  public String displayMenu() {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("VIP Priority Room Allocation");
-    System.out.println("1. Manage Waitlist");
-    System.out.println("2. Manage Allocation");
-    System.out.println("3. Settings & Configurations");
-    System.out.println("4. Generate Analytics Report");
-    System.out.println("5. Back to Main Menu\n");
-
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).input;
-  }
-
+public class VipManageWaitlistView {
   public Room.RoomType displayWaitlistQueueSelectionMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("MANAGE WAITLIST - SELECT QUEUE");
@@ -432,7 +419,7 @@ public class VipView {
     TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Confirmation Code", entry.getReservationConfirmationNumber()}, kvSettings);
+        new String[] {"Confirmation Code", r.getConfirmationNumber()}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
@@ -448,7 +435,7 @@ public class VipView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  public int displayMaxStrikeWarningScreen(Guest g, Member m) {
+  public int displayMaxStrikeWarningScreen(Guest g, Member m, int maxStrikes) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("WARNING: MAX STRIKE LIMIT EXCEEDED");
 
@@ -475,7 +462,7 @@ public class VipView {
         new String[] {"Member Tier", (m != null ? m.getTier().name() : "NON-MEMBER")}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Strikes Today", g.getStrikeCount() + " / 3"}, kvSettings);
+        new String[] {"Strikes Today", g.getStrikeCount() + " / " + maxStrikes}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {

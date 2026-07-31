@@ -26,12 +26,33 @@ public class BillingRepo {
   }
 
   public void addBilling(Billing billing) {
+    if (billing == null) return;
     billingList.add(billing);
     save();
   }
 
+  public boolean updateBilling(Billing updatedBilling) {
+    if (updatedBilling == null || billingList == null) return false;
+
+    for (int i = 1; i <= billingList.getNumberOfEntries(); i++) {
+      Billing existing = billingList.getEntry(i);
+      if (existing != null && existing.equals(updatedBilling)) {
+        billingList.replace(i, updatedBilling);
+        save();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public void addOrUpdateBilling(Billing billing) {
+    if (!updateBilling(billing)) {
+      addBilling(billing);
+    }
+  }
+
   public Billing findById(String billingId) {
-    if (billingId == null) return null;
+    if (billingId == null || billingList == null) return null;
     for (int i = 1; i <= billingList.getNumberOfEntries(); i++) {
       Billing b = billingList.getEntry(i);
       if (b != null && billingId.equalsIgnoreCase(b.getBillingId())) {
@@ -41,11 +62,9 @@ public class BillingRepo {
     return null;
   }
 
-  // Returns a fresh list (not the internal master list) containing every
-  // billing/stay record that belongs to the given guest.
   public ListInterface<Billing> findByGuestId(String guestId) {
     ListInterface<Billing> matches = new ArrayList<>();
-    if (guestId == null) return matches;
+    if (guestId == null || billingList == null) return matches;
 
     for (int i = 1; i <= billingList.getNumberOfEntries(); i++) {
       Billing b = billingList.getEntry(i);
