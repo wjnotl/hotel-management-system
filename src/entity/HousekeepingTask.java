@@ -6,15 +6,16 @@ import java.time.LocalDateTime;
 public class HousekeepingTask implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  public enum TaskType {
+  public static enum TaskType {
     STANDARD_CLEAN,
     DEEP_CLEAN,
     TURNOVER,
     MAINTENANCE_CHECK
   }
 
-  public enum Status {
+  public static enum Status {
     PENDING,
+    ASSIGNED,
     IN_PROGRESS,
     COMPLETED,
     SKIPPED

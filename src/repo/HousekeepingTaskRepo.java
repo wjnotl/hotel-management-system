@@ -24,8 +24,8 @@ public class HousekeepingTaskRepo {
     }
 
     // Rebuild the deque from stored list, preserving queue order.
-    // Rule: PENDING == "still waiting in the deque". Anything else (IN_PROGRESS, COMPLETED,
-    // SKIPPED) has already left the queue and is kept list-only for display/reporting.
+    // Rule: PENDING == "still waiting in the deque". Anything else (ASSIGNED, IN_PROGRESS,
+    // COMPLETED, SKIPPED) has already left the queue and is kept list-only for display/reporting.
     this.taskDeque = new LinkedDeque<>();
     for (int i = 1; i <= taskList.getNumberOfEntries(); i++) {
       HousekeepingTask t = taskList.getEntry(i);
@@ -83,8 +83,8 @@ public class HousekeepingTaskRepo {
 
     task.setStatus(newStatus);
 
-    // PENDING is the only status that belongs in the deque; anything else means the task
-    // has left the queue (in progress, completed, or skipped). Safe no-op if already removed.
+    // PENDING is the only status that belongs in the deque; anything else (ASSIGNED, IN_PROGRESS,
+    // COMPLETED, SKIPPED) means the task has left the queue. Safe no-op if already removed.
     if (newStatus != HousekeepingTask.Status.PENDING) {
       taskDeque.remove(task);
     }
@@ -93,16 +93,29 @@ public class HousekeepingTaskRepo {
     return true;
   }
 
+  // Step 2 of the lifecycle: a task gets a specific staff member, but work hasn't started yet.
+  // The room stays whatever it currently is (e.g. still DIRTY) until startCleaning() is called.
   public boolean assignStaff(HousekeepingTask task, String staffId) {
     if (task == null) return false;
 
     task.setAssignedStaffId(staffId);
     if (task.getStatus() == HousekeepingTask.Status.PENDING) {
-      task.setStatus(HousekeepingTask.Status.IN_PROGRESS);
+      task.setStatus(HousekeepingTask.Status.ASSIGNED);
     }
 
-    // Claimed for work now, so it no longer waits in the queue.
+    // Claimed for work now, so it no longer waits in the queue for someone else to grab.
     taskDeque.remove(task);
+    save();
+    return true;
+  }
+
+  // Step 3 of the lifecycle: staff actually begins cleaning. Requires an assigned staff member —
+  // returns false if called on a task nobody's been assigned to yet.
+  public boolean startCleaning(HousekeepingTask task) {
+    if (task == null || task.getAssignedStaffId() == null) return false;
+
+    task.setStatus(HousekeepingTask.Status.IN_PROGRESS);
+    taskDeque.remove(task); // no-op if ASSIGNED already took it out, safe either way
     save();
     return true;
   }

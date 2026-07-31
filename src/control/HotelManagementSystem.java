@@ -19,6 +19,7 @@ public class HotelManagementSystem {
   private static MemberRepo memberRepo = new MemberRepo();
   private static RoomRepo roomRepo = new RoomRepo();
   private static VipReservationRepo vipReservationRepo = new VipReservationRepo();
+  private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
 
   public static void main(String[] args) {
     // Database Seeder
@@ -39,7 +40,8 @@ public class HotelManagementSystem {
           new VipController(allocationRepo, guestRepo, memberRepo, roomRepo, vipReservationRepo)
               .start();
         } else if ("3".equals(choice)) {
-          new HouseKeepingController().start();
+          new HouseKeepingController(houseKeepingTaskRepo, housekeepingStaffRepo, roomRepo, roomStatusHistoryRepo)
+              .start();
         } else if ("4".equals(choice)) {
           new FrontDeskController().start();
         } else if ("5".equals(choice)) {
