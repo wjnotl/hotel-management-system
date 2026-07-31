@@ -32,7 +32,7 @@ public class VipManageAllocationView {
     System.out.println("SORT CRITERIA  : [ " + sort + " ]");
 
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
-    int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+    boolean hasActiveFilters = (search != null || tier != null);
 
     int[] columnWidths = {4, 25, 12, 18, 18};
 
@@ -58,14 +58,16 @@ public class VipManageAllocationView {
     TableUtil.printTableRow(
         new String[] {"NO.", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"}, headerSettings);
 
+    // WHEN 0 ALLOCATION MATCHES RETURNED:
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
+      // Width 81 matches total grid width (4+25+12+18+18 = 77 + 4 internal walls)
       TableUtil.TableSettings emptySettings =
           new TableUtil.TableSettings(new int[] {81}).setHAlign(0, TableUtil.Align.CENTER);
 
       String emptyMsg =
-          (search != null || tier != null)
+          hasActiveFilters
               ? "*** NO PENDING ALLOCATIONS FOUND FOR ACTIVE FILTERS ***"
               : "*** NO ROOM ALLOCATIONS PENDING ***";
 
@@ -73,14 +75,24 @@ public class VipManageAllocationView {
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
       System.out.println("Page 0 / 0 (Total Allocated Matches: 0)\n");
-      System.out.println("[S] Search Guests      [O] Change Sort Order   [R] Refresh Table");
-      System.out.println("[E] Exit to VIP Menu\n");
 
-      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'O', 'R', 'E'});
+      // SCENARIO 1: Filters Active -> Allow staff to adjust/clear filters or refresh
+      if (hasActiveFilters) {
+        System.out.println("[S] Search / Filter    [R] Refresh Table       [E] Exit to VIP Menu\n");
+        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'E'});
+      }
+
+      // SCENARIO 2: Holding Bay is completely empty -> Remove search, filter, and sort options
+      else {
+        System.out.println("[R] Refresh Table      [E] Exit to VIP Menu\n");
+        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'R', 'E'});
+      }
     }
 
+    // NORMAL TABLE DISPLAY (When pending allocations > 0)
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
+    int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
     int startIndex = (currentPage - 1) * pageSize + 1;
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
