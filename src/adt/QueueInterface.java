@@ -16,6 +16,12 @@ public interface QueueInterface<T> {
   // Double-checks if this specific value exists anywhere in the queue.
   public boolean contains(T entry);
 
+  // Reports the 1-based place from the front, or -1 when the entry is not in the queue.
+  public int getPosition(T entry);
+
+  // Pulls out the first matching entry wherever it sits, which a plain FIFO queue cannot do.
+  public boolean remove(T entry);
+
   // Returns the current element count.
   public int getNumberOfEntries();
 
