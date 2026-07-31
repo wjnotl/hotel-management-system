@@ -100,7 +100,7 @@ public class VipSettingsController {
         }
 
         if (targetFormula != null) {
-          validateInfixFormulaWithConfig(targetFormula, config);
+          validateInfixFormulaWithConfig(targetFormula);
           config.setActiveStrategyName(strategyName);
           config.setActiveFormulaInfix(targetFormula);
           configRepo.updateConfig(config);
@@ -244,7 +244,7 @@ public class VipSettingsController {
 
         if (allowSave) {
           if (choice == optionIndex++) {
-            validateFormulaTokens(tokens, config);
+            validateFormulaTokens(tokens);
 
             config.setActiveStrategyName("Custom Wizard Formula");
             config.setActiveFormulaInfix(currentInfix.toString().trim());
@@ -329,7 +329,7 @@ public class VipSettingsController {
     }
   }
 
-  private void validateFormulaTokens(ListInterface<String> tokens, VipSystemConfig config) {
+  private void validateFormulaTokens(ListInterface<String> tokens) {
     if (tokens == null || tokens.isEmpty()) {
       throw new IllegalArgumentException("Cannot save an empty formula!");
     }
@@ -350,13 +350,15 @@ public class VipSettingsController {
     }
 
     String formulaInfix = infixBuilder.toString().trim();
-    validateInfixFormulaWithConfig(formulaInfix, config);
+    validateInfixFormulaWithConfig(formulaInfix);
   }
 
-  public static void validateInfixFormulaWithConfig(String formulaInfix, VipSystemConfig config) {
+  private void validateInfixFormulaWithConfig(String formulaInfix) {
     if (formulaInfix == null || !formulaInfix.contains("/")) {
       return;
     }
+
+    VipSystemConfig config = configRepo.getConfig();
 
     double[][] tierProfiles = {
       {
@@ -380,52 +382,41 @@ public class VipSettingsController {
     };
     String[] tierNames = {"Silver", "Gold", "Diamond"};
 
-    class EvaluationContext {
-      double tVal, wBVal, wSVal, bVal, sVal;
-
-      double resolve(String var) {
-        if (var == null || var.trim().isEmpty()) return 0.0;
-        String cleanVar = var.trim().toUpperCase();
-
-        switch (cleanVar) {
-          case "TIER":
-            return tVal;
-          case "W_BOILING":
-            return wBVal;
-          case "W_STRIKE":
-            return wSVal;
-          case "BOILING":
-            return bVal;
-          case "STRIKES":
-            return sVal;
-          default:
-            try {
-              return Double.parseDouble(cleanVar);
-            } catch (NumberFormatException e) {
-              return 0.0;
-            }
-        }
-      }
-    }
-
-    EvaluationContext ctx = new EvaluationContext();
-    java.util.function.Function<String, Double> resolver = ctx::resolve;
-
-    // Sweep every single tier profile + ALL possible runtime strike counts [0 ... max strikes]
     for (int t = 0; t < tierProfiles.length; t++) {
-      ctx.tVal = tierProfiles[t][0];
-      ctx.wBVal = tierProfiles[t][1];
-      ctx.wSVal = tierProfiles[t][2];
+      double tVal = tierProfiles[t][0];
+      double wBVal = tierProfiles[t][1];
+      double wSVal = tierProfiles[t][2];
       int tierMaxStrikes = (int) tierProfiles[t][3];
       String tName = tierNames[t];
 
       for (int boilingState = 0; boilingState <= 1; boilingState++) {
-        ctx.bVal = boilingState;
+        double bVal = boilingState;
 
-        // Exhaustive check across EVERY single integer value of STRIKES (e.g., STRIKES = 1, STRIKES
-        // = 2, ...)
         for (int strikeCount = 0; strikeCount <= tierMaxStrikes; strikeCount++) {
-          ctx.sVal = strikeCount;
+          double sVal = strikeCount;
+
+          java.util.function.Function<String, Double> resolver =
+              (var) -> {
+                if (var == null || var.trim().isEmpty()) return 0.0;
+                switch (var.trim().toUpperCase()) {
+                  case "TIER":
+                    return tVal;
+                  case "W_BOILING":
+                    return wBVal;
+                  case "W_STRIKE":
+                    return wSVal;
+                  case "BOILING":
+                    return bVal;
+                  case "STRIKES":
+                    return sVal;
+                  default:
+                    try {
+                      return Double.parseDouble(var.trim());
+                    } catch (NumberFormatException e) {
+                      return 0.0;
+                    }
+                }
+              };
 
           try {
             double result = util.ExpressionEvaluator.evaluateInfix(formulaInfix, resolver);
@@ -437,8 +428,7 @@ public class VipSettingsController {
             throw new IllegalArgumentException(
                 "Mathematical Error: Formula results in division by zero for "
                     + tName
-                    + " Tier! "
-                    + "(Triggered when STRIKES="
+                    + " Tier! (Triggered when STRIKES="
                     + strikeCount
                     + ", BOILING="
                     + boilingState
@@ -527,7 +517,7 @@ public class VipSettingsController {
             else if (tier == 3) config.setSilverMaxStrikes(newVal);
 
             try {
-              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix());
               configRepo.updateConfig(config);
             } catch (Exception e) {
               if (tier == 1) config.setDiamondMaxStrikes(oldVal);
@@ -591,7 +581,7 @@ public class VipSettingsController {
             else if (tier == 3) config.setSilverPatienceLimitMins(newVal);
 
             try {
-              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix());
               configRepo.updateConfig(config);
             } catch (Exception e) {
               if (tier == 1) config.setDiamondPatienceLimitMins(oldVal);
@@ -722,7 +712,7 @@ public class VipSettingsController {
             else if (tier == 3) config.setSilverBaseValue(newVal);
 
             try {
-              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix());
               configRepo.updateConfig(config);
             } catch (Exception e) {
               if (tier == 1) config.setDiamondBaseValue(oldVal);
@@ -788,7 +778,7 @@ public class VipSettingsController {
             else if (tier == 3) config.setSilverBoilingBoost(newVal);
 
             try {
-              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix());
               configRepo.updateConfig(config);
             } catch (Exception e) {
               if (tier == 1) config.setDiamondBoilingBoost(oldVal);
@@ -858,7 +848,7 @@ public class VipSettingsController {
             else if (tier == 3) config.setSilverStrikePenalty(newVal);
 
             try {
-              validateInfixFormulaWithConfig(config.getActiveFormulaInfix(), config);
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix());
               configRepo.updateConfig(config);
             } catch (Exception e) {
               if (tier == 1) config.setDiamondStrikePenalty(oldVal);
