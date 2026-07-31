@@ -50,7 +50,7 @@ public class VipManageWaitlistView {
     System.out.println("SORT CRITERIA    : [ " + sort + " ]");
 
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
-    int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+    boolean hasActiveFilters = (search != null || tier != null || boiling != null);
 
     int[] columnWidths = {4, 11, 18, 14, 10, 9, 8, 7};
 
@@ -83,27 +83,44 @@ public class VipManageWaitlistView {
         },
         headerSettings);
 
+    // WHEN 0 MATCHES RETURNED:
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {81}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {88}).setHAlign(0, TableUtil.Align.CENTER);
 
-      TableUtil.printTableRow(
-          new String[] {"*** NO GUESTS WAITING IN " + roomType.name() + " QUEUE ***"},
-          emptySettings);
+      String emptyMsg =
+          hasActiveFilters
+              ? "*** NO GUESTS MATCH ACTIVE SEARCH / FILTERS IN " + roomType.name() + " QUEUE ***"
+              : "*** NO GUESTS WAITING IN " + roomType.name() + " QUEUE ***";
+
+      TableUtil.printTableRow(new String[] {emptyMsg}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
       System.out.println("Page 0 / 0 (Total Matches: 0)\n");
-      System.out.println("[A] Add Guest          [Q] Quick Assign Top    [R] Refresh Table");
-      System.out.println("[S] Search / Filter    [O] Change Sort Order   [E] Exit to Queue Menu\n");
 
-      return ConsoleUtil.getMenuInput(
-          "Enter a command: ", new char[] {'A', 'Q', 'R', 'S', 'O', 'E'});
+      // SCENARIO 1: Filters active -> Allow staff to clear/change search or refresh
+      if (hasActiveFilters) {
+        System.out.println("[A] Add Guest          [S] Search / Filter     [R] Refresh Table");
+        System.out.println("[E] Exit to Queue Menu\n");
+
+        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'A', 'S', 'R', 'E'});
+      }
+
+      // SCENARIO 2: Queue is completely empty naturally -> Remove all search/sort/assign options
+      else {
+        System.out.println(
+            "[A] Add Guest          [R] Refresh Table       [E] Exit to Queue Menu\n");
+
+        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'A', 'R', 'E'});
+      }
     }
 
+    // NORMAL TABLE DISPLAY (When matches > 0)
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
+    int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
     int startIndex = (currentPage - 1) * pageSize + 1;
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
@@ -225,7 +242,8 @@ public class VipManageWaitlistView {
     return promptConfirm("Add this guest to the " + roomType.name() + " waitlist queue? (Y/N): ");
   }
 
-  public boolean displayDequeueConfirmationScreen(Reservation r, Guest g, Member m, Room room) {
+  public boolean displayDequeueConfirmationScreen(
+      Reservation r, Guest g, Member m, Room room, int graceMins) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CONFIRM VIP ROOM ALLOCATION", 83);
 
@@ -317,7 +335,7 @@ public class VipManageWaitlistView {
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(new String[] {"Hold Expiration", "15 Minutes"}, kvSettings);
+    TableUtil.printTableRow(new String[] {"Hold Expiration", graceMins + " Minutes"}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
@@ -559,7 +577,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("SEARCH & QUEUE FILTERS");
     System.out.println("Active Search  : [ " + (search == null ? "None" : search) + " ]");
     System.out.println("Active Tier    : [ " + (tier == null ? "ALL" : tier) + " ]");
-    System.out.println("Active Boiling : [ " + (boiling == null ? "ALL" : boiling) + " ]");
+    System.out.println("Active Boiling : [ " + (boiling == null ? "ALL" : boiling) + " ]\n");
     System.out.println("1. Text Search Submenu");
     System.out.println("2. Loyalty Tier Submenu");
     System.out.println("3. Boiling Status Submenu");

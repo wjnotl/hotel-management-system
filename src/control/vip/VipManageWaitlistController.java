@@ -318,13 +318,23 @@ public class VipManageWaitlistController {
     Guest g = guestRepo.findById(reservation.getGuestId());
     Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
+    VipSystemConfig config = vipSystemConfigRepo.getConfig();
+    Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+    int graceMins =
+        (tier == Member.LoyaltyTier.DIAMOND)
+            ? config.getDiamondGraceWindowMins()
+            : (tier == Member.LoyaltyTier.GOLD)
+                ? config.getGoldGraceWindowMins()
+                : config.getSilverGraceWindowMins();
+
     boolean confirmed =
-        waitlistView.displayDequeueConfirmationScreen(reservation, g, m, vacantRoom);
+        waitlistView.displayDequeueConfirmationScreen(reservation, g, m, vacantRoom, graceMins);
     if (!confirmed) {
       return false;
     }
 
-    long holdDurationMs = 15 * 60 * 1000L;
+    long holdDurationMs = graceMins * 60 * 1000L;
+
     AllocationEntry entry =
         new AllocationEntry(
             reservation.getReservationId(),
