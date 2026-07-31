@@ -7,13 +7,13 @@ import java.io.Serializable;
 public class HousekeepingStaff implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  public enum Shift {
+  public static enum Shift {
     MORNING,
     AFTERNOON,
     NIGHT
   }
 
-  public enum Availability {
+  public static enum Availability {
     AVAILABLE,
     ON_TASK,
     OFF_DUTY

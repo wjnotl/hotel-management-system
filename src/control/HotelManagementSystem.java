@@ -18,6 +18,7 @@ public class HotelManagementSystem {
   private static HousekeepingTaskRepo houseKeepingTaskRepo = new HousekeepingTaskRepo();
   private static MemberRepo memberRepo = new MemberRepo();
   private static RoomRepo roomRepo = new RoomRepo();
+  private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
   private static VipReservationRepo vipReservationRepo = new VipReservationRepo();
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
 
@@ -47,7 +48,9 @@ public class HotelManagementSystem {
                   vipSystemConfigRepo)
               .start();
         } else if ("3".equals(choice)) {
-          new HouseKeepingController().start();
+          new HouseKeepingController(
+                  houseKeepingTaskRepo, housekeepingStaffRepo, roomRepo, roomStatusHistoryRepo)
+              .start();
         } else if ("4".equals(choice)) {
           new FrontDeskController().start();
         } else if ("5".equals(choice)) {

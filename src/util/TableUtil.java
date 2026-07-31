@@ -5,20 +5,20 @@ import adt.ListInterface;
 public class TableUtil {
 
   // Alignment Enums
-  public enum Align {
+  public static enum Align {
     LEFT,
     CENTER,
     RIGHT
   }
 
-  public enum VAlign {
+  public static enum VAlign {
     TOP,
     CENTER,
     BOTTOM
   }
 
   // Overflow Mode Enums
-  private enum OverflowMode {
+  private static enum OverflowMode {
     WRAP,
     TRUNCATE,
     TRUNCATE_AT
@@ -92,7 +92,7 @@ public class TableUtil {
   }
 
   // Border Position Enums
-  public enum BorderPosition {
+  public static enum BorderPosition {
     TOP, // ╔ ╦ ╗ - Top row border
     MIDDLE, // ╠ ╬ ╣ - Standard row separator
     BOTTOM, // ╚ ╩ ╝ - Bottom table border with column junctions
