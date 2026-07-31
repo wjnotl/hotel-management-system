@@ -72,6 +72,53 @@ public class LinkedQueue<T> implements QueueInterface<T>, Serializable {
   }
 
   @Override
+  public int getPosition(T entry) {
+    if (entry == null || isEmpty()) return -1;
+
+    Node currentNode = headNode;
+    int position = 1;
+
+    while (currentNode != null) {
+      if (currentNode.data != null && currentNode.data.equals(entry)) {
+        return position;
+      }
+      currentNode = currentNode.next;
+      position++;
+    }
+    return -1;
+  }
+
+  @Override
+  public boolean remove(T entry) {
+    if (entry == null || isEmpty()) return false;
+
+    Node previousNode = null;
+    Node currentNode = headNode;
+
+    while (currentNode != null) {
+      if (currentNode.data != null && currentNode.data.equals(entry)) {
+        if (previousNode == null) {
+          headNode = currentNode.next;
+        } else {
+          previousNode.next = currentNode.next;
+        }
+
+        if (currentNode == tailNode) {
+          tailNode = previousNode;
+        }
+
+        currentNode.next = null;
+        numberOfEntries--;
+        return true;
+      }
+
+      previousNode = currentNode;
+      currentNode = currentNode.next;
+    }
+    return false;
+  }
+
+  @Override
   public int getNumberOfEntries() {
     return numberOfEntries;
   }
