@@ -379,12 +379,7 @@ public class HouseKeepingController {
 
         ConsoleUtil.GetMenuInputResult result =
             houseKeepingView.renderStaffRosterScreen(
-                filteredList,
-                searchQuery,
-                shiftFilter,
-                availabilityFilter,
-                currentPage,
-                pageSize);
+                filteredList, searchQuery, shiftFilter, availabilityFilter, currentPage, pageSize);
 
         if (result == null || result.input == null || result.input.trim().isEmpty()) {
           continue;

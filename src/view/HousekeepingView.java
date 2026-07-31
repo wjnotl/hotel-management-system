@@ -364,8 +364,7 @@ public class HousekeepingView {
             ? "Enter a command or select a staff index number (1): "
             : "Enter a command or select a staff index number (1-" + maxOptionNum + "): ";
 
-    return ConsoleUtil.getMenuInput(
-        promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P'});
+    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P'});
   }
 
   private String formatAssignedRooms(ListInterface<String> rooms) {
@@ -515,18 +514,15 @@ public class HousekeepingView {
   // --- SCREEN 3: ROOM STATUS SYNC ---
 
   public GetMenuInputResult renderRoomStatusScreen(
-      ListInterface<Room> list,
-      String search,
-      String statusFilter,
-      int currentPage,
-      int pageSize) {
+      ListInterface<Room> list, String search, String statusFilter, int currentPage, int pageSize) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ROOM STATUS SYNC");
 
     System.out.println(
         " SEARCH QUERY  : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
-    System.out.println(" STATUS FILTER : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
+    System.out.println(
+        " STATUS FILTER : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
     System.out.println("------------------------------------------------------");
 
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
@@ -570,7 +566,10 @@ public class HousekeepingView {
       int displayNum = i - startIndex + 1;
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum), r.getRoomNumber(), r.getRoomType().name(), r.getStatus().name()
+            String.valueOf(displayNum),
+            r.getRoomNumber(),
+            r.getRoomType().name(),
+            r.getStatus().name()
           },
           settings);
     }
@@ -587,8 +586,7 @@ public class HousekeepingView {
             ? "Enter a command or select room index number (1): "
             : "Enter a command or select a room index number (1-" + maxOptionNum + "): ";
 
-    return ConsoleUtil.getMenuInput(
-        promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P'});
+    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P'});
   }
 
   public int displayRoomFilterMainMenu(String search, String statusFilter) {
@@ -657,7 +655,8 @@ public class HousekeepingView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
-  public void renderRoomHistoryScreen(String roomNumber, ListInterface<RoomStatusLogEntry> history) {
+  public void renderRoomHistoryScreen(
+      String roomNumber, ListInterface<RoomStatusLogEntry> history) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("STATUS HISTORY: ROOM " + roomNumber);
 
@@ -672,7 +671,9 @@ public class HousekeepingView {
         if (entry.getNote() != null) {
           line +=
               entry.getNote()
-                  + (entry.getToStatus() != null ? " (reverted to " + entry.getToStatus() + ")" : "");
+                  + (entry.getToStatus() != null
+                      ? " (reverted to " + entry.getToStatus() + ")"
+                      : "");
         } else {
           line += entry.getFromStatus() + " -> " + entry.getToStatus();
         }

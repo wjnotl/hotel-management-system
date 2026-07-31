@@ -1,7 +1,5 @@
 package repo;
 
-import java.time.LocalDateTime;
-
 import adt.ArrayList;
 import adt.HashMap;
 import adt.LinkedStack;
@@ -10,6 +8,7 @@ import adt.MapInterface;
 import adt.StackInterface;
 import entity.Room;
 import entity.RoomStatusLogEntry;
+import java.time.LocalDateTime;
 import util.BinaryFileUtil;
 
 public class RoomStatusHistoryRepo {
@@ -57,7 +56,8 @@ public class RoomStatusHistoryRepo {
   // Records a real status transition: pushes the OLD status so it can be undone later.
   public void recordStatusChange(String roomNumber, Room.Status fromStatus, Room.Status toStatus) {
     getOrCreateStack(roomNumber).push(fromStatus);
-    logList.add(new RoomStatusLogEntry(roomNumber, fromStatus, toStatus, null, LocalDateTime.now()));
+    logList.add(
+        new RoomStatusLogEntry(roomNumber, fromStatus, toStatus, null, LocalDateTime.now()));
     save();
   }
 
@@ -75,8 +75,7 @@ public class RoomStatusHistoryRepo {
     if (stack == null || stack.isEmpty()) return null;
 
     Room.Status revertTo = stack.pop();
-    logList.add(
-        new RoomStatusLogEntry(roomNumber, null, revertTo, "Undo", LocalDateTime.now()));
+    logList.add(new RoomStatusLogEntry(roomNumber, null, revertTo, "Undo", LocalDateTime.now()));
     save();
     return revertTo;
   }

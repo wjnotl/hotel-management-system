@@ -319,47 +319,47 @@ public class DatabaseSeeder {
       // ==========================================
       // 6. SEED HOUSEKEEPING STAFF
       // ==========================================
-      HousekeepingStaff staff1 = new HousekeepingStaff(
-          "EMP-001",
-          "Zhi Kang",
-          HousekeepingStaff.Shift.MORNING,
-          HousekeepingStaff.Availability.AVAILABLE
-      );
+      HousekeepingStaff staff1 =
+          new HousekeepingStaff(
+              "EMP-001",
+              "Zhi Kang",
+              HousekeepingStaff.Shift.MORNING,
+              HousekeepingStaff.Availability.AVAILABLE);
 
-      HousekeepingStaff staff2 = new HousekeepingStaff(
-          "EMP-002",
-          "Di Yao",
-          HousekeepingStaff.Shift.MORNING,
-          HousekeepingStaff.Availability.AVAILABLE
-      );
+      HousekeepingStaff staff2 =
+          new HousekeepingStaff(
+              "EMP-002",
+              "Di Yao",
+              HousekeepingStaff.Shift.MORNING,
+              HousekeepingStaff.Availability.AVAILABLE);
 
-      HousekeepingStaff staff3 = new HousekeepingStaff(
-          "EMP-003",
-          "Jian Chin",
-          HousekeepingStaff.Shift.AFTERNOON,
-          HousekeepingStaff.Availability.AVAILABLE
-      );
+      HousekeepingStaff staff3 =
+          new HousekeepingStaff(
+              "EMP-003",
+              "Jian Chin",
+              HousekeepingStaff.Shift.AFTERNOON,
+              HousekeepingStaff.Availability.AVAILABLE);
 
-      HousekeepingStaff staff4 = new HousekeepingStaff(
-          "EMP-004",
-          "Chu Han",
-          HousekeepingStaff.Shift.AFTERNOON,
-          HousekeepingStaff.Availability.OFF_DUTY
-      );
+      HousekeepingStaff staff4 =
+          new HousekeepingStaff(
+              "EMP-004",
+              "Chu Han",
+              HousekeepingStaff.Shift.AFTERNOON,
+              HousekeepingStaff.Availability.OFF_DUTY);
 
-      HousekeepingStaff staff5 = new HousekeepingStaff(
-          "EMP-005",
-          "Luo Feng",
-          HousekeepingStaff.Shift.NIGHT,
-          HousekeepingStaff.Availability.AVAILABLE
-      );
+      HousekeepingStaff staff5 =
+          new HousekeepingStaff(
+              "EMP-005",
+              "Luo Feng",
+              HousekeepingStaff.Shift.NIGHT,
+              HousekeepingStaff.Availability.AVAILABLE);
 
-      HousekeepingStaff staff6 = new HousekeepingStaff(
-          "EMP-006",
-          "Cheng Yu",
-          HousekeepingStaff.Shift.NIGHT,
-          HousekeepingStaff.Availability.AVAILABLE
-      );
+      HousekeepingStaff staff6 =
+          new HousekeepingStaff(
+              "EMP-006",
+              "Cheng Yu",
+              HousekeepingStaff.Shift.NIGHT,
+              HousekeepingStaff.Availability.AVAILABLE);
 
       staffRepo.addStaff(staff1);
       staffRepo.addStaff(staff2);
