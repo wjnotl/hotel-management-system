@@ -177,7 +177,14 @@ public class AllocationRepo {
 
               // Dequeue next VIP from waitlist queue into freed room
               if (roomType != null && room != null) {
-                autoAssignNextWaitingVip(roomType, room, vipReservationRepo, roomRepo);
+                autoAssignNextWaitingVip(
+                    roomType,
+                    room,
+                    vipReservationRepo,
+                    roomRepo,
+                    guestRepo,
+                    memberRepo,
+                    configRepo);
               }
             }
           } catch (Exception ignored) {
@@ -205,7 +212,10 @@ public class AllocationRepo {
       Room.RoomType roomType,
       Room vacantRoom,
       VipReservationRepo vipReservationRepo,
-      RoomRepo roomRepo) {
+      RoomRepo roomRepo,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
 
     ListInterface<Reservation> queueList = vipReservationRepo.getListByRoomType(roomType);
     if (queueList == null || queueList.isEmpty()) return;
@@ -213,12 +223,28 @@ public class AllocationRepo {
     Reservation topVip = queueList.getEntry(1);
     if (topVip == null) return;
 
-    long hold15Mins = 15 * 60 * 1000L;
+    Guest guest = (guestRepo != null) ? guestRepo.findById(topVip.getGuestId()) : null;
+    Member member =
+        (guest != null && guest.getMemberId() != null && memberRepo != null)
+            ? memberRepo.findById(guest.getMemberId())
+            : null;
+
+    VipSystemConfig config = configRepo.getConfig();
+    Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+    int graceMins =
+        (tier == Member.LoyaltyTier.DIAMOND)
+            ? config.getDiamondGraceWindowMins()
+            : (tier == Member.LoyaltyTier.GOLD)
+                ? config.getGoldGraceWindowMins()
+                : config.getSilverGraceWindowMins();
+
+    long holdDurationMs = graceMins * 60 * 1000L;
+
     AllocationEntry newHold =
         new AllocationEntry(
             topVip.getReservationId(),
             vacantRoom.getRoomNumber(),
-            System.currentTimeMillis() + hold15Mins);
+            System.currentTimeMillis() + holdDurationMs);
 
     allocationList.add(newHold);
     allocationQueue.enqueue(newHold);

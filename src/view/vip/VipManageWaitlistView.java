@@ -242,7 +242,7 @@ public class VipManageWaitlistView {
     return promptConfirm("Add this guest to the " + roomType.name() + " waitlist queue? (Y/N): ");
   }
 
-  public boolean displayDequeueConfirmationScreen(Reservation r, Guest g, Member m, Room room) {
+  public boolean displayDequeueConfirmationScreen(Reservation r, Guest g, Member m, Room room, int graceMins) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CONFIRM VIP ROOM ALLOCATION", 83);
 
@@ -334,7 +334,7 @@ public class VipManageWaitlistView {
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(new String[] {"Hold Expiration", "15 Minutes"}, kvSettings);
+    TableUtil.printTableRow(new String[] {"Hold Expiration", graceMins + " Minutes"}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
