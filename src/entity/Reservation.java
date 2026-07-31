@@ -22,9 +22,11 @@ public class Reservation implements Serializable {
   private Status status;
   private boolean isBoiling;
   private int priorityScore;
+  private Integer stayDays;
   private LocalDateTime reservationTime;
   private LocalDateTime queueArrivalTime;
   private LocalDateTime allocatedTime; // Useful for completed history & analytics
+  private LocalDateTime checkOutTime;
 
   public Reservation(
       String reservationId,
@@ -47,7 +49,6 @@ public class Reservation implements Serializable {
     this.queueArrivalTime = queueArrivalTime;
   }
 
-  // --- GETTERS ---
   public String getReservationId() {
     return reservationId;
   }
@@ -88,7 +89,14 @@ public class Reservation implements Serializable {
     return allocatedTime;
   }
 
-  // --- SETTERS ---
+  public Integer getStayDays() {
+    return stayDays;
+  }
+
+  public LocalDateTime getCheckOutTime() {
+    return checkOutTime;
+  }
+
   public void setReservationId(String reservationId) {
     this.reservationId = reservationId;
   }
@@ -127,6 +135,14 @@ public class Reservation implements Serializable {
 
   public void setAllocatedTime(LocalDateTime allocatedTime) {
     this.allocatedTime = allocatedTime;
+  }
+
+  public void setStayDays(Integer stayDays) {
+    this.stayDays = stayDays;
+  }
+
+  public void setCheckOutTime(LocalDateTime checkOutTime) {
+    this.checkOutTime = checkOutTime;
   }
 
   @Override
