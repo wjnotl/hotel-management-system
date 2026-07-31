@@ -252,4 +252,53 @@ public class ConsoleUtil {
     System.out.print(prompt);
     return scanner.nextLine().trim();
   }
+
+  public static Integer getIntegerInput(String prompt, int min, int max) {
+    System.out.print(prompt);
+    String rawInput = scanner.nextLine().trim();
+
+    if (rawInput.isEmpty() || "C".equalsIgnoreCase(rawInput)) {
+      return null; // Signals keep current value / cancel
+    }
+
+    try {
+      int choice = Integer.parseInt(rawInput);
+
+      if (rawInput.length() > 1 && rawInput.startsWith("0")) {
+        throw new IllegalArgumentException(
+            "Invalid input format! Number must not include leading zeros.");
+      }
+
+      if (choice < min || choice > max) {
+        throw new IllegalArgumentException(
+            "Invalid input! Value must be between " + min + " and " + max + ".");
+      }
+
+      return choice;
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Invalid input! Please provide a valid integer.");
+    }
+  }
+
+  public static Double getDoubleInput(String prompt, double min, double max) {
+    System.out.print(prompt);
+    String rawInput = scanner.nextLine().trim();
+
+    if (rawInput.isEmpty() || "C".equalsIgnoreCase(rawInput)) {
+      return null;
+    }
+
+    try {
+      double choice = Double.parseDouble(rawInput);
+
+      if (choice < min || choice > max) {
+        throw new IllegalArgumentException(
+            "Invalid input! Value must be between " + min + " and " + max + ".");
+      }
+
+      return choice;
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Invalid input! Please provide a valid decimal number.");
+    }
+  }
 }

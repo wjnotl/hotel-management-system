@@ -19,11 +19,11 @@ echo.
 if not exist "%FORMATTER_JAR%" (
   echo [INFO] Google Java Format JAR not found locally.
   echo [INFO] Downloading to %FORMATTER_JAR%...
-  
+
   if not exist "%LIB_DIR%" mkdir "%LIB_DIR%"
-  
+
   curl -L -s -o "%FORMATTER_JAR%" "%DOWNLOAD_URL%"
-  
+
   if !errorlevel! neq 0 (
     echo [ERROR] Failed to download the formatter JAR.
     echo Check internet connection or download it manually.
@@ -57,7 +57,7 @@ echo [2/3] Checking Google Java Format style compliance...
 set FORMAT_ERRORS=0
 for /R src %%f in (*.java) do (
   java -jar "%FORMATTER_JAR%" --set-exit-if-changed --dry-run "%%f" >nul 2>&1
-  
+
   if !errorlevel! neq 0 (
     echo  [STYLE MISMATCH] %%f
     set FORMAT_ERRORS=1
@@ -77,7 +77,7 @@ echo.
 :: Build with Ant
 :: ---------------------------------------------------------------------
 echo [3/3] Compiling and building JAR with Ant...
-call ant jar
+call ant clean jar
 
 if %errorlevel% neq 0 (
   echo.

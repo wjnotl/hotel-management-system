@@ -1,3 +1,3 @@
 @echo off
 cls
-call ant jar
+call ant clean jar

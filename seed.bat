@@ -33,7 +33,7 @@ if exist *.dat (
 
 echo.
 echo [2/3] Rebuilding JAR executable with Ant...
-call ant jar
+call ant clean jar
 
 if %errorlevel% neq 0 (
     echo.
