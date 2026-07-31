@@ -1,5 +1,6 @@
 package view;
 
+import adt.ArrayList;
 import adt.ListInterface;
 import entity.Billing;
 import entity.Guest;
@@ -104,10 +105,14 @@ public class FrontDeskView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  public String displayBillingHistory(Guest guest, ListInterface<Billing> historyNewToOld) {
+  public ConsoleUtil.GetMenuInputResult displayBillingHistory(
+      Guest guest, ListInterface<Billing> historyNewToOld, int currentPage, int pageSize) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
         "BILLING HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 83);
+
+    ListInterface<Billing> history = (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
+    int total = history.getNumberOfEntries();
 
     int[] colWidths = {5, 12, 10, 12, 12, 10, 14};
     TableUtil.TableSettings settings =
@@ -127,8 +132,6 @@ public class FrontDeskView {
         },
         settings);
 
-    int total = (historyNewToOld == null) ? 0 : historyNewToOld.getNumberOfEntries();
-
     if (total == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
@@ -137,15 +140,18 @@ public class FrontDeskView {
       TableUtil.printTableRow(new String[] {"*** NO BILLING RECORDS FOUND ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
-      System.out.println();
-      ConsoleUtil.printContinueMessage("Press Enter to return...");
-      return "C";
+      System.out.println("\nPage 0 / 0 (Total Matches: 0)\n");
+      return ConsoleUtil.getMenuInput("Press 'C' to return: ", new char[] {'C'});
     }
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    for (int i = 1; i <= total; i++) {
-      Billing b = historyNewToOld.getEntry(i);
+    int totalPages = (int) Math.ceil((double) total / pageSize);
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      Billing b = history.getEntry(i);
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(i),
@@ -160,11 +166,15 @@ public class FrontDeskView {
     }
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
 
-    System.out.println("\nSelect a Billing record number to view its receipt, or 'C' to cancel.\n");
+    System.out.printf("Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, total);
+    System.out.println("Select a Billing record number to view its receipt.");
+    System.out.println("[N] Next Page          [P] Previous Page      [C] Cancel\n");
 
     return ConsoleUtil.getMenuInput(
-            "Enter Billing No or 'C' to cancel: ", 1, total, new char[] {'C'})
-        .input;
+        "Enter a command or select index (" + startIndex + "-" + endIndex + "): ",
+        startIndex,
+        endIndex,
+        new char[] {'N', 'P', 'C'});
   }
 
   public void displayReceipt(Guest guest, Billing billing) {
@@ -225,10 +235,14 @@ public class FrontDeskView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  public void displayAssignedRoomHistory(Guest guest, ListInterface<Billing> historyNewToOld) {
+  public ConsoleUtil.GetMenuInputResult displayAssignedRoomHistory(
+      Guest guest, ListInterface<Billing> historyNewToOld, int currentPage, int pageSize) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
         "ASSIGNED ROOM HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 70);
+
+    ListInterface<Billing> history = (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
+    int total = history.getNumberOfEntries();
 
     int[] colWidths = {5, 12, 12, 12, 12, 10};
     TableUtil.TableSettings settings =
@@ -242,9 +256,8 @@ public class FrontDeskView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"NO.", "ROOM NO.", "ROOM TYPE", "CHECK-IN", "CHECK-OUT", "STATUS"}, settings);
-
-    int total = (historyNewToOld == null) ? 0 : historyNewToOld.getNumberOfEntries();
+        new String[] {"NO.", "ROOM NO.", "ROOM TYPE", "CHECK-IN", "CHECK-OUT", "STATUS"},
+        settings);
 
     if (total == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
@@ -254,33 +267,47 @@ public class FrontDeskView {
       TableUtil.printTableRow(
           new String[] {"*** NO ROOM ASSIGNMENT HISTORY FOUND ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
-    } else {
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-      for (int i = 1; i <= total; i++) {
-        Billing b = historyNewToOld.getEntry(i);
-        TableUtil.printTableRow(
-            new String[] {
-              String.valueOf(i),
-              b.getRoomNumber(),
-              b.getRoomType().name(),
-              formatDate(b.getCheckInDate()),
-              formatDate(b.getCheckOutDate()),
-              b.getStatus().name()
-            },
-            settings);
-      }
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+      System.out.println("\nPage 0 / 0 (Total Matches: 0)\n");
+      return ConsoleUtil.getMenuInput("Press 'C' to return: ", new char[] {'C'});
     }
 
-    System.out.println();
-    ConsoleUtil.printContinueMessage("Press Enter to return...");
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int totalPages = (int) Math.ceil((double) total / pageSize);
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      Billing b = history.getEntry(i);
+      TableUtil.printTableRow(
+          new String[] {
+            String.valueOf(i),
+            b.getRoomNumber(),
+            b.getRoomType().name(),
+            formatDate(b.getCheckInDate()),
+            formatDate(b.getCheckOutDate()),
+            b.getStatus().name()
+          },
+          settings);
+    }
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+
+    System.out.printf("Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, total);
+    System.out.println("[N] Next Page          [P] Previous Page      [C] Return\n");
+
+    return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'N', 'P', 'C'});
   }
 
-  public void displayReservationHistory(Guest guest, ListInterface<Reservation> historyNewToOld) {
+  public ConsoleUtil.GetMenuInputResult displayReservationHistory(
+      Guest guest, ListInterface<Reservation> historyNewToOld, int currentPage, int pageSize) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
         "RESERVATION HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 65);
+
+    ListInterface<Reservation> history =
+        (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
+    int total = history.getNumberOfEntries();
 
     int[] colWidths = {5, 12, 11, 12, 25};
     TableUtil.TableSettings settings =
@@ -295,8 +322,6 @@ public class FrontDeskView {
     TableUtil.printTableRow(
         new String[] {"NO.", "RES ID", "ROOM TYPE", "STATUS", "RESERVATION TIME"}, settings);
 
-    int total = (historyNewToOld == null) ? 0 : historyNewToOld.getNumberOfEntries();
-
     if (total == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
@@ -304,26 +329,35 @@ public class FrontDeskView {
           new TableUtil.TableSettings(new int[] {60}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(new String[] {"*** NO RESERVATION HISTORY FOUND ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
-    } else {
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-      for (int i = 1; i <= total; i++) {
-        Reservation r = historyNewToOld.getEntry(i);
-        TableUtil.printTableRow(
-            new String[] {
-              String.valueOf(i),
-              r.getReservationId(),
-              r.getRoomType().name(),
-              r.getStatus().name(),
-              formatDateTime(r.getReservationTime())
-            },
-            settings);
-      }
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+      System.out.println("\nPage 0 / 0 (Total Matches: 0)\n");
+      return ConsoleUtil.getMenuInput("Press 'C' to return: ", new char[] {'C'});
     }
 
-    System.out.println();
-    ConsoleUtil.printContinueMessage("Press Enter to return...");
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int totalPages = (int) Math.ceil((double) total / pageSize);
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      Reservation r = history.getEntry(i);
+      TableUtil.printTableRow(
+          new String[] {
+            String.valueOf(i),
+            r.getReservationId(),
+            r.getRoomType().name(),
+            r.getStatus().name(),
+            formatDateTime(r.getReservationTime())
+          },
+          settings);
+    }
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+
+    System.out.printf("Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, total);
+    System.out.println("[N] Next Page          [P] Previous Page      [C] Return\n");
+
+    return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'N', 'P', 'C'});
   }
 
   private String formatDate(LocalDate date) {

@@ -8,7 +8,7 @@ import util.BinaryFileUtil;
 public class RoomRepo {
   private final BinaryFileUtil<ListInterface<Room>> fileUtil;
   private ListInterface<Room> roomList;
-
+  
   public RoomRepo() {
     this.fileUtil = new BinaryFileUtil<>("rooms.dat");
     load();

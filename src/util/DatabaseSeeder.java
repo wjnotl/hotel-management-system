@@ -18,11 +18,6 @@ public class DatabaseSeeder {
   private static int resCounter = 10001;
   private static int billingCounter = 1001;
 
-  // Representative nightly rates (RM) used only for seeding sample billing data.
-  private static final double LUXURY_RATE = 850.00;
-  private static final double SUITE_RATE = 550.00;
-  private static final double STANDARD_RATE = 250.00;
-
   public static void seedIfEmpty() {
     GuestRepo guestRepo = new GuestRepo();
     MemberRepo memberRepo = new MemberRepo();
@@ -124,12 +119,25 @@ public class DatabaseSeeder {
       // ==========================================
       // 3. SEED ROOMS (VACANT & CLEAN TARGETS)
       // ==========================================
-      roomRepo.addRoom(new Room("L-801", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, null));
-      roomRepo.addRoom(new Room("L-802", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, null));
-      roomRepo.addRoom(new Room("S-501", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, null));
-      roomRepo.addRoom(new Room("S-502", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, null));
-      roomRepo.addRoom(new Room("ST-101", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, null));
-      roomRepo.addRoom(new Room("ST-102", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, null));
+      Room roomL801 =
+          new Room("L-801", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, null, 850.00);
+      Room roomL802 =
+          new Room("L-802", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, null, 850.00);
+      Room roomS501 =
+          new Room("S-501", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, null, 550.00);
+      Room roomS502 =
+          new Room("S-502", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, null, 550.00);
+      Room roomST101 =
+          new Room("ST-101", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, null, 250.00);
+      Room roomST102 =
+          new Room("ST-102", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, null, 250.00);
+
+      roomRepo.addRoom(roomL801);
+      roomRepo.addRoom(roomL802);
+      roomRepo.addRoom(roomS501);
+      roomRepo.addRoom(roomS502);
+      roomRepo.addRoom(roomST101);
+      roomRepo.addRoom(roomST102);
 
       // ==========================================
       // 4. SEED VIP RESERVATIONS (3 ROOM QUEUES)
@@ -189,11 +197,6 @@ public class DatabaseSeeder {
 
       // ==========================================
       // 5. SEED BILLING / STAY HISTORY
-      // (Sample front-desk data - each record represents one completed or
-      // in-progress stay: a room assignment + check-in/out dates + charges.
-      // This is what the Guest Information module reads for booking/room/
-      // billing details, since AllocationRepo only tracks *active, unexpired*
-      // room holds and cannot be used to reconstruct past stays.)
       // ==========================================
       LocalDate today = LocalDate.now();
 
@@ -205,7 +208,7 @@ public class DatabaseSeeder {
           Room.RoomType.LUXURY,
           today.minusDays(10),
           today.minusDays(7),
-          LUXURY_RATE,
+          roomL801.getPrice(),
           Billing.Status.PAID,
           now.minusDays(10));
       addBilling(
@@ -216,7 +219,7 @@ public class DatabaseSeeder {
           Room.RoomType.SUITE,
           today.minusDays(2),
           today.plusDays(1),
-          SUITE_RATE,
+          roomS501.getPrice(),
           Billing.Status.UNPAID,
           now.minusDays(2));
       addBilling(
@@ -227,7 +230,7 @@ public class DatabaseSeeder {
           Room.RoomType.SUITE,
           today.minusDays(2),
           today.plusDays(1),
-          SUITE_RATE,
+          roomS502.getPrice(),
           Billing.Status.UNPAID,
           now.minusDays(2));
 
@@ -239,7 +242,7 @@ public class DatabaseSeeder {
           Room.RoomType.LUXURY,
           today.minusDays(20),
           today.minusDays(18),
-          LUXURY_RATE,
+          roomL802.getPrice(),
           Billing.Status.PAID,
           now.minusDays(20));
       addBilling(
@@ -250,7 +253,7 @@ public class DatabaseSeeder {
           Room.RoomType.STANDARD,
           today.minusDays(5),
           today.minusDays(3),
-          STANDARD_RATE,
+          roomST101.getPrice(),
           Billing.Status.PAID,
           now.minusDays(5));
 
@@ -262,7 +265,7 @@ public class DatabaseSeeder {
           Room.RoomType.SUITE,
           today.minusDays(15),
           today.minusDays(12),
-          SUITE_RATE,
+          roomS502.getPrice(),
           Billing.Status.PAID,
           now.minusDays(15));
 
@@ -274,7 +277,7 @@ public class DatabaseSeeder {
           Room.RoomType.STANDARD,
           today.minusDays(6),
           today.minusDays(4),
-          STANDARD_RATE,
+          roomST102.getPrice(),
           Billing.Status.UNPAID,
           now.minusDays(6));
 
@@ -286,7 +289,7 @@ public class DatabaseSeeder {
           Room.RoomType.LUXURY,
           today.minusDays(30),
           today.minusDays(27),
-          LUXURY_RATE,
+          roomL801.getPrice(),
           Billing.Status.PAID,
           now.minusDays(30));
       addBilling(
@@ -297,7 +300,7 @@ public class DatabaseSeeder {
           Room.RoomType.SUITE,
           today.minusDays(1),
           today.plusDays(2),
-          SUITE_RATE,
+          roomS501.getPrice(),
           Billing.Status.UNPAID,
           now.minusDays(1));
 
@@ -309,7 +312,7 @@ public class DatabaseSeeder {
           Room.RoomType.STANDARD,
           today.minusDays(9),
           today.minusDays(7),
-          STANDARD_RATE,
+          roomST101.getPrice(),
           Billing.Status.PAID,
           now.minusDays(9));
 
