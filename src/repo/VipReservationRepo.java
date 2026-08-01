@@ -12,6 +12,7 @@ import entity.VipSystemConfig;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 import util.BinaryFileUtil;
+import util.TaskSchedulerUtil;
 
 public class VipReservationRepo {
   private final BinaryFileUtil<ListInterface<Reservation>> fileUtil;
@@ -299,7 +300,7 @@ public class VipReservationRepo {
     return affectedCount;
   }
 
-  public void scheduleNextBoilingTask(
+  private void scheduleNextBoilingTask(
       GuestRepo guestRepo, MemberRepo memberRepo, VipSystemConfigRepo configRepo) {
     VipSystemConfig config = configRepo.getConfig();
     if (config == null) return;
@@ -346,7 +347,7 @@ public class VipReservationRepo {
     long delayMinutes = Math.max(1, TimeUnit.MILLISECONDS.toMinutes(delayMs));
 
     // 4. Schedule ONCE for the top guest only (topRes and activeHeap are now effectively final!)
-    util.TaskSchedulerUtil.scheduleOnce(
+    TaskSchedulerUtil.scheduleOnce(
         delayMinutes,
         () -> {
           try {

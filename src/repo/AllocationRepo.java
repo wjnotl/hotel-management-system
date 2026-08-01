@@ -1,9 +1,7 @@
 package repo;
 
 import adt.ArrayList;
-import adt.LinkedQueue;
 import adt.ListInterface;
-import adt.QueueInterface;
 import entity.AllocationEntry;
 import entity.Guest;
 import entity.Member;
@@ -18,7 +16,6 @@ import util.TaskSchedulerUtil;
 public class AllocationRepo {
   private final BinaryFileUtil<ListInterface<AllocationEntry>> fileUtil;
   private ListInterface<AllocationEntry> allocationList;
-  private QueueInterface<AllocationEntry> allocationQueue;
 
   public AllocationRepo() {
     this.fileUtil = new BinaryFileUtil<>("allocations.dat");
@@ -29,19 +26,6 @@ public class AllocationRepo {
     this.allocationList = fileUtil.retrieveFromFile();
     if (this.allocationList == null) {
       this.allocationList = new ArrayList<>();
-    }
-    rebuildQueue();
-  }
-
-  private void rebuildQueue() {
-    this.allocationQueue = new LinkedQueue<>();
-    if (this.allocationList != null) {
-      for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
-        AllocationEntry entry = allocationList.getEntry(i);
-        if (entry != null) {
-          this.allocationQueue.enqueue(entry);
-        }
-      }
     }
   }
 
@@ -59,10 +43,8 @@ public class AllocationRepo {
     if (entry == null) return;
 
     allocationList.add(entry);
-    allocationQueue.enqueue(entry);
     save();
 
-    // Re-arm scheduler when new entry is added
     scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
   }
 
@@ -86,7 +68,6 @@ public class AllocationRepo {
     }
 
     if (removed) {
-      rebuildQueue();
       save();
 
       // Re-arm scheduler when an entry is removed early
@@ -100,39 +81,45 @@ public class AllocationRepo {
     return allocationList;
   }
 
-  public void scheduleNextAutoExpirationTask(
+  private void scheduleNextAutoExpirationTask(
       RoomRepo roomRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
 
-    // 1. Check if the Queue is empty using Queue ADT
-    if (allocationQueue == null || allocationQueue.isEmpty()) return;
+    if (allocationList == null || allocationList.getNumberOfEntries() == 0) return;
 
-    // 2. Queue ADT peek(): The front of the queue is ALWAYS the earliest expiring entry!
-    AllocationEntry earliestEntry = allocationQueue.peek();
+    AllocationEntry earliestEntry = null;
+    long earliestTime = Long.MAX_VALUE;
+
+    for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
+      AllocationEntry current = allocationList.getEntry(i);
+      if (current != null && current.getExpirationTimestamp() < earliestTime) {
+        earliestTime = current.getExpirationTimestamp();
+        earliestEntry = current;
+      }
+    }
+
     if (earliestEntry == null) return;
 
-    // 3. Calculate remaining delay for the top queue item
+    // Create a final reference copy for the lambda scope
+    final AllocationEntry targetEntry = earliestEntry;
+
+    // Calculate remaining delay
     long now = System.currentTimeMillis();
-    long remainingMs = earliestEntry.getExpirationTimestamp() - now;
+    long remainingMs = targetEntry.getExpirationTimestamp() - now;
     long delayMinutes = Math.max(1, TimeUnit.MILLISECONDS.toMinutes(remainingMs));
 
-    // 4. Schedule ONCE using TaskSchedulerUtil
     TaskSchedulerUtil.scheduleOnce(
         delayMinutes,
         () -> {
           try {
-            // 5. DEQUEUE directly from your Queue ADT!
-            if (!allocationQueue.isEmpty() && allocationQueue.peek().equals(earliestEntry)) {
-              AllocationEntry expiredEntry = allocationQueue.dequeue(); // Queue DEQUEUE!
+            // Use targetEntry instead of earliestEntry inside the lambda
+            if (allocationList.contains(targetEntry)) {
+              removeExpiredEntryInternal(targetEntry);
 
-              // Remove from underlying list storage
-              removeExpiredEntryInternal(expiredEntry);
-
-              // Free Room
-              Room room = roomRepo.findByRoomNumber(expiredEntry.getAssignedRoomNumber());
+              Room room = roomRepo.findByRoomNumber(targetEntry.getAssignedRoomNumber());
               Room.RoomType roomType = (room != null) ? room.getRoomType() : null;
 
               if (room != null) {
@@ -141,8 +128,7 @@ public class AllocationRepo {
                 roomRepo.updateRoom(room);
               }
 
-              // Issue Strike & Handle Reservation
-              Reservation res = vipReservationRepo.findById(expiredEntry.getReservationId());
+              Reservation res = vipReservationRepo.findById(targetEntry.getReservationId());
               if (res != null) {
                 Guest guest = guestRepo.findById(res.getGuestId());
                 if (guest != null) {
@@ -178,7 +164,6 @@ public class AllocationRepo {
                 }
               }
 
-              // Dequeue next VIP from waitlist queue into freed room
               if (roomType != null && room != null) {
                 autoAssignNextWaitingVip(
                     roomType,
@@ -192,7 +177,6 @@ public class AllocationRepo {
             }
           } catch (Exception ignored) {
           } finally {
-            // 6. CHAIN: Re-arm for whatever item is now at the front of the queue!
             scheduleNextAutoExpirationTask(
                 roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
           }
@@ -207,7 +191,6 @@ public class AllocationRepo {
         break;
       }
     }
-    rebuildQueue();
     save();
   }
 
@@ -250,7 +233,6 @@ public class AllocationRepo {
             System.currentTimeMillis() + holdDurationMs);
 
     allocationList.add(newHold);
-    allocationQueue.enqueue(newHold);
     save();
 
     vacantRoom.setStatus(Room.Status.OCCUPIED);
@@ -293,7 +275,6 @@ public class AllocationRepo {
       }
     }
 
-    rebuildQueue();
     save();
 
     // Re-arm auto-expiration scheduler with updated top item
