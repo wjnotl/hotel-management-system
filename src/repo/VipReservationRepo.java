@@ -168,13 +168,13 @@ public class VipReservationRepo {
                               reservation.getQueueArrivalTime(), java.time.LocalDateTime.now())
                           .toMinutes()
                       : 0.0;
-              double patienceLimit =
+              double boilingLimit =
                   (tier == Member.LoyaltyTier.DIAMOND)
-                      ? config.getDiamondPatienceLimitMins()
+                      ? config.getDiamondBoilingLimitMins()
                       : (tier == Member.LoyaltyTier.GOLD)
-                          ? config.getGoldPatienceLimitMins()
-                          : config.getSilverPatienceLimitMins();
-              boolean isBoiling = wait >= patienceLimit;
+                          ? config.getGoldBoilingLimitMins()
+                          : config.getSilverBoilingLimitMins();
+              boolean isBoiling = wait >= boilingLimit;
               if (reservation != null) reservation.setBoiling(isBoiling);
               return isBoiling ? 1.0 : 0.0;
 

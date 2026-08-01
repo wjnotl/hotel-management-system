@@ -19,7 +19,7 @@ public class VipManageWaitlistView {
     System.out.println("1. Luxury Room Waitlist Queue");
     System.out.println("2. Suite Room Waitlist Queue");
     System.out.println("3. Standard Room Waitlist Queue");
-    System.out.println("4. Back to VIP Main Menu\n");
+    System.out.println("4. Back to VIP Menu\n");
 
     int choice = ConsoleUtil.getMenuInput("Choose a queue to manage: ", 1, 4).getAsInt();
     if (choice == 1) return Room.RoomType.LUXURY;
