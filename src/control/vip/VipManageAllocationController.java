@@ -289,7 +289,8 @@ public class VipManageAllocationController {
             reservation.setStatus(Reservation.Status.WAITING);
             reservation.setPriorityScore(newScore);
             reservation.setQueueArrivalTime(LocalDateTime.now());
-            vipReservationRepo.addReservation(reservation, newScore);
+            vipReservationRepo.addReservation(
+                reservation, newScore, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
@@ -322,7 +323,8 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
-            vipReservationRepo.cancelReservation(reservation);
+            vipReservationRepo.cancelReservation(
+                reservation, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);

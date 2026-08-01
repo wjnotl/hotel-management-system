@@ -9,7 +9,10 @@ import entity.Member;
 import entity.Reservation;
 import entity.Room;
 import entity.VipSystemConfig;
+import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 import util.BinaryFileUtil;
+import util.TaskSchedulerUtil;
 
 public class VipReservationRepo {
   private final BinaryFileUtil<ListInterface<Reservation>> fileUtil;
@@ -69,7 +72,12 @@ public class VipReservationRepo {
     fileUtil.saveToFile(masterList);
   }
 
-  public void addReservation(Reservation reservation, int priority) {
+  public void addReservation(
+      Reservation reservation,
+      int priority,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
     if (reservation == null || reservation.getRoomType() == null) return;
 
     if (!masterList.contains(reservation)) {
@@ -84,6 +92,30 @@ public class VipReservationRepo {
     }
 
     save();
+    scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
+  }
+
+  public boolean allocateReservation(
+      Reservation reservation,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
+    if (reservation == null || reservation.getRoomType() == null) return false;
+
+    Room.RoomType type = reservation.getRoomType();
+
+    // Remove from active waitlist queue & heap
+    boolean heapRemoved = getHeapByRoomType(type).remove(reservation);
+    boolean listRemoved = getListByRoomType(type).remove(reservation);
+
+    // Mark status as ALLOCATED in masterList
+    reservation.setStatus(Reservation.Status.ALLOCATED);
+    boolean updatedInMaster = updateReservation(reservation);
+
+    // Re-arm boiling task for the new top reservation in line
+    scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
+
+    return heapRemoved || listRemoved || updatedInMaster;
   }
 
   public boolean updateReservation(Reservation updatedRes) {
@@ -100,7 +132,11 @@ public class VipReservationRepo {
     return false;
   }
 
-  public boolean cancelReservation(Reservation reservation) {
+  public boolean cancelReservation(
+      Reservation reservation,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
     if (reservation == null || reservation.getRoomType() == null) return false;
 
     Room.RoomType type = reservation.getRoomType();
@@ -113,6 +149,7 @@ public class VipReservationRepo {
     reservation.setStatus(Reservation.Status.CANCELLED);
     boolean updatedInMaster = updateReservation(reservation);
 
+    scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
     return heapRemoved || listRemoved || updatedInMaster;
   }
 
@@ -200,13 +237,12 @@ public class VipReservationRepo {
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       boolean evictOverStrikes,
-      boolean forceBoilingCheck) {
+      boolean forceBoilingCheck,
+      VipSystemConfigRepo configRepo) {
 
     if (masterList == null || config == null) return 0;
-
     int affectedCount = 0;
 
-    // 1. Clear active Priority Queues (Max Heaps) and Category Lists
     luxuryList.clear();
     suiteList.clear();
     standardList.clear();
@@ -215,7 +251,6 @@ public class VipReservationRepo {
     suiteHeap.clear();
     standardHeap.clear();
 
-    // 2. Iterate through master list and process WAITING reservations
     for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
       Reservation r = masterList.getEntry(i);
 
@@ -224,7 +259,6 @@ public class VipReservationRepo {
         Member member =
             (memberRepo != null && guest != null) ? memberRepo.findById(guest.getMemberId()) : null;
 
-        // Resolve max strikes limit for member tier
         Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
         int maxStrikes =
             (tier == Member.LoyaltyTier.DIAMOND)
@@ -233,33 +267,28 @@ public class VipReservationRepo {
                     ? config.getGoldMaxStrikes()
                     : config.getSilverMaxStrikes();
 
-        // CHOICE 1: Handle guests exceeding new strike thresholds
         if (evictOverStrikes && guest != null && guest.getStrikeCount() >= maxStrikes) {
           r.setStatus(Reservation.Status.NO_SHOW);
           updateReservation(r);
           affectedCount++;
-          continue; // Evicted! Do NOT re-enqueue in priority heap
+          continue;
         }
 
-        // CHOICE 2: Force Boiling Status Update based on queue arrival time
         if (forceBoilingCheck && r.getQueueArrivalTime() != null) {
           double waitMins =
-              java.time.Duration.between(r.getQueueArrivalTime(), java.time.LocalDateTime.now())
-                  .toMinutes();
-          double patienceLimit =
+              java.time.Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
+          double boilingLimit =
               (tier == Member.LoyaltyTier.DIAMOND)
-                  ? config.getDiamondPatienceLimitMins()
+                  ? config.getDiamondBoilingLimitMins()
                   : (tier == Member.LoyaltyTier.GOLD)
-                      ? config.getGoldPatienceLimitMins()
-                      : config.getSilverPatienceLimitMins();
-          r.setBoiling(waitMins >= patienceLimit);
+                      ? config.getGoldBoilingLimitMins()
+                      : config.getSilverBoilingLimitMins();
+          r.setBoiling(waitMins >= boilingLimit);
         }
 
-        // Calculate NEW priority score with current formula & weights
         int newScore = calculatePriorityScore(r, guest, member, config);
         r.setPriorityScore(newScore);
 
-        // Re-enqueue into heap & list with updated priority score
         getListByRoomType(r.getRoomType()).add(r);
         getHeapByRoomType(r.getRoomType()).enqueue(r, newScore);
         affectedCount++;
@@ -267,6 +296,74 @@ public class VipReservationRepo {
     }
 
     save();
+    scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
     return affectedCount;
+  }
+
+  private void scheduleNextBoilingTask(
+      GuestRepo guestRepo, MemberRepo memberRepo, VipSystemConfigRepo configRepo) {
+    VipSystemConfig config = configRepo.getConfig();
+    if (config == null) return;
+
+    // 1. Find the top guest and its heap using a clean ternary or helper approach
+    // so they are effectively final for the lambda expression!
+    final Reservation topRes;
+    final PriorityQueueInterface<Reservation> activeHeap;
+
+    if (!luxuryHeap.isEmpty()) {
+      topRes = luxuryHeap.peek();
+      activeHeap = luxuryHeap;
+    } else if (!suiteHeap.isEmpty()) {
+      topRes = suiteHeap.peek();
+      activeHeap = suiteHeap;
+    } else if (!standardHeap.isEmpty()) {
+      topRes = standardHeap.peek();
+      activeHeap = standardHeap;
+    } else {
+      topRes = null;
+      activeHeap = null;
+    }
+
+    if (topRes == null || topRes.getIsBoiling() || topRes.getQueueArrivalTime() == null) {
+      return;
+    }
+
+    // 2. Resolve tier-specific boiling limit
+    Guest g = guestRepo.findById(topRes.getGuestId());
+    Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+    Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+
+    int boilingLimitMins =
+        (tier == Member.LoyaltyTier.DIAMOND)
+            ? config.getDiamondBoilingLimitMins()
+            : (tier == Member.LoyaltyTier.GOLD)
+                ? config.getGoldBoilingLimitMins()
+                : config.getSilverBoilingLimitMins();
+
+    // 3. Calculate exact time left until this specific tier's limit is hit
+    LocalDateTime boilingTargetTime = topRes.getQueueArrivalTime().plusMinutes(boilingLimitMins);
+    long targetMs = java.sql.Timestamp.valueOf(boilingTargetTime).getTime();
+    long delayMs = targetMs - System.currentTimeMillis();
+    long delayMinutes = Math.max(1, TimeUnit.MILLISECONDS.toMinutes(delayMs));
+
+    // 4. Schedule ONCE for the top guest only (topRes and activeHeap are now effectively final!)
+    TaskSchedulerUtil.scheduleOnce(
+        delayMinutes,
+        () -> {
+          try {
+            if (topRes.getStatus() == Reservation.Status.WAITING && !topRes.getIsBoiling()) {
+              topRes.setBoiling(true);
+              int newScore = calculatePriorityScore(topRes, g, m, config);
+              topRes.setPriorityScore(newScore);
+              updateReservation(topRes);
+
+              // Re-sort the heap automatically
+              if (activeHeap != null) {
+                activeHeap.changePriority(topRes, newScore);
+              }
+            }
+          } catch (Exception ignored) {
+          }
+        });
   }
 }

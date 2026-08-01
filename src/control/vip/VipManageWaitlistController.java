@@ -212,7 +212,8 @@ public class VipManageWaitlistController {
                 now,
                 now);
 
-        vipReservationRepo.addReservation(newRes, baseScore);
+        vipReservationRepo.addReservation(
+            newRes, baseScore, guestRepo, memberRepo, vipSystemConfigRepo);
 
         ConsoleUtil.clearScreen();
         System.out.println(">> STATUS: SUCCESS");
@@ -288,7 +289,8 @@ public class VipManageWaitlistController {
           boolean confirmed = waitlistView.displayCancelConfirmationScreen(selected, g, m);
 
           if (confirmed) {
-            vipReservationRepo.cancelReservation(selected);
+            vipReservationRepo.cancelReservation(
+                selected, guestRepo, memberRepo, vipSystemConfigRepo);
             ConsoleUtil.clearScreen();
             System.out.println(">> STATUS: SUCCESS");
             System.out.println(
@@ -348,10 +350,8 @@ public class VipManageWaitlistController {
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
     roomRepo.updateRoom(vacantRoom);
 
-    reservation.setStatus(Reservation.Status.ALLOCATED);
-    vipReservationRepo.updateReservation(reservation);
+    vipReservationRepo.allocateReservation(reservation, guestRepo, memberRepo, vipSystemConfigRepo);
 
-    vipReservationRepo.cancelReservation(reservation);
     int remainingCount = vipReservationRepo.getListByRoomType(roomType).getNumberOfEntries();
 
     waitlistView.displayDequeueSuccessScreen(

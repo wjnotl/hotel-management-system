@@ -15,6 +15,7 @@ import repo.HousekeepingStaffRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.VipReservationRepo;
+import repo.VipSystemConfigRepo;
 
 public class DatabaseSeeder {
 
@@ -28,6 +29,7 @@ public class DatabaseSeeder {
     VipReservationRepo vipRepo = new VipReservationRepo();
     BillingRepo billingRepo = new BillingRepo();
     HousekeepingStaffRepo staffRepo = new HousekeepingStaffRepo();
+    VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
 
     if (guestRepo.getGuestList().isEmpty()) {
       System.out.println("Seeding expanded mock database...");
@@ -150,54 +152,369 @@ public class DatabaseSeeder {
 
       // --- LUXURY QUEUE (5 Reservations) ---
       Reservation res101Luxury =
-          addRes(vipRepo, "G-101", Room.RoomType.LUXURY, 9500, true, now.minusMinutes(50));
+          addRes(
+              vipRepo,
+              "G-101",
+              Room.RoomType.LUXURY,
+              9500,
+              true,
+              now.minusMinutes(50),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
       Reservation res102Luxury =
-          addRes(vipRepo, "G-102", Room.RoomType.LUXURY, 9100, false, now.minusMinutes(40));
-      addRes(vipRepo, "G-101", Room.RoomType.LUXURY, 8800, true, now.minusMinutes(35));
+          addRes(
+              vipRepo,
+              "G-102",
+              Room.RoomType.LUXURY,
+              9100,
+              false,
+              now.minusMinutes(40),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-101",
+          Room.RoomType.LUXURY,
+          8800,
+          true,
+          now.minusMinutes(35),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
       Reservation res103Luxury =
-          addRes(vipRepo, "G-103", Room.RoomType.LUXURY, 7600, false, now.minusMinutes(25));
-      addRes(vipRepo, "G-104", Room.RoomType.LUXURY, 7100, false, now.minusMinutes(15));
+          addRes(
+              vipRepo,
+              "G-103",
+              Room.RoomType.LUXURY,
+              7600,
+              false,
+              now.minusMinutes(25),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-104",
+          Room.RoomType.LUXURY,
+          7100,
+          false,
+          now.minusMinutes(15),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
 
       // --- SUITE QUEUE (11 Reservations) ---
       Reservation res101Suite =
-          addRes(vipRepo, "G-101", Room.RoomType.SUITE, 8900, false, now.minusMinutes(45));
+          addRes(
+              vipRepo,
+              "G-101",
+              Room.RoomType.SUITE,
+              8900,
+              false,
+              now.minusMinutes(45),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
       Reservation res102Suite =
-          addRes(vipRepo, "G-102", Room.RoomType.SUITE, 9300, true, now.minusMinutes(60));
-      addRes(vipRepo, "G-103", Room.RoomType.SUITE, 7800, true, now.minusMinutes(42));
+          addRes(
+              vipRepo,
+              "G-102",
+              Room.RoomType.SUITE,
+              9300,
+              true,
+              now.minusMinutes(60),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-103",
+          Room.RoomType.SUITE,
+          7800,
+          true,
+          now.minusMinutes(42),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
       Reservation res104Suite =
-          addRes(vipRepo, "G-104", Room.RoomType.SUITE, 7400, false, now.minusMinutes(38));
-      addRes(vipRepo, "G-102", Room.RoomType.SUITE, 7200, false, now.minusMinutes(30));
+          addRes(
+              vipRepo,
+              "G-104",
+              Room.RoomType.SUITE,
+              7400,
+              false,
+              now.minusMinutes(38),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-102",
+          Room.RoomType.SUITE,
+          7200,
+          false,
+          now.minusMinutes(30),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
       Reservation res105Suite =
-          addRes(vipRepo, "G-105", Room.RoomType.SUITE, 5800, true, now.minusMinutes(28));
+          addRes(
+              vipRepo,
+              "G-105",
+              Room.RoomType.SUITE,
+              5800,
+              true,
+              now.minusMinutes(28),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
       Reservation res106Suite =
-          addRes(vipRepo, "G-106", Room.RoomType.SUITE, 4900, false, now.minusMinutes(25));
-      addRes(vipRepo, "G-103", Room.RoomType.SUITE, 4600, false, now.minusMinutes(20));
-      addRes(vipRepo, "G-105", Room.RoomType.SUITE, 4300, false, now.minusMinutes(18));
-      addRes(vipRepo, "G-106", Room.RoomType.SUITE, 4100, false, now.minusMinutes(12));
-      addRes(vipRepo, "G-104", Room.RoomType.SUITE, 3900, false, now.minusMinutes(5));
+          addRes(
+              vipRepo,
+              "G-106",
+              Room.RoomType.SUITE,
+              4900,
+              false,
+              now.minusMinutes(25),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-103",
+          Room.RoomType.SUITE,
+          4600,
+          false,
+          now.minusMinutes(20),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-105",
+          Room.RoomType.SUITE,
+          4300,
+          false,
+          now.minusMinutes(18),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-106",
+          Room.RoomType.SUITE,
+          4100,
+          false,
+          now.minusMinutes(12),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-104",
+          Room.RoomType.SUITE,
+          3900,
+          false,
+          now.minusMinutes(5),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
 
       // --- STANDARD QUEUE (19 Reservations) ---
-      addRes(vipRepo, "G-101", Room.RoomType.STANDARD, 9000, true, now.minusMinutes(70));
+      addRes(
+          vipRepo,
+          "G-101",
+          Room.RoomType.STANDARD,
+          9000,
+          true,
+          now.minusMinutes(70),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
       Reservation res102Standard =
-          addRes(vipRepo, "G-102", Room.RoomType.STANDARD, 8700, false, now.minusMinutes(65));
-      addRes(vipRepo, "G-103", Room.RoomType.STANDARD, 7900, true, now.minusMinutes(58));
-      addRes(vipRepo, "G-104", Room.RoomType.STANDARD, 7300, false, now.minusMinutes(55));
-      addRes(vipRepo, "G-101", Room.RoomType.STANDARD, 7100, false, now.minusMinutes(50));
+          addRes(
+              vipRepo,
+              "G-102",
+              Room.RoomType.STANDARD,
+              8700,
+              false,
+              now.minusMinutes(65),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-103",
+          Room.RoomType.STANDARD,
+          7900,
+          true,
+          now.minusMinutes(58),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-104",
+          Room.RoomType.STANDARD,
+          7300,
+          false,
+          now.minusMinutes(55),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-101",
+          Room.RoomType.STANDARD,
+          7100,
+          false,
+          now.minusMinutes(50),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
       Reservation res105Standard =
-          addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 5900, true, now.minusMinutes(48));
-      addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 5200, false, now.minusMinutes(44));
-      addRes(vipRepo, "G-102", Room.RoomType.STANDARD, 5000, false, now.minusMinutes(40));
-      addRes(vipRepo, "G-103", Room.RoomType.STANDARD, 4800, false, now.minusMinutes(36));
-      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 4500, true, now.minusMinutes(32));
-      addRes(vipRepo, "G-104", Room.RoomType.STANDARD, 4300, false, now.minusMinutes(28));
-      addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 4100, false, now.minusMinutes(25));
-      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 3800, false, now.minusMinutes(22));
-      addRes(vipRepo, "G-103", Room.RoomType.STANDARD, 3600, false, now.minusMinutes(18));
-      addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 3400, false, now.minusMinutes(15));
-      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 3200, false, now.minusMinutes(12));
-      addRes(vipRepo, "G-104", Room.RoomType.STANDARD, 3000, false, now.minusMinutes(9));
-      addRes(vipRepo, "G-106", Room.RoomType.STANDARD, 2800, false, now.minusMinutes(6));
-      addRes(vipRepo, "G-105", Room.RoomType.STANDARD, 2500, false, now.minusMinutes(2));
+          addRes(
+              vipRepo,
+              "G-105",
+              Room.RoomType.STANDARD,
+              5900,
+              true,
+              now.minusMinutes(48),
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-106",
+          Room.RoomType.STANDARD,
+          5200,
+          false,
+          now.minusMinutes(44),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-102",
+          Room.RoomType.STANDARD,
+          5000,
+          false,
+          now.minusMinutes(40),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-103",
+          Room.RoomType.STANDARD,
+          4800,
+          false,
+          now.minusMinutes(36),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-105",
+          Room.RoomType.STANDARD,
+          4500,
+          true,
+          now.minusMinutes(32),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-104",
+          Room.RoomType.STANDARD,
+          4300,
+          false,
+          now.minusMinutes(28),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-106",
+          Room.RoomType.STANDARD,
+          4100,
+          false,
+          now.minusMinutes(25),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-105",
+          Room.RoomType.STANDARD,
+          3800,
+          false,
+          now.minusMinutes(22),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-103",
+          Room.RoomType.STANDARD,
+          3600,
+          false,
+          now.minusMinutes(18),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-106",
+          Room.RoomType.STANDARD,
+          3400,
+          false,
+          now.minusMinutes(15),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-105",
+          Room.RoomType.STANDARD,
+          3200,
+          false,
+          now.minusMinutes(12),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-104",
+          Room.RoomType.STANDARD,
+          3000,
+          false,
+          now.minusMinutes(9),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-106",
+          Room.RoomType.STANDARD,
+          2800,
+          false,
+          now.minusMinutes(6),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
+      addRes(
+          vipRepo,
+          "G-105",
+          Room.RoomType.STANDARD,
+          2500,
+          false,
+          now.minusMinutes(2),
+          guestRepo,
+          memberRepo,
+          vipSystemConfigRepo);
 
       // ==========================================
       // 5. SEED BILLING / STAY HISTORY
@@ -397,7 +714,10 @@ public class DatabaseSeeder {
       Room.RoomType roomType,
       int priorityScore,
       boolean isBoiling,
-      LocalDateTime arrivalTime) {
+      LocalDateTime arrivalTime,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      VipSystemConfigRepo vipSystemConfigRepo) {
 
     String resId = "RES-" + (resCounter++);
 
@@ -413,7 +733,7 @@ public class DatabaseSeeder {
             arrivalTime.minusMinutes(15),
             arrivalTime);
 
-    repo.addReservation(r, priorityScore);
+    repo.addReservation(r, priorityScore, guestRepo, memberRepo, vipSystemConfigRepo);
     return r;
   }
 
