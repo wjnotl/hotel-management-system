@@ -48,10 +48,12 @@ public class VipSettingsController {
         } else if (choice == 3) {
           handleComponentWeights();
         } else if (choice == 4) {
-          handleApplyToQueue();
+          handleReportAlertTargets();
         } else if (choice == 5) {
-          handleResetToDefaults();
+          handleApplyToQueue();
         } else if (choice == 6) {
+          handleResetToDefaults();
+        } else if (choice == 7) {
           break;
         }
       } catch (Exception e) {
@@ -458,16 +460,146 @@ public class VipSettingsController {
         int choice = settingsView.displayOperationalRulesMenu();
 
         if (choice == 1) {
-          manageStrikeLimits(config);
+          managePatienceLimits(config);
         } else if (choice == 2) {
-          manageBoilingPointThreshold(config);
+          manageBoilingPointLimits(config);
         } else if (choice == 3) {
-          manageGraceWindows(config);
+          manageStrikeLimits(config);
         } else if (choice == 4) {
+          manageGraceWindows(config);
+        } else if (choice == 5) {
           break;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void managePatienceLimits(VipSystemConfig config) {
+    while (true) {
+      int tier;
+      try {
+        tier =
+            settingsView.displayTierSelectionMenu(
+                "TIER PATIENCE LIMITS (SLA TARGET MINS)",
+                config.getDiamondPatienceLimitMins() + " Mins",
+                config.getGoldPatienceLimitMins() + " Mins",
+                config.getSilverPatienceLimitMins() + " Mins");
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+        continue;
+      }
+
+      if (tier == 4) break;
+
+      while (true) {
+        try {
+          Integer newVal = null;
+          String formula = config.getActiveFormulaInfix();
+          if (tier == 1)
+            newVal =
+                settingsView.promptRuleIntInput(
+                    "Diamond Patience Limit Mins",
+                    config.getDiamondPatienceLimitMins(),
+                    1,
+                    180,
+                    formula);
+          else if (tier == 2)
+            newVal =
+                settingsView.promptRuleIntInput(
+                    "Gold Patience Limit Mins", config.getGoldPatienceLimitMins(), 1, 180, formula);
+          else if (tier == 3)
+            newVal =
+                settingsView.promptRuleIntInput(
+                    "Silver Patience Limit Mins",
+                    config.getSilverPatienceLimitMins(),
+                    1,
+                    180,
+                    formula);
+
+          if (newVal != null) {
+            if (tier == 1) config.setDiamondPatienceLimitMins(newVal);
+            else if (tier == 2) config.setGoldPatienceLimitMins(newVal);
+            else if (tier == 3) config.setSilverPatienceLimitMins(newVal);
+            configRepo.updateConfig(config);
+          }
+          break;
+        } catch (Exception e) {
+          ConsoleUtil.printError(e.getMessage());
+        }
+      }
+    }
+  }
+
+  private void manageBoilingPointLimits(VipSystemConfig config) {
+    while (true) {
+      int tier;
+      try {
+        tier =
+            settingsView.displayTierSelectionMenu(
+                "TIER BOILING POINT LIMITS (STARVATION BOOST MINS)",
+                config.getDiamondBoilingLimitMins() + " Mins",
+                config.getGoldBoilingLimitMins() + " Mins",
+                config.getSilverBoilingLimitMins() + " Mins");
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+        continue;
+      }
+
+      if (tier == 4) break;
+
+      while (true) {
+        try {
+          Integer newVal = null;
+          String formula = config.getActiveFormulaInfix();
+          if (tier == 1)
+            newVal =
+                settingsView.promptRuleIntInput(
+                    "Diamond Boiling Limit Mins",
+                    config.getDiamondBoilingLimitMins(),
+                    1,
+                    180,
+                    formula);
+          else if (tier == 2)
+            newVal =
+                settingsView.promptRuleIntInput(
+                    "Gold Boiling Limit Mins", config.getGoldBoilingLimitMins(), 1, 180, formula);
+          else if (tier == 3)
+            newVal =
+                settingsView.promptRuleIntInput(
+                    "Silver Boiling Limit Mins",
+                    config.getSilverBoilingLimitMins(),
+                    1,
+                    180,
+                    formula);
+
+          if (newVal != null) {
+            int oldVal =
+                (tier == 1)
+                    ? config.getDiamondBoilingLimitMins()
+                    : (tier == 2)
+                        ? config.getGoldBoilingLimitMins()
+                        : config.getSilverBoilingLimitMins();
+
+            if (tier == 1) config.setDiamondBoilingLimitMins(newVal);
+            else if (tier == 2) config.setGoldBoilingLimitMins(newVal);
+            else if (tier == 3) config.setSilverBoilingLimitMins(newVal);
+
+            try {
+              validateInfixFormulaWithConfig(config.getActiveFormulaInfix());
+              configRepo.updateConfig(config);
+            } catch (Exception e) {
+              if (tier == 1) config.setDiamondBoilingLimitMins(oldVal);
+              else if (tier == 2) config.setGoldBoilingLimitMins(oldVal);
+              else if (tier == 3) config.setSilverBoilingLimitMins(oldVal);
+              throw e;
+            }
+          }
+          break;
+        } catch (Exception e) {
+          ConsoleUtil.printError(e.getMessage());
+        }
       }
     }
   }
@@ -523,70 +655,6 @@ public class VipSettingsController {
               if (tier == 1) config.setDiamondMaxStrikes(oldVal);
               else if (tier == 2) config.setGoldMaxStrikes(oldVal);
               else if (tier == 3) config.setSilverMaxStrikes(oldVal);
-              throw e;
-            }
-          }
-          break;
-        } catch (Exception e) {
-          ConsoleUtil.printError(e.getMessage());
-        }
-      }
-    }
-  }
-
-  private void manageBoilingPointThreshold(VipSystemConfig config) {
-    while (true) {
-      int tier;
-      try {
-        tier =
-            settingsView.displayTierSelectionMenu(
-                "TIER PATIENCE LIMITS (MINS)",
-                config.getDiamondPatienceLimitMins() + " Mins",
-                config.getGoldPatienceLimitMins() + " Mins",
-                config.getSilverPatienceLimitMins() + " Mins");
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-        continue;
-      }
-
-      if (tier == 4) break;
-
-      while (true) {
-        try {
-          Integer newVal = null;
-          String formula = config.getActiveFormulaInfix();
-          if (tier == 1)
-            newVal =
-                settingsView.promptRuleIntInput(
-                    "Diamond Patience Mins", config.getDiamondPatienceLimitMins(), 1, 180, formula);
-          else if (tier == 2)
-            newVal =
-                settingsView.promptRuleIntInput(
-                    "Gold Patience Mins", config.getGoldPatienceLimitMins(), 1, 180, formula);
-          else if (tier == 3)
-            newVal =
-                settingsView.promptRuleIntInput(
-                    "Silver Patience Mins", config.getSilverPatienceLimitMins(), 1, 180, formula);
-
-          if (newVal != null) {
-            int oldVal =
-                (tier == 1)
-                    ? config.getDiamondPatienceLimitMins()
-                    : (tier == 2)
-                        ? config.getGoldPatienceLimitMins()
-                        : config.getSilverPatienceLimitMins();
-
-            if (tier == 1) config.setDiamondPatienceLimitMins(newVal);
-            else if (tier == 2) config.setGoldPatienceLimitMins(newVal);
-            else if (tier == 3) config.setSilverPatienceLimitMins(newVal);
-
-            try {
-              validateInfixFormulaWithConfig(config.getActiveFormulaInfix());
-              configRepo.updateConfig(config);
-            } catch (Exception e) {
-              if (tier == 1) config.setDiamondPatienceLimitMins(oldVal);
-              else if (tier == 2) config.setGoldPatienceLimitMins(oldVal);
-              else if (tier == 3) config.setSilverPatienceLimitMins(oldVal);
               throw e;
             }
           }
@@ -865,50 +933,220 @@ public class VipSettingsController {
     }
   }
 
+  private void handleReportAlertTargets() {
+    while (true) {
+      try {
+        VipSystemConfig config = configRepo.getConfig();
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("REPORT ALERT TARGET THRESHOLDS (%)");
+        System.out.println("1. Tier SLA Attainment Targets (%)");
+        System.out.println("2. Tier Max Eviction Rate Limits (%)");
+        System.out.println("3. Tier Max Grace Utilization Limits (%)");
+        System.out.println("4. Back\n");
+
+        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+        if (choice == 4) break;
+
+        if (choice == 1) {
+          manageSlaAttainmentTargets(config);
+        } else if (choice == 2) {
+          manageEvictionRateTargets(config);
+        } else if (choice == 3) {
+          manageGraceUtilTargets(config);
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void manageSlaAttainmentTargets(VipSystemConfig config) {
+    while (true) {
+      int tier;
+      try {
+        tier =
+            settingsView.displayTierSelectionMenu(
+                "TIER SLA ATTAINMENT TARGETS (%)",
+                String.format("%.1f%%", config.getDiamondSlaTargetPct()),
+                String.format("%.1f%%", config.getGoldSlaTargetPct()),
+                String.format("%.1f%%", config.getSilverSlaTargetPct()));
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+        continue;
+      }
+
+      if (tier == 4) break;
+
+      while (true) {
+        try {
+          Double newVal = null;
+          String formula = config.getActiveFormulaInfix();
+          if (tier == 1)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Diamond SLA Target %", config.getDiamondSlaTargetPct(), 1.0, 100.0, formula);
+          else if (tier == 2)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Gold SLA Target %", config.getGoldSlaTargetPct(), 1.0, 100.0, formula);
+          else if (tier == 3)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Silver SLA Target %", config.getSilverSlaTargetPct(), 1.0, 100.0, formula);
+
+          if (newVal != null) {
+            if (tier == 1) config.setDiamondSlaTargetPct(newVal);
+            else if (tier == 2) config.setGoldSlaTargetPct(newVal);
+            else if (tier == 3) config.setSilverSlaTargetPct(newVal);
+            configRepo.updateConfig(config);
+          }
+          break;
+        } catch (Exception e) {
+          ConsoleUtil.printError(e.getMessage());
+        }
+      }
+    }
+  }
+
+  private void manageEvictionRateTargets(VipSystemConfig config) {
+    while (true) {
+      int tier;
+      try {
+        tier =
+            settingsView.displayTierSelectionMenu(
+                "TIER MAX EVICTION RATE LIMITS (%)",
+                String.format("%.1f%%", config.getDiamondEvictionRateTargetPct()),
+                String.format("%.1f%%", config.getGoldEvictionRateTargetPct()),
+                String.format("%.1f%%", config.getSilverEvictionRateTargetPct()));
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+        continue;
+      }
+
+      if (tier == 4) break;
+
+      while (true) {
+        try {
+          Double newVal = null;
+          String formula = config.getActiveFormulaInfix();
+          if (tier == 1)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Diamond Eviction Limit %",
+                    config.getDiamondEvictionRateTargetPct(), 0.1, 100.0, formula);
+          else if (tier == 2)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Gold Eviction Limit %",
+                    config.getGoldEvictionRateTargetPct(), 0.1, 100.0, formula);
+          else if (tier == 3)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Silver Eviction Limit %",
+                    config.getSilverEvictionRateTargetPct(), 0.1, 100.0, formula);
+
+          if (newVal != null) {
+            if (tier == 1) config.setDiamondEvictionRateTargetPct(newVal);
+            else if (tier == 2) config.setGoldEvictionRateTargetPct(newVal);
+            else if (tier == 3) config.setSilverEvictionRateTargetPct(newVal);
+            configRepo.updateConfig(config);
+          }
+          break;
+        } catch (Exception e) {
+          ConsoleUtil.printError(e.getMessage());
+        }
+      }
+    }
+  }
+
+  private void manageGraceUtilTargets(VipSystemConfig config) {
+    while (true) {
+      int tier;
+      try {
+        tier =
+            settingsView.displayTierSelectionMenu(
+                "TIER MAX GRACE UTILIZATION (%)",
+                String.format("%.1f%%", config.getDiamondGraceUtilTargetPct()),
+                String.format("%.1f%%", config.getGoldGraceUtilTargetPct()),
+                String.format("%.1f%%", config.getSilverGraceUtilTargetPct()));
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+        continue;
+      }
+
+      if (tier == 4) break;
+
+      while (true) {
+        try {
+          Double newVal = null;
+          String formula = config.getActiveFormulaInfix();
+          if (tier == 1)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Diamond Grace Util %",
+                    config.getDiamondGraceUtilTargetPct(), 1.0, 100.0, formula);
+          else if (tier == 2)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Gold Grace Util %", config.getGoldGraceUtilTargetPct(), 1.0, 100.0, formula);
+          else if (tier == 3)
+            newVal =
+                settingsView.promptRuleDoubleInput(
+                    "Silver Grace Util %",
+                    config.getSilverGraceUtilTargetPct(), 1.0, 100.0, formula);
+
+          if (newVal != null) {
+            if (tier == 1) config.setDiamondGraceUtilTargetPct(newVal);
+            else if (tier == 2) config.setGoldGraceUtilTargetPct(newVal);
+            else if (tier == 3) config.setSilverGraceUtilTargetPct(newVal);
+            configRepo.updateConfig(config);
+          }
+          break;
+        } catch (Exception e) {
+          ConsoleUtil.printError(e.getMessage());
+        }
+      }
+    }
+  }
+
   private void handleApplyToQueue() {
     VipSystemConfig config = configRepo.getConfig();
 
     while (true) {
       try {
-        // Step 1: Strike eviction rule
         int choice1 =
             settingsView.promptApplyOptionWithBack(
                 "STRIKE THRESHOLD EVICTION",
                 "Automatically cancel and evict waiting guests who exceed the active Tier Strike"
                     + " Limits?");
-        if (choice1 == 3) return; // Cancel
+        if (choice1 == 3) return;
         boolean evictOverStrikes = (choice1 == 1);
 
-        // Step 2: Boiling point re-check rule
         int choice2 =
             settingsView.promptApplyOptionWithBack(
                 "BOILING STATUS RE-EVALUATION",
                 "Re-evaluate live wait times against active Patience Thresholds and update BOILING"
                     + " flags?");
-        if (choice2 == 3) return; // Cancel
+        if (choice2 == 3) return;
         boolean forceBoilingCheck = (choice2 == 1);
 
-        // Step 3: Explicit confirmation prompt for Active Holding Bay Timers!
         int choice3 =
             settingsView.promptApplyOptionWithBack(
                 "ACTIVE ALLOCATION GRACE TIMERS",
                 "Reset active countdown timers in the Holding Bay using the newly configured Grace"
                     + " Periods?");
-        if (choice3 == 3) return; // Cancel
+        if (choice3 == 3) return;
         boolean updateActiveGraceTimers = (choice3 == 1);
 
-        // Final Master Execution Confirmation
         boolean confirmExecution =
             ConsoleUtil.showConfirmMessage(
                 "Confirm execution of selected queue reconciliation rules?");
         if (!confirmExecution) return;
 
-        // Execute Waitlist Re-calculation
         int processedWaitlist =
             vipReservationRepo.applySettingsToQueue(
                 config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck);
 
-        // Execute Active Holding Bay Recalculation ONLY IF confirmed!
         int processedAllocations = 0;
         if (updateActiveGraceTimers) {
           processedAllocations =
