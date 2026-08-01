@@ -212,7 +212,8 @@ public class VipManageWaitlistController {
                 now,
                 now);
 
-        vipReservationRepo.addReservation(newRes, baseScore);
+        vipReservationRepo.addReservation(
+            newRes, baseScore, guestRepo, memberRepo, vipSystemConfigRepo);
 
         ConsoleUtil.clearScreen();
         System.out.println(">> STATUS: SUCCESS");
@@ -288,7 +289,8 @@ public class VipManageWaitlistController {
           boolean confirmed = waitlistView.displayCancelConfirmationScreen(selected, g, m);
 
           if (confirmed) {
-            vipReservationRepo.cancelReservation(selected);
+            vipReservationRepo.cancelReservation(
+                selected, guestRepo, memberRepo, vipSystemConfigRepo);
             ConsoleUtil.clearScreen();
             System.out.println(">> STATUS: SUCCESS");
             System.out.println(
@@ -318,13 +320,23 @@ public class VipManageWaitlistController {
     Guest g = guestRepo.findById(reservation.getGuestId());
     Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
+    VipSystemConfig config = vipSystemConfigRepo.getConfig();
+    Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+    int graceMins =
+        (tier == Member.LoyaltyTier.DIAMOND)
+            ? config.getDiamondGraceWindowMins()
+            : (tier == Member.LoyaltyTier.GOLD)
+                ? config.getGoldGraceWindowMins()
+                : config.getSilverGraceWindowMins();
+
     boolean confirmed =
-        waitlistView.displayDequeueConfirmationScreen(reservation, g, m, vacantRoom);
+        waitlistView.displayDequeueConfirmationScreen(reservation, g, m, vacantRoom, graceMins);
     if (!confirmed) {
       return false;
     }
 
-    long holdDurationMs = 15 * 60 * 1000L;
+    long holdDurationMs = graceMins * 60 * 1000L;
+
     AllocationEntry entry =
         new AllocationEntry(
             reservation.getReservationId(),
@@ -338,10 +350,8 @@ public class VipManageWaitlistController {
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
     roomRepo.updateRoom(vacantRoom);
 
-    reservation.setStatus(Reservation.Status.ALLOCATED);
-    vipReservationRepo.updateReservation(reservation);
+    vipReservationRepo.allocateReservation(reservation, guestRepo, memberRepo, vipSystemConfigRepo);
 
-    vipReservationRepo.cancelReservation(reservation);
     int remainingCount = vipReservationRepo.getListByRoomType(roomType).getNumberOfEntries();
 
     waitlistView.displayDequeueSuccessScreen(

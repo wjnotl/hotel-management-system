@@ -83,7 +83,7 @@ public class VipManageAllocationController {
             currentPage = 1;
           }
         } else if ("R".equalsIgnoreCase(result.input)) {
-          // Table refreshes on loop
+          // Refresh
         } else if ("N".equalsIgnoreCase(result.input)) {
           int totalMatches = filteredList.getNumberOfEntries();
           int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
@@ -120,20 +120,28 @@ public class VipManageAllocationController {
 
     Reservation reservation = vipReservationRepo.findById(entry.getReservationId());
     Guest guest = (reservation != null) ? guestRepo.findById(reservation.getGuestId()) : null;
+    Member member =
+        (guest != null && guest.getMemberId() != null)
+            ? memberRepo.findById(guest.getMemberId())
+            : null;
 
     while (true) {
       try {
-        int action = allocationView.displaySettleAllocationSubmenu(guest);
+        // Show Detailed Summary Screen Submenu
+        int action =
+            allocationView.displayAllocationDetailScreen(entry, reservation, guest, member);
 
         if (action == 1) {
-          // CONFIRM ALLOCATE -> COMPLETE CHECK-IN
-          completeCheckIn(entry, reservation, guest);
-          break;
+          // ROUTE TO METHOD 1: CHECK-IN PROCESS
+          boolean completed = handleConfirmCheckInSubmenu(entry, reservation, guest);
+          if (completed) {
+            break; // Finished check-in -> return to allocation table
+          }
         } else if (action == 2) {
-          // CANCEL ALLOCATION / NO-SHOW RESOLUTION
-          boolean resolved = handleCancelAllocationResolution(entry, reservation, guest);
+          // ROUTE TO METHOD 2: CANCEL & NO-SHOW RESOLUTION
+          boolean resolved = handleCancelAllocationSubmenu(entry, reservation, guest, member);
           if (resolved) {
-            break;
+            break; // Resolved cancellation -> return to allocation table
           }
         } else if (action == 3) {
           break; // Return to list
@@ -144,11 +152,35 @@ public class VipManageAllocationController {
     }
   }
 
-  private void completeCheckIn(AllocationEntry entry, Reservation reservation, Guest guest) {
+  // --- SUBMENU METHOD 1: CONFIRM ALLOCATION & CHECK-IN ---
+  private boolean handleConfirmCheckInSubmenu(
+      AllocationEntry entry, Reservation reservation, Guest guest) {
     if (reservation == null || entry == null) {
       ConsoleUtil.printError("Missing booking records for check-in completion!");
-      return;
+      return false;
     }
+
+    Integer stayDays = promptStayDuration(entry, guest);
+    if (stayDays == null) {
+      return false; // User pressed 'C' to cancel back to Detail Screen
+    }
+
+    // Confirmation step
+    boolean confirmed =
+        ConsoleUtil.showConfirmMessage(
+            "Complete check-in for "
+                + (guest != null ? guest.getName() : "Guest")
+                + " in Room "
+                + entry.getAssignedRoomNumber()
+                + " for "
+                + stayDays
+                + " day(s)?");
+
+    if (!confirmed) {
+      return false; // Back to Detail Screen
+    }
+
+    LocalDateTime now = LocalDateTime.now();
 
     // 1. Update Room state
     Room room = roomRepo.findByRoomNumber(entry.getAssignedRoomNumber());
@@ -158,26 +190,47 @@ public class VipManageAllocationController {
       roomRepo.updateRoom(room);
     }
 
-    // 2. Update Reservation state to CHECKED_IN & log timestamp
+    // 2. Update Reservation state & store stay duration
     reservation.setStatus(Reservation.Status.CHECKED_IN);
-    reservation.setAllocatedTime(LocalDateTime.now());
+    reservation.setAllocatedTime(now);
+    reservation.setStayDays(stayDays);
     vipReservationRepo.updateReservation(reservation);
 
     // 3. Remove hold entry from AllocationRepo
     allocationRepo.removeAllocationEntry(
         entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
-    vipReservationRepo.getAllReservations(); // Persists state updates
 
     allocationView.displayCheckInSuccessScreen(reservation, guest, room);
+    return true; // Successfully checked in!
   }
 
-  private boolean handleCancelAllocationResolution(
-      AllocationEntry entry, Reservation reservation, Guest guest) {
+  // --- HELPER METHOD: STAY DURATION INPUT ---
+  private Integer promptStayDuration(AllocationEntry entry, Guest guest) {
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("CONFIRM ALLOCATION & CHECK-IN");
+        System.out.println(" Target Guest   : " + (guest != null ? guest.getName() : "N/A"));
+        System.out.println(" Room Assigned  : Room " + entry.getAssignedRoomNumber());
+        System.out.println("------------------------------------------------------");
+        System.out.println(" Press ENTER or 'C' to Cancel & Return\n");
+
+        Integer days =
+            ConsoleUtil.getIntegerInput(
+                " Enter Duration of Stay (Number of Days/Nights) [1 - 30]: ", 1, 30);
+
+        return days; // Returns integer or null (if cancelled)
+      } catch (Exception e) {
+        ConsoleUtil.printError("Invalid input format! Please enter a valid number of days (1-30).");
+      }
+    }
+  }
+
+  // --- SUBMENU METHOD 2: CANCEL ALLOCATION & NO-SHOW RESOLUTION ---
+  private boolean handleCancelAllocationSubmenu(
+      AllocationEntry entry, Reservation reservation, Guest guest, Member member) {
+
     VipSystemConfig config = vipSystemConfigRepo.getConfig();
-    Member member =
-        (guest != null && guest.getMemberId() != null)
-            ? memberRepo.findById(guest.getMemberId())
-            : null;
     Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
     int maxStrikes =
         (tier == Member.LoyaltyTier.DIAMOND)
@@ -188,18 +241,26 @@ public class VipManageAllocationController {
 
     while (true) {
       try {
+        // Displays NO-SHOW EVICTION PROCESSING Submenu screen first
         int choice = allocationView.displayCancelResolutionMenu(guest, member, maxStrikes);
 
         if (choice == 1) {
-          // OPTION 1: ISSUE STRIKE & RE-ENTER WAITLIST QUEUE
+          boolean confirmStrike =
+              ConsoleUtil.showConfirmMessage(
+                  "Issue 1 strike to "
+                      + (guest != null ? guest.getName() : "Guest")
+                      + " and re-enter waitlist queue?");
+          if (!confirmStrike) {
+            continue; // Back to No-Show Submenu
+          }
+
           if (guest != null) {
             guest.setStrikeCount(guest.getStrikeCount() + 1);
             guestRepo.updateGuest(guest);
           }
 
-          // CHECK STRIKE THRESHOLD:
+          // Check strike threshold
           if (guest != null && guest.getStrikeCount() >= maxStrikes) {
-            // Max strike limit reached! Forced eviction lockout triggers.
             if (reservation != null) {
               reservation.setStatus(Reservation.Status.NO_SHOW);
               vipReservationRepo.updateReservation(reservation);
@@ -222,18 +283,16 @@ public class VipManageAllocationController {
             return true;
           }
 
-          // Guest has < 3 strikes, safe to re-queue:
+          // Re-queue guest if strikes < maxStrikes
           if (reservation != null) {
             int newScore = calculateDynamicPriorityScore(guest, member);
             reservation.setStatus(Reservation.Status.WAITING);
             reservation.setPriorityScore(newScore);
             reservation.setQueueArrivalTime(LocalDateTime.now());
-
-            // Re-enqueue into heap/queue
-            vipReservationRepo.addReservation(reservation, newScore);
+            vipReservationRepo.addReservation(
+                reservation, newScore, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
-          // Free hold room
           freeHeldRoom(entry);
           allocationRepo.removeAllocationEntry(
               entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
@@ -249,11 +308,23 @@ public class VipManageAllocationController {
           System.out.println("Reservation re-entered waitlist queue.\n");
           ConsoleUtil.printContinueMessage();
           return true;
+
         } else if (choice == 2) {
-          // OPTION 2: EVICT & REMOVE GUEST ENTIRELY
+          boolean confirmEvict =
+              ConsoleUtil.showConfirmMessage(
+                  "Are you sure you want to PERMANENTLY EVICT "
+                      + (guest != null ? guest.getName() : "Guest")
+                      + " and free room "
+                      + entry.getAssignedRoomNumber()
+                      + "?");
+          if (!confirmEvict) {
+            continue; // Back to No-Show Submenu
+          }
+
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
-            vipReservationRepo.cancelReservation(reservation);
+            vipReservationRepo.cancelReservation(
+                reservation, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
@@ -267,7 +338,7 @@ public class VipManageAllocationController {
           return true;
 
         } else if (choice == 3) {
-          return false; // Back to Settle Menu
+          return false; // Back to Allocation Detail Screen
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
