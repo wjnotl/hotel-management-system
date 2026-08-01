@@ -1,6 +1,7 @@
 package view;
 
 import adt.ListInterface;
+import entity.HousekeepingSettings;
 import entity.HousekeepingStaff;
 import entity.HousekeepingTask;
 import entity.Room;
@@ -44,7 +45,9 @@ public class HousekeepingView {
     System.out.println(
         " TASK TYPE      : [ " + (taskTypeFilter == null ? "ALL" : taskTypeFilter) + " ]");
     System.out.println(
-        " STATUS FILTER  : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
+        " STATUS FILTER  : [ "
+            + (statusFilter == null ? "ACTIVE ONLY (excl. Completed/Skipped)" : statusFilter)
+            + " ]");
     System.out.println(" DISPLAY ORDER  : [ " + displayOrder + " ]");
     System.out.println("------------------------------------------------------");
 
@@ -165,7 +168,10 @@ public class HousekeepingView {
     System.out.println(
         " Active Search   : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
     System.out.println(" Active Task Type: [ " + (taskType == null ? "ALL" : taskType) + " ]");
-    System.out.println(" Active Status   : [ " + (status == null ? "ALL" : status) + " ]");
+    System.out.println(
+        " Active Status   : [ "
+            + (status == null ? "ACTIVE ONLY (excl. Completed/Skipped)" : status)
+            + " ]");
     System.out.println("------------------------------------------------------");
     System.out.println(" 1. Text Search Submenu (Room No. / Staff)");
     System.out.println(" 2. Task Type Submenu");
@@ -215,13 +221,15 @@ public class HousekeepingView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("TASK STATUS FILTER SUBMENU");
     System.out.println(
-        " Current Selected Status: [ " + (currentStatus == null ? "ALL" : currentStatus) + " ]\n");
+        " Current Selected Status: [ "
+            + (currentStatus == null ? "ACTIVE ONLY (excl. Completed/Skipped)" : currentStatus)
+            + " ]\n");
     System.out.println(" 1. Show PENDING Only");
     System.out.println(" 2. Show ASSIGNED Only");
     System.out.println(" 3. Show IN_PROGRESS Only");
     System.out.println(" 4. Show COMPLETED Only");
     System.out.println(" 5. Show SKIPPED Only");
-    System.out.println(" 6. Clear Status Filter (Show All)");
+    System.out.println(" 6. Clear Status Filter (Active Tasks Only, hides Completed/Skipped)");
     System.out.println(" 7. Back to Filter Management\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
@@ -274,6 +282,7 @@ public class HousekeepingView {
 
   public GetMenuInputResult renderStaffRosterScreen(
       ListInterface<HousekeepingStaff> list,
+      HousekeepingSettings settings,
       String search,
       String shiftFilter,
       String availabilityFilter,
@@ -294,20 +303,21 @@ public class HousekeepingView {
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
     int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
 
-    // Columns: NO.(5), STAFF NAME(16), SHIFT(12), ASSIGNED ROOMS(20), STATUS(11)
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(new int[] {5, 16, 12, 20, 11})
+    // Columns: NO.(4), STAFF NAME(14), SHIFT(22), ASSIGNED ROOMS(14), STATUS(10)
+    TableUtil.TableSettings settingsTable =
+        new TableUtil.TableSettings(new int[] {4, 14, 22, 14, 10})
             .setHAlign(0, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
+            .setTruncate(2)
             .setTruncate(3);
 
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableBorder(settingsTable, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"NO.", "STAFF NAME", "SHIFT", "ASSIGNED ROOMS", "STATUS"}, settings);
+        new String[] {"NO.", "STAFF NAME", "SHIFT", "ASSIGNED ROOMS", "STATUS"}, settingsTable);
 
     if (list == null || totalMatches == 0) {
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
+      TableUtil.printTableBorder(settingsTable, TableUtil.BorderPosition.HEADER_CLOSE);
 
       boolean hasActiveFilters =
           (search != null && !search.trim().isEmpty())
@@ -326,12 +336,13 @@ public class HousekeepingView {
 
       System.out.println(" Page 0 / 0 (Total Matches: 0)");
       System.out.println("------------------------------------------------------");
-      System.out.println(" [S] Search / Filter    [E] Exit to Menu\n");
+      System.out.println(" [S] Search / Filter    [E] Exit to Menu");
+      System.out.println(" [A] Add Staff\n");
 
-      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'E'});
+      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'E', 'A'});
     }
 
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableBorder(settingsTable, TableUtil.BorderPosition.MIDDLE);
 
     int startIndex = (currentPage - 1) * pageSize + 1;
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
@@ -345,18 +356,19 @@ public class HousekeepingView {
           new String[] {
             String.valueOf(displayNum),
             s.getName(),
-            s.getShift().name(),
+            s.getShift().name() + " (" + getShiftScheduleText(settings, s.getShift()) + ")",
             formatAssignedRooms(s.getAssignedRoomNumbers()),
             s.getAvailability().name()
           },
-          settings);
+          settingsTable);
     }
 
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    TableUtil.printTableBorder(settingsTable, TableUtil.BorderPosition.BOTTOM);
     System.out.printf(" Page %d / %d (Total Matches: %d)\n", currentPage, totalPages, totalMatches);
     System.out.println("------------------------------------------------------");
     System.out.println(" [S] Search / Filter    [E] Exit to Menu");
-    System.out.println(" [N] Next Page          [P] Prev Page\n");
+    System.out.println(" [N] Next Page          [P] Prev Page");
+    System.out.println(" [A] Add Staff\n");
 
     int maxOptionNum = endIndex - startIndex + 1;
     String promptText =
@@ -364,7 +376,19 @@ public class HousekeepingView {
             ? "Enter a command or select a staff index number (1): "
             : "Enter a command or select a staff index number (1-" + maxOptionNum + "): ";
 
-    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P'});
+    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P', 'A'});
+  }
+
+  private String getShiftScheduleText(HousekeepingSettings settings, HousekeepingStaff.Shift shift) {
+    if (settings == null) return "";
+    switch (shift) {
+      case MORNING:
+        return settings.getMorningShiftSchedule();
+      case AFTERNOON:
+        return settings.getAfternoonShiftSchedule();
+      default:
+        return settings.getNightShiftSchedule();
+    }
   }
 
   private String formatAssignedRooms(ListInterface<String> rooms) {
@@ -376,6 +400,26 @@ public class HousekeepingView {
       sb.append(rooms.getEntry(i));
     }
     return sb.toString();
+  }
+
+  // --- ADD STAFF ---
+
+  public String promptNewStaffName() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("ADD NEW STAFF MEMBER");
+    System.out.println("\n [Leave blank or type 'C' to Cancel]");
+    return ConsoleUtil.getStringInput("Enter Staff Name: ");
+  }
+
+  public int displayShiftSelectionMenu() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SELECT SHIFT");
+    System.out.println(" 1. MORNING");
+    System.out.println(" 2. AFTERNOON");
+    System.out.println(" 3. NIGHT");
+    System.out.println(" 4. Cancel\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   public int displayStaffFilterMainMenu(
@@ -468,9 +512,10 @@ public class HousekeepingView {
                 ? "Mark Available"
                 : "Mark Off Duty / On Break"));
     System.out.println(" 4. View Today's Task History");
-    System.out.println(" 5. Cancel Action and Return\n");
+    System.out.println(" 5. Edit Shift");
+    System.out.println(" 6. Cancel Action and Return\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
   }
 
   public String promptRoomNumberForReassign() {
@@ -683,6 +728,137 @@ public class HousekeepingView {
     }
 
     ConsoleUtil.printContinueMessage();
+  }
+
+  // --- SCREEN 5: SETTINGS & CONFIGURATION ---
+
+  public int displaySettingsMainMenu() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SETTINGS & CONFIGURATION");
+    System.out.println(" 1. Task Rules Manager");
+    System.out.println(" 2. Staff Configuration");
+    System.out.println(" 3. Back to Housekeeping Main Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public int displayTaskRulesMenu(HousekeepingSettings settings) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("TASK RULES MANAGER");
+    System.out.println(" Standard Cleaning Time Estimates (minutes):");
+    System.out.println("   STANDARD : " + settings.getCleanTimeStandardMinutes());
+    System.out.println("   SUITE    : " + settings.getCleanTimeSuiteMinutes());
+    System.out.println("   LUXURY   : " + settings.getCleanTimeLuxuryMinutes());
+    System.out.println();
+    System.out.println(
+        " Overdue Threshold: " + settings.getOverdueThresholdMinutes() + " minutes");
+    System.out.println();
+    System.out.println(" Queue-Jump Eligible Task Types:");
+    System.out.println(
+        "   STANDARD_CLEAN    : "
+            + (settings.isQueueJumpStandardClean() ? "Allowed" : "Not Allowed"));
+    System.out.println(
+        "   DEEP_CLEAN        : "
+            + (settings.isQueueJumpDeepClean() ? "Allowed" : "Not Allowed"));
+    System.out.println(
+        "   TURNOVER          : " + (settings.isQueueJumpTurnover() ? "Allowed" : "Not Allowed"));
+    System.out.println(
+        "   MAINTENANCE_CHECK : "
+            + (settings.isQueueJumpMaintenanceCheck() ? "Allowed" : "Not Allowed"));
+    System.out.println("------------------------------------------------------");
+    System.out.println(" 1. Edit Standard Cleaning Time Estimates");
+    System.out.println(" 2. Edit Overdue Threshold");
+    System.out.println(" 3. Configure Queue-Jump Task Types");
+    System.out.println(" 4. Back to Settings Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+  }
+
+  public void printEditCleaningTimesHeader() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("EDIT STANDARD CLEANING TIME ESTIMATES");
+    System.out.println(
+        " Current values shown in brackets. Leave blank or type 'C' to keep a value"
+            + " unchanged.\n");
+  }
+
+  public void printEditOverdueThresholdHeader(HousekeepingSettings settings) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("EDIT OVERDUE THRESHOLD");
+    System.out.println(
+        " Current Threshold: " + settings.getOverdueThresholdMinutes() + " minutes");
+    System.out.println(" Leave blank or type 'C' to keep this unchanged.\n");
+  }
+
+  // Config-only for now — not yet enforced anywhere on the Task Board (Add Urgent Task still
+  // accepts any task type regardless of what's toggled here).
+  public boolean[] promptQueueJumpTypes(HousekeepingSettings settings) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIGURE QUEUE-JUMP TASK TYPES");
+    System.out.println(
+        " Toggle which task types are allowed to jump the queue (Add Urgent Task).");
+    System.out.println(
+        " Config only for now \u2014 not yet enforced on the Task Board's Add Urgent Task"
+            + " action.\n");
+
+    boolean standardClean =
+        ConsoleUtil.showConfirmMessage(
+            "Allow STANDARD_CLEAN to jump the queue? (currently "
+                + (settings.isQueueJumpStandardClean() ? "Allowed" : "Not Allowed")
+                + ")");
+    boolean deepClean =
+        ConsoleUtil.showConfirmMessage(
+            "Allow DEEP_CLEAN to jump the queue? (currently "
+                + (settings.isQueueJumpDeepClean() ? "Allowed" : "Not Allowed")
+                + ")");
+    boolean turnover =
+        ConsoleUtil.showConfirmMessage(
+            "Allow TURNOVER to jump the queue? (currently "
+                + (settings.isQueueJumpTurnover() ? "Allowed" : "Not Allowed")
+                + ")");
+    boolean maintenanceCheck =
+        ConsoleUtil.showConfirmMessage(
+            "Allow MAINTENANCE_CHECK to jump the queue? (currently "
+                + (settings.isQueueJumpMaintenanceCheck() ? "Allowed" : "Not Allowed")
+                + ")");
+
+    return new boolean[] {standardClean, deepClean, turnover, maintenanceCheck};
+  }
+
+  public int displayStaffConfigMenu(HousekeepingSettings settings) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("STAFF CONFIGURATION");
+    System.out.println(" Shift Schedules:");
+    System.out.println("   MORNING   : " + settings.getMorningShiftSchedule());
+    System.out.println("   AFTERNOON : " + settings.getAfternoonShiftSchedule());
+    System.out.println("   NIGHT     : " + settings.getNightShiftSchedule());
+    System.out.println();
+    System.out.println(" Max Rooms per Staff per Shift:");
+    System.out.println("   MORNING   : " + settings.getMaxRoomsMorning());
+    System.out.println("   AFTERNOON : " + settings.getMaxRoomsAfternoon());
+    System.out.println("   NIGHT     : " + settings.getMaxRoomsNight());
+    System.out.println("------------------------------------------------------");
+    System.out.println(" 1. Set Shift Schedules");
+    System.out.println(" 2. Set Max Rooms per Staff per Shift");
+    System.out.println(" 3. Back to Settings Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public void printEditShiftSchedulesHeader() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SET SHIFT SCHEDULES");
+    System.out.println(
+        " Current values shown in brackets. Leave blank or type 'C' to keep a value"
+            + " unchanged.\n");
+  }
+
+  public void printEditMaxRoomsHeader() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SET MAX ROOMS PER STAFF PER SHIFT");
+    System.out.println(
+        " Current values shown in brackets. Leave blank or type 'C' to keep a value"
+            + " unchanged.\n");
   }
 
   // --- INTERNAL LOOKUP HELPERS ---

@@ -2,6 +2,7 @@ package control.housekeeping;
 
 import adt.ArrayList;
 import adt.ListInterface;
+import entity.HousekeepingSettings;
 import entity.HousekeepingStaff;
 import entity.HousekeepingTask;
 import entity.Room;
@@ -9,6 +10,7 @@ import entity.RoomStatusLogEntry;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Iterator;
+import repo.HousekeepingSettingsRepo;
 import repo.HousekeepingStaffRepo;
 import repo.HousekeepingTaskRepo;
 import repo.RoomRepo;
@@ -23,16 +25,19 @@ public class HouseKeepingController {
   private final HousekeepingStaffRepo staffRepo;
   private final RoomRepo roomRepo;
   private final RoomStatusHistoryRepo roomStatusHistoryRepo;
+  private final HousekeepingSettingsRepo settingsRepo;
 
   public HouseKeepingController(
       HousekeepingTaskRepo taskRepo,
       HousekeepingStaffRepo staffRepo,
       RoomRepo roomRepo,
-      RoomStatusHistoryRepo roomStatusHistoryRepo) {
+      RoomStatusHistoryRepo roomStatusHistoryRepo,
+      HousekeepingSettingsRepo settingsRepo) {
     this.taskRepo = taskRepo;
     this.staffRepo = staffRepo;
     this.roomRepo = roomRepo;
     this.roomStatusHistoryRepo = roomStatusHistoryRepo;
+    this.settingsRepo = settingsRepo;
   }
 
   // --- HOUSEKEEPING MAIN MENU LOOP ---
@@ -47,10 +52,12 @@ public class HouseKeepingController {
           manageStaffAssignments();
         } else if ("3".equals(choice)) {
           manageRoomStatusSync();
+        } else if ("5".equals(choice)) {
+          manageSettings();
         } else if ("6".equals(choice)) {
           return; // Go back to Resort Main Menu
         }
-        // Options 4, 5 (Reports, Settings) are still WIP.
+        // Option 4 (Reports) is still WIP.
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -162,6 +169,21 @@ public class HouseKeepingController {
         int typeChoice = houseKeepingView.promptTaskTypeInput();
         HousekeepingTask.TaskType taskType = mapTaskType(typeChoice);
 
+        // Reference info only — pulled straight from Settings, doesn't block or alter anything.
+        int estMinutes = getEstimatedCleanTimeMinutes(room.getRoomType());
+        boolean jumpAllowed = isQueueJumpAllowed(taskType);
+        System.out.println();
+        System.out.println(
+            " [Reference] Est. cleaning time: "
+                + estMinutes
+                + " min ("
+                + room.getRoomType().name()
+                + " room) | Queue-jump allowed for "
+                + taskType.name()
+                + ": "
+                + (jumpAllowed ? "YES" : "NO"));
+        ConsoleUtil.printContinueMessage();
+
         // Warn (don't hard-block) on a likely duplicate: same room, same task type, already
         // active. Different types (e.g. Maintenance Check alongside a queued Standard Clean)
         // or an ad-hoc urgent add on top of an existing queued task are legitimate, so this
@@ -224,6 +246,33 @@ public class HouseKeepingController {
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
+    }
+  }
+
+  // Reference-only lookups pulled from Settings — display purposes only, no enforcement.
+  private int getEstimatedCleanTimeMinutes(Room.RoomType roomType) {
+    HousekeepingSettings settings = settingsRepo.getSettings();
+    switch (roomType) {
+      case LUXURY:
+        return settings.getCleanTimeLuxuryMinutes();
+      case SUITE:
+        return settings.getCleanTimeSuiteMinutes();
+      default:
+        return settings.getCleanTimeStandardMinutes();
+    }
+  }
+
+  private boolean isQueueJumpAllowed(HousekeepingTask.TaskType taskType) {
+    HousekeepingSettings settings = settingsRepo.getSettings();
+    switch (taskType) {
+      case STANDARD_CLEAN:
+        return settings.isQueueJumpStandardClean();
+      case DEEP_CLEAN:
+        return settings.isQueueJumpDeepClean();
+      case TURNOVER:
+        return settings.isQueueJumpTurnover();
+      default:
+        return settings.isQueueJumpMaintenanceCheck();
     }
   }
 
@@ -348,6 +397,15 @@ public class HouseKeepingController {
     staffRepo.assignRoomToStaff(staff, task.getRoomNumber());
   }
 
+  // Reassigns an active task to a different staff member. Uses reassignTask() rather than
+  // assignStaff() so a task that was already IN_PROGRESS under the old staff resets to
+  // ASSIGNED — the new staff member hasn't started cleaning yet and still needs to hit
+  // "Start Cleaning" themselves.
+  private void reassignTaskToStaff(HousekeepingTask task, HousekeepingStaff staff) {
+    taskRepo.reassignTask(task, staff.getStaffId());
+    staffRepo.assignRoomToStaff(staff, task.getRoomNumber());
+  }
+
   // Moves a task to a terminal status (Completed/Skipped) and releases the assigned staff
   // member's hold on the room, freeing them back to AVAILABLE if they've got nothing else on.
   private void finishTask(HousekeepingTask task, HousekeepingTask.Status newStatus) {
@@ -379,7 +437,13 @@ public class HouseKeepingController {
 
         ConsoleUtil.GetMenuInputResult result =
             houseKeepingView.renderStaffRosterScreen(
-                filteredList, searchQuery, shiftFilter, availabilityFilter, currentPage, pageSize);
+                filteredList,
+                settingsRepo.getSettings(),
+                searchQuery,
+                shiftFilter,
+                availabilityFilter,
+                currentPage,
+                pageSize);
 
         if (result == null || result.input == null || result.input.trim().isEmpty()) {
           continue;
@@ -409,6 +473,8 @@ public class HouseKeepingController {
           } else {
             ConsoleUtil.printError("Already on the first page!");
           }
+        } else if ("A".equalsIgnoreCase(command)) {
+          handleAddStaff();
         } else if (result.isNumber) {
           int selectedIndex = result.getAsInt();
           handleStaffAction(filteredList, selectedIndex, currentPage, pageSize);
@@ -539,6 +605,51 @@ public class HouseKeepingController {
     return filtered;
   }
 
+  // Creates a new staff member: name, then shift, then an auto-generated unique ID. New staff
+  // always start AVAILABLE with no assigned rooms.
+  private void handleAddStaff() {
+    String nameInput = houseKeepingView.promptNewStaffName();
+    if (nameInput == null || nameInput.trim().isEmpty() || "C".equalsIgnoreCase(nameInput.trim())) {
+      return;
+    }
+    String name = nameInput.trim();
+
+    HousekeepingStaff.Shift shift = null;
+    while (shift == null) {
+      int shiftChoice = houseKeepingView.displayShiftSelectionMenu();
+      if (shiftChoice == 1) {
+        shift = HousekeepingStaff.Shift.MORNING;
+      } else if (shiftChoice == 2) {
+        shift = HousekeepingStaff.Shift.AFTERNOON;
+      } else if (shiftChoice == 3) {
+        shift = HousekeepingStaff.Shift.NIGHT;
+      } else if (shiftChoice == 4) {
+        return; // Cancelled
+      }
+    }
+
+    String staffId = generateUniqueStaffId();
+    HousekeepingStaff newStaff =
+        new HousekeepingStaff(staffId, name, shift, HousekeepingStaff.Availability.AVAILABLE);
+    staffRepo.addStaff(newStaff);
+
+    ConsoleUtil.clearScreen();
+    System.out.println(" >> STATUS: [\u2713] SUCCESS");
+    System.out.println(
+        " Staff " + staffId + " (" + name + ", " + shift.name() + ") added to the roster.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  // NumberUtil.generateFormattedId() is random, not sequential, so collisions are technically
+  // possible (same pattern used for task IDs elsewhere) — re-roll until we land on a free ID.
+  private String generateUniqueStaffId() {
+    String candidate;
+    do {
+      candidate = NumberUtil.generateFormattedId("HK-", 1000, 9999, 4);
+    } while (staffRepo.findById(candidate) != null);
+    return candidate;
+  }
+
   // --- ISOLATED STAFF ACTION SUBMENU LOOP ---
   private void handleStaffAction(
       ListInterface<HousekeepingStaff> list, int indexOnPage, int page, int pageSize) {
@@ -563,6 +674,8 @@ public class HouseKeepingController {
           handleToggleAvailability(selected);
         } else if (action == 4) {
           showStaffTaskHistory(selected);
+        } else if (action == 5) {
+          handleEditShift(selected);
         }
         return; // Return back to staff roster
       } catch (Exception e) {
@@ -571,7 +684,41 @@ public class HouseKeepingController {
     }
   }
 
-  // Pulls the next task off the front of the queue and hands it straight to this staff member.
+  private void handleEditShift(HousekeepingStaff staff) {
+    HousekeepingStaff.Shift oldShift = staff.getShift();
+
+    HousekeepingStaff.Shift newShift = null;
+    while (newShift == null) {
+      int shiftChoice = houseKeepingView.displayShiftSelectionMenu();
+      if (shiftChoice == 1) {
+        newShift = HousekeepingStaff.Shift.MORNING;
+      } else if (shiftChoice == 2) {
+        newShift = HousekeepingStaff.Shift.AFTERNOON;
+      } else if (shiftChoice == 3) {
+        newShift = HousekeepingStaff.Shift.NIGHT;
+      } else if (shiftChoice == 4) {
+        return; // Cancelled
+      }
+    }
+
+    if (newShift == oldShift) return; // No actual change
+
+    staffRepo.setShift(staff, newShift);
+
+    ConsoleUtil.clearScreen();
+    System.out.println(" >> STATUS: [\u2713] SUCCESS");
+    System.out.println(
+        " "
+            + staff.getName()
+            + "'s shift changed from "
+            + oldShift.name()
+            + " to "
+            + newShift.name()
+            + ".\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+
   // Requires AVAILABLE first so we never dequeue a task and then discover it can't be placed —
   // the check happens before anything leaves the queue.
   private void handleAutoAssignNextTask(HousekeepingStaff staff) {
@@ -640,7 +787,7 @@ public class HouseKeepingController {
       return;
     }
 
-    assignTaskToStaff(activeTask, toStaff);
+    reassignTaskToStaff(activeTask, toStaff);
     staffRepo.releaseRoomFromStaff(fromStaff, roomNumber);
 
     ConsoleUtil.clearScreen();
@@ -856,6 +1003,19 @@ public class HouseKeepingController {
               roomStatusHistoryRepo.getRecentHistory(selected.getRoomNumber(), 10);
           houseKeepingView.renderRoomHistoryScreen(selected.getRoomNumber(), history);
         } else if (action == 4) {
+          if (hasActiveTaskOfSameType(
+              selected.getRoomNumber(), HousekeepingTask.TaskType.MAINTENANCE_CHECK)) {
+            boolean proceedAnyway =
+                ConsoleUtil.showConfirmMessage(
+                    "Room "
+                        + selected.getRoomNumber()
+                        + " already has an active Maintenance Check task. Flag another one"
+                        + " anyway?");
+            if (!proceedAnyway) {
+              return; // Cancelled, back to Room Status Sync screen
+            }
+          }
+
           roomStatusHistoryRepo.recordNote(selected.getRoomNumber(), "Flagged for maintenance");
 
           HousekeepingTask maintenanceTask =
@@ -1179,6 +1339,13 @@ public class HouseKeepingController {
 
       if (status != null && !status.trim().isEmpty()) {
         matchesStatus = status.equalsIgnoreCase(t.getStatus().name());
+      } else {
+        // No explicit status filter selected: default the board to active work only. Nothing
+        // is deleted — Completed/Skipped tasks stay fully queryable via the status filter and
+        // remain in taskRepo for Reports (Task 4) — they just don't clutter the default view.
+        matchesStatus =
+            t.getStatus() != HousekeepingTask.Status.COMPLETED
+                && t.getStatus() != HousekeepingTask.Status.SKIPPED;
       }
 
       if (matchesSearch && matchesType && matchesStatus) {
@@ -1218,5 +1385,181 @@ public class HouseKeepingController {
       if (s != null && staffId.equals(s.getStaffId())) return s;
     }
     return null;
+  }
+
+  // --- SETTINGS & CONFIGURATION SCREEN LOOP ---
+  public void manageSettings() {
+    while (true) {
+      try {
+        int choice = houseKeepingView.displaySettingsMainMenu();
+
+        if (choice == 1) {
+          manageTaskRules();
+        } else if (choice == 2) {
+          manageStaffConfiguration();
+        } else if (choice == 3) {
+          return; // Back to Housekeeping Main Menu
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void manageTaskRules() {
+    while (true) {
+      try {
+        HousekeepingSettings settings = settingsRepo.getSettings();
+        int choice = houseKeepingView.displayTaskRulesMenu(settings);
+
+        if (choice == 1) {
+          handleEditCleaningTimes(settings);
+        } else if (choice == 2) {
+          handleEditOverdueThreshold(settings);
+        } else if (choice == 3) {
+          handleEditQueueJumpTypes(settings);
+        } else if (choice == 4) {
+          return; // Back to Settings Menu
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void handleEditCleaningTimes(HousekeepingSettings settings) {
+    houseKeepingView.printEditCleaningTimesHeader();
+
+    Integer standard =
+        ConsoleUtil.getIntegerInput(
+            "STANDARD room clean time in minutes ["
+                + settings.getCleanTimeStandardMinutes()
+                + "]: ",
+            1,
+            600);
+    Integer suite =
+        ConsoleUtil.getIntegerInput(
+            "SUITE room clean time in minutes [" + settings.getCleanTimeSuiteMinutes() + "]: ",
+            1,
+            600);
+    Integer luxury =
+        ConsoleUtil.getIntegerInput(
+            "LUXURY room clean time in minutes [" + settings.getCleanTimeLuxuryMinutes() + "]: ",
+            1,
+            600);
+
+    settingsRepo.updateCleaningTimes(
+        standard != null ? standard : settings.getCleanTimeStandardMinutes(),
+        suite != null ? suite : settings.getCleanTimeSuiteMinutes(),
+        luxury != null ? luxury : settings.getCleanTimeLuxuryMinutes());
+
+    ConsoleUtil.clearScreen();
+    System.out.println(" >> STATUS: [\u2713] SUCCESS");
+    System.out.println(" Cleaning time estimates updated.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  private void handleEditOverdueThreshold(HousekeepingSettings settings) {
+    houseKeepingView.printEditOverdueThresholdHeader(settings);
+
+    Integer minutes =
+        ConsoleUtil.getIntegerInput(
+            "New overdue threshold in minutes [" + settings.getOverdueThresholdMinutes() + "]: ",
+            1,
+            1440);
+
+    if (minutes == null) return; // Cancelled / kept unchanged
+
+    settingsRepo.updateOverdueThreshold(minutes);
+
+    ConsoleUtil.clearScreen();
+    System.out.println(" >> STATUS: [\u2713] SUCCESS");
+    System.out.println(" Overdue threshold updated to " + minutes + " minutes.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  private void handleEditQueueJumpTypes(HousekeepingSettings settings) {
+    boolean[] result = houseKeepingView.promptQueueJumpTypes(settings);
+    settingsRepo.updateQueueJumpTypes(result[0], result[1], result[2], result[3]);
+
+    ConsoleUtil.clearScreen();
+    System.out.println(" >> STATUS: [\u2713] SUCCESS");
+    System.out.println(" Queue-jump eligible task types updated.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  private void manageStaffConfiguration() {
+    while (true) {
+      try {
+        HousekeepingSettings settings = settingsRepo.getSettings();
+        int choice = houseKeepingView.displayStaffConfigMenu(settings);
+
+        if (choice == 1) {
+          handleEditShiftSchedules(settings);
+        } else if (choice == 2) {
+          handleEditMaxRooms(settings);
+        } else if (choice == 3) {
+          return; // Back to Settings Menu
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void handleEditShiftSchedules(HousekeepingSettings settings) {
+    houseKeepingView.printEditShiftSchedulesHeader();
+
+    String morning =
+        promptOptionalText("MORNING shift schedule [" + settings.getMorningShiftSchedule() + "]: ");
+    String afternoon =
+        promptOptionalText(
+            "AFTERNOON shift schedule [" + settings.getAfternoonShiftSchedule() + "]: ");
+    String night =
+        promptOptionalText("NIGHT shift schedule [" + settings.getNightShiftSchedule() + "]: ");
+
+    settingsRepo.updateShiftSchedules(
+        morning != null ? morning : settings.getMorningShiftSchedule(),
+        afternoon != null ? afternoon : settings.getAfternoonShiftSchedule(),
+        night != null ? night : settings.getNightShiftSchedule());
+
+    ConsoleUtil.clearScreen();
+    System.out.println(" >> STATUS: [\u2713] SUCCESS");
+    System.out.println(" Shift schedules updated.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  // Blank or "C" means "keep current" — mirrors getIntegerInput's built-in cancel semantics,
+  // for the free-text fields where there's no equivalent ConsoleUtil helper.
+  private String promptOptionalText(String prompt) {
+    String input = ConsoleUtil.getStringInput(prompt);
+    if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
+      return null;
+    }
+    return input.trim();
+  }
+
+  private void handleEditMaxRooms(HousekeepingSettings settings) {
+    houseKeepingView.printEditMaxRoomsHeader();
+
+    Integer morning =
+        ConsoleUtil.getIntegerInput(
+            "Max rooms for MORNING shift [" + settings.getMaxRoomsMorning() + "]: ", 1, 50);
+    Integer afternoon =
+        ConsoleUtil.getIntegerInput(
+            "Max rooms for AFTERNOON shift [" + settings.getMaxRoomsAfternoon() + "]: ", 1, 50);
+    Integer night =
+        ConsoleUtil.getIntegerInput(
+            "Max rooms for NIGHT shift [" + settings.getMaxRoomsNight() + "]: ", 1, 50);
+
+    settingsRepo.updateMaxRooms(
+        morning != null ? morning : settings.getMaxRoomsMorning(),
+        afternoon != null ? afternoon : settings.getMaxRoomsAfternoon(),
+        night != null ? night : settings.getMaxRoomsNight());
+
+    ConsoleUtil.clearScreen();
+    System.out.println(" >> STATUS: [\u2713] SUCCESS");
+    System.out.println(" Max rooms per shift updated.\n");
+    ConsoleUtil.printContinueMessage();
   }
 }
