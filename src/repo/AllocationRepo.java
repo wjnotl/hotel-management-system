@@ -171,7 +171,8 @@ public class AllocationRepo {
                     res.setStatus(Reservation.Status.WAITING);
                     res.setPriorityScore(newScore);
                     res.setQueueArrivalTime(LocalDateTime.now());
-                    vipReservationRepo.addReservation(res, newScore);
+                    vipReservationRepo.addReservation(
+                        res, newScore, guestRepo, memberRepo, configRepo);
                   }
                   vipReservationRepo.updateReservation(res);
                 }
@@ -256,9 +257,7 @@ public class AllocationRepo {
     vacantRoom.setReservationConfirmationNumber(topVip.getConfirmationNumber());
     roomRepo.updateRoom(vacantRoom);
 
-    topVip.setStatus(Reservation.Status.ALLOCATED);
-    vipReservationRepo.updateReservation(topVip);
-    vipReservationRepo.cancelReservation(topVip);
+    vipReservationRepo.allocateReservation(topVip, guestRepo, memberRepo, configRepo);
   }
 
   public int recalculateActiveGraceTimers(

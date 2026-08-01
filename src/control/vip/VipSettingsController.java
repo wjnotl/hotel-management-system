@@ -1145,7 +1145,7 @@ public class VipSettingsController {
 
         int processedWaitlist =
             vipReservationRepo.applySettingsToQueue(
-                config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck);
+                config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck, configRepo);
 
         int processedAllocations = 0;
         if (updateActiveGraceTimers) {
