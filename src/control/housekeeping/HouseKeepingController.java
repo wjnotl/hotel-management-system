@@ -17,7 +17,7 @@ import repo.RoomRepo;
 import repo.RoomStatusHistoryRepo;
 import util.ConsoleUtil;
 import util.NumberUtil;
-import view.HousekeepingView;
+import view.housekeeping.HousekeepingView;
 
 public class HouseKeepingController {
   private final HousekeepingView houseKeepingView = new HousekeepingView();
@@ -52,12 +52,13 @@ public class HouseKeepingController {
           manageStaffAssignments();
         } else if ("3".equals(choice)) {
           manageRoomStatusSync();
+        } else if ("4".equals(choice)) {
+          new HousekeepingReportController(taskRepo, staffRepo, roomRepo, settingsRepo).start();
         } else if ("5".equals(choice)) {
           manageSettings();
         } else if ("6".equals(choice)) {
           return; // Go back to Resort Main Menu
         }
-        // Option 4 (Reports) is still WIP.
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -170,18 +171,26 @@ public class HouseKeepingController {
         HousekeepingTask.TaskType taskType = mapTaskType(typeChoice);
 
         // Reference info only — pulled straight from Settings, doesn't block or alter anything.
-        int estMinutes = getEstimatedCleanTimeMinutes(room.getRoomType());
         boolean jumpAllowed = isQueueJumpAllowed(taskType);
         System.out.println();
-        System.out.println(
-            " [Reference] Est. cleaning time: "
-                + estMinutes
-                + " min ("
-                + room.getRoomType().name()
-                + " room) | Queue-jump allowed for "
-                + taskType.name()
-                + ": "
-                + (jumpAllowed ? "YES" : "NO"));
+        if (isCleaningTaskType(taskType)) {
+          int estMinutes = getEstimatedCleanTimeMinutes(room.getRoomType());
+          System.out.println(
+              " [Reference] Est. cleaning time: "
+                  + estMinutes
+                  + " min ("
+                  + room.getRoomType().name()
+                  + " room) | Queue-jump allowed for "
+                  + taskType.name()
+                  + ": "
+                  + (jumpAllowed ? "YES" : "NO"));
+        } else {
+          System.out.println(
+              " [Reference] Queue-jump allowed for "
+                  + taskType.name()
+                  + ": "
+                  + (jumpAllowed ? "YES" : "NO"));
+        }
         ConsoleUtil.printContinueMessage();
 
         // Warn (don't hard-block) on a likely duplicate: same room, same task type, already
@@ -353,10 +362,11 @@ public class HouseKeepingController {
     roomStatusHistoryRepo.recordStatusChange(roomNumber, Room.Status.DIRTY, Room.Status.CLEANING);
   }
 
-  // Room got marked done while a task for it is still waiting/in progress — surface it to
-  // staff rather than silently leaving stale data (or silently auto-completing, which could
-  // hide a real problem like a task that was actually skipped rather than truly finished).
-  private void warnIfTaskStillPendingForRoom(String roomNumber) {
+  // Checks for tasks still active on this room before a done-status change is allowed through.
+  // Returns true if it's safe to proceed (nothing stale, or the user chose to resolve it now —
+  // stale tasks get force-completed here, before the caller applies the status change). Returns
+  // false if the user declined, meaning the caller must NOT change the room's status.
+  private boolean resolveStaleTasksBeforeStatusChange(String roomNumber) {
     ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
     ListInterface<HousekeepingTask> staleTasks = new ArrayList<>();
 
@@ -373,7 +383,7 @@ public class HouseKeepingController {
       }
     }
 
-    if (staleTasks.isEmpty()) return;
+    if (staleTasks.isEmpty()) return true; // nothing in the way, proceed as normal
 
     boolean shouldComplete =
         ConsoleUtil.showConfirmMessage(
@@ -381,13 +391,15 @@ public class HouseKeepingController {
                 + roomNumber
                 + " has "
                 + staleTasks.getNumberOfEntries()
-                + " task(s) still PENDING/IN_PROGRESS. Mark them Completed now?");
+                + " task(s) still PENDING/ASSIGNED/IN_PROGRESS. Mark them Completed and proceed"
+                + " with the status change?");
 
-    if (shouldComplete) {
-      for (int i = 1; i <= staleTasks.getNumberOfEntries(); i++) {
-        finishTask(staleTasks.getEntry(i), HousekeepingTask.Status.COMPLETED);
-      }
+    if (!shouldComplete) return false; // caller must not change the room's status
+
+    for (int i = 1; i <= staleTasks.getNumberOfEntries(); i++) {
+      finishTask(staleTasks.getEntry(i), HousekeepingTask.Status.COMPLETED);
     }
+    return true;
   }
 
   // Assigns a task to a staff member and keeps the roster in sync: the room lands on the
@@ -437,13 +449,7 @@ public class HouseKeepingController {
 
         ConsoleUtil.GetMenuInputResult result =
             houseKeepingView.renderStaffRosterScreen(
-                filteredList,
-                settingsRepo.getSettings(),
-                searchQuery,
-                shiftFilter,
-                availabilityFilter,
-                currentPage,
-                pageSize);
+                filteredList, searchQuery, shiftFilter, availabilityFilter, currentPage, pageSize);
 
         if (result == null || result.input == null || result.input.trim().isEmpty()) {
           continue;
@@ -718,6 +724,7 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
+
   // Requires AVAILABLE first so we never dequeue a task and then discover it can't be placed —
   // the check happens before anything leaves the queue.
   private void handleAutoAssignNextTask(HousekeepingStaff staff) {
@@ -980,13 +987,20 @@ public class HouseKeepingController {
           Room.Status oldStatus = selected.getStatus();
 
           if (newStatus != oldStatus) {
-            selected.setStatus(newStatus);
-            roomRepo.updateRoom(selected);
-            roomStatusHistoryRepo.recordStatusChange(
-                selected.getRoomNumber(), oldStatus, newStatus);
+            boolean okToProceed = true;
 
             if (newStatus == Room.Status.VACANT_CLEAN || newStatus == Room.Status.INSPECTED) {
-              warnIfTaskStillPendingForRoom(selected.getRoomNumber());
+              okToProceed = resolveStaleTasksBeforeStatusChange(selected.getRoomNumber());
+            }
+
+            if (okToProceed) {
+              selected.setStatus(newStatus);
+              roomRepo.updateRoom(selected);
+              roomStatusHistoryRepo.recordStatusChange(
+                  selected.getRoomNumber(), oldStatus, newStatus);
+            } else {
+              ConsoleUtil.printError(
+                  "Status change cancelled — resolve the pending task(s) via Task Board first.");
             }
           }
         } else if (action == 2) {

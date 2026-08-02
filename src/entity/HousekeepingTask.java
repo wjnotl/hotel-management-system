@@ -29,6 +29,16 @@ public class HousekeepingTask implements Serializable {
   private boolean isUrgent;
   private LocalDateTime createdAt;
 
+  // Lifecycle timestamps for Reports (Task 4). Null until the corresponding step happens.
+  // assignedAt: stamped once, the first time a staff member is assigned — used to measure how
+  //   long a task waited in the queue before being picked up. Reassignment does not touch it.
+  // startedAt: stamped when staff hits "Start Cleaning". Reassigning an IN_PROGRESS task back
+  //   to a different staff clears this, since the new staff hasn't actually started yet.
+  // completedAt: stamped when the task reaches COMPLETED or SKIPPED.
+  private LocalDateTime assignedAt;
+  private LocalDateTime startedAt;
+  private LocalDateTime completedAt;
+
   public HousekeepingTask(
       String taskId,
       String roomNumber,
@@ -74,6 +84,18 @@ public class HousekeepingTask implements Serializable {
     return createdAt;
   }
 
+  public LocalDateTime getAssignedAt() {
+    return assignedAt;
+  }
+
+  public LocalDateTime getStartedAt() {
+    return startedAt;
+  }
+
+  public LocalDateTime getCompletedAt() {
+    return completedAt;
+  }
+
   public void setTaskId(String taskId) {
     this.taskId = taskId;
   }
@@ -100,6 +122,18 @@ public class HousekeepingTask implements Serializable {
 
   public void setCreatedAt(LocalDateTime createdAt) {
     this.createdAt = createdAt;
+  }
+
+  public void setAssignedAt(LocalDateTime assignedAt) {
+    this.assignedAt = assignedAt;
+  }
+
+  public void setStartedAt(LocalDateTime startedAt) {
+    this.startedAt = startedAt;
+  }
+
+  public void setCompletedAt(LocalDateTime completedAt) {
+    this.completedAt = completedAt;
   }
 
   @Override

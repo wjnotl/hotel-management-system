@@ -5,6 +5,7 @@ import adt.DequeInterface;
 import adt.LinkedDeque;
 import adt.ListInterface;
 import entity.HousekeepingTask;
+import java.time.LocalDateTime;
 import util.BinaryFileUtil;
 
 public class HousekeepingTaskRepo {
@@ -83,6 +84,11 @@ public class HousekeepingTaskRepo {
 
     task.setStatus(newStatus);
 
+    if (newStatus == HousekeepingTask.Status.COMPLETED
+        || newStatus == HousekeepingTask.Status.SKIPPED) {
+      task.setCompletedAt(LocalDateTime.now());
+    }
+
     // PENDING is the only status that belongs in the deque; anything else (ASSIGNED, IN_PROGRESS,
     // COMPLETED, SKIPPED) means the task has left the queue. Safe no-op if already removed.
     if (newStatus != HousekeepingTask.Status.PENDING) {
@@ -103,6 +109,11 @@ public class HousekeepingTaskRepo {
       task.setStatus(HousekeepingTask.Status.ASSIGNED);
     }
 
+    // First-touch only: preserves the original queue-wait metric even through later reassigns.
+    if (task.getAssignedAt() == null) {
+      task.setAssignedAt(LocalDateTime.now());
+    }
+
     // Claimed for work now, so it no longer waits in the queue for someone else to grab.
     taskDeque.remove(task);
     save();
@@ -119,6 +130,11 @@ public class HousekeepingTaskRepo {
     task.setAssignedStaffId(staffId);
     task.setStatus(HousekeepingTask.Status.ASSIGNED);
 
+    // Clears any partial work timing from the previous staff — the new staff hasn't started yet.
+    // assignedAt is deliberately left untouched: it marks when the task first left the queue,
+    // which reassignment doesn't change.
+    task.setStartedAt(null);
+
     // No longer waiting in the queue — safe no-op if it wasn't there (e.g. was IN_PROGRESS).
     taskDeque.remove(task);
     save();
@@ -131,6 +147,7 @@ public class HousekeepingTaskRepo {
     if (task == null || task.getAssignedStaffId() == null) return false;
 
     task.setStatus(HousekeepingTask.Status.IN_PROGRESS);
+    task.setStartedAt(LocalDateTime.now());
     taskDeque.remove(task); // no-op if ASSIGNED already took it out, safe either way
     save();
     return true;
