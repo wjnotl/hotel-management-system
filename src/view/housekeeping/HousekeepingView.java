@@ -374,7 +374,8 @@ public class HousekeepingView {
             ? "Enter a command or select a staff index number (1): "
             : "Enter a command or select a staff index number (1-" + maxOptionNum + "): ";
 
-    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P', 'A'});
+    return ConsoleUtil.getMenuInput(
+        promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P', 'A'});
   }
 
   private String formatAssignedRooms(ListInterface<String> rooms) {
@@ -736,16 +737,14 @@ public class HousekeepingView {
     System.out.println("   SUITE    : " + settings.getCleanTimeSuiteMinutes());
     System.out.println("   LUXURY   : " + settings.getCleanTimeLuxuryMinutes());
     System.out.println();
-    System.out.println(
-        " Overdue Threshold: " + settings.getOverdueThresholdMinutes() + " minutes");
+    System.out.println(" Overdue Threshold: " + settings.getOverdueThresholdMinutes() + " minutes");
     System.out.println();
     System.out.println(" Queue-Jump Eligible Task Types:");
     System.out.println(
         "   STANDARD_CLEAN    : "
             + (settings.isQueueJumpStandardClean() ? "Allowed" : "Not Allowed"));
     System.out.println(
-        "   DEEP_CLEAN        : "
-            + (settings.isQueueJumpDeepClean() ? "Allowed" : "Not Allowed"));
+        "   DEEP_CLEAN        : " + (settings.isQueueJumpDeepClean() ? "Allowed" : "Not Allowed"));
     System.out.println(
         "   TURNOVER          : " + (settings.isQueueJumpTurnover() ? "Allowed" : "Not Allowed"));
     System.out.println(
@@ -771,8 +770,7 @@ public class HousekeepingView {
   public void printEditOverdueThresholdHeader(HousekeepingSettings settings) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("EDIT OVERDUE THRESHOLD");
-    System.out.println(
-        " Current Threshold: " + settings.getOverdueThresholdMinutes() + " minutes");
+    System.out.println(" Current Threshold: " + settings.getOverdueThresholdMinutes() + " minutes");
     System.out.println(" Leave blank or type 'C' to keep this unchanged.\n");
   }
 
@@ -781,8 +779,7 @@ public class HousekeepingView {
   public boolean[] promptQueueJumpTypes(HousekeepingSettings settings) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CONFIGURE QUEUE-JUMP TASK TYPES");
-    System.out.println(
-        " Toggle which task types are allowed to jump the queue (Add Urgent Task).");
+    System.out.println(" Toggle which task types are allowed to jump the queue (Add Urgent Task).");
     System.out.println(
         " Config only for now \u2014 not yet enforced on the Task Board's Add Urgent Task"
             + " action.\n");

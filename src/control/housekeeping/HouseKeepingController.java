@@ -724,7 +724,6 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
-
   // Requires AVAILABLE first so we never dequeue a task and then discover it can't be placed —
   // the check happens before anything leaves the queue.
   private void handleAutoAssignNextTask(HousekeepingStaff staff) {

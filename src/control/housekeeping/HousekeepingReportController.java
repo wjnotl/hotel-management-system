@@ -86,7 +86,9 @@ public class HousekeepingReportController {
 
   private String dateRangeLabel(LocalDate start, LocalDate end) {
     if (start == null && end == null) return "ALL";
-    return (start == null ? "..." : start.toString()) + " to " + (end == null ? "..." : end.toString());
+    return (start == null ? "..." : start.toString())
+        + " to "
+        + (end == null ? "..." : end.toString());
   }
 
   private String staffLabel(String staffId) {
@@ -142,7 +144,8 @@ public class HousekeepingReportController {
     while (true) {
       String input = reportView.promptStaffFilterInput(staffLabel(currentStaffId));
       if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-        return currentStaffId; // Leave unchanged (blank does NOT clear here — matches Task Board convention where blank/C cancels the edit)
+        return currentStaffId; // Leave unchanged (blank does NOT clear here — matches Task Board
+                               // convention where blank/C cancels the edit)
       }
 
       HousekeepingStaff staff = staffRepo.findById(input.trim());
@@ -333,7 +336,8 @@ public class HousekeepingReportController {
         skippedCount++;
       }
 
-      // --- Overdue rate: age (createdAt -> completedAt, or now if still open) exceeds threshold ---
+      // --- Overdue rate: age (createdAt -> completedAt, or now if still open) exceeds threshold
+      // ---
       LocalDateTime effectiveEnd = t.getCompletedAt() != null ? t.getCompletedAt() : now;
       long ageMinutes = Duration.between(t.getCreatedAt(), effectiveEnd).toMinutes();
       if (ageMinutes > overdueThreshold) {
@@ -401,10 +405,14 @@ public class HousekeepingReportController {
       writer.write("------------------------------------------------------\n\n");
 
       writer.write("1. Average Cleaning Time per Room Type\n");
-      writer.write("   LUXURY   : " + formatAvgForFile(r.cleanTimeAvgLuxury, r.cleanTimeCountLuxury) + "\n");
-      writer.write("   SUITE    : " + formatAvgForFile(r.cleanTimeAvgSuite, r.cleanTimeCountSuite) + "\n");
       writer.write(
-          "   STANDARD : " + formatAvgForFile(r.cleanTimeAvgStandard, r.cleanTimeCountStandard) + "\n\n");
+          "   LUXURY   : " + formatAvgForFile(r.cleanTimeAvgLuxury, r.cleanTimeCountLuxury) + "\n");
+      writer.write(
+          "   SUITE    : " + formatAvgForFile(r.cleanTimeAvgSuite, r.cleanTimeCountSuite) + "\n");
+      writer.write(
+          "   STANDARD : "
+              + formatAvgForFile(r.cleanTimeAvgStandard, r.cleanTimeCountStandard)
+              + "\n\n");
 
       writer.write("2. Staff Productivity (Tasks Completed per Shift)\n");
       writer.write("   MORNING   : " + r.productivityMorning + " task(s)\n");
@@ -413,13 +421,31 @@ public class HousekeepingReportController {
 
       writer.write("3. Overdue / Skipped Task Rate\n");
       writer.write(
-          "   Skipped : " + r.skippedCount + " / " + r.totalMatched + " (" + String.format("%.1f%%", r.skippedRatePercent) + ")\n");
+          "   Skipped : "
+              + r.skippedCount
+              + " / "
+              + r.totalMatched
+              + " ("
+              + String.format("%.1f%%", r.skippedRatePercent)
+              + ")\n");
       writer.write(
-          "   Overdue : " + r.overdueCount + " / " + r.totalMatched + " (" + String.format("%.1f%%", r.overdueRatePercent) + ")\n\n");
+          "   Overdue : "
+              + r.overdueCount
+              + " / "
+              + r.totalMatched
+              + " ("
+              + String.format("%.1f%%", r.overdueRatePercent)
+              + ")\n\n");
 
       writer.write("4. Maintenance Flag Frequency\n");
       writer.write(
-          "   " + r.maintenanceCount + " / " + r.totalMatched + " (" + String.format("%.1f%%", r.maintenanceFrequencyPercent) + ")\n\n");
+          "   "
+              + r.maintenanceCount
+              + " / "
+              + r.totalMatched
+              + " ("
+              + String.format("%.1f%%", r.maintenanceFrequencyPercent)
+              + ")\n\n");
 
       writer.write("5. Average Queue Wait Time Before Dequeued\n");
       writer.write("   " + formatAvgForFile(r.avgQueueWaitMinutes, r.queueWaitCount) + "\n");
