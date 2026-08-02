@@ -30,9 +30,10 @@ public class GuestInformationView {
     System.out.println("2. View Billing History");
     System.out.println("3. View Assigned Room History");
     System.out.println("4. View Reservation History");
-    System.out.println("5. Back to Guest Lookup\n");
+    System.out.println("5. ReEnter Guest ID");
+    System.out.println("6. Back to Front Desk Menu\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
   }
 
   public void displayGuestDetails(
