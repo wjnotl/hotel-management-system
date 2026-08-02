@@ -131,10 +131,10 @@ public class GuestInformationController {
     int currentPage = 1;
 
     while (true) {
-      try {
-        int total = roomHistory.getNumberOfEntries();
-        ConsoleUtil.GetMenuInputResult result =
-            guestInformationView.displayAssignedRoomHistory(guest, roomHistory, currentPage, PAGE_SIZE);
+      int total = roomHistory.getNumberOfEntries();
+      ConsoleUtil.GetMenuInputResult result =
+        guestInformationView.displayAssignedRoomHistory(
+              guest, roomHistory, currentPage, PAGE_SIZE);
 
         if ("C".equalsIgnoreCase(result.input)) {
           return;

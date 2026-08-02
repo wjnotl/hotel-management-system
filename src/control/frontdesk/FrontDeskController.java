@@ -7,7 +7,6 @@ public class FrontDeskController {
   private final FrontDeskView frontDeskView = new FrontDeskView();
   private final GuestInformationController guestInfoController = new GuestInformationController();
   private final ManageGuestCheckOutController manageGuestCheckOutController = new ManageGuestCheckOutController();
-  private final ManageRoomStatusController manageRoomStatusController = new ManageRoomStatusController();
 
   public void start() {
     while (true) {
