@@ -20,6 +20,7 @@ public class HotelManagementSystem {
   private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
   private static VipReservationRepo vipReservationRepo = new VipReservationRepo();
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
+
   // private static BillingRepo billingRepo = new BillingRepo();
   public static void main(String[] args) {
     // Database Seeder

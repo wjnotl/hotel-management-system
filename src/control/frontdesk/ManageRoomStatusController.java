@@ -1,4 +1,3 @@
-
 package control.frontdesk;
 
 import adt.ArrayList;
@@ -22,7 +21,8 @@ public class ManageRoomStatusController {
   private final VipReservationRepo vipReservationRepo;
   private final GuestRepo guestRepo;
 
-  public ManageRoomStatusController(RoomRepo roomRepo, VipReservationRepo vipReservationRepo, GuestRepo guestRepo) {
+  public ManageRoomStatusController(
+      RoomRepo roomRepo, VipReservationRepo vipReservationRepo, GuestRepo guestRepo) {
     this.roomRepo = roomRepo;
     this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
@@ -141,7 +141,8 @@ public class ManageRoomStatusController {
 
   // --- ACTION 1: ASSIGN ROOM ---
   private void handleAssignRoom(Room room) {
-    if (room.getStatus() == Room.Status.OCCUPIED || room.getReservationConfirmationNumber() != null) {
+    if (room.getStatus() == Room.Status.OCCUPIED
+        || room.getReservationConfirmationNumber() != null) {
       ConsoleUtil.printError("Room already has a reservation attached - use Change Room instead!");
       return;
     }
@@ -162,7 +163,11 @@ public class ManageRoomStatusController {
         || reservation.getStatus() == Reservation.Status.NO_SHOW
         || reservation.getStatus() == Reservation.Status.CHECKED_IN) {
       ConsoleUtil.printError(
-          "Reservation " + confNum + " is " + reservation.getStatus().name() + " and cannot be assigned!");
+          "Reservation "
+              + confNum
+              + " is "
+              + reservation.getStatus().name()
+              + " and cannot be assigned!");
       return;
     }
 
@@ -186,7 +191,8 @@ public class ManageRoomStatusController {
     room.setStatus(Room.Status.OCCUPIED);
     room.setReservationConfirmationNumber(confNum);
     roomRepo.updateRoom(room);
-    roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), previousStatus, Room.Status.OCCUPIED);
+    roomStatusHistoryRepo.recordStatusChange(
+        room.getRoomNumber(), previousStatus, Room.Status.OCCUPIED);
 
     // NOTE: This only links the room to the reservation. Reservation.status is intentionally left
     // untouched here since the official check-in flow (stay duration, CHECKED_IN transition) lives
@@ -195,14 +201,16 @@ public class ManageRoomStatusController {
 
     ConsoleUtil.clearScreen();
     System.out.println(">> STATUS: ROOM ASSIGNED");
-    System.out.println("Room " + room.getRoomNumber() + " assigned to confirmation " + confNum + ".\n");
+    System.out.println(
+        "Room " + room.getRoomNumber() + " assigned to confirmation " + confNum + ".\n");
     ConsoleUtil.printContinueMessage();
   }
 
   // --- ACTION 2: CHANGE ROOM ---
   private void handleChangeRoom(Room room) {
     if (room.getReservationConfirmationNumber() == null) {
-      ConsoleUtil.printError("This room has no active reservation to move - use Assign Room instead!");
+      ConsoleUtil.printError(
+          "This room has no active reservation to move - use Assign Room instead!");
       return;
     }
 
@@ -227,7 +235,11 @@ public class ManageRoomStatusController {
 
     if (targetRoom.getStatus() != Room.Status.VACANT_CLEAN) {
       ConsoleUtil.printError(
-          "Room " + targetRoom.getRoomNumber() + " is " + targetRoom.getStatus().name() + " - not available!");
+          "Room "
+              + targetRoom.getRoomNumber()
+              + " is "
+              + targetRoom.getStatus().name()
+              + " - not available!");
       return;
     }
 
@@ -308,7 +320,8 @@ public class ManageRoomStatusController {
     room.setStatus(Room.Status.VACANT_CLEAN);
     room.setReservationConfirmationNumber(null);
     roomRepo.updateRoom(room);
-    roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), previousStatus, Room.Status.VACANT_CLEAN);
+    roomStatusHistoryRepo.recordStatusChange(
+        room.getRoomNumber(), previousStatus, Room.Status.VACANT_CLEAN);
 
     ConsoleUtil.clearScreen();
     System.out.println(">> STATUS: ROOM MARKED AS AVAILABLE");
@@ -325,13 +338,16 @@ public class ManageRoomStatusController {
 
     boolean confirmed =
         ConsoleUtil.showConfirmMessage(
-            "Mark Room " + room.getRoomNumber() + " as Occupied (manual override, no reservation)?");
+            "Mark Room "
+                + room.getRoomNumber()
+                + " as Occupied (manual override, no reservation)?");
     if (!confirmed) return;
 
     Room.Status previousStatus = room.getStatus();
     room.setStatus(Room.Status.OCCUPIED);
     roomRepo.updateRoom(room);
-    roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), previousStatus, Room.Status.OCCUPIED);
+    roomStatusHistoryRepo.recordStatusChange(
+        room.getRoomNumber(), previousStatus, Room.Status.OCCUPIED);
 
     ConsoleUtil.clearScreen();
     System.out.println(">> STATUS: ROOM MARKED AS OCCUPIED");
@@ -450,7 +466,8 @@ public class ManageRoomStatusController {
           roomNumber == null
               || (r.getRoomNumber() != null
                   && r.getRoomNumber().toLowerCase().contains(roomNumber.toLowerCase()));
-      boolean matchesRoomType = roomType == null || roomType.equalsIgnoreCase(r.getRoomType().name());
+      boolean matchesRoomType =
+          roomType == null || roomType.equalsIgnoreCase(r.getRoomType().name());
       boolean matchesRoomStatus =
           roomStatus == null || roomStatus.equalsIgnoreCase(r.getStatus().name());
 
@@ -460,7 +477,8 @@ public class ManageRoomStatusController {
     }
 
     if ("ROOM TYPE (A -> Z)".equalsIgnoreCase(sort)) {
-      filtered.sort((r1, r2) -> r1.getRoomType().name().compareToIgnoreCase(r2.getRoomType().name()));
+      filtered.sort(
+          (r1, r2) -> r1.getRoomType().name().compareToIgnoreCase(r2.getRoomType().name()));
     } else {
       // Default: ROOM NUMBER (LOW -> HIGH)
       filtered.sort((r1, r2) -> r1.getRoomNumber().compareToIgnoreCase(r2.getRoomNumber()));

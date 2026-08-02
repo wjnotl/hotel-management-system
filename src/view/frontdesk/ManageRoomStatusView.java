@@ -50,7 +50,8 @@ public class ManageRoomStatusView {
       TableUtil.TableSettings emptySettings =
           new TableUtil.TableSettings(new int[] {42}).setHAlign(0, TableUtil.Align.CENTER);
 
-      boolean hasFilters = roomNumberFilter != null || roomTypeFilter != null || roomStatusFilter != null;
+      boolean hasFilters =
+          roomNumberFilter != null || roomTypeFilter != null || roomStatusFilter != null;
       String emptyMsg =
           hasFilters ? "*** NO ROOMS FOUND FOR ACTIVE FILTERS ***" : "*** NO ROOMS IN SYSTEM ***";
 
@@ -76,7 +77,10 @@ public class ManageRoomStatusView {
       int displayNum = i - startIndex + 1;
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum), r.getRoomNumber(), r.getRoomType().name(), r.getStatus().name()
+            String.valueOf(displayNum),
+            r.getRoomNumber(),
+            r.getRoomType().name(),
+            r.getStatus().name()
           },
           settings);
     }
@@ -84,7 +88,8 @@ public class ManageRoomStatusView {
 
     System.out.printf("Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, total);
     System.out.println("[S] Search & Filter     [O] Change Sort Order   [R] Refresh Table");
-    System.out.println("[P] Prev Page           [N] Next Page           [E] Exit to Front DeskMenu\n");
+    System.out.println(
+        "[P] Prev Page           [N] Next Page           [E] Exit to Front DeskMenu\n");
 
     int maxOptionNum = endIndex - startIndex + 1;
     String rangeStr = (maxOptionNum == 1) ? "1" : "1-" + maxOptionNum;
@@ -103,7 +108,8 @@ public class ManageRoomStatusView {
     ConsoleUtil.printTitleBox("SEARCH & FILTER ROOMS");
     System.out.println(
         "Room Number : [ " + (roomNumberFilter == null ? "None" : roomNumberFilter) + " ]");
-    System.out.println("Room Type   : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
+    System.out.println(
+        "Room Type   : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
     System.out.println(
         "Room Status : [ " + (roomStatusFilter == null ? "ALL" : roomStatusFilter) + " ]\n");
 

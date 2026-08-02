@@ -98,7 +98,8 @@ public class GuestInformationController {
       try {
         int total = billingHistory.getNumberOfEntries();
         ConsoleUtil.GetMenuInputResult result =
-            guestInformationView.displayBillingHistory(guest, billingHistory, currentPage, PAGE_SIZE);
+            guestInformationView.displayBillingHistory(
+                guest, billingHistory, currentPage, PAGE_SIZE);
 
         if ("C".equalsIgnoreCase(result.input)) {
           return;
@@ -134,7 +135,8 @@ public class GuestInformationController {
       try {
         int total = roomHistory.getNumberOfEntries();
         ConsoleUtil.GetMenuInputResult result =
-            guestInformationView.displayAssignedRoomHistory(guest, roomHistory, currentPage, PAGE_SIZE);
+            guestInformationView.displayAssignedRoomHistory(
+                guest, roomHistory, currentPage, PAGE_SIZE);
 
         if ("C".equalsIgnoreCase(result.input)) {
           return;

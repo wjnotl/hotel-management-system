@@ -12,6 +12,7 @@ import util.TableUtil;
 
 public class ManageGuestCheckOutView {
   private final GuestInformationView guestInformationView = new GuestInformationView();
+
   // Reused so the check-out receipt matches the one printed from Guest Information exactly.
   public GetMenuInputResult renderCheckOutScreen(
       ListInterface<Billing> activeStays,
@@ -34,7 +35,9 @@ public class ManageGuestCheckOutView {
     System.out.println(
         "ROOM NO. FILTER   : [ " + (roomNumberFilter == null ? "None" : roomNumberFilter) + " ]");
     System.out.println(
-        "PAYMENT STATUS    : [ " + (paymentStatusFilter == null ? "ALL" : paymentStatusFilter) + " ]");
+        "PAYMENT STATUS    : [ "
+            + (paymentStatusFilter == null ? "ALL" : paymentStatusFilter)
+            + " ]");
     System.out.println("SORT CRITERIA     : [ " + sortCriteria + " ]\n");
 
     int total = (activeStays == null) ? 0 : activeStays.getNumberOfEntries();
@@ -108,10 +111,10 @@ public class ManageGuestCheckOutView {
     }
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
 
-    System.out.printf(
-        "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, total);
+    System.out.printf("Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, total);
     System.out.println("[S] Search & Filter     [O] Change Sort Order   [R] Refresh Table");
-    System.out.println("[P] Prev Page           [N] Next Page           [E] Exit to Front Desk Menu\n");
+    System.out.println(
+        "[P] Prev Page           [N] Next Page           [E] Exit to Front Desk Menu\n");
 
     int maxOptionNum = endIndex - startIndex + 1;
     String rangeStr = (maxOptionNum == 1) ? "1" : "1-" + maxOptionNum;
@@ -124,14 +127,22 @@ public class ManageGuestCheckOutView {
   }
 
   public int displayFilterMainMenu(
-      String guestIdFilter, String guestNameFilter, String roomNumberFilter, String paymentStatusFilter) {
+      String guestIdFilter,
+      String guestNameFilter,
+      String roomNumberFilter,
+      String paymentStatusFilter) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH & FILTER GUESTS");
-    System.out.println("Guest ID       : [ " + (guestIdFilter == null ? "None" : guestIdFilter) + " ]");
-    System.out.println("Guest Name     : [ " + (guestNameFilter == null ? "None" : guestNameFilter) + " ]");
-    System.out.println("Room Number    : [ " + (roomNumberFilter == null ? "None" : roomNumberFilter) + " ]");
     System.out.println(
-        "Payment Status : [ " + (paymentStatusFilter == null ? "ALL" : paymentStatusFilter) + " ]\n");
+        "Guest ID       : [ " + (guestIdFilter == null ? "None" : guestIdFilter) + " ]");
+    System.out.println(
+        "Guest Name     : [ " + (guestNameFilter == null ? "None" : guestNameFilter) + " ]");
+    System.out.println(
+        "Room Number    : [ " + (roomNumberFilter == null ? "None" : roomNumberFilter) + " ]");
+    System.out.println(
+        "Payment Status : [ "
+            + (paymentStatusFilter == null ? "ALL" : paymentStatusFilter)
+            + " ]\n");
 
     System.out.println("1. Search by Guest ID");
     System.out.println("2. Search by Guest Name");
@@ -203,8 +214,7 @@ public class ManageGuestCheckOutView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {
-          "Guest",
-          guest != null ? guest.getName() + " (" + guest.getGuestId() + ")" : "N/A"
+          "Guest", guest != null ? guest.getName() + " (" + guest.getGuestId() + ")" : "N/A"
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
@@ -215,7 +225,9 @@ public class ManageGuestCheckOutView {
         new String[] {
           "Check-in / Check-out",
           billing != null
-              ? formatDate(billing.getCheckInDate()) + " -> " + formatDate(billing.getCheckOutDate())
+              ? formatDate(billing.getCheckInDate())
+                  + " -> "
+                  + formatDate(billing.getCheckOutDate())
               : "N/A"
         },
         kvSettings);
@@ -323,7 +335,8 @@ public class ManageGuestCheckOutView {
     TableUtil.printTableRow(
         new String[] {"Room Number", room != null ? room.getRoomNumber() : "N/A"}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(new String[] {"Room Status", "DIRTY (Pending Housekeeping)"}, kvSettings);
+    TableUtil.printTableRow(
+        new String[] {"Room Status", "DIRTY (Pending Housekeeping)"}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {"Total Paid (RM)", String.format("%.2f", billing.getTotalAmount())},

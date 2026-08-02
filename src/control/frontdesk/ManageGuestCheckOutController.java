@@ -64,7 +64,8 @@ public class ManageGuestCheckOutController {
           return;
         } else if ("S".equalsIgnoreCase(result.input)) {
           String[] filters =
-              handleFilterMenu(guestIdFilter, guestNameFilter, roomNumberFilter, paymentStatusFilter);
+              handleFilterMenu(
+                  guestIdFilter, guestNameFilter, roomNumberFilter, paymentStatusFilter);
           guestIdFilter = filters[0];
           guestNameFilter = filters[1];
           roomNumberFilter = filters[2];
@@ -176,7 +177,8 @@ public class ManageGuestCheckOutController {
       room.setStatus(Room.Status.DIRTY);
       room.setReservationConfirmationNumber(null);
       roomRepo.updateRoom(room);
-      roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), previousStatus, Room.Status.DIRTY);
+      roomStatusHistoryRepo.recordStatusChange(
+          room.getRoomNumber(), previousStatus, Room.Status.DIRTY);
 
       HousekeepingTask turnoverTask =
           new HousekeepingTask(

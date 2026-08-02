@@ -100,7 +100,8 @@ public class GuestInformationView {
     ConsoleUtil.printTitleBox(
         "BILLING HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 83);
 
-    ListInterface<Billing> history = (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
+    ListInterface<Billing> history =
+        (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
     int total = history.getNumberOfEntries();
 
     int[] colWidths = {5, 12, 10, 12, 12, 10, 14};
@@ -230,7 +231,8 @@ public class GuestInformationView {
     ConsoleUtil.printTitleBox(
         "ASSIGNED ROOM HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 70);
 
-    ListInterface<Billing> history = (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
+    ListInterface<Billing> history =
+        (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
     int total = history.getNumberOfEntries();
 
     int[] colWidths = {5, 12, 12, 12, 12, 10};
@@ -245,8 +247,7 @@ public class GuestInformationView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"NO.", "ROOM NO.", "ROOM TYPE", "CHECK-IN", "CHECK-OUT", "STATUS"},
-        settings);
+        new String[] {"NO.", "ROOM NO.", "ROOM TYPE", "CHECK-IN", "CHECK-OUT", "STATUS"}, settings);
 
     if (total == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
