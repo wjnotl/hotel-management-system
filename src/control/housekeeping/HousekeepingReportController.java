@@ -145,7 +145,7 @@ public class HousekeepingReportController {
       String input = reportView.promptStaffFilterInput(staffLabel(currentStaffId));
       if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
         return currentStaffId; // Leave unchanged (blank does NOT clear here — matches Task Board
-                               // convention where blank/C cancels the edit)
+        // convention where blank/C cancels the edit)
       }
 
       HousekeepingStaff staff = staffRepo.findById(input.trim());
