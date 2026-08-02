@@ -57,6 +57,14 @@ public class HousekeepingStaffRepo {
     return true;
   }
 
+  public boolean setShift(HousekeepingStaff staff, HousekeepingStaff.Shift shift) {
+    if (staff == null) return false;
+
+    staff.setShift(shift);
+    save();
+    return true;
+  }
+
   // Called when a task is assigned to this staff member: adds the room to their assigned list
   // (if not already there) and flips them to ON_TASK so the roster reflects they're occupied.
   public boolean assignRoomToStaff(HousekeepingStaff staff, String roomNumber) {
