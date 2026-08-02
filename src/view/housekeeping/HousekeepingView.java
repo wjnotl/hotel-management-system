@@ -1,4 +1,4 @@
-package view;
+package view.housekeeping;
 
 import adt.ListInterface;
 import entity.HousekeepingSettings;
@@ -282,7 +282,6 @@ public class HousekeepingView {
 
   public GetMenuInputResult renderStaffRosterScreen(
       ListInterface<HousekeepingStaff> list,
-      HousekeepingSettings settings,
       String search,
       String shiftFilter,
       String availabilityFilter,
@@ -303,13 +302,12 @@ public class HousekeepingView {
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
     int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
 
-    // Columns: NO.(4), STAFF NAME(14), SHIFT(22), ASSIGNED ROOMS(14), STATUS(10)
+    // Columns: NO.(5), STAFF NAME(16), SHIFT(12), ASSIGNED ROOMS(20), STATUS(11)
     TableUtil.TableSettings settingsTable =
-        new TableUtil.TableSettings(new int[] {4, 14, 22, 14, 10})
+        new TableUtil.TableSettings(new int[] {5, 16, 12, 20, 11})
             .setHAlign(0, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
-            .setTruncate(2)
             .setTruncate(3);
 
     TableUtil.printTableBorder(settingsTable, TableUtil.BorderPosition.TOP);
@@ -356,7 +354,7 @@ public class HousekeepingView {
           new String[] {
             String.valueOf(displayNum),
             s.getName(),
-            s.getShift().name() + " (" + getShiftScheduleText(settings, s.getShift()) + ")",
+            s.getShift().name(),
             formatAssignedRooms(s.getAssignedRoomNumbers()),
             s.getAvailability().name()
           },
@@ -378,19 +376,6 @@ public class HousekeepingView {
 
     return ConsoleUtil.getMenuInput(
         promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P', 'A'});
-  }
-
-  private String getShiftScheduleText(
-      HousekeepingSettings settings, HousekeepingStaff.Shift shift) {
-    if (settings == null) return "";
-    switch (shift) {
-      case MORNING:
-        return settings.getMorningShiftSchedule();
-      case AFTERNOON:
-        return settings.getAfternoonShiftSchedule();
-      default:
-        return settings.getNightShiftSchedule();
-    }
   }
 
   private String formatAssignedRooms(ListInterface<String> rooms) {
