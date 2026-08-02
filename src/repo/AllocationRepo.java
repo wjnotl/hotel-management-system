@@ -81,7 +81,7 @@ public class AllocationRepo {
     return allocationList;
   }
 
-  public void scheduleNextAutoExpirationTask(
+  private void scheduleNextAutoExpirationTask(
       RoomRepo roomRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
