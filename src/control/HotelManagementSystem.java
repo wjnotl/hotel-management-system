@@ -12,16 +12,17 @@ public class HotelManagementSystem {
   private static MainMenuView mainMenuView = new MainMenuView();
 
   private static AllocationRepo allocationRepo = new AllocationRepo();
+  private static BillingRepo billingRepo = new BillingRepo();
   private static GuestRepo guestRepo = new GuestRepo();
   private static HousekeepingStaffRepo housekeepingStaffRepo = new HousekeepingStaffRepo();
   private static HousekeepingTaskRepo houseKeepingTaskRepo = new HousekeepingTaskRepo();
+  private static HousekeepingSettingsRepo housekeepingSettingsRepo = new HousekeepingSettingsRepo();
   private static MemberRepo memberRepo = new MemberRepo();
   private static RoomRepo roomRepo = new RoomRepo();
   private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
   private static VipReservationRepo vipReservationRepo = new VipReservationRepo();
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
 
-  // private static BillingRepo billingRepo = new BillingRepo();
   public static void main(String[] args) {
     // Database Seeder
     if (args.length > 0 && "--seed".equalsIgnoreCase(args[0])) {
@@ -29,6 +30,8 @@ public class HotelManagementSystem {
       return;
     }
 
+    allocationRepo.scheduleNextAutoExpirationTask(
+        roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
     VipController.startMidnightStrikeResetScheduler(guestRepo);
 
     while (true) {
@@ -47,7 +50,11 @@ public class HotelManagementSystem {
               .start();
         } else if ("3".equals(choice)) {
           new HouseKeepingController(
-                  houseKeepingTaskRepo, housekeepingStaffRepo, roomRepo, roomStatusHistoryRepo)
+                  houseKeepingTaskRepo,
+                  housekeepingStaffRepo,
+                  roomRepo,
+                  roomStatusHistoryRepo,
+                  housekeepingSettingsRepo)
               .start();
         } else if ("4".equals(choice)) {
           new FrontDeskController().start();
