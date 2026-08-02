@@ -8,10 +8,15 @@ public class VipSystemConfig implements Serializable {
   private String activeStrategyName;
   private String activeFormulaInfix;
 
-  // Tier-Specific Patience Limits (in minutes)
+  // Tier-Specific Patience Limits / SLA Targets (in minutes)
   private int diamondPatienceLimitMins;
   private int goldPatienceLimitMins;
   private int silverPatienceLimitMins;
+
+  // Tier-Specific Boiling Point Limits / Boost Triggers (in minutes)
+  private int diamondBoilingLimitMins;
+  private int goldBoilingLimitMins;
+  private int silverBoilingLimitMins;
 
   // Tier-Specific No-Show Grace Windows (in minutes)
   private int diamondGraceWindowMins;
@@ -38,6 +43,19 @@ public class VipSystemConfig implements Serializable {
   private double goldStrikePenalty;
   private double silverStrikePenalty;
 
+  // Executive Report Alert Targets (%)
+  private double diamondSlaTargetPct;
+  private double goldSlaTargetPct;
+  private double silverSlaTargetPct;
+
+  private double diamondEvictionRateTargetPct;
+  private double goldEvictionRateTargetPct;
+  private double silverEvictionRateTargetPct;
+
+  private double diamondGraceUtilTargetPct;
+  private double goldGraceUtilTargetPct;
+  private double silverGraceUtilTargetPct;
+
   public VipSystemConfig() {
     resetToDefaults();
   }
@@ -46,16 +64,22 @@ public class VipSystemConfig implements Serializable {
     this.activeStrategyName = "Balanced Lobby Flow";
     this.activeFormulaInfix = "TIER + ( BOILING * W_BOILING ) - ( STRIKES * W_STRIKE )";
 
-    this.diamondPatienceLimitMins = 30;
-    this.goldPatienceLimitMins = 45;
-    this.silverPatienceLimitMins = 60;
+    // Patience Limits (SLA Targets)
+    this.diamondPatienceLimitMins = 15;
+    this.goldPatienceLimitMins = 30;
+    this.silverPatienceLimitMins = 45;
+
+    // Boiling Limits (Boost Triggers)
+    this.diamondBoilingLimitMins = 10;
+    this.goldBoilingLimitMins = 20;
+    this.silverBoilingLimitMins = 30;
 
     this.diamondGraceWindowMins = 10;
-    this.goldGraceWindowMins = 5;
-    this.silverGraceWindowMins = 3;
+    this.goldGraceWindowMins = 15;
+    this.silverGraceWindowMins = 20;
 
-    this.diamondMaxStrikes = 5;
-    this.goldMaxStrikes = 3;
+    this.diamondMaxStrikes = 3;
+    this.goldMaxStrikes = 2;
     this.silverMaxStrikes = 2;
 
     this.diamondBaseValue = 9000;
@@ -69,6 +93,18 @@ public class VipSystemConfig implements Serializable {
     this.diamondStrikePenalty = 1000.0;
     this.goldStrikePenalty = 500.0;
     this.silverStrikePenalty = 200.0;
+
+    this.diamondSlaTargetPct = 90.0;
+    this.goldSlaTargetPct = 80.0;
+    this.silverSlaTargetPct = 70.0;
+
+    this.diamondEvictionRateTargetPct = 5.0;
+    this.goldEvictionRateTargetPct = 10.0;
+    this.silverEvictionRateTargetPct = 15.0;
+
+    this.diamondGraceUtilTargetPct = 70.0;
+    this.goldGraceUtilTargetPct = 80.0;
+    this.silverGraceUtilTargetPct = 85.0;
   }
 
   // Getters & Setters
@@ -110,6 +146,30 @@ public class VipSystemConfig implements Serializable {
 
   public void setSilverPatienceLimitMins(int val) {
     this.silverPatienceLimitMins = val;
+  }
+
+  public int getDiamondBoilingLimitMins() {
+    return diamondBoilingLimitMins;
+  }
+
+  public void setDiamondBoilingLimitMins(int val) {
+    this.diamondBoilingLimitMins = val;
+  }
+
+  public int getGoldBoilingLimitMins() {
+    return goldBoilingLimitMins;
+  }
+
+  public void setGoldBoilingLimitMins(int val) {
+    this.goldBoilingLimitMins = val;
+  }
+
+  public int getSilverBoilingLimitMins() {
+    return silverBoilingLimitMins;
+  }
+
+  public void setSilverBoilingLimitMins(int val) {
+    this.silverBoilingLimitMins = val;
   }
 
   public int getDiamondGraceWindowMins() {
@@ -230,5 +290,77 @@ public class VipSystemConfig implements Serializable {
 
   public void setSilverStrikePenalty(double val) {
     this.silverStrikePenalty = val;
+  }
+
+  public double getDiamondSlaTargetPct() {
+    return diamondSlaTargetPct;
+  }
+
+  public void setDiamondSlaTargetPct(double val) {
+    this.diamondSlaTargetPct = val;
+  }
+
+  public double getGoldSlaTargetPct() {
+    return goldSlaTargetPct;
+  }
+
+  public void setGoldSlaTargetPct(double val) {
+    this.goldSlaTargetPct = val;
+  }
+
+  public double getSilverSlaTargetPct() {
+    return silverSlaTargetPct;
+  }
+
+  public void setSilverSlaTargetPct(double val) {
+    this.silverSlaTargetPct = val;
+  }
+
+  public double getDiamondEvictionRateTargetPct() {
+    return diamondEvictionRateTargetPct;
+  }
+
+  public void setDiamondEvictionRateTargetPct(double val) {
+    this.diamondEvictionRateTargetPct = val;
+  }
+
+  public double getGoldEvictionRateTargetPct() {
+    return goldEvictionRateTargetPct;
+  }
+
+  public void setGoldEvictionRateTargetPct(double val) {
+    this.goldEvictionRateTargetPct = val;
+  }
+
+  public double getSilverEvictionRateTargetPct() {
+    return silverEvictionRateTargetPct;
+  }
+
+  public void setSilverEvictionRateTargetPct(double val) {
+    this.silverEvictionRateTargetPct = val;
+  }
+
+  public double getDiamondGraceUtilTargetPct() {
+    return diamondGraceUtilTargetPct;
+  }
+
+  public void setDiamondGraceUtilTargetPct(double val) {
+    this.diamondGraceUtilTargetPct = val;
+  }
+
+  public double getGoldGraceUtilTargetPct() {
+    return goldGraceUtilTargetPct;
+  }
+
+  public void setGoldGraceUtilTargetPct(double val) {
+    this.goldGraceUtilTargetPct = val;
+  }
+
+  public double getSilverGraceUtilTargetPct() {
+    return silverGraceUtilTargetPct;
+  }
+
+  public void setSilverGraceUtilTargetPct(double val) {
+    this.silverGraceUtilTargetPct = val;
   }
 }

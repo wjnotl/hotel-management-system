@@ -12,7 +12,6 @@ public class HotelManagementSystem {
   private static MainMenuView mainMenuView = new MainMenuView();
 
   private static AllocationRepo allocationRepo = new AllocationRepo();
-  private static BillingRepo billingRepo = new BillingRepo();
   private static GuestRepo guestRepo = new GuestRepo();
   private static HousekeepingStaffRepo housekeepingStaffRepo = new HousekeepingStaffRepo();
   private static HousekeepingTaskRepo houseKeepingTaskRepo = new HousekeepingTaskRepo();
@@ -22,6 +21,7 @@ public class HotelManagementSystem {
   private static VipReservationRepo vipReservationRepo = new VipReservationRepo();
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
 
+  // private static BillingRepo billingRepo = new BillingRepo();
   public static void main(String[] args) {
     // Database Seeder
     if (args.length > 0 && "--seed".equalsIgnoreCase(args[0])) {
@@ -29,8 +29,6 @@ public class HotelManagementSystem {
       return;
     }
 
-    allocationRepo.scheduleNextAutoExpirationTask(
-        roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
     VipController.startMidnightStrikeResetScheduler(guestRepo);
 
     while (true) {

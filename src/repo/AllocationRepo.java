@@ -1,9 +1,7 @@
 package repo;
 
 import adt.ArrayList;
-import adt.LinkedQueue;
 import adt.ListInterface;
-import adt.QueueInterface;
 import entity.AllocationEntry;
 import entity.Guest;
 import entity.Member;
@@ -18,7 +16,6 @@ import util.TaskSchedulerUtil;
 public class AllocationRepo {
   private final BinaryFileUtil<ListInterface<AllocationEntry>> fileUtil;
   private ListInterface<AllocationEntry> allocationList;
-  private QueueInterface<AllocationEntry> allocationQueue;
 
   public AllocationRepo() {
     this.fileUtil = new BinaryFileUtil<>("allocations.dat");
@@ -29,19 +26,6 @@ public class AllocationRepo {
     this.allocationList = fileUtil.retrieveFromFile();
     if (this.allocationList == null) {
       this.allocationList = new ArrayList<>();
-    }
-    rebuildQueue();
-  }
-
-  private void rebuildQueue() {
-    this.allocationQueue = new LinkedQueue<>();
-    if (this.allocationList != null) {
-      for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
-        AllocationEntry entry = allocationList.getEntry(i);
-        if (entry != null) {
-          this.allocationQueue.enqueue(entry);
-        }
-      }
     }
   }
 
@@ -59,10 +43,8 @@ public class AllocationRepo {
     if (entry == null) return;
 
     allocationList.add(entry);
-    allocationQueue.enqueue(entry);
     save();
 
-    // Re-arm scheduler when new entry is added
     scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
   }
 
@@ -86,7 +68,6 @@ public class AllocationRepo {
     }
 
     if (removed) {
-      rebuildQueue();
       save();
 
       // Re-arm scheduler when an entry is removed early
@@ -100,39 +81,45 @@ public class AllocationRepo {
     return allocationList;
   }
 
-  public void scheduleNextAutoExpirationTask(
+  private void scheduleNextAutoExpirationTask(
       RoomRepo roomRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
 
-    // 1. Check if the Queue is empty using Queue ADT
-    if (allocationQueue == null || allocationQueue.isEmpty()) return;
+    if (allocationList == null || allocationList.getNumberOfEntries() == 0) return;
 
-    // 2. Queue ADT peek(): The front of the queue is ALWAYS the earliest expiring entry!
-    AllocationEntry earliestEntry = allocationQueue.peek();
+    AllocationEntry earliestEntry = null;
+    long earliestTime = Long.MAX_VALUE;
+
+    for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
+      AllocationEntry current = allocationList.getEntry(i);
+      if (current != null && current.getExpirationTimestamp() < earliestTime) {
+        earliestTime = current.getExpirationTimestamp();
+        earliestEntry = current;
+      }
+    }
+
     if (earliestEntry == null) return;
 
-    // 3. Calculate remaining delay for the top queue item
+    // Create a final reference copy for the lambda scope
+    final AllocationEntry targetEntry = earliestEntry;
+
+    // Calculate remaining delay
     long now = System.currentTimeMillis();
-    long remainingMs = earliestEntry.getExpirationTimestamp() - now;
+    long remainingMs = targetEntry.getExpirationTimestamp() - now;
     long delayMinutes = Math.max(1, TimeUnit.MILLISECONDS.toMinutes(remainingMs));
 
-    // 4. Schedule ONCE using TaskSchedulerUtil
     TaskSchedulerUtil.scheduleOnce(
         delayMinutes,
         () -> {
           try {
-            // 5. DEQUEUE directly from your Queue ADT!
-            if (!allocationQueue.isEmpty() && allocationQueue.peek().equals(earliestEntry)) {
-              AllocationEntry expiredEntry = allocationQueue.dequeue(); // Queue DEQUEUE!
+            // Use targetEntry instead of earliestEntry inside the lambda
+            if (allocationList.contains(targetEntry)) {
+              removeExpiredEntryInternal(targetEntry);
 
-              // Remove from underlying list storage
-              removeExpiredEntryInternal(expiredEntry);
-
-              // Free Room
-              Room room = roomRepo.findByRoomNumber(expiredEntry.getAssignedRoomNumber());
+              Room room = roomRepo.findByRoomNumber(targetEntry.getAssignedRoomNumber());
               Room.RoomType roomType = (room != null) ? room.getRoomType() : null;
 
               if (room != null) {
@@ -141,8 +128,7 @@ public class AllocationRepo {
                 roomRepo.updateRoom(room);
               }
 
-              // Issue Strike & Handle Reservation
-              Reservation res = vipReservationRepo.findById(expiredEntry.getReservationId());
+              Reservation res = vipReservationRepo.findById(targetEntry.getReservationId());
               if (res != null) {
                 Guest guest = guestRepo.findById(res.getGuestId());
                 if (guest != null) {
@@ -165,24 +151,32 @@ public class AllocationRepo {
                   if (guest.getStrikeCount() >= maxStrikes) {
                     res.setStatus(Reservation.Status.NO_SHOW);
                   } else {
-                    int newScore = calculateDynamicPriorityScore(guest, member);
+                    int newScore =
+                        vipReservationRepo.calculatePriorityScore(
+                            res, guest, member, configRepo.getConfig());
                     res.setStatus(Reservation.Status.WAITING);
                     res.setPriorityScore(newScore);
                     res.setQueueArrivalTime(LocalDateTime.now());
-                    vipReservationRepo.addReservation(res, newScore);
+                    vipReservationRepo.addReservation(
+                        res, newScore, guestRepo, memberRepo, configRepo);
                   }
                   vipReservationRepo.updateReservation(res);
                 }
               }
 
-              // Dequeue next VIP from waitlist queue into freed room
               if (roomType != null && room != null) {
-                autoAssignNextWaitingVip(roomType, room, vipReservationRepo, roomRepo);
+                autoAssignNextWaitingVip(
+                    roomType,
+                    room,
+                    vipReservationRepo,
+                    roomRepo,
+                    guestRepo,
+                    memberRepo,
+                    configRepo);
               }
             }
           } catch (Exception ignored) {
           } finally {
-            // 6. CHAIN: Re-arm for whatever item is now at the front of the queue!
             scheduleNextAutoExpirationTask(
                 roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
           }
@@ -197,7 +191,6 @@ public class AllocationRepo {
         break;
       }
     }
-    rebuildQueue();
     save();
   }
 
@@ -205,7 +198,10 @@ public class AllocationRepo {
       Room.RoomType roomType,
       Room vacantRoom,
       VipReservationRepo vipReservationRepo,
-      RoomRepo roomRepo) {
+      RoomRepo roomRepo,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
 
     ListInterface<Reservation> queueList = vipReservationRepo.getListByRoomType(roomType);
     if (queueList == null || queueList.isEmpty()) return;
@@ -213,45 +209,77 @@ public class AllocationRepo {
     Reservation topVip = queueList.getEntry(1);
     if (topVip == null) return;
 
-    long hold15Mins = 15 * 60 * 1000L;
+    Guest guest = (guestRepo != null) ? guestRepo.findById(topVip.getGuestId()) : null;
+    Member member =
+        (guest != null && guest.getMemberId() != null && memberRepo != null)
+            ? memberRepo.findById(guest.getMemberId())
+            : null;
+
+    VipSystemConfig config = configRepo.getConfig();
+    Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+    int graceMins =
+        (tier == Member.LoyaltyTier.DIAMOND)
+            ? config.getDiamondGraceWindowMins()
+            : (tier == Member.LoyaltyTier.GOLD)
+                ? config.getGoldGraceWindowMins()
+                : config.getSilverGraceWindowMins();
+
+    long holdDurationMs = graceMins * 60 * 1000L;
+
     AllocationEntry newHold =
         new AllocationEntry(
             topVip.getReservationId(),
             vacantRoom.getRoomNumber(),
-            System.currentTimeMillis() + hold15Mins);
+            System.currentTimeMillis() + holdDurationMs);
 
     allocationList.add(newHold);
-    allocationQueue.enqueue(newHold);
     save();
 
     vacantRoom.setStatus(Room.Status.OCCUPIED);
     vacantRoom.setReservationConfirmationNumber(topVip.getConfirmationNumber());
     roomRepo.updateRoom(vacantRoom);
 
-    topVip.setStatus(Reservation.Status.ALLOCATED);
-    vipReservationRepo.updateReservation(topVip);
-    vipReservationRepo.cancelReservation(topVip);
+    vipReservationRepo.allocateReservation(topVip, guestRepo, memberRepo, configRepo);
   }
 
-  private int calculateDynamicPriorityScore(Guest guest, Member member) {
-    if (member == null || member.getTier() == null) return 1000;
-    int tierBase;
-    switch (member.getTier()) {
-      case DIAMOND:
-        tierBase = 9000;
-        break;
-      case GOLD:
-        tierBase = 7000;
-        break;
-      case SILVER:
-        tierBase = 5000;
-        break;
-      default:
-        tierBase = 1000;
-        break;
+  public int recalculateActiveGraceTimers(
+      VipReservationRepo vipReservationRepo,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
+    VipSystemConfig config = configRepo.getConfig();
+    if (allocationList == null || allocationList.isEmpty()) return 0;
+
+    int updatedCount = 0;
+    long now = System.currentTimeMillis();
+
+    for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
+      AllocationEntry entry = allocationList.getEntry(i);
+      if (entry != null) {
+        Reservation r = vipReservationRepo.findById(entry.getReservationId());
+        Guest g = (r != null) ? guestRepo.findById(r.getGuestId()) : null;
+        Member m =
+            (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+
+        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+        int newGraceMins =
+            (tier == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondGraceWindowMins()
+                : (tier == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldGraceWindowMins()
+                    : config.getSilverGraceWindowMins();
+
+        // Reset expiration timestamp based on new grace minutes from current time
+        entry.setExpirationTimestamp(now + (newGraceMins * 60 * 1000L));
+        updatedCount++;
+      }
     }
-    int pointsBonus = Math.min(member.getPoints() / 10, 800);
-    int strikePenalty = (guest != null) ? (guest.getStrikeCount() * 500) : 0;
-    return Math.max(1000, tierBase + pointsBonus - strikePenalty);
+
+    save();
+
+    // Re-arm auto-expiration scheduler with updated top item
+    scheduleNextAutoExpirationTask(null, vipReservationRepo, guestRepo, memberRepo, configRepo);
+
+    return updatedCount;
   }
 }

@@ -23,16 +23,25 @@ public class Room implements Serializable {
   private RoomType roomType; // Category: LUXURY, SUITE, STANDARD
   private Status status; // Operational cleaning/occupancy state
   private String reservationConfirmationNumber; // Links to Reservation.confirmationNumber
+  private double price; // Room price per night (RM), stored on the room itself
 
   public Room(
-      String roomNumber, RoomType roomType, Status status, String reservationConfirmationNumber) {
+      String roomNumber,
+      RoomType roomType,
+      Status status,
+      String reservationConfirmationNumber,
+      double price) {
     this.roomNumber = roomNumber;
     this.roomType = roomType;
     this.status = status;
     this.reservationConfirmationNumber = reservationConfirmationNumber;
+    this.price = price;
   }
 
   // --- GETTERS ---
+  public double getPrice() {
+    return price;
+  }
 
   public String getRoomNumber() {
     return roomNumber;
@@ -66,6 +75,10 @@ public class Room implements Serializable {
 
   public void setReservationConfirmationNumber(String reservationConfirmationNumber) {
     this.reservationConfirmationNumber = reservationConfirmationNumber;
+  }
+
+  public void setPrice(double price) {
+    this.price = price;
   }
 
   @Override
