@@ -11,15 +11,15 @@ public class VipSettingsView {
 
     System.out.println("Current Strategy : " + config.getActiveStrategyName());
     System.out.println("Active Equation  : " + config.getActiveFormulaInfix() + "\n");
-    System.out.println("------------------------------------------------------");
     System.out.println("1. Manage Scoring Strategies");
     System.out.println("2. Tweak Operational Rules");
     System.out.println("3. Adjust Component Weights");
-    System.out.println("4. Apply Settings to Active Queue");
-    System.out.println("5. Reset to Factory Default Settings");
-    System.out.println("6. Back\n");
+    System.out.println("4. Edit Report Alert Target Limits");
+    System.out.println("5. Apply Settings to Active Queue");
+    System.out.println("6. Reset to Factory Default Settings");
+    System.out.println("7. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
   }
 
   public int promptApplyOptionWithBack(String title, String description) {
@@ -128,7 +128,7 @@ public class VipSettingsView {
     ConsoleUtil.printTitleBox("SELECT SYSTEM VARIABLE");
     System.out.println("1. TIER    -> Numerical base priority value mapped to member tier");
     System.out.println("2. STRIKES -> Accumulated no-show penalty count");
-    System.out.println("3. BOILING -> Starvation flag (1 if wait >= patience limit, else 0)");
+    System.out.println("3. BOILING -> Starvation flag (1 if wait >= boiling limit, else 0)");
     System.out.println("4. Back\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
@@ -137,7 +137,7 @@ public class VipSettingsView {
   public int displayWeightVariableSubmenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SELECT DYNAMIC WEIGHT VARIABLE");
-    System.out.println("1. W_BOILING -> Point boost when patience limit is exceeded");
+    System.out.println("1. W_BOILING -> Point boost when boiling limit is exceeded");
     System.out.println("2. W_STRIKE  -> Point deduction applied per logged strike");
     System.out.println("3. Back\n");
 
@@ -162,18 +162,19 @@ public class VipSettingsView {
     System.out.println("Enter static integer or decimal constant to inject:");
     System.out.println("------------------------------------------------------");
     System.out.println(" Press ENTER / 'C' to Cancel\n");
-    return ConsoleUtil.getStringInput(" [ New Numeric Value ]: ");
+    return ConsoleUtil.getStringInput("[ Numeric Value ]: ");
   }
 
   public int displayOperationalRulesMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("OPERATIONAL RULES MANAGEMENT");
-    System.out.println("1. Max No-Show Strike Limits");
-    System.out.println("2. Boiling Point Thresholds");
-    System.out.println("3. No-Show Grace Periods");
-    System.out.println("4. Back\n");
+    System.out.println("1. Tier Patience Limits (SLA Targets in Mins)");
+    System.out.println("2. Tier Boiling Point Limits (Starvation Boost Triggers in Mins)");
+    System.out.println("3. Max No-Show Strike Limits");
+    System.out.println("4. No-Show Grace Period Windows (Holding Bay Mins)");
+    System.out.println("5. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
   public int displayTierSelectionMenu(String title, String dVal, String gVal, String sVal) {
@@ -198,7 +199,7 @@ public class VipSettingsView {
     System.out.println("------------------------------------------------------");
     System.out.println(" Press ENTER / 'C' to Keep Current Value\n");
 
-    return ConsoleUtil.getIntegerInput(" [ New Value ]: ", min, max);
+    return ConsoleUtil.getIntegerInput("[ New Value ]: ", min, max);
   }
 
   public Double promptRuleDoubleInput(
@@ -212,7 +213,7 @@ public class VipSettingsView {
     System.out.println("------------------------------------------------------");
     System.out.println(" Press ENTER / 'C' to Keep Current Value\n");
 
-    return ConsoleUtil.getDoubleInput(" [ New Value ]: ", min, max);
+    return ConsoleUtil.getDoubleInput("[ New Value ]: ", min, max);
   }
 
   public int displayComponentWeightsMenu() {

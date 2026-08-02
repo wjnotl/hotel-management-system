@@ -109,6 +109,22 @@ public class HousekeepingTaskRepo {
     return true;
   }
 
+  // Reassignment to a different staff member: unlike assignStaff(), this always resets the
+  // task to ASSIGNED, even if it was already IN_PROGRESS. The new staff member hasn't actually
+  // started cleaning yet and still needs to hit "Start Cleaning" themselves, no matter how far
+  // the previous staff got.
+  public boolean reassignTask(HousekeepingTask task, String staffId) {
+    if (task == null) return false;
+
+    task.setAssignedStaffId(staffId);
+    task.setStatus(HousekeepingTask.Status.ASSIGNED);
+
+    // No longer waiting in the queue — safe no-op if it wasn't there (e.g. was IN_PROGRESS).
+    taskDeque.remove(task);
+    save();
+    return true;
+  }
+
   // Step 3 of the lifecycle: staff actually begins cleaning. Requires an assigned staff member —
   // returns false if called on a task nobody's been assigned to yet.
   public boolean startCleaning(HousekeepingTask task) {
