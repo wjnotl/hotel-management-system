@@ -7,7 +7,8 @@ public class FrontDeskController {
   private final FrontDeskView frontDeskView = new FrontDeskView();
   private final GuestInformationController guestInfoController = new GuestInformationController();
   private final ManageGuestCheckOutController manageGuestCheckOutController = new ManageGuestCheckOutController();
-  
+  private final ManageRoomStatusController manageRoomStatusController = new ManageRoomStatusController();
+
   public void start() {
     while (true) {
       try {
@@ -17,6 +18,8 @@ public class FrontDeskController {
           guestInfoController.start();
         } else if ("2".equals(choice)) {
           manageGuestCheckOutController.start();
+        } else if ("3".equals(choice)) {
+          manageRoomStatusController.start();
         } else if ("5".equals(choice)) {
           return;
         }

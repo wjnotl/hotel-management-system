@@ -19,8 +19,17 @@ public class GuestInformationController {
 
   private final GuestInformationView guestInformationView = new GuestInformationView();
   private final GuestRepo guestRepo = new GuestRepo();
-  private final VipReservationRepo reservationRepo = new VipReservationRepo();
+  private final VipReservationRepo reservationRepo;
   private final BillingRepo billingRepo = new BillingRepo();
+
+  public GuestInformationController(VipReservationRepo reservationRepo) {
+    this.reservationRepo = reservationRepo;
+  }
+
+  // Convenience constructor for callers that don't need to share a VipReservationRepo instance.
+  public GuestInformationController() {
+    this(new VipReservationRepo());
+  }
 
   public void start() {
     while (true) {
@@ -40,14 +49,22 @@ public class GuestInformationController {
           continue;
         }
 
-        handleGuestActionSubmenu(guest);
+        boolean reEnterGuestId = handleGuestActionSubmenu(guest);
+        if (reEnterGuestId) {
+          // "5. ReEnter Guest ID" was chosen - loop back to the guest ID prompt.
+          continue;
+        }
+        // "6. Back to Front Desk Menu" was chosen.
+        return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
-  private void handleGuestActionSubmenu(Guest guest) {
+  // Returns true if the guest chose to re-enter a guest ID (option 5),
+  // or false if they chose to go back to the Front Desk Menu (option 6).
+  private boolean handleGuestActionSubmenu(Guest guest) {
     while (true) {
       try {
         int action = guestInformationView.displayGuestActionSubmenu(guest);
@@ -63,7 +80,9 @@ public class GuestInformationController {
         } else if (action == 4) {
           handleViewReservationHistory(guest);
         } else if (action == 5) {
-          return;
+          return true;
+        } else if (action == 6) {
+          return false;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -76,30 +95,33 @@ public class GuestInformationController {
     int currentPage = 1;
 
     while (true) {
-      int total = billingHistory.getNumberOfEntries();
-      ConsoleUtil.GetMenuInputResult result =
-          guestInformationView.displayBillingHistory(guest, billingHistory, currentPage, PAGE_SIZE);
+      try {
+        int total = billingHistory.getNumberOfEntries();
+        ConsoleUtil.GetMenuInputResult result =
+            guestInformationView.displayBillingHistory(guest, billingHistory, currentPage, PAGE_SIZE);
 
-      if ("C".equalsIgnoreCase(result.input)) {
-        return;
-      } else if ("N".equalsIgnoreCase(result.input)) {
-        int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
-        if (currentPage < totalPages) {
-          currentPage++;
-        } else {
-          ConsoleUtil.printError("Already on the last page!");
+        if ("C".equalsIgnoreCase(result.input)) {
+          return;
+        } else if ("N".equalsIgnoreCase(result.input)) {
+          int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
+          if (currentPage < totalPages) {
+            currentPage++;
+          } else {
+            ConsoleUtil.printError("Already on the last page!");
+          }
+        } else if ("P".equalsIgnoreCase(result.input)) {
+          if (currentPage > 1) {
+            currentPage--;
+          } else {
+            ConsoleUtil.printError("Already on the first page!");
+          }
+        } else if (result.isNumber) {
+          int index = Integer.parseInt(result.input);
+          Billing selected = billingHistory.getEntry(index);
+          guestInformationView.displayReceipt(guest, selected);
         }
-      } else if ("P".equalsIgnoreCase(result.input)) {
-        if (currentPage > 1) {
-          currentPage--;
-        } else {
-          ConsoleUtil.printError("Already on the first page!");
-        }
-      } else if (result.isNumber) {
-        int index = Integer.parseInt(result.input);
-        Billing selected = billingHistory.getEntry(index);
-        guestInformationView.displayReceipt(guest, selected);
-        return;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -109,25 +131,29 @@ public class GuestInformationController {
     int currentPage = 1;
 
     while (true) {
-      int total = roomHistory.getNumberOfEntries();
-      ConsoleUtil.GetMenuInputResult result =
-          guestInformationView.displayAssignedRoomHistory(guest, roomHistory, currentPage, PAGE_SIZE);
+      try {
+        int total = roomHistory.getNumberOfEntries();
+        ConsoleUtil.GetMenuInputResult result =
+            guestInformationView.displayAssignedRoomHistory(guest, roomHistory, currentPage, PAGE_SIZE);
 
-      if ("C".equalsIgnoreCase(result.input)) {
-        return;
-      } else if ("N".equalsIgnoreCase(result.input)) {
-        int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
-        if (currentPage < totalPages) {
-          currentPage++;
-        } else {
-          ConsoleUtil.printError("Already on the last page!");
+        if ("C".equalsIgnoreCase(result.input)) {
+          return;
+        } else if ("N".equalsIgnoreCase(result.input)) {
+          int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
+          if (currentPage < totalPages) {
+            currentPage++;
+          } else {
+            ConsoleUtil.printError("Already on the last page!");
+          }
+        } else if ("P".equalsIgnoreCase(result.input)) {
+          if (currentPage > 1) {
+            currentPage--;
+          } else {
+            ConsoleUtil.printError("Already on the first page!");
+          }
         }
-      } else if ("P".equalsIgnoreCase(result.input)) {
-        if (currentPage > 1) {
-          currentPage--;
-        } else {
-          ConsoleUtil.printError("Already on the first page!");
-        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -138,26 +164,30 @@ public class GuestInformationController {
     int currentPage = 1;
 
     while (true) {
-      int total = reservationHistory.getNumberOfEntries();
-      ConsoleUtil.GetMenuInputResult result =
-          guestInformationView.displayReservationHistory(
-              guest, reservationHistory, currentPage, PAGE_SIZE);
+      try {
+        int total = reservationHistory.getNumberOfEntries();
+        ConsoleUtil.GetMenuInputResult result =
+            guestInformationView.displayReservationHistory(
+                guest, reservationHistory, currentPage, PAGE_SIZE);
 
-      if ("C".equalsIgnoreCase(result.input)) {
-        return;
-      } else if ("N".equalsIgnoreCase(result.input)) {
-        int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
-        if (currentPage < totalPages) {
-          currentPage++;
-        } else {
-          ConsoleUtil.printError("Already on the last page!");
+        if ("C".equalsIgnoreCase(result.input)) {
+          return;
+        } else if ("N".equalsIgnoreCase(result.input)) {
+          int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
+          if (currentPage < totalPages) {
+            currentPage++;
+          } else {
+            ConsoleUtil.printError("Already on the last page!");
+          }
+        } else if ("P".equalsIgnoreCase(result.input)) {
+          if (currentPage > 1) {
+            currentPage--;
+          } else {
+            ConsoleUtil.printError("Already on the first page!");
+          }
         }
-      } else if ("P".equalsIgnoreCase(result.input)) {
-        if (currentPage > 1) {
-          currentPage--;
-        } else {
-          ConsoleUtil.printError("Already on the first page!");
-        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -192,10 +222,6 @@ public class GuestInformationController {
   }
 
   // --- STACK-BASED HISTORY BUILDERS (NEW -> OLD) ---
-
-  // Both "Billing History" and "Assigned Room History" pull from the same stay
-  // records (a Billing IS a completed/ongoing room stay) - just rendered with
-  // different columns. There's no separate room-assignment log for past stays.
   private ListInterface<Billing> getGuestStayHistoryNewToOld(String guestId) {
     ListInterface<Billing> matches = billingRepo.findByGuestId(guestId);
     matches.sort(Comparator.comparing(b -> b.getCheckInDate(), nullsFirstComparator()));
