@@ -10,6 +10,7 @@ public class FrontDeskController {
       new ManageGuestCheckOutController();
   private final ManageRoomStatusController manageRoomStatusController =
       new ManageRoomStatusController();
+  private final ReportsController reportsController = new ReportsController();
 
   public void start() {
     while (true) {
@@ -22,6 +23,8 @@ public class FrontDeskController {
           manageGuestCheckOutController.start();
         } else if ("3".equals(choice)) {
           manageRoomStatusController.start();
+        } else if ("4".equals(choice)) {
+          reportsController.start();
         } else if ("5".equals(choice)) {
           return;
         }
