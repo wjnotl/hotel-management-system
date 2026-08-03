@@ -153,7 +153,8 @@ public class ReportsController {
           };
     }
 
-    String path = TxtExportUtil.export("frontdesk", "checkout_report", headers, rows);
+    String content = buildTxtTable(headers, rows);
+    String path = TxtExportUtil.export("frontdesk/checkout_report", content);
     reportsView.showExportSuccess(path, total);
   }
 
@@ -361,7 +362,8 @@ public class ReportsController {
     totalRow[statusNames.length + 1] = String.valueOf(totalRooms);
     rows[roomTypeNames.length] = totalRow;
 
-    String path = TxtExportUtil.export("frontdesk", "room_occupancy_report", headers, rows);
+    String content = buildTxtTable(headers, rows);
+    String path = TxtExportUtil.export("frontdesk/room_occupancy_report", content);
     reportsView.showExportSuccess(path, roomTypeNames.length + 1);
   }
 
@@ -489,7 +491,8 @@ public class ReportsController {
           };
     }
 
-    String path = TxtExportUtil.export("frontdesk", "stay_duration_report", headers, rows);
+    String content = buildTxtTable(headers, rows);
+    String path = TxtExportUtil.export("frontdesk/stay_duration_report", content);
     reportsView.showExportSuccess(path, total);
   }
 
@@ -547,5 +550,64 @@ public class ReportsController {
     }
 
     return filtered;
+  }
+
+  // ================= TXT EXPORT FORMATTING (frontdesk's own format) =================
+  // TxtExportUtil just writes whatever string we hand it to disk, so how the report looks is
+  // entirely up to this module. This lays each row out as columns padded to the widest value
+  // in that column, with a header row and a "-----" divider underneath.
+  private String buildTxtTable(String[] headers, String[][] rows) {
+    final String gap = "   ";
+    int columnCount = (headers != null) ? headers.length : 0;
+    int[] widths = new int[columnCount];
+
+    if (headers != null) {
+      for (int c = 0; c < columnCount; c++) {
+        widths[c] = headers[c] == null ? 0 : headers[c].length();
+      }
+    }
+    if (rows != null) {
+      for (String[] row : rows) {
+        if (row == null) continue;
+        for (int c = 0; c < columnCount && c < row.length; c++) {
+          int len = (row[c] == null) ? 0 : row[c].length();
+          if (len > widths[c]) widths[c] = len;
+        }
+      }
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(formatTxtRow(headers, widths, gap));
+
+    int dividerLen = 0;
+    for (int w : widths) dividerLen += w;
+    dividerLen += gap.length() * Math.max(0, columnCount - 1);
+    for (int i = 0; i < dividerLen; i++) sb.append('-');
+    sb.append(System.lineSeparator());
+
+    if (rows != null) {
+      for (String[] row : rows) {
+        sb.append(formatTxtRow(row, widths, gap));
+      }
+    }
+
+    return sb.toString();
+  }
+
+  private String formatTxtRow(String[] fields, int[] widths, String gap) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < widths.length; i++) {
+      String value = (fields != null && i < fields.length && fields[i] != null) ? fields[i] : "";
+      boolean isLastColumn = (i == widths.length - 1);
+      if (isLastColumn) {
+        sb.append(value);
+      } else {
+        sb.append(value);
+        for (int p = value.length(); p < widths[i]; p++) sb.append(' ');
+        sb.append(gap);
+      }
+    }
+    sb.append(System.lineSeparator());
+    return sb.toString();
   }
 }

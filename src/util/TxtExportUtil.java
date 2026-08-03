@@ -6,118 +6,53 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * Thin, format-agnostic helper for saving a report's text to a .txt file under "exports/". Each
+ * module builds its own report content however it wants (aligned table, plain lines, whatever) and
+ * just hands the finished string over here to be written to disk.
+ *
+ * <p>To keep different modules' exports from colliding, prefix fileName with a module folder, e.g.
+ * export("frontdesk/checkout_report", content) writes to
+ * exports/frontdesk/checkout_report_<timestamp>.txt
+ */
 public class TxtExportUtil {
 
   private static final String EXPORT_ROOT_DIR = "exports";
-  private static final String COLUMN_GAP = "   ";
   private static final DateTimeFormatter TIMESTAMP_FMT =
       DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
-  private TxtExportUtil() {}
-
   /**
-   * Writes the given headers + rows to a new .txt file under exports/{moduleName}/, with each
-   * column padded to the widest value so the table lines up when opened in Notepad or any plain
-   * text viewer.
+   * Writes content to a new timestamped .txt file under exports/.
    *
-   * @param moduleName the module this report belongs to, e.g. "frontdesk", "vip", "housekeeping",
-   *     "booking" — used as the subfolder name so each module's exports stay separate
-   * @param baseFileName file name prefix (no extension), e.g. "checkout_report"
-   * @param headers column headers, written as the first line
-   * @param rows table body; each element is one row and must match headers.length
+   * @param fileName file name (no extension needed). May include a subfolder prefix, e.g.
+   *     "frontdesk/checkout_report", so each module's exports stay in their own folder.
+   * @param content the full text to write, already formatted however the caller wants
    * @return the path of the file that was written
    */
-  public static String export(
-      String moduleName, String baseFileName, String[] headers, String[][] rows) {
-    String safeModuleName =
-        (moduleName == null || moduleName.trim().isEmpty())
-            ? "general"
-            : moduleName.trim().toLowerCase().replaceAll("[^a-zA-Z0-9_-]", "_");
+  public static String export(String fileName, String content) {
+    String name = (fileName == null || fileName.trim().isEmpty()) ? "report" : fileName.trim();
+    name = name.replace('\\', '/');
 
-    File dir = new File(EXPORT_ROOT_DIR, safeModuleName);
+    int lastSlash = name.lastIndexOf('/');
+    String subDir = (lastSlash >= 0) ? name.substring(0, lastSlash) : "";
+    String baseName = (lastSlash >= 0) ? name.substring(lastSlash + 1) : name;
+    baseName = baseName.replaceAll("[^a-zA-Z0-9_-]", "_");
+    if (baseName.isEmpty()) baseName = "report";
+
+    File dir = subDir.isEmpty() ? new File(EXPORT_ROOT_DIR) : new File(EXPORT_ROOT_DIR, subDir);
     if (!dir.exists() && !dir.mkdirs()) {
       throw new RuntimeException("Could not create export directory: " + dir.getAbsolutePath());
     }
 
-    String safeBaseName =
-        (baseFileName == null || baseFileName.trim().isEmpty())
-            ? "report"
-            : baseFileName.trim().replaceAll("[^a-zA-Z0-9_-]", "_");
-
-    String fileName = safeBaseName + "_" + LocalDateTime.now().format(TIMESTAMP_FMT) + ".txt";
-    File file = new File(dir, fileName);
-
-    int columnCount = (headers != null) ? headers.length : 0;
-    int[] widths = computeColumnWidths(headers, rows, columnCount);
+    String timestampedName = baseName + "_" + LocalDateTime.now().format(TIMESTAMP_FMT) + ".txt";
+    File file = new File(dir, timestampedName);
 
     try (FileWriter writer = new FileWriter(file)) {
-      if (headers != null) {
-        writer.write(formatRow(headers, widths));
-        writer.write(separatorLine(widths));
-      }
-      if (rows != null) {
-        for (String[] row : rows) {
-          writer.write(formatRow(row, widths));
-        }
-      }
+      writer.write(content == null ? "" : content);
     } catch (IOException e) {
       throw new RuntimeException("Failed to export TXT file: " + e.getMessage(), e);
     }
 
     return file.getPath();
-  }
-
-  private static int[] computeColumnWidths(String[] headers, String[][] rows, int columnCount) {
-    int[] widths = new int[columnCount];
-
-    if (headers != null) {
-      for (int c = 0; c < columnCount; c++) {
-        widths[c] = lengthOf(headers[c]);
-      }
-    }
-
-    if (rows != null) {
-      for (String[] row : rows) {
-        if (row == null) continue;
-        for (int c = 0; c < columnCount && c < row.length; c++) {
-          widths[c] = Math.max(widths[c], lengthOf(row[c]));
-        }
-      }
-    }
-
-    return widths;
-  }
-
-  private static String formatRow(String[] fields, int[] widths) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < widths.length; i++) {
-      String value = (fields != null && i < fields.length && fields[i] != null) ? fields[i] : "";
-      boolean isLastColumn = (i == widths.length - 1);
-      sb.append(isLastColumn ? value : pad(value, widths[i]));
-      if (!isLastColumn) sb.append(COLUMN_GAP);
-    }
-    sb.append(System.lineSeparator());
-    return sb.toString();
-  }
-
-  private static String separatorLine(int[] widths) {
-    int total = 0;
-    for (int w : widths) total += w;
-    total += COLUMN_GAP.length() * Math.max(0, widths.length - 1);
-
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < total; i++) sb.append('-');
-    sb.append(System.lineSeparator());
-    return sb.toString();
-  }
-
-  private static String pad(String value, int width) {
-    StringBuilder sb = new StringBuilder(value);
-    while (sb.length() < width) sb.append(' ');
-    return sb.toString();
-  }
-
-  private static int lengthOf(String value) {
-    return (value == null) ? 0 : value.length();
   }
 }
