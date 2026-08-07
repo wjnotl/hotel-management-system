@@ -6,9 +6,6 @@ import entity.HousekeepingSettings;
 import entity.HousekeepingStaff;
 import entity.HousekeepingTask;
 import entity.Room;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,6 +16,7 @@ import repo.HousekeepingStaffRepo;
 import repo.HousekeepingTaskRepo;
 import repo.RoomRepo;
 import util.ConsoleUtil;
+import util.TxtExportUtil;
 import view.housekeeping.HousekeepingReportView;
 import view.housekeeping.HousekeepingReportView.ReportResult;
 
@@ -382,6 +380,10 @@ public class HousekeepingReportController {
         queueWaitSampleCount == 0 ? 0.0 : queueWaitTotalMin / queueWaitSampleCount);
   }
 
+  // ================= TXT EXPORT (delegates to the shared TxtExportUtil, same as frontdesk)
+  // =================
+  // TxtExportUtil handles timestamping, folder placement (exports/housekeeping/...), and the
+  // actual file write. This method's only job is to build the report content as a String.
   private void exportReportToFile(
       String dateRangeLabel,
       String staffLabel,
@@ -389,69 +391,66 @@ public class HousekeepingReportController {
       String taskTypeLabel,
       ReportResult r) {
 
-    String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-    String fileName = "housekeeping_report_" + timestamp + ".txt";
+    StringBuilder sb = new StringBuilder();
+    sb.append("HOUSEKEEPING REPORT\n");
+    sb.append("Generated: ").append(LocalDateTime.now()).append("\n");
+    sb.append("------------------------------------------------------\n");
+    sb.append("Filters Applied:\n");
+    sb.append("  Date Range : ").append(dateRangeLabel).append("\n");
+    sb.append("  Staff      : ").append(staffLabel).append("\n");
+    sb.append("  Room Type  : ").append(roomTypeLabel).append("\n");
+    sb.append("  Task Type  : ").append(taskTypeLabel).append("\n");
+    sb.append("  Matched Tasks: ").append(r.totalMatched).append("\n");
+    sb.append("------------------------------------------------------\n\n");
 
-    try (FileWriter writer = new FileWriter(fileName)) {
-      writer.write("HOUSEKEEPING REPORT\n");
-      writer.write("Generated: " + LocalDateTime.now() + "\n");
-      writer.write("------------------------------------------------------\n");
-      writer.write("Filters Applied:\n");
-      writer.write("  Date Range : " + dateRangeLabel + "\n");
-      writer.write("  Staff      : " + staffLabel + "\n");
-      writer.write("  Room Type  : " + roomTypeLabel + "\n");
-      writer.write("  Task Type  : " + taskTypeLabel + "\n");
-      writer.write("  Matched Tasks: " + r.totalMatched + "\n");
-      writer.write("------------------------------------------------------\n\n");
+    sb.append("1. Average Cleaning Time per Room Type\n");
+    sb.append("   LUXURY   : ")
+        .append(formatAvgForFile(r.cleanTimeAvgLuxury, r.cleanTimeCountLuxury))
+        .append("\n");
+    sb.append("   SUITE    : ")
+        .append(formatAvgForFile(r.cleanTimeAvgSuite, r.cleanTimeCountSuite))
+        .append("\n");
+    sb.append("   STANDARD : ")
+        .append(formatAvgForFile(r.cleanTimeAvgStandard, r.cleanTimeCountStandard))
+        .append("\n\n");
 
-      writer.write("1. Average Cleaning Time per Room Type\n");
-      writer.write(
-          "   LUXURY   : " + formatAvgForFile(r.cleanTimeAvgLuxury, r.cleanTimeCountLuxury) + "\n");
-      writer.write(
-          "   SUITE    : " + formatAvgForFile(r.cleanTimeAvgSuite, r.cleanTimeCountSuite) + "\n");
-      writer.write(
-          "   STANDARD : "
-              + formatAvgForFile(r.cleanTimeAvgStandard, r.cleanTimeCountStandard)
-              + "\n\n");
+    sb.append("2. Staff Productivity (Tasks Completed per Shift)\n");
+    sb.append("   MORNING   : ").append(r.productivityMorning).append(" task(s)\n");
+    sb.append("   AFTERNOON : ").append(r.productivityAfternoon).append(" task(s)\n");
+    sb.append("   NIGHT     : ").append(r.productivityNight).append(" task(s)\n\n");
 
-      writer.write("2. Staff Productivity (Tasks Completed per Shift)\n");
-      writer.write("   MORNING   : " + r.productivityMorning + " task(s)\n");
-      writer.write("   AFTERNOON : " + r.productivityAfternoon + " task(s)\n");
-      writer.write("   NIGHT     : " + r.productivityNight + " task(s)\n\n");
+    sb.append("3. Overdue / Skipped Task Rate\n");
+    sb.append("   Skipped : ")
+        .append(r.skippedCount)
+        .append(" / ")
+        .append(r.totalMatched)
+        .append(" (")
+        .append(String.format("%.1f%%", r.skippedRatePercent))
+        .append(")\n");
+    sb.append("   Overdue : ")
+        .append(r.overdueCount)
+        .append(" / ")
+        .append(r.totalMatched)
+        .append(" (")
+        .append(String.format("%.1f%%", r.overdueRatePercent))
+        .append(")\n\n");
 
-      writer.write("3. Overdue / Skipped Task Rate\n");
-      writer.write(
-          "   Skipped : "
-              + r.skippedCount
-              + " / "
-              + r.totalMatched
-              + " ("
-              + String.format("%.1f%%", r.skippedRatePercent)
-              + ")\n");
-      writer.write(
-          "   Overdue : "
-              + r.overdueCount
-              + " / "
-              + r.totalMatched
-              + " ("
-              + String.format("%.1f%%", r.overdueRatePercent)
-              + ")\n\n");
+    sb.append("4. Maintenance Flag Frequency\n");
+    sb.append("   ")
+        .append(r.maintenanceCount)
+        .append(" / ")
+        .append(r.totalMatched)
+        .append(" (")
+        .append(String.format("%.1f%%", r.maintenanceFrequencyPercent))
+        .append(")\n\n");
 
-      writer.write("4. Maintenance Flag Frequency\n");
-      writer.write(
-          "   "
-              + r.maintenanceCount
-              + " / "
-              + r.totalMatched
-              + " ("
-              + String.format("%.1f%%", r.maintenanceFrequencyPercent)
-              + ")\n\n");
+    sb.append("5. Average Queue Wait Time Before Dequeued\n");
+    sb.append("   ").append(formatAvgForFile(r.avgQueueWaitMinutes, r.queueWaitCount)).append("\n");
 
-      writer.write("5. Average Queue Wait Time Before Dequeued\n");
-      writer.write("   " + formatAvgForFile(r.avgQueueWaitMinutes, r.queueWaitCount) + "\n");
-
-      reportView.printExportSuccess(new File(fileName).getAbsolutePath());
-    } catch (IOException e) {
+    try {
+      String path = TxtExportUtil.export("housekeeping/report", sb.toString());
+      reportView.printExportSuccess(path);
+    } catch (RuntimeException e) {
       reportView.printExportFailure(e.getMessage());
     }
   }

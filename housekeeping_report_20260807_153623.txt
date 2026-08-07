@@ -1,0 +1,30 @@
+HOUSEKEEPING REPORT
+Generated: 2026-08-07T15:36:23.707631400
+------------------------------------------------------
+Filters Applied:
+  Date Range : ALL
+  Staff      : EMP-001 (Zhi Kang)
+  Room Type  : ALL
+  Task Type  : ALL
+  Matched Tasks: 1
+------------------------------------------------------
+
+1. Average Cleaning Time per Room Type
+   LUXURY   : N/A (no data)
+   SUITE    : N/A (no data)
+   STANDARD : N/A (no data)
+
+2. Staff Productivity (Tasks Completed per Shift)
+   MORNING   : 0 task(s)
+   AFTERNOON : 0 task(s)
+   NIGHT     : 0 task(s)
+
+3. Overdue / Skipped Task Rate
+   Skipped : 0 / 1 (0.0%)
+   Overdue : 1 / 1 (100.0%)
+
+4. Maintenance Flag Frequency
+   0 / 1 (0.0%)
+
+5. Average Queue Wait Time Before Dequeued
+   0.0 min (n=1)
