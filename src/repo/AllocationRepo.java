@@ -132,9 +132,6 @@ public class AllocationRepo {
               if (res != null) {
                 Guest guest = guestRepo.findById(res.getGuestId());
                 if (guest != null) {
-                  guest.setStrikeCount(guest.getStrikeCount() + 1);
-                  guestRepo.updateGuest(guest);
-
                   Member member =
                       (guest.getMemberId() != null)
                           ? memberRepo.findById(guest.getMemberId())
@@ -148,9 +145,14 @@ public class AllocationRepo {
                               ? config.getGoldMaxStrikes()
                               : config.getSilverMaxStrikes();
 
+                  // Check if already at the limit?
                   if (guest.getStrikeCount() >= maxStrikes) {
                     res.setStatus(Reservation.Status.NO_SHOW);
+                    vipReservationRepo.updateReservation(res);
                   } else {
+                    // Under the limit: increment then re-queue
+                    guest.setStrikeCount(guest.getStrikeCount() + 1);
+                    guestRepo.updateGuest(guest);
                     int newScore =
                         vipReservationRepo.calculatePriorityScore(
                             res, guest, member, configRepo.getConfig());
@@ -160,7 +162,6 @@ public class AllocationRepo {
                     vipReservationRepo.addReservation(
                         res, newScore, guestRepo, memberRepo, configRepo);
                   }
-                  vipReservationRepo.updateReservation(res);
                 }
               }
 
@@ -243,6 +244,7 @@ public class AllocationRepo {
   }
 
   public int recalculateActiveGraceTimers(
+      RoomRepo roomRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
@@ -278,7 +280,7 @@ public class AllocationRepo {
     save();
 
     // Re-arm auto-expiration scheduler with updated top item
-    scheduleNextAutoExpirationTask(null, vipReservationRepo, guestRepo, memberRepo, configRepo);
+    scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
 
     return updatedCount;
   }

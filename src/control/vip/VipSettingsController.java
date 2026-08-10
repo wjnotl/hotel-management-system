@@ -8,6 +8,7 @@ import entity.VipSystemConfig;
 import repo.AllocationRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
+import repo.RoomRepo;
 import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
@@ -21,18 +22,21 @@ public class VipSettingsController {
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final AllocationRepo allocationRepo;
+  private final RoomRepo roomRepo;
 
   public VipSettingsController(
       VipSystemConfigRepo configRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
-      AllocationRepo allocationRepo) {
+      AllocationRepo allocationRepo,
+      RoomRepo roomRepo) {
     this.configRepo = configRepo;
     this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.allocationRepo = allocationRepo;
+    this.roomRepo = roomRepo;
   }
 
   public void startSettingsManagement() {
@@ -1145,7 +1149,7 @@ public class VipSettingsController {
         if (updateActiveGraceTimers) {
           processedAllocations =
               allocationRepo.recalculateActiveGraceTimers(
-                  vipReservationRepo, guestRepo, memberRepo, configRepo);
+                  roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
         }
 
         settingsView.displayApplySuccessScreen(processedWaitlist + processedAllocations);

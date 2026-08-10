@@ -245,12 +245,7 @@ public class VipManageAllocationController {
             continue; // Back to No-Show Submenu
           }
 
-          if (guest != null) {
-            guest.setStrikeCount(guest.getStrikeCount() + 1);
-            guestRepo.updateGuest(guest);
-          }
-
-          // Check strike threshold
+          // Check already at the limit?
           if (guest != null && guest.getStrikeCount() >= maxStrikes) {
             if (reservation != null) {
               reservation.setStatus(Reservation.Status.NO_SHOW);
@@ -265,7 +260,12 @@ public class VipManageAllocationController {
             return true;
           }
 
-          // Re-queue guest if strikes < maxStrikes
+          // Under the limit: increment strike then re-queue
+          if (guest != null) {
+            guest.setStrikeCount(guest.getStrikeCount() + 1);
+            guestRepo.updateGuest(guest);
+          }
+
           if (reservation != null) {
             int newScore = calculateDynamicPriorityScore(guest, member);
             reservation.setStatus(Reservation.Status.WAITING);

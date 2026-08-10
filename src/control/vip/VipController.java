@@ -64,7 +64,12 @@ public class VipController {
               .startReportManagement();
         } else if ("4".equals(choice)) {
           new VipSettingsController(
-                  vipSystemConfigRepo, vipReservationRepo, guestRepo, memberRepo, allocationRepo)
+                  vipSystemConfigRepo,
+                  vipReservationRepo,
+                  guestRepo,
+                  memberRepo,
+                  allocationRepo,
+                  roomRepo)
               .startSettingsManagement();
         } else if ("5".equals(choice)) {
           return;
