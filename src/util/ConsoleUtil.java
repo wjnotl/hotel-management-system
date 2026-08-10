@@ -1,9 +1,9 @@
 package util;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class ConsoleUtil {
@@ -312,12 +312,13 @@ public class ConsoleUtil {
   public static void startRecording() {
     if (originalOut == null) {
       originalOut = System.out;
-      System.setOut(new PrintStream(new DualStream(originalOut, buffer), true));
+      System.setOut(
+          new PrintStream(new DualStream(originalOut, buffer), true, StandardCharsets.UTF_8));
     }
   }
 
   public static String getCapturedString() {
-    return buffer.toString();
+    return buffer.toString(StandardCharsets.UTF_8);
   }
 
   public static void clearBuffer() {
@@ -332,36 +333,33 @@ public class ConsoleUtil {
   }
 
   private static class DualStream extends OutputStream {
-    private final OutputStream out1;
-    private final OutputStream out2;
+    private final PrintStream terminal;
+    private final ByteArrayOutputStream buffer;
 
-    public DualStream(OutputStream out1, OutputStream out2) {
-      this.out1 = out1;
-      this.out2 = out2;
+    public DualStream(PrintStream terminal, ByteArrayOutputStream buffer) {
+      this.terminal = terminal;
+      this.buffer = buffer;
     }
 
     @Override
-    public void write(int b) throws IOException {
-      out1.write(b);
-      out2.write(b);
+    public void write(int b) {
+      terminal.write(b);
+      buffer.write(b);
     }
 
     @Override
-    public void write(byte[] b, int off, int len) throws IOException {
-      out1.write(b, off, len);
-      out2.write(b, off, len);
+    public void write(byte[] b, int off, int len) {
+      // Decode bytes to String so System.out uses Windows native terminal rendering
+      String text = new String(b, off, len, StandardCharsets.UTF_8);
+      terminal.print(text);
+
+      // Save raw UTF-8 bytes to memory buffer for export
+      buffer.write(b, off, len);
     }
 
     @Override
-    public void flush() throws IOException {
-      out1.flush();
-      out2.flush();
-    }
-
-    @Override
-    public void close() throws IOException {
-      out1.close();
-      out2.close();
+    public void flush() {
+      terminal.flush();
     }
   }
 }
