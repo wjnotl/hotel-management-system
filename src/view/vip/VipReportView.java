@@ -199,6 +199,9 @@ public class VipReportView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("REPORT 1: WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT", 88);
 
+    ConsoleUtil.clearBuffer();
+    ConsoleUtil.startRecording();
+
     System.out.println(
         "Generated At: "
             + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
@@ -260,9 +263,13 @@ public class VipReportView {
 
     printSlaSummaryBlock(matchedList, guestList, memberList, config);
 
+    ConsoleUtil.stopRecording();
+
     System.out.println(
-        "\n[S] Modify Filter Matrix    [R] Refresh Report      [E] Exit to Analytics Hub\n");
-    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E'});
+        "\n"
+            + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
+            + " to Analytics Hub\n");
+    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
   }
 
   public GetMenuInputResult renderPenaltyReportScreen(
@@ -276,6 +283,9 @@ public class VipReportView {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("REPORT 2: VIP PENALTY & EVICTION AUDIT REPORT", 88);
+
+    ConsoleUtil.clearBuffer();
+    ConsoleUtil.startRecording();
 
     System.out.println(
         "Generated At: "
@@ -340,9 +350,13 @@ public class VipReportView {
 
     printPenaltySummaryBlock(matchedList, guestList, memberList, config);
 
+    ConsoleUtil.stopRecording();
+
     System.out.println(
-        "\n[S] Modify Filter Matrix    [R] Refresh Report      [E] Exit to Analytics Hub\n");
-    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E'});
+        "\n"
+            + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
+            + " to Analytics Hub\n");
+    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
   }
 
   public GetMenuInputResult renderHoldingReportScreen(
@@ -356,6 +370,9 @@ public class VipReportView {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("REPORT 3: ROOM HOLDING BAY & GRACE WINDOW AUDIT", 88);
+
+    ConsoleUtil.clearBuffer();
+    ConsoleUtil.startRecording();
 
     System.out.println(
         "Generated At: "
@@ -421,9 +438,13 @@ public class VipReportView {
 
     printHoldingSummaryBlock(matchedList, guestList, memberList, config);
 
+    ConsoleUtil.stopRecording();
+
     System.out.println(
-        "\n[S] Modify Filter Matrix    [R] Refresh Report      [E] Exit to Analytics Hub\n");
-    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E'});
+        "\n"
+            + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
+            + " to Analytics Hub\n");
+    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
   }
 
   private void printSlaSummaryBlock(
@@ -656,5 +677,13 @@ public class VipReportView {
       if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) return m;
     }
     return null;
+  }
+
+  public void displayExportSuccessScreen(String filePath) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("REPORT EXPORT COMPLETE");
+    System.out.println(" >> SUCCESS: Report successfully exported to disk!");
+    System.out.println(" >> File Location: " + filePath + "\n");
+    ConsoleUtil.printContinueMessage();
   }
 }
