@@ -226,4 +226,21 @@ public class VipSettingsView {
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
+
+  public int displayReportAlertTargetsMenu() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("REPORT ALERT TARGET THRESHOLDS (%)");
+    System.out.println("1. Tier SLA Attainment Targets (%)");
+    System.out.println("2. Tier Max Eviction Rate Limits (%)");
+    System.out.println("3. Tier Max Grace Utilization Limits (%)");
+    System.out.println("4. Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+  }
+
+  public void displayResetSuccessScreen() {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> SUCCESS: System settings reset to baseline factory defaults.\n");
+    ConsoleUtil.printContinueMessage();
+  }
 }
