@@ -1,9 +1,16 @@
 package util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.Scanner;
 
 public class ConsoleUtil {
   private static final Scanner scanner = new Scanner(System.in);
+
+  private static PrintStream originalOut;
+  private static final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
   public static void clearScreen() {
     System.out.print("\033\143");
@@ -299,6 +306,62 @@ public class ConsoleUtil {
       return choice;
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Invalid input! Please provide a valid decimal number.");
+    }
+  }
+
+  public static void startRecording() {
+    if (originalOut == null) {
+      originalOut = System.out;
+      System.setOut(new PrintStream(new DualStream(originalOut, buffer), true));
+    }
+  }
+
+  public static String getCapturedString() {
+    return buffer.toString();
+  }
+
+  public static void clearBuffer() {
+    buffer.reset();
+  }
+
+  public static void stopRecording() {
+    if (originalOut != null) {
+      System.setOut(originalOut);
+      originalOut = null;
+    }
+  }
+
+  private static class DualStream extends OutputStream {
+    private final OutputStream out1;
+    private final OutputStream out2;
+
+    public DualStream(OutputStream out1, OutputStream out2) {
+      this.out1 = out1;
+      this.out2 = out2;
+    }
+
+    @Override
+    public void write(int b) throws IOException {
+      out1.write(b);
+      out2.write(b);
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) throws IOException {
+      out1.write(b, off, len);
+      out2.write(b, off, len);
+    }
+
+    @Override
+    public void flush() throws IOException {
+      out1.flush();
+      out2.flush();
+    }
+
+    @Override
+    public void close() throws IOException {
+      out1.close();
+      out2.close();
     }
   }
 }

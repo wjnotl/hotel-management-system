@@ -12,6 +12,7 @@ import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
+import util.TxtExportUtil;
 import view.vip.VipReportView;
 
 public class VipReportController {
@@ -153,6 +154,9 @@ public class VipReportController {
         VipSystemConfig config = configRepo.getConfig();
         GetMenuInputResult result;
 
+        ConsoleUtil.clearBuffer();
+        ConsoleUtil.startRecording();
+
         if (reportType == 1) {
           result =
               reportView.renderSlaReportScreen(
@@ -185,14 +189,42 @@ public class VipReportController {
                   recordLimit);
         }
 
-        if ("E".equalsIgnoreCase(result.input)) {
-          return true; // Return true to signal Exit to Analytics Hub!
+        String capturedReportText = ConsoleUtil.getCapturedString();
+
+        if ("Q".equalsIgnoreCase(result.input)) {
+          return true; // Return true to signal Quit to Analytics Hub!
         } else if ("S".equalsIgnoreCase(result.input)) {
           return false; // Return false to re-open Filter Control Panel!
         } else if ("R".equalsIgnoreCase(result.input)) {
           // Refresh live view
+        } else if ("E".equalsIgnoreCase(result.input)) {
+
+          String filePrefix = "unknown_report";
+          String reportTitle = "UNKNOWN REPORT";
+
+          switch (reportType) {
+            case 1:
+              filePrefix = "vip/sla_report";
+              reportTitle = "WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT REPORT";
+              break;
+            case 2:
+              filePrefix = "vip/penalty_report";
+              reportTitle = "VIP PENALTY & EVICTION AUDIT REPORT";
+              break;
+            case 3:
+              filePrefix = "vip/holding_report";
+              reportTitle = "ROOM HOLDING BAY & GRACE WINDOW AUDIT REPORT";
+              break;
+            default:
+              throw new IllegalArgumentException("Invalid report type: " + reportType);
+          }
+
+          String exportedPath =
+              TxtExportUtil.export(filePrefix, reportTitle + "\n" + capturedReportText);
+          reportView.displayExportSuccessScreen(exportedPath);
         }
       } catch (Exception e) {
+        ConsoleUtil.stopRecording();
         ConsoleUtil.printError(e.getMessage());
       }
     }
