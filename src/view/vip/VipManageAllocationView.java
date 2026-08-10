@@ -321,6 +321,51 @@ public class VipManageAllocationView {
     return null;
   }
 
+  public Integer promptStayDuration(AllocationEntry entry, Guest guest) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM ALLOCATION & CHECK-IN");
+    System.out.println(" Target Guest   : " + (guest != null ? guest.getName() : "N/A"));
+    System.out.println(" Room Assigned  : Room " + entry.getAssignedRoomNumber());
+    System.out.println("------------------------------------------------------");
+    System.out.println(" Press ENTER or 'C' to Cancel & Return\n");
+
+    return ConsoleUtil.getIntegerInput(
+        " Enter Duration of Stay (Number of Days/Nights) [1 - 30]: ", 1, 30);
+  }
+
+  public void displayEvictionLockoutScreen(Guest guest) {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: EVICTION LOCKOUT ENFORCED");
+    System.out.println(
+        "Guest "
+            + (guest != null ? guest.getName() : "N/A")
+            + " has accumulated "
+            + (guest != null ? guest.getStrikeCount() : 0)
+            + " strikes (MAX LIMIT REACHED).");
+    System.out.println("Cannot re-enter queue. Reservation evicted and room freed.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  public void displayStrikeIssuedScreen(Guest guest) {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: STRIKE ISSUED & RE-QUEUED");
+    System.out.println(
+        "Guest "
+            + (guest != null ? guest.getName() : "N/A")
+            + " strike count is now "
+            + (guest != null ? guest.getStrikeCount() : 0)
+            + ".");
+    System.out.println("Reservation re-entered waitlist queue.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  public void displayEvictionCompletedScreen() {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: EVICTION COMPLETED");
+    System.out.println("Booking record marked as NO_SHOW and removed from active system.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
   private String formatTimerCountdown(long expirationMs) {
     long diffMs = expirationMs - System.currentTimeMillis();
     if (diffMs <= 0) {

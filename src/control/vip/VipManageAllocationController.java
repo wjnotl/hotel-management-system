@@ -208,18 +208,9 @@ public class VipManageAllocationController {
   private Integer promptStayDuration(AllocationEntry entry, Guest guest) {
     while (true) {
       try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CONFIRM ALLOCATION & CHECK-IN");
-        System.out.println(" Target Guest   : " + (guest != null ? guest.getName() : "N/A"));
-        System.out.println(" Room Assigned  : Room " + entry.getAssignedRoomNumber());
-        System.out.println("------------------------------------------------------");
-        System.out.println(" Press ENTER or 'C' to Cancel & Return\n");
+        Integer days = allocationView.promptStayDuration(entry, guest);
 
-        Integer days =
-            ConsoleUtil.getIntegerInput(
-                " Enter Duration of Stay (Number of Days/Nights) [1 - 30]: ", 1, 30);
-
-        return days; // Returns integer or null (if cancelled)
+        return days;
       } catch (Exception e) {
         ConsoleUtil.printError("Invalid input format! Please enter a valid number of days (1-30).");
       }
@@ -270,16 +261,7 @@ public class VipManageAllocationController {
             allocationRepo.removeAllocationEntry(
                 entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
-            ConsoleUtil.clearScreen();
-            System.out.println(">> STATUS: EVICTION LOCKOUT ENFORCED");
-            System.out.println(
-                "Guest "
-                    + guest.getName()
-                    + " has accumulated "
-                    + guest.getStrikeCount()
-                    + " strikes (MAX LIMIT REACHED).");
-            System.out.println("Cannot re-enter queue. Reservation evicted and room freed.\n");
-            ConsoleUtil.printContinueMessage();
+            allocationView.displayEvictionLockoutScreen(guest);
             return true;
           }
 
@@ -297,16 +279,7 @@ public class VipManageAllocationController {
           allocationRepo.removeAllocationEntry(
               entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
-          ConsoleUtil.clearScreen();
-          System.out.println(">> STATUS: STRIKE ISSUED & RE-QUEUED");
-          System.out.println(
-              "Guest "
-                  + (guest != null ? guest.getName() : "N/A")
-                  + " strike count is now "
-                  + (guest != null ? guest.getStrikeCount() : 0)
-                  + ".");
-          System.out.println("Reservation re-entered waitlist queue.\n");
-          ConsoleUtil.printContinueMessage();
+          allocationView.displayStrikeIssuedScreen(guest);
           return true;
 
         } else if (choice == 2) {
@@ -331,10 +304,7 @@ public class VipManageAllocationController {
           allocationRepo.removeAllocationEntry(
               entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
-          ConsoleUtil.clearScreen();
-          System.out.println(">> STATUS: EVICTION COMPLETED");
-          System.out.println("Booking record marked as NO_SHOW and removed from active system.\n");
-          ConsoleUtil.printContinueMessage();
+          allocationView.displayEvictionCompletedScreen();
           return true;
 
         } else if (choice == 3) {
