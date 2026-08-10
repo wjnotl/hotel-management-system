@@ -1,5 +1,6 @@
 package control;
 
+import control.booking.BookingController;
 import control.frontdesk.FrontDeskController;
 import control.housekeeping.HouseKeepingController;
 import control.vip.VipController;
@@ -19,6 +20,7 @@ public class HotelManagementSystem {
   private static MemberRepo memberRepo = new MemberRepo();
   private static RoomRepo roomRepo = new RoomRepo();
   private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
+  private static StandardReservationRepo standardReservationRepo = new StandardReservationRepo();
   private static VipReservationRepo vipReservationRepo = new VipReservationRepo();
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
 
@@ -37,7 +39,11 @@ public class HotelManagementSystem {
         String choice = mainMenuView.displayMainMenu();
         System.out.println(choice);
 
-        if ("2".equals(choice)) {
+        if ("1".equals(choice)) {
+          new BookingController(
+                  standardReservationRepo, vipReservationRepo, guestRepo, memberRepo, roomRepo)
+              .start();
+        } else if ("2".equals(choice)) {
           new VipController(
                   allocationRepo,
                   guestRepo,
