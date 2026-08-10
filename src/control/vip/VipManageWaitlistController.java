@@ -166,10 +166,7 @@ public class VipManageWaitlistController {
           if (choice == 1) {
             guest.setStrikeCount(0);
             guestRepo.updateGuest(guest);
-            ConsoleUtil.clearScreen();
-            System.out.println(
-                ">> OVERRIDE AUTHORIZED: Strike count reset to 0 for " + guest.getName() + ".\n");
-            ConsoleUtil.printContinueMessage();
+            waitlistView.displayStrikeResetOverrideScreen(guest);
           } else if (choice == 2) {
             ConsoleUtil.printError("Eviction lockout enforced. Guest entry denied.");
             return;
@@ -215,20 +212,7 @@ public class VipManageWaitlistController {
         vipReservationRepo.addReservation(
             newRes, baseScore, guestRepo, memberRepo, vipSystemConfigRepo);
 
-        ConsoleUtil.clearScreen();
-        System.out.println(">> STATUS: SUCCESS");
-        System.out.println(
-            "Reservation "
-                + resId
-                + " (Confirmation Code: "
-                + confNum
-                + ")"
-                + " created for "
-                + guest.getName()
-                + " in "
-                + roomType.name()
-                + " queue.\n");
-        ConsoleUtil.printContinueMessage();
+        waitlistView.displayAddGuestSuccessScreen(resId, confNum, guest, roomType);
         break;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -291,13 +275,7 @@ public class VipManageWaitlistController {
           if (confirmed) {
             vipReservationRepo.cancelReservation(
                 selected, guestRepo, memberRepo, vipSystemConfigRepo);
-            ConsoleUtil.clearScreen();
-            System.out.println(">> STATUS: SUCCESS");
-            System.out.println(
-                "Reservation "
-                    + selected.getReservationId()
-                    + " has been removed from the waitlist.\n");
-            ConsoleUtil.printContinueMessage();
+            waitlistView.displayCancelSuccessScreen(selected.getReservationId());
             break;
           }
         } else if (action == 3) {

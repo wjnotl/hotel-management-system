@@ -937,14 +937,8 @@ public class VipSettingsController {
     while (true) {
       try {
         VipSystemConfig config = configRepo.getConfig();
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("REPORT ALERT TARGET THRESHOLDS (%)");
-        System.out.println("1. Tier SLA Attainment Targets (%)");
-        System.out.println("2. Tier Max Eviction Rate Limits (%)");
-        System.out.println("3. Tier Max Grace Utilization Limits (%)");
-        System.out.println("4. Back\n");
+        int choice = settingsView.displayReportAlertTargetsMenu();
 
-        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
         if (choice == 4) break;
 
         if (choice == 1) {
@@ -1174,9 +1168,7 @@ public class VipSettingsController {
       config.resetToDefaults();
       configRepo.updateConfig(config);
 
-      ConsoleUtil.clearScreen();
-      System.out.println(">> SUCCESS: System settings reset to baseline factory defaults.\n");
-      ConsoleUtil.printContinueMessage();
+      settingsView.displayResetSuccessScreen();
     }
   }
 }

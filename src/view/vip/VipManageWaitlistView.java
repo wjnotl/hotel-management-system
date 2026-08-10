@@ -666,6 +666,38 @@ public class VipManageWaitlistView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
+  public void displayStrikeResetOverrideScreen(Guest guest) {
+    ConsoleUtil.clearScreen();
+    System.out.println(
+        ">> OVERRIDE AUTHORIZED: Strike count reset to 0 for " + guest.getName() + ".\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  public void displayAddGuestSuccessScreen(
+      String resId, String confNum, Guest guest, Room.RoomType roomType) {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: SUCCESS");
+    System.out.println(
+        "Reservation "
+            + resId
+            + " (Confirmation Code: "
+            + confNum
+            + ")"
+            + " created for "
+            + guest.getName()
+            + " in "
+            + roomType.name()
+            + " queue.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  public void displayCancelSuccessScreen(String resId) {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: SUCCESS");
+    System.out.println("Reservation " + resId + " has been removed from the waitlist.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
   private boolean promptConfirm(String prompt) {
     while (true) {
       String choice = ConsoleUtil.getStringInput(prompt);
