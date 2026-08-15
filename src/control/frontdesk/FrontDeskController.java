@@ -5,7 +5,7 @@ import view.frontdesk.FrontDeskView;
 
 public class FrontDeskController {
   private final FrontDeskView frontDeskView = new FrontDeskView();
-  private final GuestInformationController guestInfoController = new GuestInformationController();
+  private final ManageGuestController manageGuestController = new ManageGuestController();
   private final ManageGuestCheckOutController manageGuestCheckOutController =
       new ManageGuestCheckOutController();
   private final ManageRoomStatusController manageRoomStatusController =
@@ -18,7 +18,7 @@ public class FrontDeskController {
         String choice = frontDeskView.displayMenu();
 
         if ("1".equals(choice)) {
-          guestInfoController.start();
+          manageGuestController.start();
         } else if ("2".equals(choice)) {
           manageGuestCheckOutController.start();
         } else if ("3".equals(choice)) {
