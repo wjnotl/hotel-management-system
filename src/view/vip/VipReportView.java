@@ -265,11 +265,17 @@ public class VipReportView {
 
     ConsoleUtil.stopRecording();
 
-    System.out.println(
-        "\n"
-            + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
-            + " to Analytics Hub\n");
-    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+    while (true) {
+      System.out.println(
+          "\n"
+              + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
+              + " to Analytics Hub\n");
+      try {
+        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public GetMenuInputResult renderPenaltyReportScreen(
@@ -352,11 +358,17 @@ public class VipReportView {
 
     ConsoleUtil.stopRecording();
 
-    System.out.println(
-        "\n"
-            + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
-            + " to Analytics Hub\n");
-    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+    while (true) {
+      System.out.println(
+          "\n"
+              + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
+              + " to Analytics Hub\n");
+      try {
+        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public GetMenuInputResult renderHoldingReportScreen(
@@ -440,11 +452,17 @@ public class VipReportView {
 
     ConsoleUtil.stopRecording();
 
-    System.out.println(
-        "\n"
-            + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
-            + " to Analytics Hub\n");
-    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+    while (true) {
+      System.out.println(
+          "\n"
+              + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
+              + " to Analytics Hub\n");
+      try {
+        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   private void printSlaSummaryBlock(

@@ -173,7 +173,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ADD GUEST TO WAITLIST");
     System.out.println("[Enter 'C' to Cancel]\n");
-    return ConsoleUtil.getStringInput("Enter Guest ID or Name: ");
+    return ConsoleUtil.getStringInput("Enter Guest ID, Name, IC/Passport, or Phone: ");
   }
 
   public boolean displayAddGuestConfirmationScreen(
@@ -239,7 +239,11 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
-    return promptConfirm("Add this guest to the " + roomType.name() + " waitlist queue? (Y/N): ");
+    GetMenuInputResult input =
+        ConsoleUtil.getMenuInput(
+            "Add this guest to the " + roomType.name() + " waitlist queue? (Y/N): ",
+            new char[] {'Y', 'N'});
+    return "Y".equalsIgnoreCase(input.input);
   }
 
   public boolean displayDequeueConfirmationScreen(
@@ -339,7 +343,10 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
-    return promptConfirm("Assign room & create allocation entry? (Y/N): ");
+    GetMenuInputResult input =
+        ConsoleUtil.getMenuInput(
+            "Assign room & create allocation entry? (Y/N): ", new char[] {'Y', 'N'});
+    return "Y".equalsIgnoreCase(input.input);
   }
 
   public boolean displayCancelConfirmationScreen(Reservation r, Guest g, Member m) {
@@ -405,8 +412,11 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
-    return promptConfirm(
-        "Are you sure you want to remove this reservation from the waitlist? (Y/N): ");
+    GetMenuInputResult input =
+        ConsoleUtil.getMenuInput(
+            "Are you sure you want to remove this reservation from the waitlist? (Y/N): ",
+            new char[] {'Y', 'N'});
+    return "Y".equalsIgnoreCase(input.input);
   }
 
   public void displayDequeueSuccessScreen(
@@ -492,7 +502,7 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println("\n1. Authorize Override (Reset Strikes to 0)");
-    System.out.println("2. Enforce Eviction Lockout (Deny Waitlist Access)\n");
+    System.out.println("2. Cancel / Go Back\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt();
   }
@@ -521,7 +531,9 @@ public class VipManageWaitlistView {
         new String[] {"Target Guest", g.getName() + " (" + g.getGuestId() + ")"}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Loyalty Member", (g.getMemberId() != null ? g.getMemberId() : "NONE (Not a Member)")},
+        new String[] {
+          "Loyalty Member", (g.getMemberId() != null ? g.getMemberId() : "NONE (Not a Member)")
+        },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
@@ -697,17 +709,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printContinueMessage();
   }
 
-  private boolean promptConfirm(String prompt) {
-    while (true) {
-      String choice = ConsoleUtil.getStringInput(prompt);
-      if (choice != null) {
-        choice = choice.trim().toUpperCase();
-        if ("Y".equalsIgnoreCase(choice)) return true;
-        if ("N".equalsIgnoreCase(choice)) return false;
-      }
-      System.out.println("Invalid input. Please enter 'Y' or 'N'.");
-    }
-  }
+
 
   private String formatTime(LocalDateTime dateTime) {
     if (dateTime == null) return "N/A";
@@ -724,6 +726,122 @@ public class VipManageWaitlistView {
         return g;
     }
     return null;
+  }
+
+  public Guest displayGuestDisambiguationScreen(
+      ListInterface<Guest> matches, ListInterface<Member> memberList, String searchQuery) {
+    if (matches == null || matches.isEmpty()) return null;
+
+    int pageSize = 10;
+    int totalMatches = matches.getNumberOfEntries();
+    int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
+    int currentPage = 1;
+
+    int[] columnWidths = {4, 10, 18, 18, 14, 18};
+
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setTruncate(2);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setTruncate(2);
+
+    while (true) {
+      ConsoleUtil.clearScreen();
+      ConsoleUtil.printTitleBox("MULTIPLE GUEST MATCHES FOUND");
+
+      System.out.println("Search Term: \"" + searchQuery + "\"");
+      if (totalMatches > pageSize) {
+        System.out.println("(Tip: If there are too many results, enter a more specific search query)");
+      }
+      System.out.println();
+
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+      TableUtil.printTableRow(
+          new String[] {
+            "NO.", "GUEST ID", "GUEST NAME", "IC / PASSPORT NO.", "PHONE NO.", "MEMBER TIER"
+          },
+          headerSettings);
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+      int startIndex = (currentPage - 1) * pageSize + 1;
+      int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+      int rowsOnPage = endIndex - startIndex + 1;
+
+      for (int i = startIndex; i <= endIndex; i++) {
+        Guest g = matches.getEntry(i);
+        if (g == null) continue;
+
+        Member m = (g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+        String icOrPass =
+            (g.getIcNumber() != null && !g.getIcNumber().isEmpty())
+                ? g.getIcNumber()
+                : (g.getPassportNumber() != null ? g.getPassportNumber() : "N/A");
+        String phone = (g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
+        String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+
+        int displayNum = i - startIndex + 1;
+        TableUtil.printTableRow(
+            new String[] {String.valueOf(displayNum), g.getGuestId(), g.getName(), icOrPass, phone, tierStr},
+            settings);
+      }
+
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+      System.out.printf(
+          "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, totalMatches);
+
+      if (totalPages > 1) {
+        System.out.println("[P] Previous Page    [N] Next Page    [C] Cancel / Refine Search");
+      } else {
+        System.out.println("[C] Cancel / Refine Search");
+      }
+      System.out.println();
+
+      try {
+        String rangeStr = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
+        GetMenuInputResult input =
+            ConsoleUtil.getMenuInput(
+                "Select guest index (" + rangeStr + ") or command: ",
+                1,
+                rowsOnPage,
+                new char[] {'P', 'N', 'C'});
+
+        if (!input.isNumber) {
+          char cmd = input.input.toUpperCase().charAt(0);
+          if (cmd == 'P') {
+            if (currentPage > 1) {
+              currentPage--;
+            } else {
+              ConsoleUtil.printError("Already on the first page!");
+            }
+          } else if (cmd == 'N') {
+            if (currentPage < totalPages) {
+              currentPage++;
+            } else {
+              ConsoleUtil.printError("Already on the last page!");
+            }
+          } else if (cmd == 'C') {
+            return null;
+          }
+        } else {
+          int rowIdx = input.getAsInt();
+          return matches.getEntry(startIndex + rowIdx - 1);
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   private Member findMember(ListInterface<Member> memberList, String memberId) {

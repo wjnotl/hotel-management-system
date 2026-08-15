@@ -132,7 +132,6 @@ public class VipManageAllocationView {
 
   public int displayAllocationDetailScreen(
       AllocationEntry entry, Reservation r, Guest g, Member m) {
-
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ALLOCATION DETAILS & SETTLEMENT");
 

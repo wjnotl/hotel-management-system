@@ -1113,7 +1113,7 @@ public class VipSettingsController {
     while (true) {
       try {
         int choice1 =
-            settingsView.promptApplyOptionWithBack(
+            promptApplyOptionWithBack(
                 "STRIKE THRESHOLD EVICTION",
                 "Automatically cancel and evict waiting guests who exceed the active Tier Strike"
                     + " Limits?");
@@ -1121,7 +1121,7 @@ public class VipSettingsController {
         boolean evictOverStrikes = (choice1 == 1);
 
         int choice2 =
-            settingsView.promptApplyOptionWithBack(
+            promptApplyOptionWithBack(
                 "BOILING STATUS RE-EVALUATION",
                 "Re-evaluate live wait times against active Patience Thresholds and update BOILING"
                     + " flags?");
@@ -1129,16 +1129,14 @@ public class VipSettingsController {
         boolean forceBoilingCheck = (choice2 == 1);
 
         int choice3 =
-            settingsView.promptApplyOptionWithBack(
+            promptApplyOptionWithBack(
                 "ACTIVE ALLOCATION GRACE TIMERS",
                 "Reset active countdown timers in the Holding Bay using the newly configured Grace"
                     + " Periods?");
         if (choice3 == 3) return;
         boolean updateActiveGraceTimers = (choice3 == 1);
 
-        boolean confirmExecution =
-            ConsoleUtil.showConfirmMessage(
-                "Confirm execution of selected queue reconciliation rules?");
+        boolean confirmExecution = promptConfirmExecution();
         if (!confirmExecution) return;
 
         int processedWaitlist =
@@ -1161,11 +1159,29 @@ public class VipSettingsController {
     }
   }
 
+  private int promptApplyOptionWithBack(String title, String description) {
+    while (true) {
+      try {
+        return settingsView.promptApplyOptionWithBack(title, description);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptConfirmExecution() {
+    while (true) {
+      try {
+        return ConsoleUtil.showConfirmMessage(
+            "Confirm execution of selected queue reconciliation rules?");
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
   private void handleResetToDefaults() {
-    boolean confirmed =
-        ConsoleUtil.showConfirmMessage(
-            "Are you sure you want to reset all VIP rules, weights, and strategies to factory"
-                + " defaults?");
+    boolean confirmed = promptResetToDefaultsConfirmation();
 
     if (confirmed) {
       VipSystemConfig config = configRepo.getConfig();
@@ -1173,6 +1189,18 @@ public class VipSettingsController {
       configRepo.updateConfig(config);
 
       settingsView.displayResetSuccessScreen();
+    }
+  }
+
+  private boolean promptResetToDefaultsConfirmation() {
+    while (true) {
+      try {
+        return ConsoleUtil.showConfirmMessage(
+            "Are you sure you want to reset all VIP rules, weights, and strategies to factory"
+                + " defaults?");
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 }

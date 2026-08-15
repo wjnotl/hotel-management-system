@@ -121,7 +121,7 @@ public class VipReportController {
           String sortStr = sortAttribute + " (" + sortDirection + ")";
 
           int confirmChoice =
-              reportView.displayExecutionConfirmationScreen(
+              promptExecutionConfirmation(
                   reportTitle, scopeStr, sortStr, filteredList.getNumberOfEntries(), recordLimit);
 
           if (confirmChoice == 1) {
@@ -136,6 +136,18 @@ public class VipReportController {
         } else if (choice == 9) {
           return; // Back to Hub
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptExecutionConfirmation(
+      String reportTitle, String scopeStr, String sortStr, int totalMatches, int limit) {
+    while (true) {
+      try {
+        return reportView.displayExecutionConfirmationScreen(
+            reportTitle, scopeStr, sortStr, totalMatches, limit);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -303,11 +315,21 @@ public class VipReportController {
       if (choice == 2) return 20;
       if (choice == 3) return 50;
       if (choice == 4) {
-        Integer custom = reportView.promptCustomRecordLimit();
+        Integer custom = promptCustomRecordLimit();
         return (custom == null) ? currentLimit : custom;
       }
       if (choice == 5) return 0; // 0 = Show All (Unlimited)
       if (choice == 6) return currentLimit;
+    }
+  }
+
+  private Integer promptCustomRecordLimit() {
+    while (true) {
+      try {
+        return reportView.promptCustomRecordLimit();
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 

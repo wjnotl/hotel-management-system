@@ -166,15 +166,7 @@ public class VipManageAllocationController {
     }
 
     // Confirmation step
-    boolean confirmed =
-        ConsoleUtil.showConfirmMessage(
-            "Complete check-in for "
-                + (guest != null ? guest.getName() : "Guest")
-                + " in Room "
-                + entry.getAssignedRoomNumber()
-                + " for "
-                + stayDays
-                + " day(s)?");
+    boolean confirmed = promptConfirmCheckIn(guest, entry.getAssignedRoomNumber(), stayDays);
 
     if (!confirmed) {
       return false; // Back to Detail Screen
@@ -202,6 +194,23 @@ public class VipManageAllocationController {
 
     allocationView.displayCheckInSuccessScreen(reservation, guest, room);
     return true; // Successfully checked in!
+  }
+
+  private boolean promptConfirmCheckIn(Guest guest, String roomNumber, int stayDays) {
+    while (true) {
+      try {
+        return ConsoleUtil.showConfirmMessage(
+            "Complete check-in for "
+                + (guest != null ? guest.getName() : "Guest")
+                + " in Room "
+                + roomNumber
+                + " for "
+                + stayDays
+                + " day(s)?");
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   // --- HELPER METHOD: STAY DURATION INPUT ---
@@ -236,11 +245,7 @@ public class VipManageAllocationController {
         int choice = allocationView.displayCancelResolutionMenu(guest, member, maxStrikes);
 
         if (choice == 1) {
-          boolean confirmStrike =
-              ConsoleUtil.showConfirmMessage(
-                  "Issue 1 strike to "
-                      + (guest != null ? guest.getName() : "Guest")
-                      + " and re-enter waitlist queue?");
+          boolean confirmStrike = promptConfirmStrike(guest);
           if (!confirmStrike) {
             continue; // Back to No-Show Submenu
           }
@@ -283,13 +288,7 @@ public class VipManageAllocationController {
           return true;
 
         } else if (choice == 2) {
-          boolean confirmEvict =
-              ConsoleUtil.showConfirmMessage(
-                  "Are you sure you want to PERMANENTLY EVICT "
-                      + (guest != null ? guest.getName() : "Guest")
-                      + " and free room "
-                      + entry.getAssignedRoomNumber()
-                      + "?");
+          boolean confirmEvict = promptConfirmEvict(guest, entry.getAssignedRoomNumber());
           if (!confirmEvict) {
             continue; // Back to No-Show Submenu
           }
@@ -310,6 +309,34 @@ public class VipManageAllocationController {
         } else if (choice == 3) {
           return false; // Back to Allocation Detail Screen
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptConfirmStrike(Guest guest) {
+    while (true) {
+      try {
+        return ConsoleUtil.showConfirmMessage(
+            "Issue 1 strike to "
+                + (guest != null ? guest.getName() : "Guest")
+                + " and re-enter waitlist queue?");
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptConfirmEvict(Guest guest, String roomNumber) {
+    while (true) {
+      try {
+        return ConsoleUtil.showConfirmMessage(
+            "Are you sure you want to PERMANENTLY EVICT "
+                + (guest != null ? guest.getName() : "Guest")
+                + " and free room "
+                + roomNumber
+                + "?");
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
