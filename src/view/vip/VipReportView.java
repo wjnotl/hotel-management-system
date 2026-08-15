@@ -451,7 +451,7 @@ public class VipReportView {
                 ? r.getAllocatedGraceMins()
                 : getGraceMinsForTier(m, config);
 
-        String timeUsedStr = calculateTimeUsedStr(r);
+        String timeUsedStr = calculateTimeUsedStr(r, m, config);
         String status = (r != null) ? r.getStatus().name() : "N/A";
         String utilPctStr = calculateGraceUsedPctStr(r, m, config);
 
@@ -716,19 +716,22 @@ public class VipReportView {
     return null;
   }
 
-  private String calculateTimeUsedStr(Reservation r) {
+  private String calculateTimeUsedStr(Reservation r, Member m, VipSystemConfig config) {
     if (r == null) return "N/A";
-    LocalDateTime startTime = r.getAllocatedTime();
-    if (startTime == null) {
-      startTime = r.getQueueArrivalTime();
+
+    int allowedGraceMins =
+        (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
+            ? r.getAllocatedGraceMins()
+            : getGraceMinsForTier(m, config);
+
+    if (r.getStatus() == Reservation.Status.NO_SHOW) {
+      return allowedGraceMins + " Mins";
     }
+
+    LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "N/A";
 
-    LocalDateTime endTime =
-        (r.getStatus() == Reservation.Status.CHECKED_IN && r.getAllocatedTime() != null)
-            ? r.getAllocatedTime()
-            : LocalDateTime.now();
-
+    LocalDateTime endTime = LocalDateTime.now();
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
     return elapsedMins + " Mins";
@@ -736,23 +739,21 @@ public class VipReportView {
 
   private String calculateGraceUsedPctStr(Reservation r, Member m, VipSystemConfig config) {
     if (r == null) return "0.0";
+
     int allowedGraceMins =
         (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
             ? r.getAllocatedGraceMins()
             : getGraceMinsForTier(m, config);
     if (allowedGraceMins <= 0) return "0.0";
 
-    LocalDateTime startTime = r.getAllocatedTime();
-    if (startTime == null) {
-      startTime = r.getQueueArrivalTime();
+    if (r.getStatus() == Reservation.Status.NO_SHOW) {
+      return "100.0";
     }
+
+    LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "0.0";
 
-    LocalDateTime endTime =
-        (r.getStatus() == Reservation.Status.CHECKED_IN && r.getAllocatedTime() != null)
-            ? r.getAllocatedTime()
-            : LocalDateTime.now();
-
+    LocalDateTime endTime = LocalDateTime.now();
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 

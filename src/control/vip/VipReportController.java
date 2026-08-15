@@ -98,7 +98,8 @@ public class VipReportController {
             state.roomTypeFilter,
             state.boilingFilter,
             state.sortAttribute,
-            state.sortDirection);
+            state.sortDirection,
+            reportType);
 
         String scopeStr = buildScopeString(state.searchQuery, state.tierFilter, state.roomTypeFilter,
             state.boilingFilter);
@@ -392,7 +393,8 @@ public class VipReportController {
       String roomType,
       String boiling,
       String sortAttr,
-      String sortDir) {
+      String sortDir,
+      int reportType) {
 
     if (source == null || source.isEmpty())
       return new ArrayList<>();
@@ -403,6 +405,17 @@ public class VipReportController {
       Reservation r = source.getEntry(i);
       if (r == null)
         continue;
+
+      // Report 3 is Room Holding Bay & Grace Window Audit: strictly include holding bay records
+      if (reportType == 3) {
+        boolean enteredHoldingBay = r.getAllocatedTime() != null
+            || r.getStatus() == Reservation.Status.ALLOCATED
+            || r.getStatus() == Reservation.Status.NO_SHOW
+            || r.getStatus() == Reservation.Status.CHECKED_IN;
+        if (!enteredHoldingBay) {
+          continue;
+        }
+      }
 
       Guest g = guestRepo.findById(r.getGuestId());
       Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
@@ -450,9 +463,13 @@ public class VipReportController {
 
     if ("PRIORITY SCORE".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
-          (r1, r2) -> isAsc
-              ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
-              : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore()));
+          (r1, r2) -> {
+            int cmp = isAsc
+                ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
+                : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
+          });
     } else if ("STRIKE COUNT".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
           (r1, r2) -> {
@@ -460,7 +477,10 @@ public class VipReportController {
             Guest g2 = guestRepo.findById(r2.getGuestId());
             int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
             int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
-            return isAsc ? Integer.compare(s1, s2) : Integer.compare(s2, s1);
+
+            int cmp = isAsc ? Integer.compare(s1, s2) : Integer.compare(s2, s1);
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
           });
     } else if ("GUEST NAME".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
@@ -469,14 +489,21 @@ public class VipReportController {
             Guest g2 = guestRepo.findById(r2.getGuestId());
             String n1 = (g1 != null && g1.getName() != null) ? g1.getName() : "";
             String n2 = (g2 != null && g2.getName() != null) ? g2.getName() : "";
-            return isAsc ? n1.compareToIgnoreCase(n2) : n2.compareToIgnoreCase(n1);
+
+            int cmp = isAsc ? n1.compareToIgnoreCase(n2) : n2.compareToIgnoreCase(n1);
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
           });
     } else {
       // Default: PHYSICAL WAIT TIME
       filtered.sort(
-          (r1, r2) -> isAsc
-              ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
-              : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime()));
+          (r1, r2) -> {
+            int cmp = isAsc
+                ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
+                : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
+          });
     }
 
     return filtered;

@@ -271,7 +271,7 @@ public class VipReservationRepo {
 
     double result =
         util.ExpressionEvaluator.evaluateInfix(config.getActiveFormulaInfix(), resolver);
-    return (int) Math.max(1000, Math.round(result));
+    return (int) Math.max(0, Math.round(result));
   }
 
   public int applySettingsToQueue(

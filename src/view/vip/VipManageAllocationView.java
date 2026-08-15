@@ -1,5 +1,6 @@
 package view.vip;
 
+import adt.ArrayList;
 import adt.ListInterface;
 import entity.AllocationEntry;
 import entity.Guest;
@@ -123,7 +124,7 @@ public class VipManageAllocationView {
     System.out.println("[S] Search Guests      [O] Change Sort Order   [R] Refresh Table");
 
     StringBuilder navLine = new StringBuilder();
-    adt.ArrayList<Character> validList = new adt.ArrayList<>();
+    ArrayList<Character> validList = new ArrayList<>();
     validList.add('S');
     validList.add('O');
     validList.add('R');

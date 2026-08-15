@@ -1,5 +1,6 @@
 package util;
 
+import adt.LinkedList;
 import adt.ListInterface;
 
 public class TableUtil {
@@ -179,10 +180,10 @@ public class TableUtil {
 
       ListInterface<String> lines;
       if (mode == OverflowMode.TRUNCATE) {
-        lines = new adt.LinkedList<>();
+        lines = new LinkedList<>();
         lines.add(TextUtil.truncate(text, width));
       } else if (mode == OverflowMode.TRUNCATE_AT) {
-        lines = new adt.LinkedList<>();
+        lines = new LinkedList<>();
         lines.add(TextUtil.truncate(text, customLimit));
       } else {
         lines = TextUtil.wrapText(text, width);

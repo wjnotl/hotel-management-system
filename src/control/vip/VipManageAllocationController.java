@@ -278,7 +278,7 @@ public class VipManageAllocationController {
             vipReservationRepo.updateReservation(reservation);
 
             // 2. Create a NEW reservation ID for the re-queued entry
-            int newScore = calculateDynamicPriorityScore(guest, member);
+            int newScore = vipReservationRepo.calculatePriorityScore(reservation, guest, member, config);
             String newResId = vipReservationRepo.generateReservationId();
             Reservation newRes =
                 new Reservation(
@@ -343,7 +343,7 @@ public class VipManageAllocationController {
             vipReservationRepo.updateReservation(reservation);
 
             // 2. Create a NEW reservation ID for the re-queued entry
-            int newScore = calculateDynamicPriorityScore(guest, member);
+            int newScore = vipReservationRepo.calculatePriorityScore(reservation, guest, member, config);
             String newResId = vipReservationRepo.generateReservationId();
             Reservation newRes =
                 new Reservation(
@@ -652,27 +652,5 @@ public class VipManageAllocationController {
     }
 
     return filtered;
-  }
-
-  private int calculateDynamicPriorityScore(Guest guest, Member member) {
-    if (member == null || member.getTier() == null) return 1000;
-    int tierBase;
-    switch (member.getTier()) {
-      case DIAMOND:
-        tierBase = 9000;
-        break;
-      case GOLD:
-        tierBase = 7000;
-        break;
-      case SILVER:
-        tierBase = 5000;
-        break;
-      default:
-        tierBase = 1000;
-        break;
-    }
-    int pointsBonus = Math.min(member.getPoints() / 10, 800);
-    int strikePenalty = (guest != null) ? (guest.getStrikeCount() * 500) : 0;
-    return Math.max(1000, tierBase + pointsBonus - strikePenalty);
   }
 }
