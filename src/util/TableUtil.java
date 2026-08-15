@@ -107,25 +107,46 @@ public class TableUtil {
 
     switch (position) {
       case TOP:
-        borders = new String[] {"╔", "╦", "╗"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╔", "╦", "╗"};
         break;
       case MIDDLE:
-        borders = new String[] {"╠", "╬", "╣"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╠", "╬", "╣"};
         break;
       case BOTTOM:
-        borders = new String[] {"╚", "╩", "╝"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╚", "╩", "╝"};
         break;
       case HEADER_CLOSE:
-        borders = new String[] {"╠", "╩", "╣"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╠", "╩", "╣"};
         break;
       case SPAN_OPEN:
-        borders = new String[] {"╠", "╦", "╣"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╠", "╦", "╣"};
         break;
       case PLAIN_ROW:
-        borders = new String[] {"╠", "═", "╣"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "-", "+"}
+                : new String[] {"╠", "═", "╣"};
         break;
       case PLAIN_BOTTOM:
-        borders = new String[] {"╚", "═", "╝"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "-", "+"}
+                : new String[] {"╚", "═", "╝"};
         break;
       default:
         throw new IllegalArgumentException("System Error: Invalid border position specified!");
@@ -133,7 +154,8 @@ public class TableUtil {
 
     System.out.print(borders[0]); // Left border
     for (int i = 0; i < settings.colWidths.length; i++) {
-      System.out.print("═".repeat(settings.colWidths[i]));
+      System.out.print((ConsoleUtil.isRunningInIDE() ? "-" : "═").repeat(settings.colWidths[i]));
+
       if (i < settings.colWidths.length - 1) {
         System.out.print(borders[1]); // Middle junction
       } else {
@@ -175,7 +197,7 @@ public class TableUtil {
 
     for (int lineIndex = 0; lineIndex < maxLinesRequired; lineIndex++) {
       for (int colIndex = 0; colIndex < columns.length; colIndex++) {
-        System.out.print("║");
+        System.out.print(ConsoleUtil.isRunningInIDE() ? "|" : "║");
 
         ListInterface<String> colLines = processedCellLines[colIndex];
         int totalLinesInCell = (colLines != null) ? colLines.getNumberOfEntries() : 0;
@@ -230,7 +252,7 @@ public class TableUtil {
 
         System.out.print(" ");
       }
-      System.out.println("║");
+      System.out.println(ConsoleUtil.isRunningInIDE() ? "|" : "║");
     }
   }
 }

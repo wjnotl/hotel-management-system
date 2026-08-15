@@ -705,9 +705,11 @@ public class VipManageWaitlistView {
     System.out.println("6. VIP Tier Rank (Silver -> Diamond)");
     System.out.println("7. Live Wait Time (Longest -> Shortest)");
     System.out.println("8. Live Wait Time (Shortest -> Longest)");
-    System.out.println("9. Back\n");
+    System.out.println("9. Reservation ID (Low -> High)");
+    System.out.println("10. Reservation ID (High -> Low)");
+    System.out.println("11. Back\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 9).getAsInt();
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 11).getAsInt();
     if (choice == 1) return "SCORE (HIGH -> LOW)";
     if (choice == 2) return "SCORE (LOW -> HIGH)";
     if (choice == 3) return "STRIKES (LOWEST -> HIGHEST)";
@@ -716,6 +718,8 @@ public class VipManageWaitlistView {
     if (choice == 6) return "TIER RANK (SILVER -> DIAMOND)";
     if (choice == 7) return "WAIT TIME (LONGEST -> SHORTEST)";
     if (choice == 8) return "WAIT TIME (SHORTEST -> LONGEST)";
+    if (choice == 9) return "RESERVATION ID (LOW -> HIGH)";
+    if (choice == 10) return "RESERVATION ID (HIGH -> LOW)";
     return null;
   }
 

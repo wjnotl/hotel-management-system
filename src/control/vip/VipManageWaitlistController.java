@@ -638,6 +638,10 @@ public class VipManageWaitlistController {
       filtered.sort((r1, r2) -> r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime()));
     } else if ("WAIT TIME (SHORTEST -> LONGEST)".equalsIgnoreCase(sort)) {
       filtered.sort((r1, r2) -> r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime()));
+    } else if ("RESERVATION ID (LOW -> HIGH)".equalsIgnoreCase(sort)) {
+      filtered.sort((r1, r2) -> r1.getReservationId().compareToIgnoreCase(r2.getReservationId()));
+    } else if ("RESERVATION ID (HIGH -> LOW)".equalsIgnoreCase(sort)) {
+      filtered.sort((r1, r2) -> r2.getReservationId().compareToIgnoreCase(r1.getReservationId()));
     } else {
       filtered.sort((r1, r2) -> Integer.compare(r2.getPriorityScore(), r1.getPriorityScore()));
     }

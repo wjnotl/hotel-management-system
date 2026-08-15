@@ -39,35 +39,25 @@ public class VipReportView {
       int recordLimit) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("FILTER & SORT CONFIGURATION MATRIX");
-    System.out.println("ACTIVE REPORT: [ " + reportTitle + " ]\n");
+    ConsoleUtil.printTitleBox("FILTER & SORT OPTIONS", 88);
+    System.out.println("CURRENT ACTIVE FILTERS & SORTS:");
+    System.out.println("  - Guest Search Query : [ " + (search == null ? "NONE (All)" : "\"" + search + "\"") + " ]");
+    System.out.println("  - Membership Tier    : [ " + (tier == null ? "ALL TIERS" : tier) + " ]");
+    System.out.println("  - Room Queue Type    : [ " + (roomType == null ? "ALL ROOM TYPES" : roomType) + " ]");
+    System.out.println("  - Boiling Status     : [ " + (boiling == null ? "ALL STATES" : boiling) + " ]");
+    System.out.println("  - Sort Attribute     : [ " + sortAttr + " ]");
+    System.out.println("  - Sort Direction     : [ " + sortDir + " ]");
+    System.out.println("  - Max Records        : [ " + (recordLimit == 0 ? "SHOW ALL (Unlimited)" : "Top " + recordLimit + " Records") + " ]\n");
     System.out.println(
         "--------------------------------------------------------------------------\n");
-    System.out.println(
-        "- Guest Search String   : [ "
-            + (search == null ? "NONE (All)" : "\"" + search + "\"")
-            + " ]");
-    System.out.println("- Membership Tier       : [ " + (tier == null ? "ALL TIERS" : tier) + " ]");
-    System.out.println(
-        "- Room Queue Type       : [ " + (roomType == null ? "ALL ROOM TYPES" : roomType) + " ]");
-    System.out.println(
-        "- Boiling Status        : [ " + (boiling == null ? "ALL STATES" : boiling) + " ]");
-    System.out.println("- Sort Attribute        : [ " + sortAttr + " ]");
-    System.out.println("- Sort Vector Direction : [ " + sortDir + " ]");
-    System.out.println(
-        "- Max Display Records   : [ "
-            + (recordLimit == 0 ? "SHOW ALL (Unlimited)" : "Top " + recordLimit + " Records")
-            + " ]\n");
-    System.out.println(
-        "--------------------------------------------------------------------------\n");
-    System.out.println("1. Edit Guest Search String");
-    System.out.println("2. Edit Membership Tier Filter");
-    System.out.println("3. Edit Room Queue Type Filter");
-    System.out.println("4. Edit Boiling Status Filter");
-    System.out.println("5. Edit Sort Attribute & Direction");
-    System.out.println("6. Edit Max Display Records Limit");
-    System.out.println("7. Reset All Filters");
-    System.out.println("8. Generate Report Now");
+    System.out.println("1. Generate Report");
+    System.out.println("2. Search Query");
+    System.out.println("3. Membership Tier");
+    System.out.println("4. Room Queue Type");
+    System.out.println("5. Boiling Status");
+    System.out.println("6. Sort Attribute & Direction");
+    System.out.println("7. Max Display Records");
+    System.out.println("8. Reset All Filters");
     System.out.println("9. Back\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 9);
@@ -163,29 +153,6 @@ public class VipReportView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3);
   }
 
-  public int displayExecutionConfirmationScreen(
-      String reportTitle, String scopeStr, String sortStr, int totalMatches, int limit) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CONFIRM REPORT EXECUTION");
-    System.out.println("ACTIVE REPORT PARAMETERS:\n");
-    System.out.println("  - Report Type  : " + reportTitle);
-    System.out.println("  - Scope Match  : " + scopeStr);
-    System.out.println("  - Sort Order   : " + sortStr);
-    System.out.println(
-        "  - Display Limit: "
-            + (limit == 0
-                ? "Show All (" + totalMatches + " Records)"
-                : "Top " + Math.min(limit, totalMatches) + " of " + totalMatches + " Records")
-            + "\n");
-    System.out.println(
-        "--------------------------------------------------------------------------\n");
-    System.out.println("Proceed with memory array parsing and generate analytics display?\n");
-    System.out.println("1. Yes, Run Pipeline & Render Report");
-    System.out.println("2. Back to Filter Matrix");
-    System.out.println("3. Cancel & Exit to Analytics Hub\n");
-
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
-  }
 
   public GetMenuInputResult renderSlaReportScreen(
       ListInterface<Reservation> matchedList,
@@ -229,7 +196,7 @@ public class VipReportView {
     if (matchedList == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {88}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {94}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -321,7 +288,7 @@ public class VipReportView {
     if (matchedList == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {88}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -416,7 +383,7 @@ public class VipReportView {
     if (matchedList == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {88}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);

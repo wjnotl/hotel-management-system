@@ -12,9 +12,19 @@ public class ConsoleUtil {
   private static PrintStream originalOut;
   private static final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
+  public static boolean isRunningInIDE() {
+    return System.console() == null;
+  }
+
   public static void clearScreen() {
-    System.out.print("\033\143");
-    System.out.flush();
+    if (isRunningInIDE()) {
+      for (int i = 0; i < 50; i++) {
+        System.out.println();
+      }
+    } else {
+      System.out.print("\033[H\033[2J");
+      System.out.flush();
+    }
   }
 
   public static void printTitleBox(String title) {
