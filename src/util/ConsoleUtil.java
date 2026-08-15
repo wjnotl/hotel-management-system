@@ -262,7 +262,8 @@ public class ConsoleUtil {
       return input;
     }
     throw new IllegalArgumentException(
-        "Unsupported characters detected! Please use standard English letters, numbers, and common symbols only (e.g. A-Z, 0-9).");
+        "Unsupported characters detected! Please use standard English letters, numbers, and common"
+            + " symbols only (e.g. A-Z, 0-9).");
   }
 
   public static Integer getIntegerInput(String prompt, int min, int max) {

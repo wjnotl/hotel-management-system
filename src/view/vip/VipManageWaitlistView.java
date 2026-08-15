@@ -645,8 +645,6 @@ public class VipManageWaitlistView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
   }
 
-
-
   public int displaySearchSubmenu(String currentQuery) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH QUERY");
