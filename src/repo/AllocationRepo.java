@@ -9,6 +9,7 @@ import entity.Reservation;
 import entity.Room;
 import entity.VipSystemConfig;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 import util.BinaryFileUtil;
 import util.TaskSchedulerUtil;
@@ -269,7 +270,8 @@ public class AllocationRepo {
     if (allocationList == null || allocationList.isEmpty()) return 0;
 
     int updatedCount = 0;
-    long now = System.currentTimeMillis();
+    long now =
+        System.currentTimeMillis(); // Current system time as raw milliseconds since 1 Jan 1970 UTC
 
     for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
       AllocationEntry entry = allocationList.getEntry(i);
@@ -287,8 +289,23 @@ public class AllocationRepo {
                     ? config.getGoldGraceWindowMins()
                     : config.getSilverGraceWindowMins();
 
-        // Reset expiration timestamp based on new grace minutes from current time
-        entry.setExpirationTimestamp(now + (newGraceMins * 60 * 1000L));
+        // Calculate new expiration target from the original allocation timestamp
+        long newExpiration;
+        if (r != null && r.getAllocatedTime() != null) {
+          long startMs =
+              r.getAllocatedTime()
+                  .atZone(ZoneId.systemDefault()) // Attach local timezone (UTC+8)
+                  .toInstant() // Converts to UTC Instant
+                  .toEpochMilli(); // Converts to raw long ms
+          newExpiration = startMs + (newGraceMins * 60 * 1000L);
+          r.setAllocatedGraceMins(newGraceMins);
+          vipReservationRepo.updateReservation(r);
+        } else {
+          newExpiration = now + (newGraceMins * 60 * 1000L);
+        }
+
+        // If hold has already exceeded the new grace window, expire it immediately
+        entry.setExpirationTimestamp(Math.min(newExpiration, now));
         updatedCount++;
       }
     }

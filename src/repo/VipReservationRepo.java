@@ -9,9 +9,11 @@ import entity.Member;
 import entity.Reservation;
 import entity.Room;
 import entity.VipSystemConfig;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import util.BinaryFileUtil;
 import util.TaskSchedulerUtil;
 
@@ -217,7 +219,7 @@ public class VipReservationRepo {
     Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
     // Resolve variable names to dynamic values
-    java.util.function.Function<String, Double> resolver =
+    Function<String, Double> resolver =
         (var) -> {
           switch (var.toUpperCase()) {
             case "TIER":
@@ -242,8 +244,7 @@ public class VipReservationRepo {
             case "BOILING":
               double wait =
                   (reservation != null && reservation.getQueueArrivalTime() != null)
-                      ? java.time.Duration.between(
-                              reservation.getQueueArrivalTime(), java.time.LocalDateTime.now())
+                      ? Duration.between(reservation.getQueueArrivalTime(), LocalDateTime.now())
                           .toMinutes()
                       : 0.0;
               double boilingLimit =
@@ -317,7 +318,7 @@ public class VipReservationRepo {
 
         if (forceBoilingCheck && r.getQueueArrivalTime() != null) {
           double waitMins =
-              java.time.Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
+              Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
           double boilingLimit =
               (tier == Member.LoyaltyTier.DIAMOND)
                   ? config.getDiamondBoilingLimitMins()
