@@ -166,10 +166,8 @@ public class VipManageWaitlistController {
             guest.setStrikeCount(0);
             guestRepo.updateGuest(guest);
             waitlistView.displayStrikeResetOverrideScreen(guest);
-          } else if (choice == 2) {
-            ConsoleUtil.printError("Eviction lockout enforced. Guest entry denied.");
-            return;
           } else {
+            ConsoleUtil.printError("Eviction lockout enforced. Guest entry denied.");
             return;
           }
         }

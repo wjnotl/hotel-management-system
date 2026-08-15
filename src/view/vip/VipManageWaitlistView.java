@@ -492,10 +492,9 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println("\n1. Authorize Override (Reset Strikes to 0)");
-    System.out.println("2. Enforce Eviction Lockout (Deny Waitlist Access)");
-    System.out.println("3. Cancel and Return\n");
+    System.out.println("2. Enforce Eviction Lockout (Deny Waitlist Access)\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt();
   }
 
   public void displayNonMemberDeniedScreen(Guest g) {
