@@ -366,4 +366,43 @@ public class VipReservationRepo {
           }
         });
   }
+
+  public String generateReservationId() {
+    int maxId = 10000;
+    if (masterList != null) {
+      for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
+        Reservation r = masterList.getEntry(i);
+        if (r != null && r.getReservationId() != null && r.getReservationId().startsWith("RES-")) {
+          try {
+            int num = Integer.parseInt(r.getReservationId().substring(4));
+            if (num > maxId) {
+              maxId = num;
+            }
+          } catch (NumberFormatException ignored) {
+          }
+        }
+      }
+    }
+    return "RES-" + (maxId + 1);
+  }
+
+  public String generateConfirmationNumber() {
+    while (true) {
+      String code = util.NumberUtil.generateDigitPin(8);
+      if (findByConfirmationNumber(code) == null) {
+        return code;
+      }
+    }
+  }
+
+  public Reservation findByConfirmationNumber(String confirmationNumber) {
+    if (confirmationNumber == null || masterList == null) return null;
+    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
+      Reservation r = masterList.getEntry(i);
+      if (r != null && confirmationNumber.equalsIgnoreCase(r.getConfirmationNumber())) {
+        return r;
+      }
+    }
+    return null;
+  }
 }

@@ -16,7 +16,6 @@ import repo.RoomRepo;
 import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
-import util.NumberUtil;
 import view.vip.VipManageWaitlistView;
 
 public class VipManageWaitlistController {
@@ -190,8 +189,8 @@ public class VipManageWaitlistController {
           continue;
         }
 
-        String resId = generateUniqueReservationId();
-        String confNum = generateUniqueConfirmationNumber();
+        String resId = vipReservationRepo.generateReservationId();
+        String confNum = vipReservationRepo.generateConfirmationNumber();
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -335,49 +334,6 @@ public class VipManageWaitlistController {
     return true;
   }
 
-  private String generateUniqueConfirmationNumber() {
-    while (true) {
-      String code = NumberUtil.generateDigitPin(8);
-
-      boolean exists = false;
-      ListInterface<Reservation> allReservations = vipReservationRepo.getAllReservations();
-      if (allReservations != null) {
-        for (int i = 1; i <= allReservations.getNumberOfEntries(); i++) {
-          Reservation r = allReservations.getEntry(i);
-          if (r != null && code.equalsIgnoreCase(r.getConfirmationNumber())) {
-            exists = true;
-            break;
-          }
-        }
-      }
-
-      if (!exists) {
-        return code;
-      }
-    }
-  }
-
-  private String generateUniqueReservationId() {
-    int maxIdNum = 10000;
-    ListInterface<Reservation> allReservations = vipReservationRepo.getAllReservations();
-
-    if (allReservations != null) {
-      for (int i = 1; i <= allReservations.getNumberOfEntries(); i++) {
-        Reservation r = allReservations.getEntry(i);
-        if (r != null && r.getReservationId() != null && r.getReservationId().startsWith("RES-")) {
-          try {
-            int num = Integer.parseInt(r.getReservationId().substring(4));
-            if (num > maxIdNum) {
-              maxIdNum = num;
-            }
-          } catch (NumberFormatException ignored) {
-          }
-        }
-      }
-    }
-
-    return "RES-" + (maxIdNum + 1);
-  }
 
   private Guest findGuestByName(ListInterface<Guest> guestList, String name) {
     if (guestList == null || name == null) return null;
