@@ -32,7 +32,14 @@ public class HotelManagementSystem {
       return;
     }
 
-    VipController.startMidnightStrikeResetScheduler(guestRepo);
+    // Process any holding allocations that expired while offline/shutdown & arm auto-expiration scheduler
+    allocationRepo.processExpiredAllocationsOnStartup(
+        roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+
+    // Process any boiling transitions that occurred while offline/shutdown & arm boiling scheduler
+    vipReservationRepo.processBoilingOnStartup(guestRepo, memberRepo, vipSystemConfigRepo);
+
+    VipController.startMidnightStrikeResetScheduler(guestRepo, vipSystemConfigRepo);
 
     while (true) {
       try {
@@ -41,24 +48,24 @@ public class HotelManagementSystem {
 
         if ("1".equals(choice)) {
           new BookingController(
-                  standardReservationRepo, vipReservationRepo, guestRepo, memberRepo, roomRepo)
+              standardReservationRepo, vipReservationRepo, guestRepo, memberRepo, roomRepo)
               .start();
         } else if ("2".equals(choice)) {
           new VipController(
-                  allocationRepo,
-                  guestRepo,
-                  memberRepo,
-                  roomRepo,
-                  vipReservationRepo,
-                  vipSystemConfigRepo)
+              allocationRepo,
+              guestRepo,
+              memberRepo,
+              roomRepo,
+              vipReservationRepo,
+              vipSystemConfigRepo)
               .start();
         } else if ("3".equals(choice)) {
           new HouseKeepingController(
-                  houseKeepingTaskRepo,
-                  housekeepingStaffRepo,
-                  roomRepo,
-                  roomStatusHistoryRepo,
-                  housekeepingSettingsRepo)
+              houseKeepingTaskRepo,
+              housekeepingStaffRepo,
+              roomRepo,
+              roomStatusHistoryRepo,
+              housekeepingSettingsRepo)
               .start();
         } else if ("4".equals(choice)) {
           new FrontDeskController().start();

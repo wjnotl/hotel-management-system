@@ -11,8 +11,8 @@ import entity.Room;
 import entity.VipSystemConfig;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Comparator;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import util.BinaryFileUtil;
 import util.TaskSchedulerUtil;
@@ -342,67 +342,128 @@ public class VipReservationRepo {
     return affectedCount;
   }
 
+  public void processBoilingOnStartup(
+      GuestRepo guestRepo, MemberRepo memberRepo, VipSystemConfigRepo configRepo) {
+    // Delegates to scheduleNextBoilingTask which performs both synchronous overdue sweeps
+    // and arms the next future background boiling timer.
+    scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
+  }
+
   private void scheduleNextBoilingTask(
       GuestRepo guestRepo, MemberRepo memberRepo, VipSystemConfigRepo configRepo) {
-    VipSystemConfig config = configRepo.getConfig();
-    if (config == null) return;
+    VipSystemConfig config = (configRepo != null) ? configRepo.getConfig() : null;
+    if (config == null || masterList == null || masterList.isEmpty()) return;
 
-    // 1. Find the top guest and its heap using a clean ternary or helper approach
-    // so they are effectively final for the lambda expression!
-    final Reservation topRes;
-    final PriorityQueueInterface<Reservation> activeHeap;
+    long now = System.currentTimeMillis();
 
-    if (!luxuryVipQueue.isEmpty()) {
-      topRes = luxuryVipQueue.peek();
-      activeHeap = luxuryVipQueue;
-    } else if (!suiteVipQueue.isEmpty()) {
-      topRes = suiteVipQueue.peek();
-      activeHeap = suiteVipQueue;
-    } else if (!standardVipQueue.isEmpty()) {
-      topRes = standardVipQueue.peek();
-      activeHeap = standardVipQueue;
-    } else {
-      topRes = null;
-      activeHeap = null;
+    // 1. Process any overdue boiling targets synchronously (where targetMs <= now)
+    boolean modified = false;
+    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
+      Reservation r = masterList.getEntry(i);
+      if (r != null
+          && r.getStatus() == Reservation.Status.WAITING
+          && !r.getIsBoiling()
+          && r.getQueueArrivalTime() != null) {
+        Guest g = (guestRepo != null) ? guestRepo.findById(r.getGuestId()) : null;
+        Member m =
+            (g != null && g.getMemberId() != null && memberRepo != null)
+                ? memberRepo.findById(g.getMemberId())
+                : null;
+        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+
+        int limitMins =
+            (tier == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondBoilingLimitMins()
+                : (tier == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldBoilingLimitMins()
+                    : config.getSilverBoilingLimitMins();
+
+        long targetMs =
+            r.getQueueArrivalTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                + (limitMins * 60 * 1000L);
+
+        if (targetMs <= now) {
+          r.setBoiling(true);
+          int newScore = calculatePriorityScore(r, g, m, config);
+          r.setPriorityScore(newScore);
+          modified = true;
+
+          PriorityQueueInterface<Reservation> heap = getHeapByRoomType(r.getRoomType());
+          if (heap != null) {
+            heap.updatePriority(r);
+          }
+        }
+      }
     }
 
-    if (topRes == null || topRes.getIsBoiling() || topRes.getQueueArrivalTime() == null) {
-      return;
+    if (modified) {
+      save();
     }
 
-    // 2. Resolve tier-specific boiling limit
-    Guest g = guestRepo.findById(topRes.getGuestId());
-    Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
-    Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+    // 2. Find the earliest FUTURE boiling target (where targetMs > now)
+    Reservation earliestFutureRes = null;
+    long earliestFutureTargetMs = Long.MAX_VALUE;
 
-    int boilingLimitMins =
-        (tier == Member.LoyaltyTier.DIAMOND)
-            ? config.getDiamondBoilingLimitMins()
-            : (tier == Member.LoyaltyTier.GOLD)
-                ? config.getGoldBoilingLimitMins()
-                : config.getSilverBoilingLimitMins();
+    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
+      Reservation r = masterList.getEntry(i);
+      if (r != null
+          && r.getStatus() == Reservation.Status.WAITING
+          && !r.getIsBoiling()
+          && r.getQueueArrivalTime() != null) {
+        Guest g = (guestRepo != null) ? guestRepo.findById(r.getGuestId()) : null;
+        Member m =
+            (g != null && g.getMemberId() != null && memberRepo != null)
+                ? memberRepo.findById(g.getMemberId())
+                : null;
+        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
 
-    // 3. Calculate exact time left until this specific tier's limit is hit
-    LocalDateTime boilingTargetTime = topRes.getQueueArrivalTime().plusMinutes(boilingLimitMins);
-    long targetMs = java.sql.Timestamp.valueOf(boilingTargetTime).getTime();
-    long delayMs = targetMs - System.currentTimeMillis();
-    long delayMinutes = Math.max(1, TimeUnit.MILLISECONDS.toMinutes(delayMs));
+        int limitMins =
+            (tier == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondBoilingLimitMins()
+                : (tier == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldBoilingLimitMins()
+                    : config.getSilverBoilingLimitMins();
 
-    // 4. Schedule ONCE for the top guest only (topRes and activeHeap are now effectively final!)
+        long targetMs =
+            r.getQueueArrivalTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                + (limitMins * 60 * 1000L);
+
+        if (targetMs > now && targetMs < earliestFutureTargetMs) {
+          earliestFutureTargetMs = targetMs;
+          earliestFutureRes = r;
+        }
+      }
+    }
+
+    if (earliestFutureRes == null) return;
+
+    final Reservation targetRes = earliestFutureRes;
+    long delayMs = Math.max(1, earliestFutureTargetMs - now);
+
     TaskSchedulerUtil.scheduleOnce(
-        delayMinutes,
+        delayMs,
         () -> {
           try {
-            if (topRes.getStatus() == Reservation.Status.WAITING && !topRes.getIsBoiling()) {
-              topRes.setBoiling(true);
-              int newScore = calculatePriorityScore(topRes, g, m, config);
-              topRes.setPriorityScore(newScore);
-              updateReservation(topRes);
+            if (targetRes.getStatus() == Reservation.Status.WAITING && !targetRes.getIsBoiling()) {
+              targetRes.setBoiling(true);
 
-              // Re-sort the heap automatically
-              if (activeHeap != null) {
-                activeHeap.updatePriority(topRes);
+              Guest g = (guestRepo != null) ? guestRepo.findById(targetRes.getGuestId()) : null;
+              Member m =
+                  (g != null && g.getMemberId() != null && memberRepo != null)
+                      ? memberRepo.findById(g.getMemberId())
+                      : null;
+
+              int newScore = calculatePriorityScore(targetRes, g, m, config);
+              targetRes.setPriorityScore(newScore);
+              updateReservation(targetRes);
+
+              PriorityQueueInterface<Reservation> heap = getHeapByRoomType(targetRes.getRoomType());
+              if (heap != null) {
+                heap.updatePriority(targetRes);
               }
+
+              // Re-arm scheduler for the NEXT earliest non-boiling reservation
+              scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
             }
           } catch (Exception ignored) {
           }

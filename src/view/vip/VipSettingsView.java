@@ -26,7 +26,7 @@ public class VipSettingsView {
     if (val == (long) val) {
       return String.format("%d", (long) val);
     }
-    return String.format("%.2f", val).replaceAll("0+$", "").replaceAll("\\.$", "");
+    return String.format("%.4f", val).replaceAll("0+$", "").replaceAll("\\.$", "");
   }
 
   public int promptWizardStep(int stepNum, int totalSteps, String title, String description, boolean hasPrevious) {
@@ -194,7 +194,8 @@ public class VipSettingsView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ENTER NUMERIC VALUE");
     System.out.println("Enter static integer or decimal constant to inject:");
-    System.out.println("------------------------------------------------------");
+    System.out.println(" (Supports up to 4 decimal places. Trailing zeros will be formatted cleanly)");
+    System.out.println("----------------------------------------------------------------------------------------");
     System.out.println(" Press ENTER / 'C' to Cancel\n");
     return ConsoleUtil.getStringInput("[ Numeric Value ]: ");
   }

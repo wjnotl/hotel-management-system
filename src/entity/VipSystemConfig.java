@@ -56,6 +56,8 @@ public class VipSystemConfig implements Serializable {
   private double goldGraceUtilTargetPct;
   private double silverGraceUtilTargetPct;
 
+  private String lastStrikeResetDate;
+
   public VipSystemConfig() {
     resetToDefaults();
   }
@@ -105,6 +107,8 @@ public class VipSystemConfig implements Serializable {
     this.diamondGraceUtilTargetPct = 70.0;
     this.goldGraceUtilTargetPct = 80.0;
     this.silverGraceUtilTargetPct = 85.0;
+
+    this.lastStrikeResetDate = null;
   }
 
   // Getters & Setters
@@ -362,5 +366,13 @@ public class VipSystemConfig implements Serializable {
 
   public void setSilverGraceUtilTargetPct(double val) {
     this.silverGraceUtilTargetPct = val;
+  }
+
+  public String getLastStrikeResetDate() {
+    return lastStrikeResetDate;
+  }
+
+  public void setLastStrikeResetDate(String lastStrikeResetDate) {
+    this.lastStrikeResetDate = lastStrikeResetDate;
   }
 }

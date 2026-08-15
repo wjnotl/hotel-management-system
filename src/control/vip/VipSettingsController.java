@@ -328,8 +328,8 @@ public class VipSettingsController {
           return null;
         }
 
-        Double.parseDouble(num.trim());
-        return num.trim();
+        double val = Double.parseDouble(num.trim());
+        return VipSettingsView.formatNumber(val);
       } catch (NumberFormatException e) {
         ConsoleUtil.printError("Invalid numeric format! Enter a valid number or 'C' to cancel.");
       }

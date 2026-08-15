@@ -1,5 +1,7 @@
 package repo;
 
+import java.time.LocalDate;
+
 import adt.ArrayList;
 import adt.ListInterface;
 import entity.Guest;
@@ -95,7 +97,7 @@ public class GuestRepo {
     return guestList;
   }
 
-  public void resetAllGuestStrikes() {
+  public void resetAllGuestStrikes(VipSystemConfigRepo configRepo) {
     if (guestList == null || guestList.isEmpty()) return;
 
     boolean needSave = false;
@@ -111,6 +113,14 @@ public class GuestRepo {
 
     if (needSave) {
       save();
+    }
+
+    if (configRepo != null) {
+      entity.VipSystemConfig config = configRepo.getConfig();
+      if (config != null) {
+        config.setLastStrikeResetDate(LocalDate.now().toString());
+        configRepo.updateConfig(config);
+      }
     }
   }
 }

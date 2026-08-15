@@ -174,11 +174,15 @@ public class VipManageAllocationController {
 
     LocalDateTime now = LocalDateTime.now();
 
+    // Generate official Confirmation Number upon CHECK-IN
+    String confNum = vipReservationRepo.generateConfirmationNumber();
+    reservation.setConfirmationNumber(confNum);
+
     // 1. Update Room state
     Room room = roomRepo.findByRoomNumber(entry.getAssignedRoomNumber());
     if (room != null) {
       room.setStatus(Room.Status.OCCUPIED);
-      room.setReservationConfirmationNumber(reservation.getConfirmationNumber());
+      room.setReservationConfirmationNumber(confNum);
       roomRepo.updateRoom(room);
     }
 
@@ -276,12 +280,11 @@ public class VipManageAllocationController {
             // 2. Create a NEW reservation ID for the re-queued entry
             int newScore = calculateDynamicPriorityScore(guest, member);
             String newResId = vipReservationRepo.generateReservationId();
-            String newConfNum = vipReservationRepo.generateConfirmationNumber();
             Reservation newRes =
                 new Reservation(
                     newResId,
                     (guest != null ? guest.getGuestId() : "N/A"),
-                    newConfNum,
+                    null,
                     reservation.getRoomType(),
                     Reservation.Status.WAITING,
                     reservation.getIsBoiling(),
@@ -342,12 +345,11 @@ public class VipManageAllocationController {
             // 2. Create a NEW reservation ID for the re-queued entry
             int newScore = calculateDynamicPriorityScore(guest, member);
             String newResId = vipReservationRepo.generateReservationId();
-            String newConfNum = vipReservationRepo.generateConfirmationNumber();
             Reservation newRes =
                 new Reservation(
                     newResId,
                     (guest != null ? guest.getGuestId() : "N/A"),
-                    newConfNum,
+                    null,
                     reservation.getRoomType(),
                     Reservation.Status.WAITING,
                     reservation.getIsBoiling(),
