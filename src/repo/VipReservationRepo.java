@@ -389,10 +389,25 @@ public class VipReservationRepo {
   public String generateConfirmationNumber() {
     while (true) {
       String code = util.NumberUtil.generateDigitPin(8);
-      if (findByConfirmationNumber(code) == null) {
+      if (findByActiveConfirmationNumber(code) == null) {
         return code;
       }
     }
+  }
+
+  public Reservation findByActiveConfirmationNumber(String confirmationNumber) {
+    if (confirmationNumber == null || masterList == null) return null;
+    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
+      Reservation r = masterList.getEntry(i);
+      if (r != null
+          && confirmationNumber.equalsIgnoreCase(r.getConfirmationNumber())
+          && (r.getStatus() == Reservation.Status.WAITING
+              || r.getStatus() == Reservation.Status.ALLOCATED
+              || r.getStatus() == Reservation.Status.CHECKED_IN)) {
+        return r;
+      }
+    }
+    return null;
   }
 
   public Reservation findByConfirmationNumber(String confirmationNumber) {

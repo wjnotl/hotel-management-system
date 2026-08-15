@@ -120,14 +120,39 @@ public class VipManageAllocationView {
     System.out.printf(
         "Page %d / %d (Total Allocated Matches: %d)\n\n", currentPage, totalPages, totalMatches);
     System.out.println("[S] Search Guests      [O] Change Sort Order   [R] Refresh Table");
-    System.out.println("[P] Prev Page          [N] Next Page           [E] Exit to VIP Menu\n");
+
+    StringBuilder navLine = new StringBuilder();
+    adt.ArrayList<Character> validList = new adt.ArrayList<>();
+    validList.add('S');
+    validList.add('O');
+    validList.add('R');
+    validList.add('E');
+
+    if (currentPage > 1) {
+      navLine.append("[P] Prev Page          ");
+      validList.add('P');
+    }
+    if (currentPage < totalPages) {
+      navLine.append("[N] Next Page          ");
+      validList.add('N');
+    }
+
+    if (navLine.length() > 0) {
+      System.out.println(navLine.toString().trim() + "           [E] Exit to VIP Menu\n");
+    } else {
+      System.out.println("[E] Exit to VIP Menu\n");
+    }
+
+    char[] validChars = new char[validList.getNumberOfEntries()];
+    for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
+      validChars[i - 1] = validList.getEntry(i);
+    }
 
     int maxOptionNum = endIndex - startIndex + 1;
     String rangeStr = (maxOptionNum == 1) ? "1" : "1-" + maxOptionNum;
     String promptText = "Select a pending guest number to handle (" + rangeStr + "): ";
 
-    return ConsoleUtil.getMenuInput(
-        promptText, 1, maxOptionNum, new char[] {'S', 'O', 'R', 'P', 'N', 'E'});
+    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, validChars);
   }
 
   public int displayAllocationDetailScreen(

@@ -1,5 +1,6 @@
 package view.vip;
 
+import adt.ArrayList;
 import adt.ListInterface;
 import entity.AllocationEntry;
 import entity.Guest;
@@ -108,7 +109,8 @@ public class VipManageWaitlistView {
         return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'A', 'S', 'R', 'E'});
       }
 
-      // SCENARIO 2: Queue is completely empty naturally -> Remove all search/sort/assign options
+      // SCENARIO 2: Queue is completely empty naturally -> Remove all
+      // search/sort/assign options
       else {
         System.out.println(
             "[A] Add Guest          [R] Refresh Table       [E] Exit to Queue Menu\n");
@@ -159,14 +161,41 @@ public class VipManageWaitlistView {
         "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, totalMatches);
     System.out.println("[A] Add Guest          [Q] Quick Assign Top    [R] Refresh Table");
     System.out.println("[S] Search / Filter    [O] Change Sort Order   [E] Exit to Queue Menu");
-    System.out.println("[P] Prev Page          [N] Next Page\n");
+
+    StringBuilder navLine = new StringBuilder();
+    ArrayList<Character> validList = new ArrayList<>();
+    validList.add('A');
+    validList.add('Q');
+    validList.add('R');
+    validList.add('S');
+    validList.add('O');
+    validList.add('E');
+
+    if (currentPage > 1) {
+      navLine.append("[P] Prev Page          ");
+      validList.add('P');
+    }
+    if (currentPage < totalPages) {
+      navLine.append("[N] Next Page          ");
+      validList.add('N');
+    }
+
+    if (navLine.length() > 0) {
+      System.out.println(navLine.toString().trim() + "\n");
+    } else {
+      System.out.println();
+    }
+
+    char[] validChars = new char[validList.getNumberOfEntries()];
+    for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
+      validChars[i - 1] = validList.getEntry(i);
+    }
 
     int maxOptionNum = endIndex - startIndex + 1;
     String rangeStr = (maxOptionNum == 1) ? "1" : "1-" + maxOptionNum;
     String promptText = "Enter a command or select index (" + rangeStr + "): ";
 
-    return ConsoleUtil.getMenuInput(
-        promptText, 1, maxOptionNum, new char[] {'A', 'Q', 'R', 'S', 'O', 'E', 'N', 'P'});
+    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, validChars);
   }
 
   public String promptAddGuestInput() {
@@ -507,6 +536,23 @@ public class VipManageWaitlistView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt();
   }
 
+  public boolean displayStrikeOverrideConfirmationScreen(Guest g) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM STRIKE OVERRIDE");
+    System.out.println(
+        " Are you sure you want to authorize strike reset for "
+            + (g != null ? g.getName() : "Guest")
+            + "?");
+    System.out.println(
+        " This will reset the guest's strike count from "
+            + (g != null ? g.getStrikeCount() : 0)
+            + " to 0.\n");
+    GetMenuInputResult input =
+        ConsoleUtil.getMenuInput(
+            "Authorize override and reset strikes to 0? (Y/N): ", new char[] {'Y', 'N'});
+    return "Y".equalsIgnoreCase(input.input);
+  }
+
   public void displayNonMemberDeniedScreen(Guest g) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ENTRY DENIED - NON-MEMBER");
@@ -599,11 +645,14 @@ public class VipManageWaitlistView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
   }
 
+
+
   public int displaySearchSubmenu(String currentQuery) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH QUERY");
+    System.out.println("Searchable Fields: Reservation ID, Guest Name, Phone Number");
     System.out.println(
-        "Current Search: [ " + (currentQuery == null ? "None" : currentQuery) + " ]\n");
+        "Current Search   : [ " + (currentQuery == null ? "None" : currentQuery) + " ]\n");
     System.out.println("1. Enter Search Term");
     System.out.println("2. Clear Search Term");
     System.out.println("3. Back\n");
@@ -611,8 +660,13 @@ public class VipManageWaitlistView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
-  public String promptSearchInput() {
-    return ConsoleUtil.getStringInput("\nEnter search term: ");
+  public String promptSearchInput(String currentQuery) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH QUERY");
+    System.out.println("Searchable Fields: Reservation ID, Guest Name, Phone Number");
+    System.out.println(
+        "Current Search   : [ " + (currentQuery == null ? "None" : currentQuery) + " ]\n");
+    return ConsoleUtil.getStringInput("Enter search term (Res ID / Guest Name / Phone No): ");
   }
 
   public int displayTierSubmenu(String currentTier) {
@@ -709,8 +763,6 @@ public class VipManageWaitlistView {
     ConsoleUtil.printContinueMessage();
   }
 
-
-
   private String formatTime(LocalDateTime dateTime) {
     if (dateTime == null) return "N/A";
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
@@ -763,7 +815,8 @@ public class VipManageWaitlistView {
 
       System.out.println("Search Term: \"" + searchQuery + "\"");
       if (totalMatches > pageSize) {
-        System.out.println("(Tip: If there are too many results, enter a more specific search query)");
+        System.out.println(
+            "(Tip: If there are too many results, enter a more specific search query)");
       }
       System.out.println();
 
@@ -793,7 +846,9 @@ public class VipManageWaitlistView {
 
         int displayNum = i - startIndex + 1;
         TableUtil.printTableRow(
-            new String[] {String.valueOf(displayNum), g.getGuestId(), g.getName(), icOrPass, phone, tierStr},
+            new String[] {
+              String.valueOf(displayNum), g.getGuestId(), g.getName(), icOrPass, phone, tierStr
+            },
             settings);
       }
 
@@ -801,21 +856,32 @@ public class VipManageWaitlistView {
       System.out.printf(
           "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, totalMatches);
 
-      if (totalPages > 1) {
-        System.out.println("[P] Previous Page    [N] Next Page    [C] Cancel / Refine Search");
-      } else {
-        System.out.println("[C] Cancel / Refine Search");
+      StringBuilder navLine = new StringBuilder();
+      ArrayList<Character> validList = new ArrayList<>();
+      validList.add('C');
+
+      if (currentPage > 1) {
+        navLine.append("[P] Previous Page    ");
+        validList.add('P');
       }
+      if (currentPage < totalPages) {
+        navLine.append("[N] Next Page        ");
+        validList.add('N');
+      }
+      navLine.append("[C] Cancel / Refine Search");
+      System.out.println(navLine.toString());
       System.out.println();
+
+      char[] validChars = new char[validList.getNumberOfEntries()];
+      for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
+        validChars[i - 1] = validList.getEntry(i);
+      }
 
       try {
         String rangeStr = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
         GetMenuInputResult input =
             ConsoleUtil.getMenuInput(
-                "Select guest index (" + rangeStr + ") or command: ",
-                1,
-                rowsOnPage,
-                new char[] {'P', 'N', 'C'});
+                "Select guest index (" + rangeStr + ") or command: ", 1, rowsOnPage, validChars);
 
         if (!input.isNumber) {
           char cmd = input.input.toUpperCase().charAt(0);

@@ -362,12 +362,7 @@ public class VipManageAllocationController {
         int choice = allocationView.displayFilterMainMenu(search, tier);
 
         if (choice == 1) {
-          String input = allocationView.promptSearchInput();
-          if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-            search = null;
-          } else {
-            search = input.trim();
-          }
+          search = promptSearchInputWithRetry();
         } else if (choice == 2) {
           tier = handleTierSubmenu(tier);
         } else if (choice == 3) {
@@ -389,6 +384,20 @@ public class VipManageAllocationController {
         if (choice == 2) return "GOLD";
         if (choice == 3) return "SILVER";
         if (choice == 4) return null;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String promptSearchInputWithRetry() {
+    while (true) {
+      try {
+        String input = allocationView.promptSearchInput();
+        if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
+          return null;
+        }
+        return input.trim();
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }

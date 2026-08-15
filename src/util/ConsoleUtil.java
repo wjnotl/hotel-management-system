@@ -257,7 +257,12 @@ public class ConsoleUtil {
 
   public static String getStringInput(String prompt) {
     System.out.print(prompt);
-    return scanner.nextLine().trim();
+    String input = scanner.nextLine().trim();
+    if (input.matches("^[\\x20-\\x7E]*$")) {
+      return input;
+    }
+    throw new IllegalArgumentException(
+        "Unsupported characters detected! Please use standard English letters, numbers, and common symbols only (e.g. A-Z, 0-9).");
   }
 
   public static Integer getIntegerInput(String prompt, int min, int max) {

@@ -243,11 +243,17 @@ public class VipReportController {
   }
 
   private String handleSearchSubmenu(String currentSearch) {
-    String input = reportView.promptSearchInput();
-    if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-      return null;
+    while (true) {
+      try {
+        String input = reportView.promptSearchInput();
+        if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
+          return null;
+        }
+        return input.trim();
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-    return input.trim();
   }
 
   private String handleTierSubmenu(String currentTier) {
