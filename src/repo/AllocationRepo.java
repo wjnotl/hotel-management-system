@@ -150,17 +150,32 @@ public class AllocationRepo {
                     res.setStatus(Reservation.Status.NO_SHOW);
                     vipReservationRepo.updateReservation(res);
                   } else {
-                    // Under the limit: increment then re-queue
+                    // Under limit: mark current as NO_SHOW, increment strike, create new WAITING reservation
+                    res.setStatus(Reservation.Status.NO_SHOW);
+                    vipReservationRepo.updateReservation(res);
+
                     guest.setStrikeCount(guest.getStrikeCount() + 1);
                     guestRepo.updateGuest(guest);
+
                     int newScore =
                         vipReservationRepo.calculatePriorityScore(
                             res, guest, member, configRepo.getConfig());
-                    res.setStatus(Reservation.Status.WAITING);
-                    res.setPriorityScore(newScore);
-                    res.setQueueArrivalTime(LocalDateTime.now());
+
+                    String newResId = vipReservationRepo.generateReservationId();
+                    String newConfNum = vipReservationRepo.generateConfirmationNumber();
+                    Reservation newRes = new Reservation(
+                        newResId,
+                        guest.getGuestId(),
+                        newConfNum,
+                        res.getRoomType(),
+                        Reservation.Status.WAITING,
+                        res.getIsBoiling(),
+                        newScore,
+                        LocalDateTime.now(),
+                        LocalDateTime.now());
+
                     vipReservationRepo.addReservation(
-                        res, newScore, guestRepo, memberRepo, configRepo);
+                        newRes, newScore, guestRepo, memberRepo, configRepo);
                   }
                 }
               }

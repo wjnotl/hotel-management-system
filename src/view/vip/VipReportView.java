@@ -39,28 +39,59 @@ public class VipReportView {
       int recordLimit) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("FILTER & SORT OPTIONS", 88);
-    System.out.println("CURRENT ACTIVE FILTERS & SORTS:");
+    ConsoleUtil.printTitleBox("REPORT GENERATION CONFIGURATION", 88);
+    System.out.println("CURRENT ACTIVE PARAMETERS:");
     System.out.println("  - Guest Search Query : [ " + (search == null ? "NONE (All)" : "\"" + search + "\"") + " ]");
     System.out.println("  - Membership Tier    : [ " + (tier == null ? "ALL TIERS" : tier) + " ]");
     System.out.println("  - Room Queue Type    : [ " + (roomType == null ? "ALL ROOM TYPES" : roomType) + " ]");
     System.out.println("  - Boiling Status     : [ " + (boiling == null ? "ALL STATES" : boiling) + " ]");
     System.out.println("  - Sort Attribute     : [ " + sortAttr + " ]");
     System.out.println("  - Sort Direction     : [ " + sortDir + " ]");
-    System.out.println("  - Max Records        : [ " + (recordLimit == 0 ? "SHOW ALL (Unlimited)" : "Top " + recordLimit + " Records") + " ]\n");
+    System.out.println("  - Max Display Records: [ "
+        + (recordLimit == 0 ? "SHOW ALL (Unlimited)" : "Top " + recordLimit + " Records") + " ]\n");
     System.out.println(
         "--------------------------------------------------------------------------\n");
     System.out.println("1. Generate Report");
-    System.out.println("2. Search Query");
-    System.out.println("3. Membership Tier");
-    System.out.println("4. Room Queue Type");
-    System.out.println("5. Boiling Status");
-    System.out.println("6. Sort Attribute & Direction");
-    System.out.println("7. Max Display Records");
-    System.out.println("8. Reset All Filters");
-    System.out.println("9. Back\n");
+    System.out.println("2. Edit Filters");
+    System.out.println("3. Sort Options");
+    System.out.println("4. Max Display Records");
+    System.out.println("5. Reset All Options");
+    System.out.println("6. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 9);
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6);
+  }
+
+  public GetMenuInputResult displayEditFiltersSubmenu(
+      String search, String tier, String roomType, String boiling) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("EDIT FILTERS", 88);
+    System.out.println("  - Guest Search Query : [ " + (search == null ? "NONE (All)" : "\"" + search + "\"") + " ]");
+    System.out.println("  - Membership Tier    : [ " + (tier == null ? "ALL TIERS" : tier) + " ]");
+    System.out.println("  - Room Queue Type    : [ " + (roomType == null ? "ALL ROOM TYPES" : roomType) + " ]");
+    System.out.println("  - Boiling Status     : [ " + (boiling == null ? "ALL STATES" : boiling) + " ]\n");
+    System.out.println(
+        "--------------------------------------------------------------------------\n");
+    System.out.println("1. Membership Tier");
+    System.out.println("2. Boiling Status");
+    System.out.println("3. Room Queue Type");
+    System.out.println("4. Search Query");
+    System.out.println("5. Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5);
+  }
+
+  public GetMenuInputResult displaySortOptionsSubmenu(String sortAttr, String sortDir) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SORT OPTIONS", 88);
+    System.out.println("  - Sort Attribute     : [ " + sortAttr + " ]");
+    System.out.println("  - Sort Direction     : [ " + sortDir + " ]\n");
+    System.out.println(
+        "--------------------------------------------------------------------------\n");
+    System.out.println("1. Sort Attribute");
+    System.out.println("2. Sort Direction");
+    System.out.println("3. Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3);
   }
 
   public GetMenuInputResult displayRecordLimitSubmenu(int currentLimit) {
@@ -153,7 +184,6 @@ public class VipReportView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3);
   }
 
-
   public GetMenuInputResult renderSlaReportScreen(
       ListInterface<Reservation> matchedList,
       ListInterface<Guest> guestList,
@@ -176,29 +206,27 @@ public class VipReportView {
     System.out.println("Sort Order   : " + sortStr + "\n");
 
     int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
-    int displayCount =
-        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+    int displayCount = (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
-    int[] columnWidths = {6, 20, 12, 14, 12, 9, 15};
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(2, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER);
+    int[] columnWidths = { 6, 20, 12, 14, 12, 9, 15 };
+    TableUtil.TableSettings settings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(2, TableUtil.Align.CENTER)
+        .setHAlign(3, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.CENTER)
+        .setHAlign(6, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"RANK", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"},
+        new String[] { "RANK", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS" },
         settings);
 
     if (matchedList == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
-      TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {94}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.TableSettings emptySettings = new TableUtil.TableSettings(new int[] { 94 }).setHAlign(0,
+          TableUtil.Align.CENTER);
       TableUtil.printTableRow(
-          new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
+          new String[] { "*** NO MATCHING RECORDS FOUND FOR REPORT ***" }, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
     } else {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
@@ -206,8 +234,7 @@ public class VipReportView {
       for (int i = 1; i <= displayCount; i++) {
         Reservation r = matchedList.getEntry(i);
         Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+        Member m = (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
 
         String rank = i + ".";
         String name = (g != null) ? g.getName() : "N/A";
@@ -219,7 +246,7 @@ public class VipReportView {
 
         TableUtil.printTableRow(
             new String[] {
-              rank, name, tier, room, waitMins + " Mins", String.valueOf(strikes), status
+                rank, name, tier, room, waitMins + " Mins", String.valueOf(strikes), status
             },
             settings);
       }
@@ -238,9 +265,10 @@ public class VipReportView {
               + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
               + " to Analytics Hub\n");
       try {
-        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+        return ConsoleUtil.getMenuInput("Select a command: ", new char[] { 'S', 'R', 'E', 'Q' });
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
+        return null;
       }
     }
   }
@@ -267,30 +295,28 @@ public class VipReportView {
     System.out.println("Sort Order   : " + sortStr + "\n");
 
     int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
-    int displayCount =
-        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+    int displayCount = (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
-    int[] columnWidths = {6, 22, 12, 10, 10, 28};
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.LEFT)
-            .setHAlign(2, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.LEFT);
+    int[] columnWidths = { 6, 22, 12, 10, 10, 28 };
+    TableUtil.TableSettings settings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(0, TableUtil.Align.CENTER)
+        .setHAlign(1, TableUtil.Align.LEFT)
+        .setHAlign(2, TableUtil.Align.CENTER)
+        .setHAlign(3, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.LEFT);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"RANK", "GUEST NAME", "TIER", "STRIKES", "BOILING", "RESOLUTION STATUS"},
+        new String[] { "RANK", "GUEST NAME", "TIER", "STRIKES", "BOILING", "RESOLUTION STATUS" },
         settings);
 
     if (matchedList == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
-      TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.TableSettings emptySettings = new TableUtil.TableSettings(new int[] { 93 }).setHAlign(0,
+          TableUtil.Align.CENTER);
       TableUtil.printTableRow(
-          new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
+          new String[] { "*** NO MATCHING RECORDS FOUND FOR REPORT ***" }, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
     } else {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
@@ -298,8 +324,7 @@ public class VipReportView {
       for (int i = 1; i <= displayCount; i++) {
         Reservation r = matchedList.getEntry(i);
         Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+        Member m = (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
 
         String rank = i + ".";
         String name = (g != null) ? g.getName() : "N/A";
@@ -313,7 +338,7 @@ public class VipReportView {
         }
 
         TableUtil.printTableRow(
-            new String[] {rank, name, tier, String.valueOf(strikes), boiling, resolution},
+            new String[] { rank, name, tier, String.valueOf(strikes), boiling, resolution },
             settings);
       }
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
@@ -331,9 +356,10 @@ public class VipReportView {
               + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
               + " to Analytics Hub\n");
       try {
-        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+        return ConsoleUtil.getMenuInput("Select a command: ", new char[] { 'S', 'R', 'E', 'Q' });
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
+        return null;
       }
     }
   }
@@ -360,32 +386,31 @@ public class VipReportView {
     System.out.println("Sort Order   : " + sortStr + "\n");
 
     int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
-    int displayCount =
-        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+    int displayCount = (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
-    int[] columnWidths = {6, 22, 12, 14, 16, 18};
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.LEFT)
-            .setHAlign(2, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER);
+    int[] columnWidths = { 6, 20, 12, 16, 12, 14, 14 };
+    TableUtil.TableSettings settings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(0, TableUtil.Align.CENTER)
+        .setHAlign(1, TableUtil.Align.LEFT)
+        .setHAlign(2, TableUtil.Align.CENTER)
+        .setHAlign(3, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.CENTER)
+        .setHAlign(6, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {
-          "RANK", "GUEST NAME", "TIER", "ALLOWED GRACE", "HOLD STATUS", "UTILIZATION %"
+            "RANK", "GUEST NAME", "TIER", "ALLOWED GRACE", "TIME USED", "HOLD STATUS", "GRACE USED %"
         },
         settings);
 
     if (matchedList == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
-      TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.TableSettings emptySettings = new TableUtil.TableSettings(new int[] { 94 }).setHAlign(0,
+          TableUtil.Align.CENTER);
       TableUtil.printTableRow(
-          new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
+          new String[] { "*** NO MATCHING RECORDS FOUND FOR REPORT ***" }, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
     } else {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
@@ -393,22 +418,22 @@ public class VipReportView {
       for (int i = 1; i <= displayCount; i++) {
         Reservation r = matchedList.getEntry(i);
         Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+        Member m = (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
 
         String rank = i + ".";
         String name = (g != null) ? g.getName() : "N/A";
         String tier = (m != null) ? m.getTier().name() : "NON-MEMBER";
 
-        int allowedGrace = getGraceMinsForTier(m, config);
+        int allowedGrace = (r != null && r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
+            ? r.getAllocatedGraceMins()
+            : getGraceMinsForTier(m, config);
+
+        String timeUsedStr = calculateTimeUsedStr(r);
         String status = (r != null) ? r.getStatus().name() : "N/A";
-        String utilPctStr =
-            (r != null && r.getStatus() == Reservation.Status.CHECKED_IN)
-                ? "100.0%"
-                : "Active Hold";
+        String utilPctStr = calculateGraceUsedPctStr(r, m, config);
 
         TableUtil.printTableRow(
-            new String[] {rank, name, tier, allowedGrace + " Mins", status, utilPctStr}, settings);
+            new String[] { rank, name, tier, allowedGrace + " Mins", timeUsedStr, status, utilPctStr }, settings);
       }
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
     }
@@ -425,9 +450,10 @@ public class VipReportView {
               + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q] Quit"
               + " to Analytics Hub\n");
       try {
-        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
+        return ConsoleUtil.getMenuInput("Select a command: ", new char[] { 'S', 'R', 'E', 'Q' });
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
+        return null;
       }
     }
   }
@@ -444,30 +470,32 @@ public class VipReportView {
     if (list != null) {
       for (int i = 1; i <= list.getNumberOfEntries(); i++) {
         Reservation r = list.getEntry(i);
-        if (r == null) continue;
+        if (r == null)
+          continue;
 
         Guest g = findGuest(guestList, r.getGuestId());
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+        Member m = (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
         Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
 
         long wait = calculateWaitMins(r);
-        int targetMins =
-            (tier == Member.LoyaltyTier.DIAMOND)
-                ? config.getDiamondPatienceLimitMins()
-                : (tier == Member.LoyaltyTier.GOLD)
-                    ? config.getGoldPatienceLimitMins()
-                    : config.getSilverPatienceLimitMins();
+        int targetMins = (tier == Member.LoyaltyTier.DIAMOND)
+            ? config.getDiamondPatienceLimitMins()
+            : (tier == Member.LoyaltyTier.GOLD)
+                ? config.getGoldPatienceLimitMins()
+                : config.getSilverPatienceLimitMins();
 
         if (tier == Member.LoyaltyTier.DIAMOND) {
           diamondTotal++;
-          if (wait <= targetMins) diamondSlaMet++;
+          if (wait <= targetMins)
+            diamondSlaMet++;
         } else if (tier == Member.LoyaltyTier.GOLD) {
           goldTotal++;
-          if (wait <= targetMins) goldSlaMet++;
+          if (wait <= targetMins)
+            goldSlaMet++;
         } else {
           silverTotal++;
-          if (wait <= targetMins) silverSlaMet++;
+          if (wait <= targetMins)
+            silverSlaMet++;
         }
       }
     }
@@ -543,24 +571,28 @@ public class VipReportView {
     if (list != null) {
       for (int i = 1; i <= list.getNumberOfEntries(); i++) {
         Reservation r = list.getEntry(i);
-        if (r == null) continue;
+        if (r == null)
+          continue;
 
         Guest g = findGuest(guestList, r.getGuestId());
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+        Member m = (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
         Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
 
-        if (g != null) totalStrikes += g.getStrikeCount();
+        if (g != null)
+          totalStrikes += g.getStrikeCount();
 
         if (tier == Member.LoyaltyTier.DIAMOND) {
           dTotal++;
-          if (r.getStatus() == Reservation.Status.NO_SHOW) dEvicted++;
+          if (r.getStatus() == Reservation.Status.NO_SHOW)
+            dEvicted++;
         } else if (tier == Member.LoyaltyTier.GOLD) {
           gTotal++;
-          if (r.getStatus() == Reservation.Status.NO_SHOW) gEvicted++;
+          if (r.getStatus() == Reservation.Status.NO_SHOW)
+            gEvicted++;
         } else {
           sTotal++;
-          if (r.getStatus() == Reservation.Status.NO_SHOW) sEvicted++;
+          if (r.getStatus() == Reservation.Status.NO_SHOW)
+            sEvicted++;
         }
       }
     }
@@ -575,23 +607,23 @@ public class VipReportView {
 
     System.out.println(
         "\n--------------------------------------------------------------------------\n");
-    System.out.println("ALGORITHM SUMMARY METRICS (EVICTION & CHURN AUDIT):\n");
+    System.out.println("ALGORITHM SUMMARY METRICS (EVICTION AUDIT):\n");
     System.out.printf(" - Total Strikes Logged: %d Penalty Strikes\n\n", totalStrikes);
     System.out.printf(
         " DIAMOND EVICTIONS : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n",
-        dEvicted, dTotal, dRate, dMax, (dRate <= dMax ? "[OK]" : "[!] HIGH CHURN"));
+        dEvicted, dTotal, dRate, dMax, (dRate <= dMax ? "[OK]" : "[!] HIGH EVICTION"));
     System.out.printf(
         " GOLD EVICTIONS    : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n",
-        gEvicted, gTotal, gRate, gMax, (gRate <= gMax ? "[OK]" : "[!] HIGH CHURN"));
+        gEvicted, gTotal, gRate, gMax, (gRate <= gMax ? "[OK]" : "[!] HIGH EVICTION"));
     System.out.printf(
         " SILVER EVICTIONS  : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n\n",
-        sEvicted, sTotal, sRate, sMax, (sRate <= sMax ? "[OK]" : "[!] HIGH CHURN"));
+        sEvicted, sTotal, sRate, sMax, (sRate <= sMax ? "[OK]" : "[!] HIGH EVICTION"));
     System.out.println(
         "--------------------------------------------------------------------------\n");
 
     if (dRate > dMax || gRate > gMax || sRate > sMax) {
       System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
-      System.out.println(" [!] VIP CHURN ALERT: Eviction rate exceeds tier target threshold!");
+      System.out.println(" [!] VIP EVICTION ALERT: Eviction rate exceeds tier target threshold!");
       System.out.println(
           " REMEDIATION: Open Settings -> Tweak Operational Rules -> Increase Max Strike");
       System.out.println(" Limit to grant high-value members more callout opportunities.\n");
@@ -630,12 +662,14 @@ public class VipReportView {
   }
 
   private long calculateWaitMins(Reservation r) {
-    if (r == null || r.getQueueArrivalTime() == null) return 0;
+    if (r == null || r.getQueueArrivalTime() == null)
+      return 0;
     return java.time.Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
   }
 
   private int getGraceMinsForTier(Member m, VipSystemConfig config) {
-    if (m == null || m.getTier() == null) return config.getSilverGraceWindowMins();
+    if (m == null || m.getTier() == null)
+      return config.getSilverGraceWindowMins();
     switch (m.getTier()) {
       case DIAMOND:
         return config.getDiamondGraceWindowMins();
@@ -647,21 +681,67 @@ public class VipReportView {
   }
 
   private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
-    if (guestList == null || guestId == null) return null;
+    if (guestList == null || guestId == null)
+      return null;
     for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
       Guest g = guestList.getEntry(i);
-      if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) return g;
+      if (g != null && guestId.equalsIgnoreCase(g.getGuestId()))
+        return g;
     }
     return null;
   }
 
   private Member findMember(ListInterface<Member> memberList, String memberId) {
-    if (memberList == null || memberId == null) return null;
+    if (memberList == null || memberId == null)
+      return null;
     for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
       Member m = memberList.getEntry(i);
-      if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) return m;
+      if (m != null && memberId.equalsIgnoreCase(m.getMemberId()))
+        return m;
     }
     return null;
+  }
+
+  private String calculateTimeUsedStr(Reservation r) {
+    if (r == null) return "N/A";
+    LocalDateTime startTime = r.getAllocatedTime();
+    if (startTime == null) {
+      startTime = r.getQueueArrivalTime();
+    }
+    if (startTime == null) return "N/A";
+
+    LocalDateTime endTime = (r.getStatus() == Reservation.Status.CHECKED_IN && r.getAllocatedTime() != null)
+        ? r.getAllocatedTime()
+        : LocalDateTime.now();
+
+    long elapsedMins = java.time.Duration.between(startTime, endTime).toMinutes();
+    if (elapsedMins < 0) elapsedMins = 0;
+    return elapsedMins + " Mins";
+  }
+
+  private String calculateGraceUsedPctStr(Reservation r, Member m, VipSystemConfig config) {
+    if (r == null) return "0.0";
+    int allowedGraceMins = (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
+        ? r.getAllocatedGraceMins()
+        : getGraceMinsForTier(m, config);
+    if (allowedGraceMins <= 0) return "0.0";
+
+    LocalDateTime startTime = r.getAllocatedTime();
+    if (startTime == null) {
+      startTime = r.getQueueArrivalTime();
+    }
+    if (startTime == null) return "0.0";
+
+    LocalDateTime endTime = (r.getStatus() == Reservation.Status.CHECKED_IN && r.getAllocatedTime() != null)
+        ? r.getAllocatedTime()
+        : LocalDateTime.now();
+
+    long elapsedMins = java.time.Duration.between(startTime, endTime).toMinutes();
+    if (elapsedMins < 0) elapsedMins = 0;
+
+    double pct = ((double) elapsedMins / allowedGraceMins) * 100.0;
+    pct = Math.min(100.0, Math.max(0.0, pct));
+    return String.format("%.1f", pct);
   }
 
   public void displayExportSuccessScreen(String filePath) {

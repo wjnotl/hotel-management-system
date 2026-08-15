@@ -104,6 +104,27 @@ public class VipReservationRepo {
 
     Room.RoomType type = reservation.getRoomType();
 
+    // Determine grace minutes snapshot for this allocation session
+    Guest guest = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
+    Member member =
+        (guest != null && guest.getMemberId() != null && memberRepo != null)
+            ? memberRepo.findById(guest.getMemberId())
+            : null;
+
+    VipSystemConfig config = (configRepo != null) ? configRepo.getConfig() : null;
+    Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+    int graceMins =
+        (tier == Member.LoyaltyTier.DIAMOND)
+            ? (config != null ? config.getDiamondGraceWindowMins() : 45)
+            : (tier == Member.LoyaltyTier.GOLD)
+                ? (config != null ? config.getGoldGraceWindowMins() : 30)
+                : (config != null ? config.getSilverGraceWindowMins() : 15);
+
+    if (reservation.getAllocatedTime() == null) {
+      reservation.setAllocatedTime(LocalDateTime.now());
+    }
+    reservation.setAllocatedGraceMins(graceMins);
+
     // Remove from active waitlist queue & heap
     boolean heapRemoved = getHeapByRoomType(type).remove(reservation);
     boolean listRemoved = getListByRoomType(type).remove(reservation);
