@@ -155,12 +155,24 @@ public class WalkInQueueController {
         String term = input.trim();
         Guest guest = guestRepo.findById(term);
         if (guest == null) {
-          guest = findGuestByName(term);
+          guest = guestRepo.findByName(term);
         }
 
+        // A walk-in never booked, so a first-time arrival legitimately has no guest file yet.
+        // Refusing them here would mean the module can only serve people the seeder created.
         if (guest == null) {
-          walkInQueueView.displayGuestNotFoundScreen(term);
-          continue;
+          int choice = walkInQueueView.displayGuestNotFoundScreen(term);
+          if (choice == 2) {
+            continue;
+          } else if (choice != 1) {
+            return;
+          }
+
+          guest =
+              new GuestRegistrationController(guestRepo).registerNewGuest(nameSuggestionFrom(term));
+          if (guest == null) {
+            continue;
+          }
         }
 
         QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
@@ -174,6 +186,20 @@ public class WalkInQueueController {
 
         Member member =
             (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
+
+        // A tier holder does not belong at the back of a FIFO line, so the decision is put to
+        // the clerk before the line is offered at all.
+        if (member != null && member.getTier() != null) {
+          int decision = promptVipRouting(guest, member, roomType, queue.getNumberOfEntries());
+          if (decision == 1) {
+            if (assignRoomDirectly(guest, member, roomType)) {
+              return;
+            }
+            continue;
+          } else if (decision == 3) {
+            return;
+          }
+        }
 
         int waiting = queue.getNumberOfEntries();
         boolean confirmed =
@@ -573,15 +599,70 @@ public class WalkInQueueController {
     return null;
   }
 
-  private Guest findGuestByName(String name) {
-    ListInterface<Guest> guestList = guestRepo.getGuestList();
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null && name.equalsIgnoreCase(g.getName())) {
-        return g;
-      }
+  // A guest id typed into the search box is not a name, so it must not be pre-filled as one.
+  private String nameSuggestionFrom(String term) {
+    if (term == null || term.toUpperCase().startsWith("G-")) {
+      return null;
     }
-    return null;
+    return term;
+  }
+
+  // A free room may only be handed straight to this member while one is left over after every
+  // VIP already on the waitlist is covered. That is the same guard handleAllocateNext applies,
+  // so arriving late cannot buy a better place than the VIPs who have been waiting.
+  private int promptVipRouting(Guest guest, Member member, Room.RoomType roomType, int lineLength) {
+    int vacantRooms = countVacantCleanRooms(roomType);
+    int vipWaiting = countVipWaiting(roomType);
+
+    return walkInQueueView.displayVipArrivalScreen(
+        guest, member, roomType, vacantRooms, vipWaiting, lineLength, vacantRooms > vipWaiting);
+  }
+
+  private boolean assignRoomDirectly(Guest guest, Member member, Room.RoomType roomType) {
+    Room room = roomRepo.findVacantCleanRoom(roomType);
+    if (room == null) {
+      ConsoleUtil.printError("No VACANT & CLEAN " + roomType.name() + " room is available!");
+      return false;
+    }
+
+    int vacantRooms = countVacantCleanRooms(roomType);
+    int vipWaiting = countVipWaiting(roomType);
+
+    boolean confirmed =
+        walkInQueueView.displayVipDirectAssignConfirmationScreen(
+            guest, member, room, StandardReservationRepo.GRACE_MINUTES, vacantRooms, vipWaiting);
+    if (!confirmed) {
+      return false;
+    }
+
+    LocalDateTime now = LocalDateTime.now();
+
+    // queueArrivalTime is stamped even though the guest never queues, so the wait-time report
+    // still counts this arrival and records it as the zero-wait case it actually was.
+    Reservation direct =
+        new Reservation(
+            standardReservationRepo.generateReservationId(),
+            guest.getGuestId(),
+            standardReservationRepo.generateConfirmationNumber(vipReservationRepo),
+            roomType,
+            Reservation.Status.ALLOCATED,
+            false,
+            0,
+            now,
+            now);
+
+    if (!standardReservationRepo.allocateDirect(direct)) {
+      ConsoleUtil.printError("The reservation could not be recorded!");
+      return false;
+    }
+
+    room.setStatus(Room.Status.OCCUPIED);
+    room.setReservationConfirmationNumber(direct.getConfirmationNumber());
+    roomRepo.updateRoom(room);
+
+    walkInQueueView.displayVipDirectAssignSuccessScreen(
+        direct, guest, member, room, StandardReservationRepo.GRACE_MINUTES);
+    return true;
   }
 
   private int countVacantCleanRooms(Room.RoomType roomType) {

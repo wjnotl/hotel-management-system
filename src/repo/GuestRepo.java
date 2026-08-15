@@ -1,10 +1,9 @@
 package repo;
 
-import java.time.LocalDate;
-
 import adt.ArrayList;
 import adt.ListInterface;
 import entity.Guest;
+import java.time.LocalDate;
 import util.BinaryFileUtil;
 
 public class GuestRepo {
@@ -62,6 +61,63 @@ public class GuestRepo {
       }
     }
     return null;
+  }
+
+  public Guest findByName(String name) {
+    if (name == null || guestList == null) return null;
+    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
+      Guest g = guestList.getEntry(i);
+      if (g != null && name.equalsIgnoreCase(g.getName())) {
+        return g;
+      }
+    }
+    return null;
+  }
+
+  // One scan covers both documents because a guest carries whichever one they presented, and
+  // the desk must not be able to open a second file for a person already on record.
+  public Guest findByIdentityDocument(String document) {
+    if (document == null || guestList == null) return null;
+    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
+      Guest g = guestList.getEntry(i);
+      if (g == null) continue;
+      if (document.equalsIgnoreCase(g.getIcNumber())
+          || document.equalsIgnoreCase(g.getPassportNumber())) {
+        return g;
+      }
+    }
+    return null;
+  }
+
+  public Guest findByPhoneNumber(String phoneNumber) {
+    if (phoneNumber == null || guestList == null) return null;
+    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
+      Guest g = guestList.getEntry(i);
+      if (g != null && phoneNumber.equalsIgnoreCase(g.getPhoneNumber())) {
+        return g;
+      }
+    }
+    return null;
+  }
+
+  // Ids are minted here because this repository owns the list that decides which suffix is
+  // still free. Guest.equals compares the id alone, so a reused number would make findById
+  // and updateGuest resolve to whichever record happened to be stored first.
+  public String generateGuestId() {
+    int maxId = 100;
+    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
+      Guest g = guestList.getEntry(i);
+      if (g != null && g.getGuestId() != null && g.getGuestId().startsWith("G-")) {
+        try {
+          int num = Integer.parseInt(g.getGuestId().substring(2));
+          if (num > maxId) {
+            maxId = num;
+          }
+        } catch (NumberFormatException ignored) {
+        }
+      }
+    }
+    return "G-" + (maxId + 1);
   }
 
   public ListInterface<Guest> searchGuests(String query) {

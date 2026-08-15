@@ -10,14 +10,13 @@ import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 import util.TextUtil;
 
+// The report bodies are no longer drawn here. Generating a report writes a .txt file and this
+// view only confirms what was written, so the tables that used to live in this class moved into
+// BookingReportController where the file content is built.
 public class BookingReportView {
 
   // Every table below spans 88 printable columns: the widths sum plus one separator per gap.
   // TableUtil spends 2 of every column on padding, so a header of n characters needs n + 2.
-  private static final int[] REGISTER_WIDTHS = {5, 11, 18, 11, 12, 9, 16};
-  private static final int[] SUMMARY_WIDTHS = {12, 11, 11, 11, 10, 12, 15};
-  private static final int[] WAIT_WIDTHS = {5, 11, 18, 11, 12, 9, 16};
-  private static final int[] SUBTOTAL_WIDTHS = {14, 12, 12, 13, 15, 17};
   private static final int[] SPAN_WIDTH = {88};
   private static final int[] KV_WIDTHS = {23, 64};
   private static final int SCREEN_WIDTH = 90;
@@ -69,7 +68,7 @@ public class BookingReportView {
     System.out.println(
         "7. Record Limit     : [ " + (recordLimit == 0 ? "Show All" : "Top " + recordLimit) + " ]");
     System.out.println("8. Reset All Filters");
-    System.out.println("9. Generate Report Now");
+    System.out.println("9. Export Report To TXT");
     System.out.println("10. Back to Analytics Hub\n");
 
     System.out.println("Records matching the current scope: " + matchCount + "\n");
@@ -77,235 +76,57 @@ public class BookingReportView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 10).getAsInt();
   }
 
-  public GetMenuInputResult renderArrivalRegister(
-      ListInterface<Reservation> rows,
-      ListInterface<Guest> guestList,
+  /**
+   * Confirms a finished .txt export and collects the next command. The report itself is in the
+   * file, so nothing but the receipt is printed here.
+   *
+   * @param offerBinarySearch true for the arrival register, which still exposes the reservation ID
+   *     lookup over the sorted rows that were written
+   * @param binarySearchAvailable true when the current sort order actually permits a binary search
+   */
+  public GetMenuInputResult showExportReceipt(
+      String reportTitle,
       String scope,
       String sortLabel,
-      int recordLimit,
-      String[][] roomTypeTotals,
+      int matchCount,
+      int exportedCount,
+      String filePath,
+      boolean offerBinarySearch,
       boolean binarySearchAvailable) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("DAILY ARRIVAL REGISTER", SCREEN_WIDTH);
+    ConsoleUtil.printTitleBox("EXPORT SUCCESSFUL", SCREEN_WIDTH);
 
-    printScopeHeader(scope, sortLabel, recordLimit, rows.getNumberOfEntries());
-
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(REGISTER_WIDTHS)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.RIGHT)
-            .setHAlign(6, TableUtil.Align.CENTER)
-            .setTruncateAt(2, REGISTER_WIDTHS[2] - 2);
-
-    TableUtil.TableSettings headerSettings = centeredHeader(REGISTER_WIDTHS);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
     TableUtil.TableSettings spanSettings =
         new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"ARRIVALS BY ROOM TYPE"}, spanSettings);
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
-    TableUtil.printTableRow(
-        new String[] {"NO.", "RES ID", "GUEST NAME", "ROOM TYPE", "STATUS", "WAITED", "ARRIVED"},
-        headerSettings);
-
-    if (rows.isEmpty()) {
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
-      TableUtil.printTableRow(
-          new String[] {"*** NO BOOKINGS MATCH THE CURRENT SCOPE ***"}, spanSettings);
-      TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
-    } else {
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-      int shown =
-          (recordLimit == 0)
-              ? rows.getNumberOfEntries()
-              : Math.min(recordLimit, rows.getNumberOfEntries());
-
-      for (int i = 1; i <= shown; i++) {
-        Reservation r = rows.getEntry(i);
-        if (r == null) continue;
-
-        Guest g = findGuest(guestList, r.getGuestId());
-
-        TableUtil.printTableRow(
-            new String[] {
-              String.valueOf(i),
-              r.getReservationId(),
-              (g != null) ? g.getName() : "N/A",
-              r.getRoomType().name(),
-              r.getStatus().name(),
-              formatMinutes(waitMinutesOf(r)),
-              formatClock(r.getQueueArrivalTime())
-            },
-            settings);
-      }
-
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
-
-      if (recordLimit != 0 && rows.getNumberOfEntries() > recordLimit) {
-        System.out.println(
-            "Showing the top "
-                + recordLimit
-                + " of "
-                + rows.getNumberOfEntries()
-                + " matching records. Raise the record limit to see the rest.");
-      }
-    }
+    TableUtil.printTableRow(new String[] {reportTitle}, spanSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Generated", formatTime(LocalDateTime.now()), true);
+    printKeyValue(kvSettings, "Scope", scope, true);
+    printKeyValue(kvSettings, "Sorted By", sortLabel, true);
+    printKeyValue(
+        kvSettings,
+        "Records",
+        matchCount + " matching, " + exportedCount + " written to the file",
+        true);
+    printKeyValue(kvSettings, "Saved To", filePath, false);
 
     System.out.println();
-    printRoomTypeSubtotals(roomTypeTotals);
-
-    System.out.println();
-    if (binarySearchAvailable) {
-      System.out.println("[F] Find A Reservation ID (binary search on the sorted register)");
-    } else {
-      System.out.println("[F] Find A Reservation ID (needs the RESERVATION ID sort order)");
-    }
-    System.out.println("[S] Change Filters     [R] Refresh     [E] Exit to Analytics Hub\n");
-
-    return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'F', 'S', 'R', 'E'});
-  }
-
-  private void printRoomTypeSubtotals(String[][] roomTypeTotals) {
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(SUBTOTAL_WIDTHS)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(2, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER);
-    TableUtil.TableSettings headerSettings = centeredHeader(SUBTOTAL_WIDTHS);
-    TableUtil.TableSettings spanSettings =
-        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
-
-    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"SUBTOTALS WITHIN SCOPE"}, spanSettings);
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
-    TableUtil.printTableRow(
-        new String[] {"ROOM TYPE", "IN SCOPE", "IN LINE", "ON HOLD", "CHECKED IN", "CLOSED"},
-        headerSettings);
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-    for (String[] row : roomTypeTotals) {
-      TableUtil.printTableRow(row, settings);
-    }
-
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
-  }
-
-  public GetMenuInputResult renderPerformanceReport(
-      ListInterface<Reservation> rows,
-      ListInterface<Guest> guestList,
-      String scope,
-      String sortLabel,
-      int recordLimit,
-      String[][] summaryRows,
-      String[] overallRow) {
-
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("QUEUE PERFORMANCE & NO-SHOW ANALYSIS", SCREEN_WIDTH);
-
-    printScopeHeader(scope, sortLabel, recordLimit, rows.getNumberOfEntries());
-
-    TableUtil.TableSettings summarySettings =
-        new TableUtil.TableSettings(SUMMARY_WIDTHS)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(2, TableUtil.Align.RIGHT)
-            .setHAlign(3, TableUtil.Align.RIGHT)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER);
-    TableUtil.TableSettings summaryHeader = centeredHeader(SUMMARY_WIDTHS);
-    TableUtil.TableSettings spanSettings =
-        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
-
-    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"OPERATIONAL SUMMARY"}, spanSettings);
-    TableUtil.printTableBorder(summarySettings, TableUtil.BorderPosition.SPAN_OPEN);
-    TableUtil.printTableRow(
-        new String[] {
-          "ROOM TYPE", "ARRIVALS", "AVG WAIT", "MAX WAIT", "SERVED", "NO-SHOWS", "NO-SHOW RATE"
-        },
-        summaryHeader);
-    TableUtil.printTableBorder(summarySettings, TableUtil.BorderPosition.MIDDLE);
-
-    for (String[] row : summaryRows) {
-      TableUtil.printTableRow(row, summarySettings);
-    }
-
-    TableUtil.printTableBorder(summarySettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(overallRow, summarySettings);
-    TableUtil.printTableBorder(summarySettings, TableUtil.BorderPosition.BOTTOM);
-
-    System.out.println();
-
-    TableUtil.TableSettings waitSettings =
-        new TableUtil.TableSettings(WAIT_WIDTHS)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.RIGHT)
-            .setHAlign(6, TableUtil.Align.CENTER)
-            .setTruncateAt(2, WAIT_WIDTHS[2] - 2);
-    TableUtil.TableSettings waitHeader = centeredHeader(WAIT_WIDTHS);
-
-    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"WORST WAITS IN SCOPE"}, spanSettings);
-    TableUtil.printTableBorder(waitSettings, TableUtil.BorderPosition.SPAN_OPEN);
-    TableUtil.printTableRow(
-        new String[] {"NO.", "RES ID", "GUEST NAME", "ROOM TYPE", "OUTCOME", "WAITED", "STRIKES"},
-        waitHeader);
-
-    if (rows.isEmpty()) {
-      TableUtil.printTableBorder(waitSettings, TableUtil.BorderPosition.HEADER_CLOSE);
-      TableUtil.printTableRow(
-          new String[] {"*** NO BOOKINGS MATCH THE CURRENT SCOPE ***"}, spanSettings);
-      TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
-    } else {
-      TableUtil.printTableBorder(waitSettings, TableUtil.BorderPosition.MIDDLE);
-
-      int shown =
-          (recordLimit == 0)
-              ? rows.getNumberOfEntries()
-              : Math.min(recordLimit, rows.getNumberOfEntries());
-
-      for (int i = 1; i <= shown; i++) {
-        Reservation r = rows.getEntry(i);
-        if (r == null) continue;
-
-        Guest g = findGuest(guestList, r.getGuestId());
-
-        TableUtil.printTableRow(
-            new String[] {
-              String.valueOf(i),
-              r.getReservationId(),
-              (g != null) ? g.getName() : "N/A",
-              r.getRoomType().name(),
-              r.getStatus().name(),
-              formatMinutes(waitMinutesOf(r)),
-              String.valueOf((g != null) ? g.getStrikeCount() : 0)
-            },
-            waitSettings);
+    if (offerBinarySearch) {
+      if (binarySearchAvailable) {
+        System.out.println("[F] Find A Reservation ID (binary search on the sorted register)");
+      } else {
+        System.out.println("[F] Find A Reservation ID (needs the RESERVATION ID sort order)");
       }
+      System.out.println("[S] Change Filters     [R] Export Again     [E] Exit to Analytics Hub\n");
 
-      TableUtil.printTableBorder(waitSettings, TableUtil.BorderPosition.BOTTOM);
-
-      if (recordLimit != 0 && rows.getNumberOfEntries() > recordLimit) {
-        System.out.println(
-            "Showing the top "
-                + recordLimit
-                + " of "
-                + rows.getNumberOfEntries()
-                + " matching records. Raise the record limit to see the rest.");
-      }
+      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'F', 'S', 'R', 'E'});
     }
 
-    System.out.println("\n[S] Change Filters     [R] Refresh     [E] Exit to Analytics Hub\n");
+    System.out.println("[S] Change Filters     [R] Export Again     [E] Exit to Analytics Hub\n");
 
     return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'E'});
   }
@@ -473,26 +294,6 @@ public class BookingReportView {
     return ConsoleUtil.getStringInput("Enter search term: ");
   }
 
-  private void printScopeHeader(String scope, String sortLabel, int recordLimit, int matches) {
-    System.out.println("GENERATED : " + formatTime(LocalDateTime.now()));
-    System.out.println("SCOPE     : " + scope);
-    System.out.println("SORTED BY : " + sortLabel);
-    System.out.println(
-        "RECORDS   : "
-            + matches
-            + " matching, showing "
-            + (recordLimit == 0 ? "all" : "top " + recordLimit)
-            + "\n");
-  }
-
-  private TableUtil.TableSettings centeredHeader(int[] widths) {
-    TableUtil.TableSettings settings = new TableUtil.TableSettings(widths);
-    for (int i = 0; i < widths.length; i++) {
-      settings.setHAlign(i, TableUtil.Align.CENTER);
-    }
-    return settings;
-  }
-
   // TableUtil wraps at the full column width but prints only width - 2 characters, so long
   // values are pre-wrapped here and emitted one row at a time to avoid losing characters.
   private void printKeyValue(
@@ -523,22 +324,8 @@ public class BookingReportView {
     return (minutes / 60) + "h " + String.format("%02dm", minutes % 60);
   }
 
-  private String formatClock(LocalDateTime dateTime) {
-    if (dateTime == null) return "-";
-    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
-  }
-
   private String formatTime(LocalDateTime dateTime) {
     if (dateTime == null) return "N/A";
     return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
-  }
-
-  private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
-    if (guestList == null || guestId == null) return null;
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) return g;
-    }
-    return null;
   }
 }

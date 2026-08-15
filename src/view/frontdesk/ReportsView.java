@@ -49,6 +49,7 @@ public class ReportsView {
         "PAYMENT STATUS  : [ "
             + (paymentStatusFilter == null ? "ALL" : paymentStatusFilter)
             + " ]");
+
     System.out.println("SORT CRITERIA   : [ " + sortCriteria + " ]\n");
 
     int total = (checkouts == null) ? 0 : checkouts.getNumberOfEntries();
@@ -85,7 +86,7 @@ public class ReportsView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {86}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
 
       boolean hasFilters = dateFilter != null || paymentStatusFilter != null;
       String emptyMsg =
