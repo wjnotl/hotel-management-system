@@ -49,6 +49,7 @@ public class ReportsView {
         "PAYMENT STATUS  : [ "
             + (paymentStatusFilter == null ? "ALL" : paymentStatusFilter)
             + " ]");
+            
     System.out.println("SORT CRITERIA   : [ " + sortCriteria + " ]\n");
 
     int total = (checkouts == null) ? 0 : checkouts.getNumberOfEntries();

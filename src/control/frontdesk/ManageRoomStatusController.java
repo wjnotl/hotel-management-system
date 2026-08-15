@@ -123,14 +123,12 @@ public class ManageRoomStatusController {
         int action = roomStatusView.displayRoomActionSubmenu(room, linkedReservation, linkedGuest);
 
         if (action == 1) {
-          handleAssignRoom(room);
-        } else if (action == 2) {
           handleChangeRoom(room);
-        } else if (action == 3) {
+        } else if (action == 2) {
           handleMarkAvailable(room);
-        } else if (action == 4) {
+        } else if (action == 3) {
           handleMarkOccupied(room);
-        } else if (action == 5) {
+        } else if (action == 4) {
           return;
         }
       } catch (Exception e) {
@@ -139,74 +137,7 @@ public class ManageRoomStatusController {
     }
   }
 
-  // --- ACTION 1: ASSIGN ROOM ---
-  private void handleAssignRoom(Room room) {
-    if (room.getStatus() == Room.Status.OCCUPIED
-        || room.getReservationConfirmationNumber() != null) {
-      ConsoleUtil.printError("Room already has a reservation attached - use Change Room instead!");
-      return;
-    }
-
-    String confNum = roomStatusView.promptConfirmationNumberInput();
-    if (confNum == null || confNum.trim().isEmpty() || "C".equalsIgnoreCase(confNum.trim())) {
-      return; // Cancelled
-    }
-    confNum = confNum.trim();
-
-    Reservation reservation = findReservationByConfirmationNumberValue(confNum);
-    if (reservation == null) {
-      ConsoleUtil.printError("No reservation found for confirmation number \"" + confNum + "\"!");
-      return;
-    }
-
-    if (reservation.getStatus() == Reservation.Status.CANCELLED
-        || reservation.getStatus() == Reservation.Status.NO_SHOW
-        || reservation.getStatus() == Reservation.Status.CHECKED_IN) {
-      ConsoleUtil.printError(
-          "Reservation "
-              + confNum
-              + " is "
-              + reservation.getStatus().name()
-              + " and cannot be assigned!");
-      return;
-    }
-
-    if (reservation.getRoomType() != room.getRoomType()) {
-      boolean confirmMismatch =
-          ConsoleUtil.showConfirmMessage(
-              "Reservation requests "
-                  + reservation.getRoomType().name()
-                  + " but this room is "
-                  + room.getRoomType().name()
-                  + ". Assign anyway?");
-      if (!confirmMismatch) return;
-    }
-
-    boolean confirmed =
-        ConsoleUtil.showConfirmMessage(
-            "Assign Room " + room.getRoomNumber() + " to confirmation " + confNum + "?");
-    if (!confirmed) return;
-
-    Room.Status previousStatus = room.getStatus();
-    room.setStatus(Room.Status.OCCUPIED);
-    room.setReservationConfirmationNumber(confNum);
-    roomRepo.updateRoom(room);
-    roomStatusHistoryRepo.recordStatusChange(
-        room.getRoomNumber(), previousStatus, Room.Status.OCCUPIED);
-
-    // NOTE: This only links the room to the reservation. Reservation.status is intentionally left
-    // untouched here since the official check-in flow (stay duration, CHECKED_IN transition) lives
-    // in VipManageAllocationController - confirm with the team whether this screen should also
-    // drive that transition, or stay a lightweight room-linking action.
-
-    ConsoleUtil.clearScreen();
-    System.out.println(">> STATUS: ROOM ASSIGNED");
-    System.out.println(
-        "Room " + room.getRoomNumber() + " assigned to confirmation " + confNum + ".\n");
-    ConsoleUtil.printContinueMessage();
-  }
-
-  // --- ACTION 2: CHANGE ROOM ---
+  // --- ACTION 1: CHANGE ROOM ---
   private void handleChangeRoom(Room room) {
     if (room.getReservationConfirmationNumber() == null) {
       ConsoleUtil.printError(
@@ -294,7 +225,7 @@ public class ManageRoomStatusController {
     ConsoleUtil.printContinueMessage();
   }
 
-  // --- ACTION 3: MARK ROOM AS AVAILABLE ---
+  // --- ACTION 2: MARK ROOM AS AVAILABLE ---
   private void handleMarkAvailable(Room room) {
     if (room.getStatus() == Room.Status.VACANT_CLEAN) {
       ConsoleUtil.printError("Room is already marked as Available!");
@@ -329,7 +260,7 @@ public class ManageRoomStatusController {
     ConsoleUtil.printContinueMessage();
   }
 
-  // --- ACTION 4: MARK ROOM AS OCCUPIED ---
+  // --- ACTION 3: MARK ROOM AS OCCUPIED ---
   private void handleMarkOccupied(Room room) {
     if (room.getStatus() == Room.Status.OCCUPIED) {
       ConsoleUtil.printError("Room is already marked as Occupied!");

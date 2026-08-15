@@ -6,7 +6,7 @@ public class FrontDeskView {
   public String displayMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("Front Desk Service");
-    System.out.println("1. Guest Information");
+    System.out.println("1. Manage Guest");
     System.out.println("2. Manage Guest Check-Out");
     System.out.println("3. Manage Room Status");
     System.out.println("4. Reports");
