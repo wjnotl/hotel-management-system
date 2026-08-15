@@ -10,6 +10,7 @@ import entity.Reservation;
 import entity.Room;
 import entity.VipSystemConfig;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 import util.BinaryFileUtil;
 import util.TaskSchedulerUtil;
@@ -24,9 +25,9 @@ public class VipReservationRepo {
   private ListInterface<Reservation> standardList;
 
   // 3 Dedicated Priority Queues (Max Heaps)
-  private PriorityQueueInterface<Reservation> luxuryHeap;
-  private PriorityQueueInterface<Reservation> suiteHeap;
-  private PriorityQueueInterface<Reservation> standardHeap;
+  private PriorityQueueInterface<Reservation> luxuryVipQueue;
+  private PriorityQueueInterface<Reservation> suiteVipQueue;
+  private PriorityQueueInterface<Reservation> standardVipQueue;
 
   public VipReservationRepo() {
     this.fileUtil = new BinaryFileUtil<>("vip_reservations.dat");
@@ -43,15 +44,35 @@ public class VipReservationRepo {
     this.suiteList = new ArrayList<>();
     this.standardList = new ArrayList<>();
 
-    this.luxuryHeap = new BinaryHeapPriorityQueue<>(true);
-    this.suiteHeap = new BinaryHeapPriorityQueue<>(true);
-    this.standardHeap = new BinaryHeapPriorityQueue<>(true);
+    Comparator<Reservation> vipReservationComparator =
+        new Comparator<>() {
+          @Override
+          public int compare(Reservation a, Reservation b) {
+            if (a == b) return 0;
+            if (a == null) return -1;
+            if (b == null) return 1;
+
+            // Higher score returns positive -> a gets dequeued before b
+            int scoreComp = Integer.compare(a.getPriorityScore(), b.getPriorityScore());
+            if (scoreComp != 0) {
+              return scoreComp;
+            }
+
+            // Tie-breaker: earlier arrival time gets dequeued first
+            // b.compareTo(a) returns positive when a's timestamp is earlier than b's
+            return b.getQueueArrivalTime().compareTo(a.getQueueArrivalTime());
+          }
+        };
+
+    this.luxuryVipQueue = new BinaryHeapPriorityQueue<>(vipReservationComparator);
+    this.suiteVipQueue = new BinaryHeapPriorityQueue<>(vipReservationComparator);
+    this.standardVipQueue = new BinaryHeapPriorityQueue<>(vipReservationComparator);
 
     for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
       Reservation r = masterList.getEntry(i);
       if (r != null && r.getRoomType() != null && r.getStatus() == Reservation.Status.WAITING) {
         getListByRoomType(r.getRoomType()).add(r);
-        getHeapByRoomType(r.getRoomType()).enqueue(r, r.getPriorityScore());
+        getHeapByRoomType(r.getRoomType()).enqueue(r);
       }
     }
   }
@@ -63,9 +84,9 @@ public class VipReservationRepo {
   }
 
   public PriorityQueueInterface<Reservation> getHeapByRoomType(Room.RoomType roomType) {
-    if (roomType == Room.RoomType.LUXURY) return luxuryHeap;
-    if (roomType == Room.RoomType.SUITE) return suiteHeap;
-    return standardHeap;
+    if (roomType == Room.RoomType.LUXURY) return luxuryVipQueue;
+    if (roomType == Room.RoomType.SUITE) return suiteVipQueue;
+    return standardVipQueue;
   }
 
   private void save() {
@@ -74,7 +95,6 @@ public class VipReservationRepo {
 
   public void addReservation(
       Reservation reservation,
-      int priority,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
@@ -88,7 +108,7 @@ public class VipReservationRepo {
 
     if (reservation.getStatus() == Reservation.Status.WAITING) {
       getListByRoomType(reservation.getRoomType()).add(reservation);
-      getHeapByRoomType(reservation.getRoomType()).enqueue(reservation, priority);
+      getHeapByRoomType(reservation.getRoomType()).enqueue(reservation);
     }
 
     save();
@@ -268,9 +288,9 @@ public class VipReservationRepo {
     suiteList.clear();
     standardList.clear();
 
-    luxuryHeap.clear();
-    suiteHeap.clear();
-    standardHeap.clear();
+    luxuryVipQueue.clear();
+    suiteVipQueue.clear();
+    standardVipQueue.clear();
 
     for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
       Reservation r = masterList.getEntry(i);
@@ -311,7 +331,7 @@ public class VipReservationRepo {
         r.setPriorityScore(newScore);
 
         getListByRoomType(r.getRoomType()).add(r);
-        getHeapByRoomType(r.getRoomType()).enqueue(r, newScore);
+        getHeapByRoomType(r.getRoomType()).enqueue(r);
         affectedCount++;
       }
     }
@@ -331,15 +351,15 @@ public class VipReservationRepo {
     final Reservation topRes;
     final PriorityQueueInterface<Reservation> activeHeap;
 
-    if (!luxuryHeap.isEmpty()) {
-      topRes = luxuryHeap.peek();
-      activeHeap = luxuryHeap;
-    } else if (!suiteHeap.isEmpty()) {
-      topRes = suiteHeap.peek();
-      activeHeap = suiteHeap;
-    } else if (!standardHeap.isEmpty()) {
-      topRes = standardHeap.peek();
-      activeHeap = standardHeap;
+    if (!luxuryVipQueue.isEmpty()) {
+      topRes = luxuryVipQueue.peek();
+      activeHeap = luxuryVipQueue;
+    } else if (!suiteVipQueue.isEmpty()) {
+      topRes = suiteVipQueue.peek();
+      activeHeap = suiteVipQueue;
+    } else if (!standardVipQueue.isEmpty()) {
+      topRes = standardVipQueue.peek();
+      activeHeap = standardVipQueue;
     } else {
       topRes = null;
       activeHeap = null;
@@ -380,7 +400,7 @@ public class VipReservationRepo {
 
               // Re-sort the heap automatically
               if (activeHeap != null) {
-                activeHeap.changePriority(topRes, newScore);
+                activeHeap.updatePriority(topRes);
               }
             }
           } catch (Exception ignored) {

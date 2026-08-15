@@ -150,7 +150,8 @@ public class AllocationRepo {
                     res.setStatus(Reservation.Status.NO_SHOW);
                     vipReservationRepo.updateReservation(res);
                   } else {
-                    // Under limit: mark current as NO_SHOW, increment strike, create new WAITING reservation
+                    // Under limit: mark current as NO_SHOW, increment strike, create new WAITING
+                    // reservation
                     res.setStatus(Reservation.Status.NO_SHOW);
                     vipReservationRepo.updateReservation(res);
 
@@ -163,19 +164,19 @@ public class AllocationRepo {
 
                     String newResId = vipReservationRepo.generateReservationId();
                     String newConfNum = vipReservationRepo.generateConfirmationNumber();
-                    Reservation newRes = new Reservation(
-                        newResId,
-                        guest.getGuestId(),
-                        newConfNum,
-                        res.getRoomType(),
-                        Reservation.Status.WAITING,
-                        res.getIsBoiling(),
-                        newScore,
-                        LocalDateTime.now(),
-                        LocalDateTime.now());
+                    Reservation newRes =
+                        new Reservation(
+                            newResId,
+                            guest.getGuestId(),
+                            newConfNum,
+                            res.getRoomType(),
+                            Reservation.Status.WAITING,
+                            res.getIsBoiling(),
+                            newScore,
+                            LocalDateTime.now(),
+                            LocalDateTime.now());
 
-                    vipReservationRepo.addReservation(
-                        newRes, newScore, guestRepo, memberRepo, configRepo);
+                    vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
                   }
                 }
               }

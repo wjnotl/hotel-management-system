@@ -290,7 +290,7 @@ public class VipManageAllocationController {
                     LocalDateTime.now());
 
             vipReservationRepo.addReservation(
-                newRes, newScore, guestRepo, memberRepo, vipSystemConfigRepo);
+                newRes, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
@@ -356,7 +356,7 @@ public class VipManageAllocationController {
                     LocalDateTime.now());
 
             vipReservationRepo.addReservation(
-                newRes, newScore, guestRepo, memberRepo, vipSystemConfigRepo);
+                newRes, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);

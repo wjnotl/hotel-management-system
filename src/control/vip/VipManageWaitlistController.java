@@ -253,8 +253,7 @@ public class VipManageWaitlistController {
             now,
             now);
 
-    vipReservationRepo.addReservation(
-        newRes, baseScore, guestRepo, memberRepo, vipSystemConfigRepo);
+    vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
 
     waitlistView.displayAddGuestSuccessScreen(resId, confNum, guest, roomType);
   }
