@@ -205,6 +205,32 @@ public class StandardReservationRepo {
     return true;
   }
 
+  // A loyalty member standing at the desk is served without ever joining the line, so the
+  // record jumps straight to ALLOCATED. Routing this through joinQueue then allocateFront
+  // would be wrong: allocateFront serves whoever is at the front, not this guest.
+  public boolean allocateDirect(Reservation reservation) {
+    if (reservation == null || reservation.getRoomType() == null) return false;
+
+    LocalDateTime now = LocalDateTime.now();
+
+    // An advance booking that was already marked as arrived is standing in the line, so it
+    // has to leave the queue before it can be held, or the same record would be served twice.
+    getQueueByRoomType(reservation.getRoomType()).remove(reservation);
+
+    if (reservation.getQueueArrivalTime() == null) {
+      reservation.setQueueArrivalTime(now);
+    }
+    reservation.setStatus(Reservation.Status.ALLOCATED);
+    reservation.setAllocatedTime(now);
+
+    if (!masterList.contains(reservation)) {
+      masterList.add(reservation);
+      save();
+      return true;
+    }
+    return updateReservation(reservation);
+  }
+
   public Reservation allocateFront(Room.RoomType roomType) {
     Reservation front = getQueueByRoomType(roomType).dequeue();
     if (front == null) return null;

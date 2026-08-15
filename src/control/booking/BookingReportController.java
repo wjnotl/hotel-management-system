@@ -9,15 +9,20 @@ import entity.Room;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
 import util.ConsoleUtil;
+import util.TxtExportUtil;
 import view.booking.BookingReportView;
 
 public class BookingReportController {
   private static final int ARRIVAL_REGISTER = 1;
+  private static final String REGISTER_TITLE = "DAILY ARRIVAL REGISTER";
+  private static final String PERFORMANCE_TITLE = "QUEUE PERFORMANCE & NO-SHOW ANALYSIS";
+  private static final String NEW_LINE = System.lineSeparator();
 
   private final BookingReportView reportView = new BookingReportView();
   private final StandardReservationRepo standardReservationRepo;
@@ -125,7 +130,7 @@ public class BookingReportController {
           recordLimit = 10;
         } else if (choice == 9) {
           boolean exitToHub =
-              renderReport(
+              exportReport(
                   reportType,
                   matched,
                   buildScopeLabel(
@@ -150,7 +155,10 @@ public class BookingReportController {
     }
   }
 
-  private boolean renderReport(
+  // The report body goes to a .txt file rather than to the screen, so the sort runs once here
+  // and the same ordered list backs both the file and the binary search offered afterwards.
+  // Returns true when the user wants to leave the whole report, false to go back to the filters.
+  private boolean exportReport(
       int reportType,
       ListInterface<Reservation> matched,
       String scope,
@@ -158,39 +166,33 @@ public class BookingReportController {
       String sortDirection,
       int recordLimit) {
 
+    boolean isRegister = (reportType == ARRIVAL_REGISTER);
+    String title = isRegister ? REGISTER_TITLE : PERFORMANCE_TITLE;
+    String sortLabel = sortAttribute + " (" + sortDirection + ")";
+    ListInterface<Reservation> sorted = sortReservations(matched, sortAttribute, sortDirection);
+
+    String path = writeReportFile(isRegister, sorted, title, scope, sortLabel, recordLimit);
+
     while (true) {
       try {
-        ListInterface<Reservation> sorted = sortReservations(matched, sortAttribute, sortDirection);
-        String sortLabel = sortAttribute + " (" + sortDirection + ")";
-
-        ConsoleUtil.GetMenuInputResult result;
-        if (reportType == ARRIVAL_REGISTER) {
-          result =
-              reportView.renderArrivalRegister(
-                  sorted,
-                  guestRepo.getGuestList(),
-                  scope,
-                  sortLabel,
-                  recordLimit,
-                  buildRoomTypeSubtotals(sorted),
-                  "RESERVATION ID".equalsIgnoreCase(sortAttribute)
-                      && "ASCENDING".equalsIgnoreCase(sortDirection));
-        } else {
-          result =
-              reportView.renderPerformanceReport(
-                  sorted,
-                  guestRepo.getGuestList(),
-                  scope,
-                  sortLabel,
-                  recordLimit,
-                  buildPerformanceSummary(sorted),
-                  buildOverallSummary(sorted));
-        }
+        ConsoleUtil.GetMenuInputResult result =
+            reportView.showExportReceipt(
+                title,
+                scope,
+                sortLabel,
+                sorted.getNumberOfEntries(),
+                exportedRowCount(sorted.getNumberOfEntries(), recordLimit),
+                path,
+                isRegister,
+                "RESERVATION ID".equalsIgnoreCase(sortAttribute)
+                    && "ASCENDING".equalsIgnoreCase(sortDirection));
 
         if ("E".equalsIgnoreCase(result.input)) {
           return true;
         } else if ("S".equalsIgnoreCase(result.input)) {
           return false;
+        } else if ("R".equalsIgnoreCase(result.input)) {
+          path = writeReportFile(isRegister, sorted, title, scope, sortLabel, recordLimit);
         } else if ("F".equalsIgnoreCase(result.input)) {
           handleBinarySearch(sorted, sortAttribute, sortDirection);
         }
@@ -198,6 +200,24 @@ public class BookingReportController {
         ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  private String writeReportFile(
+      boolean isRegister,
+      ListInterface<Reservation> sorted,
+      String title,
+      String scope,
+      String sortLabel,
+      int recordLimit) {
+
+    String content =
+        isRegister
+            ? buildArrivalRegisterTxt(sorted, title, scope, sortLabel, recordLimit)
+            : buildPerformanceReportTxt(sorted, title, scope, sortLabel, recordLimit);
+
+    return TxtExportUtil.export(
+        isRegister ? "booking/daily_arrival_register" : "booking/queue_performance_report",
+        content);
   }
 
   // Binary search is only valid on the key the list is actually ordered by, so the register
@@ -425,6 +445,243 @@ public class BookingReportController {
       String.valueOf(noShows),
       noShowRate
     };
+  }
+
+  // ================= TXT REPORT CONTENT (booking's own format) =================
+  // TxtExportUtil only writes the string it is handed, so the whole layout of the file is decided
+  // here. Both reports share the same shape: a scope header, then one or more titled sections,
+  // each section a column aligned table.
+
+  private String buildArrivalRegisterTxt(
+      ListInterface<Reservation> sorted,
+      String title,
+      String scope,
+      String sortLabel,
+      int recordLimit) {
+
+    int matched = sorted.getNumberOfEntries();
+    int shown = exportedRowCount(matched, recordLimit);
+
+    StringBuilder sb = new StringBuilder();
+    appendReportHeader(sb, title, scope, sortLabel, matched, shown);
+    appendSectionHeading(sb, "ARRIVALS BY ROOM TYPE");
+
+    if (shown == 0) {
+      sb.append("*** NO BOOKINGS MATCH THE CURRENT SCOPE ***").append(NEW_LINE);
+    } else {
+      String[] headers = {
+        "No.", "Res ID", "Guest Name", "Room Type", "Status", "Waited", "Arrived"
+      };
+      String[][] rows = new String[shown][];
+
+      for (int i = 1; i <= shown; i++) {
+        Reservation r = sorted.getEntry(i);
+        Guest g = (r == null) ? null : guestRepo.findById(r.getGuestId());
+
+        rows[i - 1] =
+            (r == null)
+                ? new String[] {String.valueOf(i), "-", "-", "-", "-", "-", "-"}
+                : new String[] {
+                  String.valueOf(i),
+                  r.getReservationId(),
+                  (g != null) ? g.getName() : "N/A",
+                  r.getRoomType().name(),
+                  r.getStatus().name(),
+                  formatMinutes(waitMinutesOf(r)),
+                  formatClock(r.getQueueArrivalTime())
+                };
+      }
+
+      sb.append(buildTxtTable(headers, rows));
+      appendTruncationNote(sb, matched, recordLimit);
+    }
+
+    sb.append(NEW_LINE);
+    appendSectionHeading(sb, "SUBTOTALS WITHIN SCOPE");
+    sb.append(
+        buildTxtTable(
+            new String[] {"Room Type", "In Scope", "In Line", "On Hold", "Checked In", "Closed"},
+            buildRoomTypeSubtotals(sorted)));
+
+    return sb.toString();
+  }
+
+  private String buildPerformanceReportTxt(
+      ListInterface<Reservation> sorted,
+      String title,
+      String scope,
+      String sortLabel,
+      int recordLimit) {
+
+    int matched = sorted.getNumberOfEntries();
+    int shown = exportedRowCount(matched, recordLimit);
+
+    StringBuilder sb = new StringBuilder();
+    appendReportHeader(sb, title, scope, sortLabel, matched, shown);
+
+    // The per type rows and the ALL TYPES row share one table, so the overall figures sit directly
+    // underneath the types they aggregate.
+    String[][] perType = buildPerformanceSummary(sorted);
+    String[][] summaryRows = new String[perType.length + 1][];
+    for (int i = 0; i < perType.length; i++) {
+      summaryRows[i] = perType[i];
+    }
+    summaryRows[perType.length] = buildOverallSummary(sorted);
+
+    appendSectionHeading(sb, "OPERATIONAL SUMMARY");
+    sb.append(
+        buildTxtTable(
+            new String[] {
+              "Room Type", "Arrivals", "Avg Wait", "Max Wait", "Served", "No-Shows", "No-Show Rate"
+            },
+            summaryRows));
+
+    sb.append(NEW_LINE);
+    appendSectionHeading(sb, "WORST WAITS IN SCOPE");
+
+    if (shown == 0) {
+      sb.append("*** NO BOOKINGS MATCH THE CURRENT SCOPE ***").append(NEW_LINE);
+      return sb.toString();
+    }
+
+    String[] headers = {"No.", "Res ID", "Guest Name", "Room Type", "Outcome", "Waited", "Strikes"};
+    String[][] rows = new String[shown][];
+
+    for (int i = 1; i <= shown; i++) {
+      Reservation r = sorted.getEntry(i);
+      Guest g = (r == null) ? null : guestRepo.findById(r.getGuestId());
+
+      rows[i - 1] =
+          (r == null)
+              ? new String[] {String.valueOf(i), "-", "-", "-", "-", "-", "-"}
+              : new String[] {
+                String.valueOf(i),
+                r.getReservationId(),
+                (g != null) ? g.getName() : "N/A",
+                r.getRoomType().name(),
+                r.getStatus().name(),
+                formatMinutes(waitMinutesOf(r)),
+                String.valueOf((g != null) ? g.getStrikeCount() : 0)
+              };
+    }
+
+    sb.append(buildTxtTable(headers, rows));
+    appendTruncationNote(sb, matched, recordLimit);
+
+    return sb.toString();
+  }
+
+  private void appendReportHeader(
+      StringBuilder sb, String title, String scope, String sortLabel, int matched, int exported) {
+
+    sb.append(title).append(NEW_LINE);
+    appendRule(sb, '=', title.length());
+    sb.append("GENERATED : ").append(formatTimestamp(LocalDateTime.now())).append(NEW_LINE);
+    sb.append("SCOPE     : ").append(scope).append(NEW_LINE);
+    sb.append("SORTED BY : ").append(sortLabel).append(NEW_LINE);
+    sb.append("RECORDS   : ")
+        .append(matched)
+        .append(" matching, ")
+        .append(exported)
+        .append(" written")
+        .append(NEW_LINE)
+        .append(NEW_LINE);
+  }
+
+  private void appendSectionHeading(StringBuilder sb, String heading) {
+    sb.append(heading).append(NEW_LINE);
+    appendRule(sb, '-', heading.length());
+  }
+
+  private void appendRule(StringBuilder sb, char character, int length) {
+    for (int i = 0; i < length; i++) {
+      sb.append(character);
+    }
+    sb.append(NEW_LINE);
+  }
+
+  private void appendTruncationNote(StringBuilder sb, int matched, int recordLimit) {
+    if (recordLimit == 0 || matched <= recordLimit) return;
+
+    sb.append(NEW_LINE)
+        .append("Showing the top ")
+        .append(recordLimit)
+        .append(" of ")
+        .append(matched)
+        .append(" matching records. Raise the record limit to export the rest.")
+        .append(NEW_LINE);
+  }
+
+  private int exportedRowCount(int matched, int recordLimit) {
+    return (recordLimit == 0) ? matched : Math.min(recordLimit, matched);
+  }
+
+  // Pads every column to the widest value it holds so the file lines up in a plain text editor,
+  // with a dashed divider under the header row.
+  private String buildTxtTable(String[] headers, String[][] rows) {
+    final String gap = "   ";
+    int columnCount = (headers == null) ? 0 : headers.length;
+    int[] widths = new int[columnCount];
+
+    for (int c = 0; c < columnCount; c++) {
+      widths[c] = (headers[c] == null) ? 0 : headers[c].length();
+    }
+    if (rows != null) {
+      for (String[] row : rows) {
+        if (row == null) continue;
+        for (int c = 0; c < columnCount && c < row.length; c++) {
+          int length = (row[c] == null) ? 0 : row[c].length();
+          if (length > widths[c]) widths[c] = length;
+        }
+      }
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(formatTxtRow(headers, widths, gap));
+
+    int dividerLength = gap.length() * Math.max(0, columnCount - 1);
+    for (int width : widths) {
+      dividerLength += width;
+    }
+    appendRule(sb, '-', dividerLength);
+
+    if (rows != null) {
+      for (String[] row : rows) {
+        sb.append(formatTxtRow(row, widths, gap));
+      }
+    }
+
+    return sb.toString();
+  }
+
+  private String formatTxtRow(String[] fields, int[] widths, String gap) {
+    StringBuilder sb = new StringBuilder();
+
+    for (int i = 0; i < widths.length; i++) {
+      String value = (fields != null && i < fields.length && fields[i] != null) ? fields[i] : "";
+      sb.append(value);
+
+      // The last column is left ragged so no line carries trailing spaces.
+      if (i < widths.length - 1) {
+        for (int p = value.length(); p < widths[i]; p++) {
+          sb.append(' ');
+        }
+        sb.append(gap);
+      }
+    }
+
+    sb.append(NEW_LINE);
+    return sb.toString();
+  }
+
+  private String formatClock(LocalDateTime dateTime) {
+    if (dateTime == null) return "-";
+    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
+  }
+
+  private String formatTimestamp(LocalDateTime dateTime) {
+    if (dateTime == null) return "N/A";
+    return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
   }
 
   private String buildScopeLabel(

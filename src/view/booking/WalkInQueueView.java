@@ -312,16 +312,174 @@ public class WalkInQueueView {
     return ConsoleUtil.getStringInput("Enter Guest ID or Name: ");
   }
 
-  public void displayGuestNotFoundScreen(String searchedTerm) {
+  // A walk-in is by definition someone who did not book, so "not found" is the expected case
+  // for a first-time arrival rather than an error. The clerk is offered a guest file instead
+  // of being sent back to retype the same search.
+  public int displayGuestNotFoundScreen(String searchedTerm) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("VALIDATION ERROR", SCREEN_WIDTH);
+    ConsoleUtil.printTitleBox("GUEST NOT ON RECORD", SCREEN_WIDTH);
     printNoticeBox(
-        "STATUS: [X] GUEST NOT FOUND",
+        "STATUS: [!] NO MATCHING GUEST FILE",
         "Searched Term",
         searchedTerm,
-        "The identifier typed does not match any registered guest. Check the guest ID or the"
-            + " spelling of the name.");
-    ConsoleUtil.printContinueMessage("Press Enter to try again...");
+        "No registered guest matches this guest ID or name. A first-time walk-in has no file"
+            + " yet, so one can be opened now before they join the line.");
+
+    System.out.println("1. Register This Person As A New Guest");
+    System.out.println("2. Search Again");
+    System.out.println("3. Cancel\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  // The tier used to be printed as one more row on the confirmation screen, which let a
+  // Diamond member be dropped into the ordinary line without anyone noticing. Priority is a
+  // decision, so it is raised as its own screen before the line is ever offered.
+  public int displayVipArrivalScreen(
+      Guest guest,
+      Member member,
+      Room.RoomType roomType,
+      int vacantRooms,
+      int vipWaiting,
+      int lineLength,
+      boolean canServeNow) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("PRIORITY GUEST DETECTED", SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
+    TableUtil.TableSettings spanSettings =
+        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"STATUS: [!] " + member.getTier().name() + " MEMBER AT THE COUNTER"},
+        spanSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
+    printKeyValue(
+        kvSettings,
+        "Loyalty Tier",
+        member.getTier().name() + " (" + member.getMemberId() + ")",
+        true);
+    printKeyValue(kvSettings, "Strike Count", String.valueOf(guest.getStrikeCount()), true);
+    printKeyValue(kvSettings, "Requested Type", roomType.name(), true);
+    printKeyValue(kvSettings, "Vacant Clean Rooms", String.valueOf(vacantRooms), true);
+    printKeyValue(kvSettings, "VIP Already Waiting", String.valueOf(vipWaiting), true);
+    printKeyValue(kvSettings, "Standard Line Length", String.valueOf(lineLength), false);
+
+    System.out.println();
+
+    if (canServeNow) {
+      printNoticeBox(
+          "RECOMMENDED ACTION",
+          "Verdict",
+          "SERVE NOW, DO NOT QUEUE",
+          "This guest holds a loyalty tier, so the standard FIFO line is the wrong place for"
+              + " them. A vacant clean "
+              + roomType.name()
+              + " room is free even after every waiting VIP is covered, so a room can be handed"
+              + " over immediately without displacing anyone.");
+    } else if (vacantRooms == 0) {
+      printNoticeBox(
+          "RECOMMENDED ACTION",
+          "Verdict",
+          "NO ROOM TO GIVE",
+          "This guest holds a loyalty tier, but no vacant clean "
+              + roomType.name()
+              + " room exists at all. Place them on the VIP waitlist in the VIP module so the"
+              + " priority score decides their turn, rather than the back of this line.");
+    } else {
+      printNoticeBox(
+          "RECOMMENDED ACTION",
+          "Verdict",
+          "VIP BYPASS IN EFFECT",
+          vipWaiting
+              + " VIP guest(s) are already waiting against only "
+              + vacantRooms
+              + " vacant clean room(s), so every free room of this type is spoken for. Place"
+              + " this guest on the VIP waitlist so the priority score ranks them against those"
+              + " already waiting.");
+    }
+
+    if (canServeNow) {
+      System.out.println("1. Assign A Room Now (Skip The Line)");
+    } else {
+      System.out.println("1. Assign A Room Now (UNAVAILABLE)");
+    }
+    System.out.println("2. Add To The Standard Walk-In Line Anyway");
+    System.out.println("3. Cancel (Handle Through The VIP Module)\n");
+
+    while (true) {
+      try {
+        return ConsoleUtil.getMenuInput("Choose an option: ", canServeNow ? 1 : 2, 3).getAsInt();
+      } catch (IllegalArgumentException e) {
+        System.out.println(
+            "No room can be handed over right now. Choose 2 to queue them, or 3 to cancel.");
+      }
+    }
+  }
+
+  public boolean displayVipDirectAssignConfirmationScreen(
+      Guest guest, Member member, Room room, int graceMinutes, int vacantRooms, int vipWaiting) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM PRIORITY ROOM ASSIGNMENT", SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
+    TableUtil.TableSettings spanSettings =
+        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"ROOM HAND-OVER"}, spanSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
+    printKeyValue(kvSettings, "Loyalty Tier", member.getTier().name(), true);
+    printKeyValue(kvSettings, "Room Number", room.getRoomNumber(), true);
+    printKeyValue(kvSettings, "Room Type", room.getRoomType().name(), true);
+    printKeyValue(kvSettings, "Rooms Left After", String.valueOf(vacantRooms - 1), true);
+    printKeyValue(kvSettings, "VIP Still Waiting", String.valueOf(vipWaiting), true);
+    printKeyValue(
+        kvSettings,
+        "Hold Window",
+        graceMinutes + " minutes before the room is released and a strike is recorded",
+        false);
+
+    System.out.println();
+    System.out.println("The guest never enters the line. The room is held immediately and the");
+    System.out.println("booking appears under [C] Check In Held Guest.");
+    System.out.println();
+
+    return promptConfirm("Hand room " + room.getRoomNumber() + " to this guest now? (Y/N): ");
+  }
+
+  public void displayVipDirectAssignSuccessScreen(
+      Reservation reservation, Guest guest, Member member, Room room, int graceMinutes) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("PRIORITY ROOM ASSIGNED", SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
+    TableUtil.TableSettings spanSettings =
+        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"STATUS: ALLOCATED WITHOUT QUEUING"}, spanSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Reservation ID", reservation.getReservationId(), true);
+    printKeyValue(kvSettings, "Confirmation Code", reservation.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Guest Name", guest.getName(), true);
+    printKeyValue(
+        kvSettings,
+        "Loyalty Tier",
+        (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER",
+        true);
+    printKeyValue(kvSettings, "Room Number", room.getRoomNumber(), true);
+    printKeyValue(kvSettings, "Room Status", room.getStatus().name(), true);
+    printKeyValue(kvSettings, "Hold Expires In", graceMinutes + " minutes", false);
+
+    System.out.println();
+    ConsoleUtil.printContinueMessage();
   }
 
   public void displayAlreadyInLineScreen(Guest guest, Reservation existing, int position) {
@@ -365,7 +523,10 @@ public class WalkInQueueView {
         (g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A",
         true);
     printKeyValue(
-        kvSettings, "Loyalty Tier", (m != null) ? m.getTier().name() : "NON-MEMBER", true);
+        kvSettings,
+        "Loyalty Tier",
+        (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER",
+        true);
     printKeyValue(kvSettings, "Strike Count", String.valueOf(g.getStrikeCount()), false);
 
     System.out.println();
@@ -511,7 +672,10 @@ public class WalkInQueueView {
     printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
     printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
     printKeyValue(
-        kvSettings, "Loyalty Tier", (m != null) ? m.getTier().name() : "NON-MEMBER", true);
+        kvSettings,
+        "Loyalty Tier",
+        (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER",
+        true);
     printKeyValue(kvSettings, "Joined Line At", formatTime(r.getQueueArrivalTime()), true);
     printKeyValue(kvSettings, "Waited", formatWait(r.getQueueArrivalTime()), false);
 
@@ -691,7 +855,10 @@ public class WalkInQueueView {
         (g != null && g.getEmail() != null) ? g.getEmail() : "N/A",
         true);
     printKeyValue(
-        kvSettings, "Loyalty Tier", (m != null) ? m.getTier().name() : "NON-MEMBER", true);
+        kvSettings,
+        "Loyalty Tier",
+        (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER",
+        true);
     printKeyValue(
         kvSettings, "Strike Count", String.valueOf((g != null) ? g.getStrikeCount() : 0), false);
 

@@ -120,11 +120,32 @@ public class AdvanceBookingController {
         String term = input.trim();
         Guest guest = guestRepo.findById(term);
         if (guest == null) {
-          guest = findGuestByName(term);
+          guest = guestRepo.findByName(term);
         }
 
+        // Someone booking for the first time has no guest file yet, so the desk opens one
+        // rather than turning away a booking it is perfectly able to take.
         if (guest == null) {
-          advanceBookingView.displayGuestNotFoundScreen(term);
+          int choice = advanceBookingView.displayGuestNotFoundScreen(term);
+          if (choice == 2) {
+            continue;
+          } else if (choice != 1) {
+            return;
+          }
+
+          guest =
+              new GuestRegistrationController(guestRepo).registerNewGuest(nameSuggestionFrom(term));
+          if (guest == null) {
+            continue;
+          }
+        }
+
+        Member member =
+            (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
+
+        if (member != null
+            && member.getTier() != null
+            && !advanceBookingView.displayVipNoticeScreen(guest, member)) {
           continue;
         }
 
@@ -132,9 +153,6 @@ public class AdvanceBookingController {
         if (roomType == null) {
           return;
         }
-
-        Member member =
-            (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
 
         if (!advanceBookingView.displayNewBookingConfirmationScreen(guest, member, roomType)) {
           continue;
@@ -198,6 +216,35 @@ public class AdvanceBookingController {
 
     QueueInterface<Reservation> queue =
         standardReservationRepo.getQueueByRoomType(booking.getRoomType());
+
+    Member member =
+        (guest != null && guest.getMemberId() != null)
+            ? memberRepo.findById(guest.getMemberId())
+            : null;
+
+    // Marking arrival is the moment this booking becomes a person at the counter, which is
+    // exactly when a loyalty tier stops being decoration and starts deciding who waits.
+    if (member != null && member.getTier() != null) {
+      int vacantRooms = countVacantCleanRooms(booking.getRoomType());
+      int vipWaiting = countVipWaiting(booking.getRoomType());
+
+      int decision =
+          advanceBookingView.displayVipArrivalScreen(
+              guest,
+              member,
+              booking.getRoomType(),
+              vacantRooms,
+              vipWaiting,
+              queue.getNumberOfEntries(),
+              vacantRooms > vipWaiting);
+
+      if (decision == 1) {
+        assignRoomDirectly(booking, guest, member);
+        return;
+      } else if (decision == 3) {
+        return;
+      }
+    }
 
     boolean confirmed =
         advanceBookingView.displayMarkArrivalConfirmationScreen(
@@ -419,14 +466,58 @@ public class AdvanceBookingController {
     return null;
   }
 
-  private Guest findGuestByName(String name) {
-    ListInterface<Guest> guestList = guestRepo.getGuestList();
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null && name.equalsIgnoreCase(g.getName())) {
-        return g;
+  // A guest id typed into the search box is not a name, so it must not be pre-filled as one.
+  private String nameSuggestionFrom(String term) {
+    if (term == null || term.toUpperCase().startsWith("G-")) {
+      return null;
+    }
+    return term;
+  }
+
+  private void assignRoomDirectly(Reservation booking, Guest guest, Member member) {
+    Room room = roomRepo.findVacantCleanRoom(booking.getRoomType());
+    if (room == null) {
+      ConsoleUtil.printError(
+          "No VACANT & CLEAN " + booking.getRoomType().name() + " room is available!");
+      return;
+    }
+
+    boolean confirmed =
+        advanceBookingView.displayVipDirectAssignConfirmationScreen(
+            booking, guest, member, room, StandardReservationRepo.GRACE_MINUTES);
+    if (!confirmed) {
+      return;
+    }
+
+    if (!standardReservationRepo.allocateDirect(booking)) {
+      ConsoleUtil.printError("This booking could not be moved onto a room!");
+      return;
+    }
+
+    room.setStatus(Room.Status.OCCUPIED);
+    room.setReservationConfirmationNumber(booking.getConfirmationNumber());
+    roomRepo.updateRoom(room);
+
+    advanceBookingView.displayVipDirectAssignSuccessScreen(
+        booking, guest, room, StandardReservationRepo.GRACE_MINUTES);
+  }
+
+  private int countVacantCleanRooms(Room.RoomType roomType) {
+    ListInterface<Room> rooms = roomRepo.getRoomList();
+    int count = 0;
+    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
+      Room room = rooms.getEntry(i);
+      if (room != null
+          && room.getRoomType() == roomType
+          && room.getStatus() == Room.Status.VACANT_CLEAN) {
+        count++;
       }
     }
-    return null;
+    return count;
+  }
+
+  private int countVipWaiting(Room.RoomType roomType) {
+    ListInterface<Reservation> vipLine = vipReservationRepo.getListByRoomType(roomType);
+    return (vipLine == null) ? 0 : vipLine.getNumberOfEntries();
   }
 }
