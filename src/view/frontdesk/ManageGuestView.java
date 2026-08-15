@@ -42,8 +42,7 @@ public class ManageGuestView {
             .setHAlign(4, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(
-        new String[] {"NO.", "GUEST ID", "NAME", "EMAIL", "PHONE"}, settings);
+    TableUtil.printTableRow(new String[] {"NO.", "GUEST ID", "NAME", "EMAIL", "PHONE"}, settings);
 
     if (total == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
@@ -82,10 +81,8 @@ public class ManageGuestView {
     }
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
 
-    System.out.printf(
-        "\nPage %d / %d (Total: %d)\n\n", currentPage, totalPages, total);
-    System.out.println(
-        "[N] Next Page    [P] Previous Page    [S] Search / Filter    [C] Back\n");
+    System.out.printf("\nPage %d / %d (Total: %d)\n\n", currentPage, totalPages, total);
+    System.out.println("[N] Next Page    [P] Previous Page    [S] Search / Filter    [C] Back\n");
 
     return ConsoleUtil.getMenuInput(
         "Enter row number or command (" + startIndex + "-" + endIndex + "): ",
@@ -131,7 +128,9 @@ public class ManageGuestView {
 
   public void displayGuestNotFound(String input) {
     ConsoleUtil.printError(
-        "No guest found for \"" + input + "\". "
+        "No guest found for \""
+            + input
+            + "\". "
             + "Check the Guest ID or Reservation ID and try again.");
   }
 
