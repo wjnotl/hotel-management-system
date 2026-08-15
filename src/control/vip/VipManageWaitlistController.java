@@ -176,10 +176,8 @@ public class VipManageWaitlistController {
         }
 
         if (member == null || member.getTier() == null) {
-          boolean proceed = waitlistView.displayUnassignedTierWarningScreen(guest);
-          if (!proceed) {
-            continue;
-          }
+          waitlistView.displayNonMemberDeniedScreen(guest);
+          return;
         }
 
         int baseScore =

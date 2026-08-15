@@ -498,9 +498,9 @@ public class VipManageWaitlistView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
-  public boolean displayUnassignedTierWarningScreen(Guest g) {
+  public void displayNonMemberDeniedScreen(Guest g) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CRITICAL PROFILE WARNING");
+    ConsoleUtil.printTitleBox("ENTRY DENIED - NON-MEMBER");
 
     int[] kvWidths = {20, 60};
     int[] fullWidth = {81};
@@ -515,27 +515,27 @@ public class VipManageWaitlistView {
 
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"STATUS: [X] UNASSIGNED / NULL MEMBERSHIP TIER"}, fullSettings);
+        new String[] {"STATUS: [X] ENTRY DENIED - NON-MEMBER PROFILE"}, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
         new String[] {"Target Guest", g.getName() + " (" + g.getGuestId() + ")"}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Loyalty Member", (g.getMemberId() != null ? g.getMemberId() : "NONE")},
+        new String[] {"Loyalty Member", (g.getMemberId() != null ? g.getMemberId() : "NONE (Not a Member)")},
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "System Notice",
-          "Cannot resolve VIP priority ranking without a tier. Guest will be assigned default"
-              + " NON-MEMBER priority score (1000)."
+          "System Policy",
+          "VIP Waitlist access is strictly reserved for Loyalty Members (Diamond, Gold, Silver). "
+              + "Non-members cannot join the VIP waitlist queue."
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
-    return promptConfirm("Proceed with default NON-MEMBER priority score? (Y/N): ");
+    ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
   public void displayGuestNotFoundErrorScreen(String searchedTerm) {
