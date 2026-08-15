@@ -67,11 +67,12 @@ public class VipReportController {
   private void manageReportPipeline(int reportType) {
     ReportFilterState state = new ReportFilterState(reportType);
 
-    String reportTitle = (reportType == 1)
-        ? "Wait Time Efficiency & SLA Attainment Report"
-        : (reportType == 2)
-            ? "VIP Penalty & Eviction Audit Report"
-            : "Room Holding Bay & Grace Window Report";
+    String reportTitle =
+        (reportType == 1)
+            ? "Wait Time Efficiency & SLA Attainment Report"
+            : (reportType == 2)
+                ? "VIP Penalty & Eviction Audit Report"
+                : "Room Holding Bay & Grace Window Report";
 
     // Step 1: Open Filter & Sort Options screen FIRST!
     boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
@@ -84,25 +85,25 @@ public class VipReportController {
   }
 
   private void renderGeneratedReportLoop(
-      int reportType,
-      String reportTitle,
-      ReportFilterState state) {
+      int reportType, String reportTitle, ReportFilterState state) {
 
     while (true) {
       try {
         ListInterface<Reservation> allReservations = vipReservationRepo.getAllReservations();
-        ListInterface<Reservation> filteredList = filterAndSortList(
-            allReservations,
-            state.searchQuery,
-            state.tierFilter,
-            state.roomTypeFilter,
-            state.boilingFilter,
-            state.sortAttribute,
-            state.sortDirection,
-            reportType);
+        ListInterface<Reservation> filteredList =
+            filterAndSortList(
+                allReservations,
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.sortAttribute,
+                state.sortDirection,
+                reportType);
 
-        String scopeStr = buildScopeString(state.searchQuery, state.tierFilter, state.roomTypeFilter,
-            state.boilingFilter);
+        String scopeStr =
+            buildScopeString(
+                state.searchQuery, state.tierFilter, state.roomTypeFilter, state.boilingFilter);
         String sortStr = state.sortAttribute + " (" + state.sortDirection + ")";
         VipSystemConfig config = configRepo.getConfig();
         GetMenuInputResult result;
@@ -111,32 +112,35 @@ public class VipReportController {
         ConsoleUtil.startRecording();
 
         if (reportType == 1) {
-          result = reportView.renderSlaReportScreen(
-              filteredList,
-              guestRepo.getGuestList(),
-              memberRepo.getMemberList(),
-              config,
-              scopeStr,
-              sortStr,
-              state.recordLimit);
+          result =
+              reportView.renderSlaReportScreen(
+                  filteredList,
+                  guestRepo.getGuestList(),
+                  memberRepo.getMemberList(),
+                  config,
+                  scopeStr,
+                  sortStr,
+                  state.recordLimit);
         } else if (reportType == 2) {
-          result = reportView.renderPenaltyReportScreen(
-              filteredList,
-              guestRepo.getGuestList(),
-              memberRepo.getMemberList(),
-              config,
-              scopeStr,
-              sortStr,
-              state.recordLimit);
+          result =
+              reportView.renderPenaltyReportScreen(
+                  filteredList,
+                  guestRepo.getGuestList(),
+                  memberRepo.getMemberList(),
+                  config,
+                  scopeStr,
+                  sortStr,
+                  state.recordLimit);
         } else {
-          result = reportView.renderHoldingReportScreen(
-              filteredList,
-              guestRepo.getGuestList(),
-              memberRepo.getMemberList(),
-              config,
-              scopeStr,
-              sortStr,
-              state.recordLimit);
+          result =
+              reportView.renderHoldingReportScreen(
+                  filteredList,
+                  guestRepo.getGuestList(),
+                  memberRepo.getMemberList(),
+                  config,
+                  scopeStr,
+                  sortStr,
+                  state.recordLimit);
         }
 
         if (result == null) {
@@ -169,7 +173,9 @@ public class VipReportController {
               break;
           }
 
-          String exportedPath = TxtExportUtil.export(filePrefix, reportTitle.toUpperCase() + "\n" + capturedReportText);
+          String exportedPath =
+              TxtExportUtil.export(
+                  filePrefix, reportTitle.toUpperCase() + "\n" + capturedReportText);
           reportView.displayExportSuccessScreen(exportedPath);
         }
       } catch (Exception e) {
@@ -179,18 +185,20 @@ public class VipReportController {
     }
   }
 
-  private boolean handleFilterControlPanel(String reportTitle, ReportFilterState state, int reportType) {
+  private boolean handleFilterControlPanel(
+      String reportTitle, ReportFilterState state, int reportType) {
     while (true) {
       try {
-        GetMenuInputResult action = reportView.displayFilterControlPanel(
-            reportTitle,
-            state.searchQuery,
-            state.tierFilter,
-            state.roomTypeFilter,
-            state.boilingFilter,
-            state.sortAttribute,
-            state.sortDirection,
-            state.recordLimit);
+        GetMenuInputResult action =
+            reportView.displayFilterControlPanel(
+                reportTitle,
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.sortAttribute,
+                state.sortDirection,
+                state.recordLimit);
 
         int choice = action.getAsInt();
 
@@ -223,8 +231,9 @@ public class VipReportController {
   private void handleEditFiltersSubmenu(ReportFilterState state) {
     while (true) {
       try {
-        GetMenuInputResult action = reportView.displayEditFiltersSubmenu(
-            state.searchQuery, state.tierFilter, state.roomTypeFilter, state.boilingFilter);
+        GetMenuInputResult action =
+            reportView.displayEditFiltersSubmenu(
+                state.searchQuery, state.tierFilter, state.roomTypeFilter, state.boilingFilter);
         int choice = action.getAsInt();
         if (choice == 1) {
           state.tierFilter = handleTierSubmenu(state.tierFilter);
@@ -246,8 +255,8 @@ public class VipReportController {
   private void handleSortOptionsSubmenu(ReportFilterState state) {
     while (true) {
       try {
-        GetMenuInputResult action = reportView.displaySortOptionsSubmenu(
-            state.sortAttribute, state.sortDirection);
+        GetMenuInputResult action =
+            reportView.displaySortOptionsSubmenu(state.sortAttribute, state.sortDirection);
         int choice = action.getAsInt();
         if (choice == 1) {
           state.sortAttribute = handleSortAttrSubmenu(state.sortAttribute);
@@ -280,16 +289,11 @@ public class VipReportController {
     while (true) {
       GetMenuInputResult res = reportView.displayTierFilterSubmenu(currentTier);
       int choice = res.getAsInt();
-      if (choice == 1)
-        return "DIAMOND";
-      if (choice == 2)
-        return "GOLD";
-      if (choice == 3)
-        return "SILVER";
-      if (choice == 4)
-        return null;
-      if (choice == 5)
-        return currentTier;
+      if (choice == 1) return "DIAMOND";
+      if (choice == 2) return "GOLD";
+      if (choice == 3) return "SILVER";
+      if (choice == 4) return null;
+      if (choice == 5) return currentTier;
     }
   }
 
@@ -297,16 +301,11 @@ public class VipReportController {
     while (true) {
       GetMenuInputResult res = reportView.displayRoomTypeFilterSubmenu(currentRoom);
       int choice = res.getAsInt();
-      if (choice == 1)
-        return "LUXURY";
-      if (choice == 2)
-        return "SUITE";
-      if (choice == 3)
-        return "STANDARD";
-      if (choice == 4)
-        return null;
-      if (choice == 5)
-        return currentRoom;
+      if (choice == 1) return "LUXURY";
+      if (choice == 2) return "SUITE";
+      if (choice == 3) return "STANDARD";
+      if (choice == 4) return null;
+      if (choice == 5) return currentRoom;
     }
   }
 
@@ -314,14 +313,10 @@ public class VipReportController {
     while (true) {
       GetMenuInputResult res = reportView.displayBoilingFilterSubmenu(currentBoiling);
       int choice = res.getAsInt();
-      if (choice == 1)
-        return "BOILING";
-      if (choice == 2)
-        return "NORMAL";
-      if (choice == 3)
-        return null;
-      if (choice == 4)
-        return currentBoiling;
+      if (choice == 1) return "BOILING";
+      if (choice == 2) return "NORMAL";
+      if (choice == 3) return null;
+      if (choice == 4) return currentBoiling;
     }
   }
 
@@ -329,16 +324,11 @@ public class VipReportController {
     while (true) {
       GetMenuInputResult res = reportView.displaySortAttrSubmenu(currentAttr);
       int choice = res.getAsInt();
-      if (choice == 1)
-        return "PHYSICAL WAIT TIME";
-      if (choice == 2)
-        return "PRIORITY SCORE";
-      if (choice == 3)
-        return "STRIKE COUNT";
-      if (choice == 4)
-        return "GUEST NAME";
-      if (choice == 5)
-        return currentAttr;
+      if (choice == 1) return "PHYSICAL WAIT TIME";
+      if (choice == 2) return "PRIORITY SCORE";
+      if (choice == 3) return "STRIKE COUNT";
+      if (choice == 4) return "GUEST NAME";
+      if (choice == 5) return currentAttr;
     }
   }
 
@@ -346,12 +336,9 @@ public class VipReportController {
     while (true) {
       GetMenuInputResult res = reportView.displaySortDirSubmenu(currentDir);
       int choice = res.getAsInt();
-      if (choice == 1)
-        return "DESCENDING";
-      if (choice == 2)
-        return "ASCENDING";
-      if (choice == 3)
-        return currentDir;
+      if (choice == 1) return "DESCENDING";
+      if (choice == 2) return "ASCENDING";
+      if (choice == 3) return currentDir;
     }
   }
 
@@ -359,20 +346,15 @@ public class VipReportController {
     while (true) {
       GetMenuInputResult res = reportView.displayRecordLimitSubmenu(currentLimit);
       int choice = res.getAsInt();
-      if (choice == 1)
-        return 10;
-      if (choice == 2)
-        return 20;
-      if (choice == 3)
-        return 50;
+      if (choice == 1) return 10;
+      if (choice == 2) return 20;
+      if (choice == 3) return 50;
       if (choice == 4) {
         Integer custom = promptCustomRecordLimit();
         return (custom == null) ? currentLimit : custom;
       }
-      if (choice == 5)
-        return 0; // 0 = Show All (Unlimited)
-      if (choice == 6)
-        return currentLimit;
+      if (choice == 5) return 0; // 0 = Show All (Unlimited)
+      if (choice == 6) return currentLimit;
     }
   }
 
@@ -396,29 +378,29 @@ public class VipReportController {
       String sortDir,
       int reportType) {
 
-    if (source == null || source.isEmpty())
-      return new ArrayList<>();
+    if (source == null || source.isEmpty()) return new ArrayList<>();
 
     ListInterface<Reservation> filtered = new ArrayList<>();
 
     for (int i = 1; i <= source.getNumberOfEntries(); i++) {
       Reservation r = source.getEntry(i);
-      if (r == null)
-        continue;
+      if (r == null) continue;
 
       // Report 3 is Room Holding Bay & Grace Window Audit: strictly include holding bay records
       if (reportType == 3) {
-        boolean enteredHoldingBay = r.getAllocatedTime() != null
-            || r.getStatus() == Reservation.Status.ALLOCATED
-            || r.getStatus() == Reservation.Status.NO_SHOW
-            || r.getStatus() == Reservation.Status.CHECKED_IN;
+        boolean enteredHoldingBay =
+            r.getAllocatedTime() != null
+                || r.getStatus() == Reservation.Status.ALLOCATED
+                || r.getStatus() == Reservation.Status.NO_SHOW
+                || r.getStatus() == Reservation.Status.CHECKED_IN;
         if (!enteredHoldingBay) {
           continue;
         }
       }
 
       Guest g = guestRepo.findById(r.getGuestId());
-      Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+      Member m =
+          (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
       boolean matchSearch = true;
       boolean matchTier = true;
@@ -427,13 +409,17 @@ public class VipReportController {
 
       if (search != null && !search.trim().isEmpty()) {
         String query = search.trim().toLowerCase();
-        boolean mRes = r.getReservationId() != null && r.getReservationId().toLowerCase().contains(query);
-        boolean mConf = r.getConfirmationNumber() != null
-            && r.getConfirmationNumber().toLowerCase().contains(query);
-        boolean mName = g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
-        boolean mPhone = g != null
-            && g.getPhoneNumber() != null
-            && g.getPhoneNumber().toLowerCase().contains(query);
+        boolean mRes =
+            r.getReservationId() != null && r.getReservationId().toLowerCase().contains(query);
+        boolean mConf =
+            r.getConfirmationNumber() != null
+                && r.getConfirmationNumber().toLowerCase().contains(query);
+        boolean mName =
+            g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
+        boolean mPhone =
+            g != null
+                && g.getPhoneNumber() != null
+                && g.getPhoneNumber().toLowerCase().contains(query);
         matchSearch = mRes || mConf || mName || mPhone;
       }
 
@@ -448,10 +434,8 @@ public class VipReportController {
       }
 
       if (boiling != null) {
-        if ("BOILING".equalsIgnoreCase(boiling))
-          matchBoiling = r.getIsBoiling();
-        else if ("NORMAL".equalsIgnoreCase(boiling))
-          matchBoiling = !r.getIsBoiling();
+        if ("BOILING".equalsIgnoreCase(boiling)) matchBoiling = r.getIsBoiling();
+        else if ("NORMAL".equalsIgnoreCase(boiling)) matchBoiling = !r.getIsBoiling();
       }
 
       if (matchSearch && matchTier && matchRoom && matchBoiling) {
@@ -464,9 +448,10 @@ public class VipReportController {
     if ("PRIORITY SCORE".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
           (r1, r2) -> {
-            int cmp = isAsc
-                ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
-                : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+            int cmp =
+                isAsc
+                    ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
+                    : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
             if (cmp != 0) return cmp;
             return r1.getReservationId().compareTo(r2.getReservationId());
           });
@@ -498,9 +483,10 @@ public class VipReportController {
       // Default: PHYSICAL WAIT TIME
       filtered.sort(
           (r1, r2) -> {
-            int cmp = isAsc
-                ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
-                : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+            int cmp =
+                isAsc
+                    ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
+                    : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
             if (cmp != 0) return cmp;
             return r1.getReservationId().compareTo(r2.getReservationId());
           });

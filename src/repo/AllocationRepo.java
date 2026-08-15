@@ -40,8 +40,7 @@ public class AllocationRepo {
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
-    if (entry == null)
-      return;
+    if (entry == null) return;
 
     allocationList.add(entry);
     save();
@@ -56,8 +55,7 @@ public class AllocationRepo {
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
-    if (entry == null || allocationList == null)
-      return false;
+    if (entry == null || allocationList == null) return false;
 
     boolean removed = false;
     for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
@@ -90,8 +88,7 @@ public class AllocationRepo {
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
 
-    if (allocationList == null || allocationList.getNumberOfEntries() == 0)
-      return;
+    if (allocationList == null || allocationList.getNumberOfEntries() == 0) return;
 
     long now = System.currentTimeMillis();
 
@@ -114,16 +111,16 @@ public class AllocationRepo {
         if (res != null) {
           Guest guest = guestRepo.findById(res.getGuestId());
           if (guest != null) {
-            Member member = (guest.getMemberId() != null)
-                ? memberRepo.findById(guest.getMemberId())
-                : null;
+            Member member =
+                (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
 
             VipSystemConfig config = configRepo.getConfig();
-            int maxStrikes = (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
-                ? config.getDiamondMaxStrikes()
-                : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
-                    ? config.getGoldMaxStrikes()
-                    : config.getSilverMaxStrikes();
+            int maxStrikes =
+                (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
+                    ? config.getDiamondMaxStrikes()
+                    : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
+                        ? config.getGoldMaxStrikes()
+                        : config.getSilverMaxStrikes();
 
             if (guest.getStrikeCount() >= maxStrikes) {
               res.setStatus(Reservation.Status.NO_SHOW);
@@ -138,16 +135,17 @@ public class AllocationRepo {
               int newScore = vipReservationRepo.calculatePriorityScore(res, guest, member, config);
 
               String newResId = vipReservationRepo.generateReservationId();
-              Reservation newRes = new Reservation(
-                  newResId,
-                  guest.getGuestId(),
-                  null,
-                  res.getRoomType(),
-                  Reservation.Status.WAITING,
-                  res.getIsBoiling(),
-                  newScore,
-                  LocalDateTime.now(),
-                  LocalDateTime.now());
+              Reservation newRes =
+                  new Reservation(
+                      newResId,
+                      guest.getGuestId(),
+                      null,
+                      res.getRoomType(),
+                      Reservation.Status.WAITING,
+                      res.getIsBoiling(),
+                      newScore,
+                      LocalDateTime.now(),
+                      LocalDateTime.now());
 
               vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
             }
@@ -174,8 +172,7 @@ public class AllocationRepo {
       }
     }
 
-    if (earliestFutureEntry == null)
-      return;
+    if (earliestFutureEntry == null) return;
 
     final AllocationEntry targetEntry = earliestFutureEntry;
     long remainingMs = Math.max(1, earliestFutureTime - now);
@@ -199,16 +196,18 @@ public class AllocationRepo {
               if (res != null) {
                 Guest guest = guestRepo.findById(res.getGuestId());
                 if (guest != null) {
-                  Member member = (guest.getMemberId() != null)
-                      ? memberRepo.findById(guest.getMemberId())
-                      : null;
+                  Member member =
+                      (guest.getMemberId() != null)
+                          ? memberRepo.findById(guest.getMemberId())
+                          : null;
 
                   VipSystemConfig config = configRepo.getConfig();
-                  int maxStrikes = (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
-                      ? config.getDiamondMaxStrikes()
-                      : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
-                          ? config.getGoldMaxStrikes()
-                          : config.getSilverMaxStrikes();
+                  int maxStrikes =
+                      (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
+                          ? config.getDiamondMaxStrikes()
+                          : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
+                              ? config.getGoldMaxStrikes()
+                              : config.getSilverMaxStrikes();
 
                   if (guest.getStrikeCount() >= maxStrikes) {
                     res.setStatus(Reservation.Status.NO_SHOW);
@@ -220,20 +219,22 @@ public class AllocationRepo {
                     guest.setStrikeCount(guest.getStrikeCount() + 1);
                     guestRepo.updateGuest(guest);
 
-                    int newScore = vipReservationRepo.calculatePriorityScore(
-                        res, guest, member, configRepo.getConfig());
+                    int newScore =
+                        vipReservationRepo.calculatePriorityScore(
+                            res, guest, member, configRepo.getConfig());
 
                     String newResId = vipReservationRepo.generateReservationId();
-                    Reservation newRes = new Reservation(
-                        newResId,
-                        guest.getGuestId(),
-                        null,
-                        res.getRoomType(),
-                        Reservation.Status.WAITING,
-                        res.getIsBoiling(),
-                        newScore,
-                        LocalDateTime.now(),
-                        LocalDateTime.now());
+                    Reservation newRes =
+                        new Reservation(
+                            newResId,
+                            guest.getGuestId(),
+                            null,
+                            res.getRoomType(),
+                            Reservation.Status.WAITING,
+                            res.getIsBoiling(),
+                            newScore,
+                            LocalDateTime.now(),
+                            LocalDateTime.now());
 
                     vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
                   }
@@ -265,7 +266,8 @@ public class AllocationRepo {
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
-    // Delegates directly to scheduleNextAutoExpirationTask which processes overdue holds synchronously
+    // Delegates directly to scheduleNextAutoExpirationTask which processes overdue holds
+    // synchronously
     // and arms the timer for future expirations.
     scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
   }
@@ -277,33 +279,36 @@ public class AllocationRepo {
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
     VipSystemConfig config = configRepo.getConfig();
-    if (allocationList == null || allocationList.isEmpty())
-      return 0;
+    if (allocationList == null || allocationList.isEmpty()) return 0;
 
     int updatedCount = 0;
-    long now = System.currentTimeMillis(); // Current system time as raw milliseconds since 1 Jan 1970 UTC
+    long now =
+        System.currentTimeMillis(); // Current system time as raw milliseconds since 1 Jan 1970 UTC
 
     for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
       AllocationEntry entry = allocationList.getEntry(i);
       if (entry != null) {
         Reservation r = vipReservationRepo.findById(entry.getReservationId());
         Guest g = (r != null) ? guestRepo.findById(r.getGuestId()) : null;
-        Member m = (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+        Member m =
+            (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
         Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
-        int newGraceMins = (tier == Member.LoyaltyTier.DIAMOND)
-            ? config.getDiamondGraceWindowMins()
-            : (tier == Member.LoyaltyTier.GOLD)
-                ? config.getGoldGraceWindowMins()
-                : config.getSilverGraceWindowMins();
+        int newGraceMins =
+            (tier == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondGraceWindowMins()
+                : (tier == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldGraceWindowMins()
+                    : config.getSilverGraceWindowMins();
 
         // Calculate new expiration target from the original allocation timestamp
         long newExpiration;
         if (r != null && r.getAllocatedTime() != null) {
-          long startMs = r.getAllocatedTime()
-              .atZone(ZoneId.systemDefault()) // Attach local timezone (UTC+8)
-              .toInstant() // Converts to UTC Instant
-              .toEpochMilli(); // Converts to raw long ms
+          long startMs =
+              r.getAllocatedTime()
+                  .atZone(ZoneId.systemDefault()) // Attach local timezone (UTC+8)
+                  .toInstant() // Converts to UTC Instant
+                  .toEpochMilli(); // Converts to raw long ms
           newExpiration = startMs + (newGraceMins * 60 * 1000L);
           r.setAllocatedGraceMins(newGraceMins);
           vipReservationRepo.updateReservation(r);

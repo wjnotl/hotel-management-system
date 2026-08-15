@@ -44,33 +44,33 @@ public class VipController {
 
         if ("1".equals(choice)) {
           new VipManageWaitlistController(
-              vipReservationRepo,
-              guestRepo,
-              memberRepo,
-              roomRepo,
-              allocationRepo,
-              vipSystemConfigRepo)
+                  vipReservationRepo,
+                  guestRepo,
+                  memberRepo,
+                  roomRepo,
+                  allocationRepo,
+                  vipSystemConfigRepo)
               .startWaitlistManagement();
         } else if ("2".equals(choice)) {
           new VipManageAllocationController(
-              allocationRepo,
-              vipReservationRepo,
-              guestRepo,
-              memberRepo,
-              roomRepo,
-              vipSystemConfigRepo)
+                  allocationRepo,
+                  vipReservationRepo,
+                  guestRepo,
+                  memberRepo,
+                  roomRepo,
+                  vipSystemConfigRepo)
               .startAllocationManagement();
         } else if ("3".equals(choice)) {
           new VipReportController(vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo)
               .startReportManagement();
         } else if ("4".equals(choice)) {
           new VipSettingsController(
-              vipSystemConfigRepo,
-              vipReservationRepo,
-              guestRepo,
-              memberRepo,
-              allocationRepo,
-              roomRepo)
+                  vipSystemConfigRepo,
+                  vipReservationRepo,
+                  guestRepo,
+                  memberRepo,
+                  allocationRepo,
+                  roomRepo)
               .startSettingsManagement();
         } else if ("5".equals(choice)) {
           return;
@@ -83,8 +83,7 @@ public class VipController {
 
   public static void startMidnightStrikeResetScheduler(
       GuestRepo guestRepo, VipSystemConfigRepo configRepo) {
-    if (guestRepo == null || configRepo == null)
-      return;
+    if (guestRepo == null || configRepo == null) return;
 
     // 1. Startup check: Check if midnight passed while system was offline/shutdown
     String lastResetDate = configRepo.getConfig().getLastStrikeResetDate();

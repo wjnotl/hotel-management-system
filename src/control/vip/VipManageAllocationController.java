@@ -278,7 +278,8 @@ public class VipManageAllocationController {
             vipReservationRepo.updateReservation(reservation);
 
             // 2. Create a NEW reservation ID for the re-queued entry
-            int newScore = vipReservationRepo.calculatePriorityScore(reservation, guest, member, config);
+            int newScore =
+                vipReservationRepo.calculatePriorityScore(reservation, guest, member, config);
             String newResId = vipReservationRepo.generateReservationId();
             Reservation newRes =
                 new Reservation(
@@ -292,8 +293,7 @@ public class VipManageAllocationController {
                     LocalDateTime.now(),
                     LocalDateTime.now());
 
-            vipReservationRepo.addReservation(
-                newRes, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
@@ -343,7 +343,8 @@ public class VipManageAllocationController {
             vipReservationRepo.updateReservation(reservation);
 
             // 2. Create a NEW reservation ID for the re-queued entry
-            int newScore = vipReservationRepo.calculatePriorityScore(reservation, guest, member, config);
+            int newScore =
+                vipReservationRepo.calculatePriorityScore(reservation, guest, member, config);
             String newResId = vipReservationRepo.generateReservationId();
             Reservation newRes =
                 new Reservation(
@@ -357,8 +358,7 @@ public class VipManageAllocationController {
                     LocalDateTime.now(),
                     LocalDateTime.now());
 
-            vipReservationRepo.addReservation(
-                newRes, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
