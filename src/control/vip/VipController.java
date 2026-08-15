@@ -1,6 +1,7 @@
 package control.vip;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import repo.AllocationRepo;
 import repo.GuestRepo;
@@ -64,7 +65,12 @@ public class VipController {
               .startReportManagement();
         } else if ("4".equals(choice)) {
           new VipSettingsController(
-                  vipSystemConfigRepo, vipReservationRepo, guestRepo, memberRepo, allocationRepo)
+                  vipSystemConfigRepo,
+                  vipReservationRepo,
+                  guestRepo,
+                  memberRepo,
+                  allocationRepo,
+                  roomRepo)
               .startSettingsManagement();
         } else if ("5".equals(choice)) {
           return;
@@ -75,17 +81,30 @@ public class VipController {
     }
   }
 
-  public static void startMidnightStrikeResetScheduler(GuestRepo guestRepo) {
+  public static void startMidnightStrikeResetScheduler(
+      GuestRepo guestRepo, VipSystemConfigRepo configRepo) {
+    if (guestRepo == null || configRepo == null) return;
+
+    // 1. Startup check: Check if midnight passed while system was offline/shutdown
+    String lastResetDate = configRepo.getConfig().getLastStrikeResetDate();
+    String todayDate = LocalDate.now().toString();
+
+    if (lastResetDate == null || !todayDate.equals(lastResetDate)) {
+      guestRepo.resetAllGuestStrikes(configRepo);
+    }
+
+    // 2. Schedule recurring timer for the next midnight
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay();
-    long minutesUntilMidnight = Duration.between(now, nextMidnight).toMinutes();
+    long initialDelayMs = Math.max(1, Duration.between(now, nextMidnight).toMillis());
+    long twentyFourHoursMs = 24 * 60 * 60 * 1000L;
 
     TaskSchedulerUtil.scheduleEvery(
-        minutesUntilMidnight,
-        24 * 60,
+        initialDelayMs,
+        twentyFourHoursMs,
         () -> {
           try {
-            guestRepo.resetAllGuestStrikes();
+            guestRepo.resetAllGuestStrikes(configRepo);
           } catch (Exception e) {
           }
         });

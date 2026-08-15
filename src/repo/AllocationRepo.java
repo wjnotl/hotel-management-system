@@ -9,7 +9,7 @@ import entity.Reservation;
 import entity.Room;
 import entity.VipSystemConfig;
 import java.time.LocalDateTime;
-import java.util.concurrent.TimeUnit;
+import java.time.ZoneId;
 import util.BinaryFileUtil;
 import util.TaskSchedulerUtil;
 
@@ -90,37 +90,101 @@ public class AllocationRepo {
 
     if (allocationList == null || allocationList.getNumberOfEntries() == 0) return;
 
-    AllocationEntry earliestEntry = null;
-    long earliestTime = Long.MAX_VALUE;
+    long now = System.currentTimeMillis();
 
-    for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
-      AllocationEntry current = allocationList.getEntry(i);
-      if (current != null && current.getExpirationTimestamp() < earliestTime) {
-        earliestTime = current.getExpirationTimestamp();
-        earliestEntry = current;
+    // 1. Process any overdue expired allocations synchronously (where expirationTimestamp <= now)
+    boolean processedOverdue = false;
+    for (int i = allocationList.getNumberOfEntries(); i >= 1; i--) {
+      AllocationEntry entry = allocationList.getEntry(i);
+      if (entry != null && entry.getExpirationTimestamp() <= now) {
+        allocationList.removeAt(i);
+        processedOverdue = true;
+
+        Room room = roomRepo.findByRoomNumber(entry.getAssignedRoomNumber());
+        if (room != null) {
+          room.setStatus(Room.Status.VACANT_CLEAN);
+          room.setReservationConfirmationNumber(null);
+          roomRepo.updateRoom(room);
+        }
+
+        Reservation res = vipReservationRepo.findById(entry.getReservationId());
+        if (res != null) {
+          Guest guest = guestRepo.findById(res.getGuestId());
+          if (guest != null) {
+            Member member =
+                (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
+
+            VipSystemConfig config = configRepo.getConfig();
+            int maxStrikes =
+                (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
+                    ? config.getDiamondMaxStrikes()
+                    : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
+                        ? config.getGoldMaxStrikes()
+                        : config.getSilverMaxStrikes();
+
+            if (guest.getStrikeCount() >= maxStrikes) {
+              res.setStatus(Reservation.Status.NO_SHOW);
+              vipReservationRepo.updateReservation(res);
+            } else {
+              res.setStatus(Reservation.Status.NO_SHOW);
+              vipReservationRepo.updateReservation(res);
+
+              guest.setStrikeCount(guest.getStrikeCount() + 1);
+              guestRepo.updateGuest(guest);
+
+              int newScore = vipReservationRepo.calculatePriorityScore(res, guest, member, config);
+
+              String newResId = vipReservationRepo.generateReservationId();
+              Reservation newRes =
+                  new Reservation(
+                      newResId,
+                      guest.getGuestId(),
+                      null,
+                      res.getRoomType(),
+                      Reservation.Status.WAITING,
+                      res.getIsBoiling(),
+                      newScore,
+                      LocalDateTime.now(),
+                      LocalDateTime.now());
+
+              vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
+            }
+          }
+        }
       }
     }
 
-    if (earliestEntry == null) return;
+    if (processedOverdue) {
+      save();
+    }
 
-    // Create a final reference copy for the lambda scope
-    final AllocationEntry targetEntry = earliestEntry;
+    // 2. Find the earliest FUTURE expiration target (where expirationTimestamp > now)
+    AllocationEntry earliestFutureEntry = null;
+    long earliestFutureTime = Long.MAX_VALUE;
 
-    // Calculate remaining delay
-    long now = System.currentTimeMillis();
-    long remainingMs = targetEntry.getExpirationTimestamp() - now;
-    long delayMinutes = Math.max(1, TimeUnit.MILLISECONDS.toMinutes(remainingMs));
+    for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
+      AllocationEntry current = allocationList.getEntry(i);
+      if (current != null
+          && current.getExpirationTimestamp() > now
+          && current.getExpirationTimestamp() < earliestFutureTime) {
+        earliestFutureTime = current.getExpirationTimestamp();
+        earliestFutureEntry = current;
+      }
+    }
+
+    if (earliestFutureEntry == null) return;
+
+    final AllocationEntry targetEntry = earliestFutureEntry;
+    long remainingMs = Math.max(1, earliestFutureTime - now);
 
     TaskSchedulerUtil.scheduleOnce(
-        delayMinutes,
+        remainingMs,
         () -> {
           try {
-            // Use targetEntry instead of earliestEntry inside the lambda
             if (allocationList.contains(targetEntry)) {
               removeExpiredEntryInternal(targetEntry);
 
               Room room = roomRepo.findByRoomNumber(targetEntry.getAssignedRoomNumber());
-              Room.RoomType roomType = (room != null) ? room.getRoomType() : null;
 
               if (room != null) {
                 room.setStatus(Room.Status.VACANT_CLEAN);
@@ -132,9 +196,6 @@ public class AllocationRepo {
               if (res != null) {
                 Guest guest = guestRepo.findById(res.getGuestId());
                 if (guest != null) {
-                  guest.setStrikeCount(guest.getStrikeCount() + 1);
-                  guestRepo.updateGuest(guest);
-
                   Member member =
                       (guest.getMemberId() != null)
                           ? memberRepo.findById(guest.getMemberId())
@@ -150,29 +211,34 @@ public class AllocationRepo {
 
                   if (guest.getStrikeCount() >= maxStrikes) {
                     res.setStatus(Reservation.Status.NO_SHOW);
+                    vipReservationRepo.updateReservation(res);
                   } else {
+                    res.setStatus(Reservation.Status.NO_SHOW);
+                    vipReservationRepo.updateReservation(res);
+
+                    guest.setStrikeCount(guest.getStrikeCount() + 1);
+                    guestRepo.updateGuest(guest);
+
                     int newScore =
                         vipReservationRepo.calculatePriorityScore(
                             res, guest, member, configRepo.getConfig());
-                    res.setStatus(Reservation.Status.WAITING);
-                    res.setPriorityScore(newScore);
-                    res.setQueueArrivalTime(LocalDateTime.now());
-                    vipReservationRepo.addReservation(
-                        res, newScore, guestRepo, memberRepo, configRepo);
-                  }
-                  vipReservationRepo.updateReservation(res);
-                }
-              }
 
-              if (roomType != null && room != null) {
-                autoAssignNextWaitingVip(
-                    roomType,
-                    room,
-                    vipReservationRepo,
-                    roomRepo,
-                    guestRepo,
-                    memberRepo,
-                    configRepo);
+                    String newResId = vipReservationRepo.generateReservationId();
+                    Reservation newRes =
+                        new Reservation(
+                            newResId,
+                            guest.getGuestId(),
+                            null,
+                            res.getRoomType(),
+                            Reservation.Status.WAITING,
+                            res.getIsBoiling(),
+                            newScore,
+                            LocalDateTime.now(),
+                            LocalDateTime.now());
+
+                    vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
+                  }
+                }
               }
             }
           } catch (Exception ignored) {
@@ -194,55 +260,20 @@ public class AllocationRepo {
     save();
   }
 
-  private void autoAssignNextWaitingVip(
-      Room.RoomType roomType,
-      Room vacantRoom,
-      VipReservationRepo vipReservationRepo,
+  public void processExpiredAllocationsOnStartup(
       RoomRepo roomRepo,
+      VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
-
-    ListInterface<Reservation> queueList = vipReservationRepo.getListByRoomType(roomType);
-    if (queueList == null || queueList.isEmpty()) return;
-
-    Reservation topVip = queueList.getEntry(1);
-    if (topVip == null) return;
-
-    Guest guest = (guestRepo != null) ? guestRepo.findById(topVip.getGuestId()) : null;
-    Member member =
-        (guest != null && guest.getMemberId() != null && memberRepo != null)
-            ? memberRepo.findById(guest.getMemberId())
-            : null;
-
-    VipSystemConfig config = configRepo.getConfig();
-    Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
-    int graceMins =
-        (tier == Member.LoyaltyTier.DIAMOND)
-            ? config.getDiamondGraceWindowMins()
-            : (tier == Member.LoyaltyTier.GOLD)
-                ? config.getGoldGraceWindowMins()
-                : config.getSilverGraceWindowMins();
-
-    long holdDurationMs = graceMins * 60 * 1000L;
-
-    AllocationEntry newHold =
-        new AllocationEntry(
-            topVip.getReservationId(),
-            vacantRoom.getRoomNumber(),
-            System.currentTimeMillis() + holdDurationMs);
-
-    allocationList.add(newHold);
-    save();
-
-    vacantRoom.setStatus(Room.Status.OCCUPIED);
-    vacantRoom.setReservationConfirmationNumber(topVip.getConfirmationNumber());
-    roomRepo.updateRoom(vacantRoom);
-
-    vipReservationRepo.allocateReservation(topVip, guestRepo, memberRepo, configRepo);
+    // Delegates directly to scheduleNextAutoExpirationTask which processes overdue holds
+    // synchronously
+    // and arms the timer for future expirations.
+    scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
   }
 
   public int recalculateActiveGraceTimers(
+      RoomRepo roomRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
@@ -251,7 +282,8 @@ public class AllocationRepo {
     if (allocationList == null || allocationList.isEmpty()) return 0;
 
     int updatedCount = 0;
-    long now = System.currentTimeMillis();
+    long now =
+        System.currentTimeMillis(); // Current system time as raw milliseconds since 1 Jan 1970 UTC
 
     for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
       AllocationEntry entry = allocationList.getEntry(i);
@@ -269,8 +301,23 @@ public class AllocationRepo {
                     ? config.getGoldGraceWindowMins()
                     : config.getSilverGraceWindowMins();
 
-        // Reset expiration timestamp based on new grace minutes from current time
-        entry.setExpirationTimestamp(now + (newGraceMins * 60 * 1000L));
+        // Calculate new expiration target from the original allocation timestamp
+        long newExpiration;
+        if (r != null && r.getAllocatedTime() != null) {
+          long startMs =
+              r.getAllocatedTime()
+                  .atZone(ZoneId.systemDefault()) // Attach local timezone (UTC+8)
+                  .toInstant() // Converts to UTC Instant
+                  .toEpochMilli(); // Converts to raw long ms
+          newExpiration = startMs + (newGraceMins * 60 * 1000L);
+          r.setAllocatedGraceMins(newGraceMins);
+          vipReservationRepo.updateReservation(r);
+        } else {
+          newExpiration = now + (newGraceMins * 60 * 1000L);
+        }
+
+        // If hold has already exceeded the new grace window, expire it immediately
+        entry.setExpirationTimestamp(Math.min(newExpiration, now));
         updatedCount++;
       }
     }
@@ -278,7 +325,7 @@ public class AllocationRepo {
     save();
 
     // Re-arm auto-expiration scheduler with updated top item
-    scheduleNextAutoExpirationTask(null, vipReservationRepo, guestRepo, memberRepo, configRepo);
+    scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
 
     return updatedCount;
   }

@@ -26,6 +26,7 @@ public class Reservation implements Serializable {
   private LocalDateTime reservationTime;
   private LocalDateTime queueArrivalTime;
   private LocalDateTime allocatedTime; // Useful for completed history & analytics
+  private Integer allocatedGraceMins; // Snapshot of grace limit set during allocation
   private LocalDateTime checkOutTime;
 
   public Reservation(
@@ -87,6 +88,14 @@ public class Reservation implements Serializable {
 
   public LocalDateTime getAllocatedTime() {
     return allocatedTime;
+  }
+
+  public Integer getAllocatedGraceMins() {
+    return allocatedGraceMins;
+  }
+
+  public void setAllocatedGraceMins(Integer allocatedGraceMins) {
+    this.allocatedGraceMins = allocatedGraceMins;
   }
 
   public Integer getStayDays() {

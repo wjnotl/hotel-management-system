@@ -16,7 +16,6 @@ import repo.RoomRepo;
 import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
-import util.NumberUtil;
 import view.vip.VipManageWaitlistView;
 
 public class VipManageWaitlistController {
@@ -140,80 +139,150 @@ public class VipManageWaitlistController {
         }
 
         String searchId = inputId.trim();
+        ListInterface<Guest> matches = guestRepo.searchGuests(searchId);
 
-        Guest guest = guestRepo.findById(searchId);
-        if (guest == null) {
-          guest = findGuestByName(guestRepo.getGuestList(), searchId);
-        }
-
-        if (guest == null) {
+        if (matches == null || matches.isEmpty()) {
           waitlistView.displayGuestNotFoundErrorScreen(searchId);
           continue;
         }
 
-        Member member =
-            (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
-        int maxStrikes =
-            (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
-                ? config.getDiamondMaxStrikes()
-                : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
-                    ? config.getGoldMaxStrikes()
-                    : config.getSilverMaxStrikes();
-
-        if (guest.getStrikeCount() >= maxStrikes) {
-          int choice = waitlistView.displayMaxStrikeWarningScreen(guest, member, maxStrikes);
-
-          if (choice == 1) {
-            guest.setStrikeCount(0);
-            guestRepo.updateGuest(guest);
-            waitlistView.displayStrikeResetOverrideScreen(guest);
-          } else if (choice == 2) {
-            ConsoleUtil.printError("Eviction lockout enforced. Guest entry denied.");
-            return;
-          } else {
+        if (matches.getNumberOfEntries() == 1) {
+          Guest guest = matches.getEntry(1);
+          if (processAddGuestSelection(guest, roomType, config)) {
             return;
           }
-        }
+        } else {
+          while (true) {
+            Guest guest = promptGuestDisambiguation(matches, searchId);
+            if (guest == null) {
+              break; // User pressed 'C' on disambiguation screen -> back to search prompt
+            }
 
-        if (member == null || member.getTier() == null) {
-          boolean proceed = waitlistView.displayUnassignedTierWarningScreen(guest);
-          if (!proceed) {
-            continue;
+            if (processAddGuestSelection(guest, roomType, config)) {
+              return;
+            }
+            // Selecting 'N' or cancelling returns back to the disambiguation loop!
           }
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
 
-        int baseScore =
-            vipReservationRepo.calculatePriorityScore(
-                null, guest, member, vipSystemConfigRepo.getConfig());
+  private boolean processAddGuestSelection(
+      Guest guest, Room.RoomType roomType, VipSystemConfig config) {
+    Member member = (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
+    int maxStrikes = getTierMaxStrikes(member, config);
 
-        boolean confirmed =
-            waitlistView.displayAddGuestConfirmationScreen(guest, member, roomType, baseScore);
-        if (!confirmed) {
+    if (!handleStrikeOverrideFlow(guest, member, maxStrikes)) {
+      return false;
+    }
+
+    if (member == null || member.getTier() == null) {
+      waitlistView.displayNonMemberDeniedScreen(guest);
+      return false;
+    }
+
+    int baseScore =
+        vipReservationRepo.calculatePriorityScore(
+            null, guest, member, vipSystemConfigRepo.getConfig());
+
+    boolean confirmed = promptAddGuestConfirmation(guest, member, roomType, baseScore);
+    if (!confirmed) {
+      return false;
+    }
+
+    createWaitlistReservation(guest, member, roomType, baseScore);
+    return true;
+  }
+
+  private int getTierMaxStrikes(Member member, VipSystemConfig config) {
+    if (member == null || member.getTier() == null) {
+      return config.getSilverMaxStrikes();
+    }
+    switch (member.getTier()) {
+      case DIAMOND:
+        return config.getDiamondMaxStrikes();
+      case GOLD:
+        return config.getGoldMaxStrikes();
+      case SILVER:
+      default:
+        return config.getSilverMaxStrikes();
+    }
+  }
+
+  private boolean handleStrikeOverrideFlow(Guest guest, Member member, int maxStrikes) {
+    if (guest.getStrikeCount() < maxStrikes) {
+      return true;
+    }
+    while (true) {
+      int choice = promptMaxStrikeWarning(guest, member, maxStrikes);
+
+      if (choice == 1) {
+        boolean confirmOverride = waitlistView.displayStrikeOverrideConfirmationScreen(guest);
+        if (confirmOverride) {
+          guest.setStrikeCount(0);
+          guestRepo.updateGuest(guest);
+          waitlistView.displayStrikeResetOverrideScreen(guest);
+          return true;
+        } else {
           continue;
         }
+      } else {
+        return false;
+      }
+    }
+  }
 
-        String resId = generateUniqueReservationId();
-        String confNum = generateUniqueConfirmationNumber();
+  private void createWaitlistReservation(
+      Guest guest, Member member, Room.RoomType roomType, int baseScore) {
+    String resId = vipReservationRepo.generateReservationId();
+    LocalDateTime now = LocalDateTime.now();
 
-        LocalDateTime now = LocalDateTime.now();
+    Reservation newRes =
+        new Reservation(
+            resId,
+            guest.getGuestId(),
+            null,
+            roomType,
+            Reservation.Status.WAITING,
+            false,
+            baseScore,
+            now,
+            now);
 
-        Reservation newRes =
-            new Reservation(
-                resId,
-                guest.getGuestId(),
-                confNum,
-                roomType,
-                Reservation.Status.WAITING,
-                false,
-                baseScore,
-                now,
-                now);
+    vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
 
-        vipReservationRepo.addReservation(
-            newRes, baseScore, guestRepo, memberRepo, vipSystemConfigRepo);
+    waitlistView.displayAddGuestSuccessScreen(resId, guest, roomType);
+  }
 
-        waitlistView.displayAddGuestSuccessScreen(resId, confNum, guest, roomType);
-        break;
+  private Guest promptGuestDisambiguation(ListInterface<Guest> matches, String searchId) {
+    while (true) {
+      try {
+        return waitlistView.displayGuestDisambiguationScreen(
+            matches, memberRepo.getMemberList(), searchId);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptMaxStrikeWarning(Guest guest, Member member, int maxStrikes) {
+    while (true) {
+      try {
+        return waitlistView.displayMaxStrikeWarningScreen(guest, member, maxStrikes);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptAddGuestConfirmation(
+      Guest guest, Member member, Room.RoomType roomType, int baseScore) {
+    while (true) {
+      try {
+        return waitlistView.displayAddGuestConfirmationScreen(guest, member, roomType, baseScore);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -270,7 +339,7 @@ public class VipManageWaitlistController {
           Member m =
               (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
-          boolean confirmed = waitlistView.displayCancelConfirmationScreen(selected, g, m);
+          boolean confirmed = promptCancelConfirmation(selected, g, m);
 
           if (confirmed) {
             vipReservationRepo.cancelReservation(
@@ -281,6 +350,28 @@ public class VipManageWaitlistController {
         } else if (action == 3) {
           break;
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptCancelConfirmation(Reservation selected, Guest g, Member m) {
+    while (true) {
+      try {
+        return waitlistView.displayCancelConfirmationScreen(selected, g, m);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptDequeueConfirmation(
+      Reservation reservation, Guest g, Member m, Room vacantRoom, int graceMins) {
+    while (true) {
+      try {
+        return waitlistView.displayDequeueConfirmationScreen(
+            reservation, g, m, vacantRoom, graceMins);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -307,8 +398,7 @@ public class VipManageWaitlistController {
                 ? config.getGoldGraceWindowMins()
                 : config.getSilverGraceWindowMins();
 
-    boolean confirmed =
-        waitlistView.displayDequeueConfirmationScreen(reservation, g, m, vacantRoom, graceMins);
+    boolean confirmed = promptDequeueConfirmation(reservation, g, m, vacantRoom, graceMins);
     if (!confirmed) {
       return false;
     }
@@ -335,61 +425,6 @@ public class VipManageWaitlistController {
     waitlistView.displayDequeueSuccessScreen(
         reservation, g, m, vacantRoom.getRoomNumber(), remainingCount, entry);
     return true;
-  }
-
-  private String generateUniqueConfirmationNumber() {
-    while (true) {
-      String code = NumberUtil.generateDigitPin(8);
-
-      boolean exists = false;
-      ListInterface<Reservation> allReservations = vipReservationRepo.getAllReservations();
-      if (allReservations != null) {
-        for (int i = 1; i <= allReservations.getNumberOfEntries(); i++) {
-          Reservation r = allReservations.getEntry(i);
-          if (r != null && code.equalsIgnoreCase(r.getConfirmationNumber())) {
-            exists = true;
-            break;
-          }
-        }
-      }
-
-      if (!exists) {
-        return code;
-      }
-    }
-  }
-
-  private String generateUniqueReservationId() {
-    int maxIdNum = 10000;
-    ListInterface<Reservation> allReservations = vipReservationRepo.getAllReservations();
-
-    if (allReservations != null) {
-      for (int i = 1; i <= allReservations.getNumberOfEntries(); i++) {
-        Reservation r = allReservations.getEntry(i);
-        if (r != null && r.getReservationId() != null && r.getReservationId().startsWith("RES-")) {
-          try {
-            int num = Integer.parseInt(r.getReservationId().substring(4));
-            if (num > maxIdNum) {
-              maxIdNum = num;
-            }
-          } catch (NumberFormatException ignored) {
-          }
-        }
-      }
-    }
-
-    return "RES-" + (maxIdNum + 1);
-  }
-
-  private Guest findGuestByName(ListInterface<Guest> guestList, String name) {
-    if (guestList == null || name == null) return null;
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null && name.equalsIgnoreCase(g.getName())) {
-        return g;
-      }
-    }
-    return null;
   }
 
   private String[] handleFilterMenu(
@@ -428,16 +463,26 @@ public class VipManageWaitlistController {
       try {
         int option = waitlistView.displaySearchSubmenu(currentSearch);
         if (option == 1) {
-          String input = waitlistView.promptSearchInput();
-          if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-            return currentSearch;
-          }
-          return input.trim();
+          return promptSearchInputWithRetry(currentSearch);
         } else if (option == 2) {
           return null;
         } else if (option == 3) {
           return currentSearch;
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String promptSearchInputWithRetry(String defaultValue) {
+    while (true) {
+      try {
+        String input = waitlistView.promptSearchInput(defaultValue);
+        if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
+          return defaultValue;
+        }
+        return input.trim();
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -509,11 +554,6 @@ public class VipManageWaitlistController {
         String query = search.trim().toLowerCase();
         boolean matchResId =
             r.getReservationId() != null && r.getReservationId().toLowerCase().contains(query);
-        boolean matchConf =
-            r.getConfirmationNumber() != null
-                && r.getConfirmationNumber().toLowerCase().contains(query);
-        boolean matchGuestId =
-            r.getGuestId() != null && r.getGuestId().toLowerCase().contains(query);
         boolean matchName =
             g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
         boolean matchPhone =
@@ -521,7 +561,7 @@ public class VipManageWaitlistController {
                 && g.getPhoneNumber() != null
                 && g.getPhoneNumber().toLowerCase().contains(query);
 
-        matchesSearch = matchResId || matchConf || matchGuestId || matchName || matchPhone;
+        matchesSearch = matchResId || matchName || matchPhone;
       }
 
       if (tier != null) {
@@ -596,6 +636,10 @@ public class VipManageWaitlistController {
       filtered.sort((r1, r2) -> r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime()));
     } else if ("WAIT TIME (SHORTEST -> LONGEST)".equalsIgnoreCase(sort)) {
       filtered.sort((r1, r2) -> r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime()));
+    } else if ("RESERVATION ID (LOW -> HIGH)".equalsIgnoreCase(sort)) {
+      filtered.sort((r1, r2) -> r1.getReservationId().compareToIgnoreCase(r2.getReservationId()));
+    } else if ("RESERVATION ID (HIGH -> LOW)".equalsIgnoreCase(sort)) {
+      filtered.sort((r1, r2) -> r2.getReservationId().compareToIgnoreCase(r1.getReservationId()));
     } else {
       filtered.sort((r1, r2) -> Integer.compare(r2.getPriorityScore(), r1.getPriorityScore()));
     }

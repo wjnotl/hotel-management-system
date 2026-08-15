@@ -50,14 +50,22 @@ public class VipReportController {
     }
   }
 
-  private void manageReportPipeline(int reportType) {
+  private static class ReportFilterState {
     String searchQuery = null;
     String tierFilter = null;
     String roomTypeFilter = null;
     String boilingFilter = null;
-    String sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
+    String sortAttribute;
     String sortDirection = "DESCENDING";
-    int recordLimit = 10; // Default: Top 10 Records
+    int recordLimit = 10;
+
+    ReportFilterState(int reportType) {
+      this.sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
+    }
+  }
+
+  private void manageReportPipeline(int reportType) {
+    ReportFilterState state = new ReportFilterState(reportType);
 
     String reportTitle =
         (reportType == 1)
@@ -66,91 +74,37 @@ public class VipReportController {
                 ? "VIP Penalty & Eviction Audit Report"
                 : "Room Holding Bay & Grace Window Report";
 
+    // Step 1: Open Filter & Sort Options screen FIRST!
+    boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
+    if (!generateSelected) {
+      return; // User selected Back (Option 6) -> Return to Analytics Hub
+    }
+
+    // Step 2: User selected Option 1 (Generate Report) -> Enter Report Screen Loop!
+    renderGeneratedReportLoop(reportType, reportTitle, state);
+  }
+
+  private void renderGeneratedReportLoop(
+      int reportType, String reportTitle, ReportFilterState state) {
+
     while (true) {
       try {
         ListInterface<Reservation> allReservations = vipReservationRepo.getAllReservations();
         ListInterface<Reservation> filteredList =
             filterAndSortList(
                 allReservations,
-                searchQuery,
-                tierFilter,
-                roomTypeFilter,
-                boilingFilter,
-                sortAttribute,
-                sortDirection);
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.sortAttribute,
+                state.sortDirection,
+                reportType);
 
-        GetMenuInputResult action =
-            reportView.displayFilterControlPanel(
-                reportTitle,
-                searchQuery,
-                tierFilter,
-                roomTypeFilter,
-                boilingFilter,
-                sortAttribute,
-                sortDirection,
-                recordLimit);
-
-        int choice = action.getAsInt();
-
-        if (choice == 1) {
-          searchQuery = handleSearchSubmenu(searchQuery);
-        } else if (choice == 2) {
-          tierFilter = handleTierSubmenu(tierFilter);
-        } else if (choice == 3) {
-          roomTypeFilter = handleRoomTypeSubmenu(roomTypeFilter);
-        } else if (choice == 4) {
-          boilingFilter = handleBoilingSubmenu(boilingFilter);
-        } else if (choice == 5) {
-          sortAttribute = handleSortAttrSubmenu(sortAttribute);
-          sortDirection = handleSortDirSubmenu(sortDirection);
-        } else if (choice == 6) {
-          recordLimit = handleRecordLimitSubmenu(recordLimit);
-        } else if (choice == 7) {
-          // Reset to defaults
-          searchQuery = null;
-          tierFilter = null;
-          roomTypeFilter = null;
-          boilingFilter = null;
-          sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
-          sortDirection = "DESCENDING";
-          recordLimit = 10;
-        } else if (choice == 8) {
-          // Generate Report Now!
-          String scopeStr =
-              buildScopeString(searchQuery, tierFilter, roomTypeFilter, boilingFilter);
-          String sortStr = sortAttribute + " (" + sortDirection + ")";
-
-          int confirmChoice =
-              reportView.displayExecutionConfirmationScreen(
-                  reportTitle, scopeStr, sortStr, filteredList.getNumberOfEntries(), recordLimit);
-
-          if (confirmChoice == 1) {
-            boolean exitToHub =
-                renderGeneratedReportLoop(reportType, filteredList, scopeStr, sortStr, recordLimit);
-            if (exitToHub) {
-              return; // Cleanly exit back to Analytics Hub!
-            }
-          } else if (confirmChoice == 3) {
-            return; // Exit to Hub
-          }
-        } else if (choice == 9) {
-          return; // Back to Hub
-        }
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  private boolean renderGeneratedReportLoop(
-      int reportType,
-      ListInterface<Reservation> matchedList,
-      String scopeStr,
-      String sortStr,
-      int recordLimit) {
-
-    while (true) {
-      try {
+        String scopeStr =
+            buildScopeString(
+                state.searchQuery, state.tierFilter, state.roomTypeFilter, state.boilingFilter);
+        String sortStr = state.sortAttribute + " (" + state.sortDirection + ")";
         VipSystemConfig config = configRepo.getConfig();
         GetMenuInputResult result;
 
@@ -160,67 +114,68 @@ public class VipReportController {
         if (reportType == 1) {
           result =
               reportView.renderSlaReportScreen(
-                  matchedList,
+                  filteredList,
                   guestRepo.getGuestList(),
                   memberRepo.getMemberList(),
                   config,
                   scopeStr,
                   sortStr,
-                  recordLimit);
+                  state.recordLimit);
         } else if (reportType == 2) {
           result =
               reportView.renderPenaltyReportScreen(
-                  matchedList,
+                  filteredList,
                   guestRepo.getGuestList(),
                   memberRepo.getMemberList(),
                   config,
                   scopeStr,
                   sortStr,
-                  recordLimit);
+                  state.recordLimit);
         } else {
           result =
               reportView.renderHoldingReportScreen(
-                  matchedList,
+                  filteredList,
                   guestRepo.getGuestList(),
                   memberRepo.getMemberList(),
                   config,
                   scopeStr,
                   sortStr,
-                  recordLimit);
+                  state.recordLimit);
+        }
+
+        if (result == null) {
+          continue; // Re-render whole report cleanly on invalid command input
         }
 
         String capturedReportText = ConsoleUtil.getCapturedString();
 
         if ("Q".equalsIgnoreCase(result.input)) {
-          return true; // Return true to signal Quit to Analytics Hub!
+          return; // Quit to Analytics Hub
         } else if ("S".equalsIgnoreCase(result.input)) {
-          return false; // Return false to re-open Filter Control Panel!
+          boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
+          if (!generateSelected) {
+            return; // Back from filter menu -> return to Analytics Hub
+          }
+          // generateSelected is true -> loop continues & re-renders report with new filters!
         } else if ("R".equalsIgnoreCase(result.input)) {
-          // Refresh live view
+          // Refresh -> loop continues & re-fetches live data & re-renders report screen directly!
         } else if ("E".equalsIgnoreCase(result.input)) {
-
           String filePrefix = "unknown_report";
-          String reportTitle = "UNKNOWN REPORT";
-
           switch (reportType) {
             case 1:
               filePrefix = "vip/sla_report";
-              reportTitle = "WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT REPORT";
               break;
             case 2:
               filePrefix = "vip/penalty_report";
-              reportTitle = "VIP PENALTY & EVICTION AUDIT REPORT";
               break;
             case 3:
               filePrefix = "vip/holding_report";
-              reportTitle = "ROOM HOLDING BAY & GRACE WINDOW AUDIT REPORT";
               break;
-            default:
-              throw new IllegalArgumentException("Invalid report type: " + reportType);
           }
 
           String exportedPath =
-              TxtExportUtil.export(filePrefix, reportTitle + "\n" + capturedReportText);
+              TxtExportUtil.export(
+                  filePrefix, reportTitle.toUpperCase() + "\n" + capturedReportText);
           reportView.displayExportSuccessScreen(exportedPath);
         }
       } catch (Exception e) {
@@ -230,12 +185,104 @@ public class VipReportController {
     }
   }
 
-  private String handleSearchSubmenu(String currentSearch) {
-    String input = reportView.promptSearchInput();
-    if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-      return null;
+  private boolean handleFilterControlPanel(
+      String reportTitle, ReportFilterState state, int reportType) {
+    while (true) {
+      try {
+        GetMenuInputResult action =
+            reportView.displayFilterControlPanel(
+                reportTitle,
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.sortAttribute,
+                state.sortDirection,
+                state.recordLimit);
+
+        int choice = action.getAsInt();
+
+        if (choice == 1) {
+          return true; // 1. Generate Report
+        } else if (choice == 2) {
+          handleEditFiltersSubmenu(state); // 2. Edit Filters
+        } else if (choice == 3) {
+          handleSortOptionsSubmenu(state); // 3. Sort Options
+        } else if (choice == 4) {
+          state.recordLimit = handleRecordLimitSubmenu(state.recordLimit); // 4. Max Display Records
+        } else if (choice == 5) {
+          // 5. Reset All Options
+          state.searchQuery = null;
+          state.tierFilter = null;
+          state.roomTypeFilter = null;
+          state.boilingFilter = null;
+          state.sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
+          state.sortDirection = "DESCENDING";
+          state.recordLimit = 10;
+        } else if (choice == 6) {
+          return false; // 6. Back to Analytics Hub
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-    return input.trim();
+  }
+
+  private void handleEditFiltersSubmenu(ReportFilterState state) {
+    while (true) {
+      try {
+        GetMenuInputResult action =
+            reportView.displayEditFiltersSubmenu(
+                state.searchQuery, state.tierFilter, state.roomTypeFilter, state.boilingFilter);
+        int choice = action.getAsInt();
+        if (choice == 1) {
+          state.tierFilter = handleTierSubmenu(state.tierFilter);
+        } else if (choice == 2) {
+          state.boilingFilter = handleBoilingSubmenu(state.boilingFilter);
+        } else if (choice == 3) {
+          state.roomTypeFilter = handleRoomTypeSubmenu(state.roomTypeFilter);
+        } else if (choice == 4) {
+          state.searchQuery = handleSearchSubmenu(state.searchQuery);
+        } else if (choice == 5) {
+          return; // Back to Report Generation Configuration Menu
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void handleSortOptionsSubmenu(ReportFilterState state) {
+    while (true) {
+      try {
+        GetMenuInputResult action =
+            reportView.displaySortOptionsSubmenu(state.sortAttribute, state.sortDirection);
+        int choice = action.getAsInt();
+        if (choice == 1) {
+          state.sortAttribute = handleSortAttrSubmenu(state.sortAttribute);
+        } else if (choice == 2) {
+          state.sortDirection = handleSortDirSubmenu(state.sortDirection);
+        } else if (choice == 3) {
+          return; // Back to Report Generation Configuration Menu
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String handleSearchSubmenu(String currentSearch) {
+    while (true) {
+      try {
+        String input = reportView.promptSearchInput();
+        if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
+          return null;
+        }
+        return input.trim();
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   private String handleTierSubmenu(String currentTier) {
@@ -303,11 +350,21 @@ public class VipReportController {
       if (choice == 2) return 20;
       if (choice == 3) return 50;
       if (choice == 4) {
-        Integer custom = reportView.promptCustomRecordLimit();
+        Integer custom = promptCustomRecordLimit();
         return (custom == null) ? currentLimit : custom;
       }
       if (choice == 5) return 0; // 0 = Show All (Unlimited)
       if (choice == 6) return currentLimit;
+    }
+  }
+
+  private Integer promptCustomRecordLimit() {
+    while (true) {
+      try {
+        return reportView.promptCustomRecordLimit();
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -318,7 +375,8 @@ public class VipReportController {
       String roomType,
       String boiling,
       String sortAttr,
-      String sortDir) {
+      String sortDir,
+      int reportType) {
 
     if (source == null || source.isEmpty()) return new ArrayList<>();
 
@@ -327,6 +385,18 @@ public class VipReportController {
     for (int i = 1; i <= source.getNumberOfEntries(); i++) {
       Reservation r = source.getEntry(i);
       if (r == null) continue;
+
+      // Report 3 is Room Holding Bay & Grace Window Audit: strictly include holding bay records
+      if (reportType == 3) {
+        boolean enteredHoldingBay =
+            r.getAllocatedTime() != null
+                || r.getStatus() == Reservation.Status.ALLOCATED
+                || r.getStatus() == Reservation.Status.NO_SHOW
+                || r.getStatus() == Reservation.Status.CHECKED_IN;
+        if (!enteredHoldingBay) {
+          continue;
+        }
+      }
 
       Guest g = guestRepo.findById(r.getGuestId());
       Member m =
@@ -377,10 +447,14 @@ public class VipReportController {
 
     if ("PRIORITY SCORE".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
-          (r1, r2) ->
-              isAsc
-                  ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
-                  : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore()));
+          (r1, r2) -> {
+            int cmp =
+                isAsc
+                    ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
+                    : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
+          });
     } else if ("STRIKE COUNT".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
           (r1, r2) -> {
@@ -388,7 +462,10 @@ public class VipReportController {
             Guest g2 = guestRepo.findById(r2.getGuestId());
             int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
             int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
-            return isAsc ? Integer.compare(s1, s2) : Integer.compare(s2, s1);
+
+            int cmp = isAsc ? Integer.compare(s1, s2) : Integer.compare(s2, s1);
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
           });
     } else if ("GUEST NAME".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
@@ -397,22 +474,29 @@ public class VipReportController {
             Guest g2 = guestRepo.findById(r2.getGuestId());
             String n1 = (g1 != null && g1.getName() != null) ? g1.getName() : "";
             String n2 = (g2 != null && g2.getName() != null) ? g2.getName() : "";
-            return isAsc ? n1.compareToIgnoreCase(n2) : n2.compareToIgnoreCase(n1);
+
+            int cmp = isAsc ? n1.compareToIgnoreCase(n2) : n2.compareToIgnoreCase(n1);
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
           });
     } else {
       // Default: PHYSICAL WAIT TIME
       filtered.sort(
-          (r1, r2) ->
-              isAsc
-                  ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
-                  : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime()));
+          (r1, r2) -> {
+            int cmp =
+                isAsc
+                    ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
+                    : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
+          });
     }
 
     return filtered;
   }
 
   private String buildScopeString(String search, String tier, String room, String boiling) {
-    StringBuilder sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder("All-Time System Audit | ");
     sb.append(tier == null ? "All Tiers" : tier).append(" | ");
     sb.append(room == null ? "All Room Types" : room).append(" | ");
     sb.append(boiling == null ? "All Boiling States" : boiling);

@@ -22,17 +22,66 @@ public class VipSettingsView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
   }
 
-  public int promptApplyOptionWithBack(String title, String description) {
+  public static String formatNumber(double val) {
+    if (val == (long) val) {
+      return String.format("%d", (long) val);
+    }
+    return String.format("%.4f", val).replaceAll("0+$", "").replaceAll("\\.$", "");
+  }
+
+  public int promptWizardStep(
+      int stepNum, int totalSteps, String title, String description, boolean hasPrevious) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("QUEUE RECONCILIATION WIZARD");
+    ConsoleUtil.printTitleBox(
+        "QUEUE RECONCILIATION WIZARD (STEP " + stepNum + " OF " + totalSteps + ")");
     System.out.println(" [ " + title + " ]");
     System.out.println(" " + description + "\n");
-    System.out.println("------------------------------------------------------");
-    System.out.println("1. Yes (Enforce)");
-    System.out.println("2. No  (Skip)");
-    System.out.println("3. Back (Cancel Apply Wizard)\n");
+    System.out.println(
+        "----------------------------------------------------------------------------------------");
+    System.out.println("1. Yes (Enable / Apply)");
+    System.out.println("2. No  (Skip / Disable)");
+    int optionCount = 2;
+    if (hasPrevious) {
+      System.out.println("3. Previous Step (Go back)");
+      System.out.println("4. Cancel Wizard (Exit without changes)\n");
+      optionCount = 4;
+    } else {
+      System.out.println("3. Cancel Wizard (Exit without changes)\n");
+      optionCount = 3;
+    }
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, optionCount).getAsInt();
+  }
+
+  public boolean promptReconciliationConfirmation(
+      boolean evictOverStrikes, boolean forceBoilingCheck, boolean updateActiveGraceTimers) {
+    while (true) {
+      ConsoleUtil.clearScreen();
+      ConsoleUtil.printTitleBox("QUEUE RECONCILIATION SUMMARY REVIEW");
+      System.out.println(
+          " Review the selected reconciliation parameters below before execution:\n");
+      System.out.println(
+          " 1. Strike Threshold Eviction  : "
+              + (evictOverStrikes ? "[ ENABLED ]" : "[ DISABLED ]"));
+      System.out.println(
+          " 2. Boiling Status Re-eval     : "
+              + (forceBoilingCheck ? "[ ENABLED ]" : "[ DISABLED ]"));
+      System.out.println(
+          " 3. Active Grace Timer Reset   : "
+              + (updateActiveGraceTimers ? "[ ENABLED ]" : "[ DISABLED ]"));
+      System.out.println(
+          "\n"
+              + "----------------------------------------------------------------------------------------");
+      try {
+        return ConsoleUtil.getMenuInput(
+                "Confirm execution of selected queue reconciliation rules? (Y/N): ",
+                new char[] {'Y', 'N'})
+            .input
+            .equalsIgnoreCase("Y");
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public void displayApplySuccessScreen(int processedCount) {
@@ -160,7 +209,10 @@ public class VipSettingsView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ENTER NUMERIC VALUE");
     System.out.println("Enter static integer or decimal constant to inject:");
-    System.out.println("------------------------------------------------------");
+    System.out.println(
+        " (Supports up to 4 decimal places. Trailing zeros will be formatted cleanly)");
+    System.out.println(
+        "----------------------------------------------------------------------------------------");
     System.out.println(" Press ENTER / 'C' to Cancel\n");
     return ConsoleUtil.getStringInput("[ Numeric Value ]: ");
   }

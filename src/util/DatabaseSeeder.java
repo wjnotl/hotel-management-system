@@ -969,7 +969,7 @@ public class DatabaseSeeder {
             arrivalTime.minusMinutes(15),
             arrivalTime);
 
-    repo.addReservation(r, priorityScore, guestRepo, memberRepo, vipSystemConfigRepo);
+    repo.addReservation(r, guestRepo, memberRepo, vipSystemConfigRepo);
     return r;
   }
 

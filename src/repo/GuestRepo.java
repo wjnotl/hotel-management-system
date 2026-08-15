@@ -3,6 +3,7 @@ package repo;
 import adt.ArrayList;
 import adt.ListInterface;
 import entity.Guest;
+import java.time.LocalDate;
 import util.BinaryFileUtil;
 
 public class GuestRepo {
@@ -119,11 +120,40 @@ public class GuestRepo {
     return "G-" + (maxId + 1);
   }
 
+  public ListInterface<Guest> searchGuests(String query) {
+    ListInterface<Guest> matches = new ArrayList<>();
+    if (query == null || query.trim().isEmpty() || guestList == null) {
+      return matches;
+    }
+
+    String q = query.trim().toLowerCase();
+
+    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
+      Guest g = guestList.getEntry(i);
+      if (g == null) continue;
+
+      boolean matchId = g.getGuestId() != null && g.getGuestId().toLowerCase().contains(q);
+      boolean matchName = g.getName() != null && g.getName().toLowerCase().contains(q);
+      boolean matchIc = g.getIcNumber() != null && g.getIcNumber().toLowerCase().contains(q);
+      boolean matchPassport =
+          g.getPassportNumber() != null && g.getPassportNumber().toLowerCase().contains(q);
+      boolean matchPhone =
+          g.getPhoneNumber() != null && g.getPhoneNumber().toLowerCase().contains(q);
+      boolean matchMember = g.getMemberId() != null && g.getMemberId().toLowerCase().contains(q);
+
+      if (matchId || matchName || matchIc || matchPassport || matchPhone || matchMember) {
+        matches.add(g);
+      }
+    }
+
+    return matches;
+  }
+
   public ListInterface<Guest> getGuestList() {
     return guestList;
   }
 
-  public void resetAllGuestStrikes() {
+  public void resetAllGuestStrikes(VipSystemConfigRepo configRepo) {
     if (guestList == null || guestList.isEmpty()) return;
 
     boolean needSave = false;
@@ -139,6 +169,14 @@ public class GuestRepo {
 
     if (needSave) {
       save();
+    }
+
+    if (configRepo != null) {
+      entity.VipSystemConfig config = configRepo.getConfig();
+      if (config != null) {
+        config.setLastStrikeResetDate(LocalDate.now().toString());
+        configRepo.updateConfig(config);
+      }
     }
   }
 }

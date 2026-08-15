@@ -6,9 +6,10 @@ import java.util.concurrent.TimeUnit;
 
 public class TaskSchedulerUtil {
 
-  // Schedule a task to run once after X minutes
-  public static ScheduledExecutorService scheduleOnce(long minutes, Runnable task) {
+  // Schedule a task to run once after X milliseconds (or 0 for immediate execution)
+  public static ScheduledExecutorService scheduleOnce(long delayMs, Runnable task) {
     ScheduledExecutorService scheduler = createScheduler();
+    long actualDelay = Math.max(0, delayMs);
     scheduler.schedule(
         () -> {
           try {
@@ -17,16 +18,17 @@ public class TaskSchedulerUtil {
             shutdown(scheduler); // Self-shutdown after execution
           }
         },
-        minutes,
-        TimeUnit.MINUTES);
+        actualDelay,
+        TimeUnit.MILLISECONDS);
     return scheduler;
   }
 
-  // Schedule a recurring task to run every X minutes
+  // Schedule a recurring task to run every X milliseconds
   public static ScheduledExecutorService scheduleEvery(
-      long initialDelay, long interval, Runnable task) {
+      long initialDelayMs, long intervalMs, Runnable task) {
     ScheduledExecutorService scheduler = createScheduler();
-    scheduler.scheduleAtFixedRate(task, initialDelay, interval, TimeUnit.MINUTES);
+    long actualInitialDelay = Math.max(0, initialDelayMs);
+    scheduler.scheduleAtFixedRate(task, actualInitialDelay, intervalMs, TimeUnit.MILLISECONDS);
     return scheduler;
   }
 
