@@ -13,6 +13,7 @@ import repo.BillingRepo;
 import repo.GuestRepo;
 import repo.HousekeepingStaffRepo;
 import repo.MemberRepo;
+import repo.ReservationRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
 import repo.VipReservationRepo;
@@ -27,11 +28,12 @@ public class DatabaseSeeder {
     GuestRepo guestRepo = new GuestRepo();
     MemberRepo memberRepo = new MemberRepo();
     RoomRepo roomRepo = new RoomRepo();
-    VipReservationRepo vipRepo = new VipReservationRepo();
+    ReservationRepo reservationRepo = new ReservationRepo();
+    VipReservationRepo vipRepo = new VipReservationRepo(reservationRepo);
     BillingRepo billingRepo = new BillingRepo();
     HousekeepingStaffRepo staffRepo = new HousekeepingStaffRepo();
     VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
-    StandardReservationRepo standardRepo = new StandardReservationRepo();
+    StandardReservationRepo standardRepo = new StandardReservationRepo(reservationRepo);
 
     if (guestRepo.getGuestList().isEmpty()) {
       System.out.println("Seeding expanded mock database...");
@@ -967,9 +969,10 @@ public class DatabaseSeeder {
             isBoiling,
             priorityScore,
             arrivalTime.minusMinutes(15),
-            arrivalTime);
+            arrivalTime,
+            true);
 
-    repo.addReservation(r, priorityScore, guestRepo, memberRepo, vipSystemConfigRepo);
+    repo.addReservation(r);
     return r;
   }
 
@@ -990,13 +993,14 @@ public class DatabaseSeeder {
         new Reservation(
             repo.generateReservationId(),
             guestId,
-            repo.generateConfirmationNumber(vipRepo),
+            repo.generateConfirmationNumber(),
             roomType,
             status,
             false,
             0,
             reservationTime,
-            queueArrivalTime);
+            queueArrivalTime,
+            false);
 
     repo.addReservation(r);
     return r;

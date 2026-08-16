@@ -15,9 +15,9 @@ import util.TextUtil;
 // BookingReportController where the file content is built.
 public class BookingReportView {
 
-  // Every table below spans 88 printable columns: the widths sum plus one separator per gap.
-  // TableUtil spends 2 of every column on padding, so a header of n characters needs n + 2.
-  private static final int[] SPAN_WIDTH = {88};
+  // Every table below spans 90 printable columns: SPAN_WIDTH = {90}.
+  // TableUtil adds 2 spaces padding (1 left + 1 right) per column automatically.
+  private static final int[] SPAN_WIDTH = {90};
   private static final int[] KV_WIDTHS = {23, 64};
   private static final int SCREEN_WIDTH = 90;
 

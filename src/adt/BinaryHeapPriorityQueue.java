@@ -1,6 +1,7 @@
 package adt;
 
 import java.io.Serializable;
+import java.util.Comparator;
 import java.util.Iterator;
 
 public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Serializable {
@@ -8,7 +9,7 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
 
   private static final int DEFAULT_CAPACITY = 16;
   private final boolean canExpand;
-  private boolean isMaxHeap;
+  private final Comparator<? super T> comparator;
 
   private PriorityEntry<T>[] array; // starts from index 1
   private int size;
@@ -18,53 +19,47 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
     private static final long serialVersionUID = 1L;
 
     T entry;
-    int priority;
     long sequenceNumber;
 
-    PriorityEntry(T entry, int priority, long sequenceNumber) {
+    PriorityEntry(T entry, long sequenceNumber) {
       this.entry = entry;
-      this.priority = priority;
       this.sequenceNumber = sequenceNumber;
     }
   }
 
   public BinaryHeapPriorityQueue() {
-    this(DEFAULT_CAPACITY, true, true);
+    this(DEFAULT_CAPACITY, true, null);
+  }
+
+  public BinaryHeapPriorityQueue(Comparator<? super T> comparator) {
+    this(DEFAULT_CAPACITY, true, comparator);
   }
 
   public BinaryHeapPriorityQueue(int initialCapacity) {
-    this(initialCapacity, true, true);
-  }
-
-  public BinaryHeapPriorityQueue(boolean isMaxHeap) {
-    this(DEFAULT_CAPACITY, true, isMaxHeap);
-  }
-
-  public BinaryHeapPriorityQueue(boolean canExpand, boolean isMaxHeap) {
-    this(DEFAULT_CAPACITY, canExpand, isMaxHeap);
+    this(initialCapacity, true, null);
   }
 
   @SuppressWarnings("unchecked")
-  public BinaryHeapPriorityQueue(int initialCapacity, boolean canExpand, boolean isMaxHeap) {
+  public BinaryHeapPriorityQueue(
+      int initialCapacity, boolean canExpand, Comparator<? super T> comparator) {
     int cap = initialCapacity <= 0 ? DEFAULT_CAPACITY : initialCapacity;
     this.array = (PriorityEntry<T>[]) new PriorityEntry[cap + 1];
     this.canExpand = canExpand;
-    this.isMaxHeap = isMaxHeap;
+    this.comparator = comparator;
     this.size = 0;
   }
 
   @Override
-  public boolean enqueue(T newEntry, int priority) {
-    if (newEntry == null) {
-      return false;
-    }
+  public boolean enqueue(T newEntry) {
+    if (newEntry == null) return false;
+
     if (isFull()) {
       if (!canExpand) return false;
       grow();
     }
 
     size++;
-    array[size] = new PriorityEntry<>(newEntry, priority, sequenceCounter++);
+    array[size] = new PriorityEntry<>(newEntry, sequenceCounter++);
     siftUp(size);
     return true;
   }
@@ -142,33 +137,22 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
   }
 
   @Override
+  public int getPosition(T entry) {
+    return positionOf(entry);
+  }
+
+  @Override
   public int getNumberOfEntries() {
     return size;
   }
 
   @Override
-  public int getPriority(T entry) {
-    int pos = positionOf(entry);
-    if (pos == -1 || array[pos] == null) return -1;
-
-    return array[pos].priority;
-  }
-
-  @Override
-  public boolean changePriority(T entry, int newPriority) {
+  public boolean updatePriority(T entry) {
     int pos = positionOf(entry);
     if (pos == -1 || array[pos] == null) return false;
 
-    int oldPriority = array[pos].priority;
-    array[pos].priority = newPriority;
-
-    if (hasHigherPriority(
-        array[pos], new PriorityEntry<>(null, oldPriority, array[pos].sequenceNumber))) {
-      siftUp(pos);
-    } else if (newPriority != oldPriority) {
-      siftDown(pos);
-    }
-
+    siftUp(pos);
+    siftDown(pos);
     return true;
   }
 
@@ -195,22 +179,6 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
     return new PriorityQueueIterator();
   }
 
-  public boolean isMaxHeap() {
-    return isMaxHeap;
-  }
-
-  public void setMaxHeap(boolean isMaxHeap) {
-    if (this.isMaxHeap == isMaxHeap) return;
-    this.isMaxHeap = isMaxHeap;
-    rebuildHeap();
-  }
-
-  private void rebuildHeap() {
-    for (int i = size / 2; i >= 1; i--) {
-      siftDown(i);
-    }
-  }
-
   // --- INTERNAL HELPERS ---
 
   @SuppressWarnings("unchecked")
@@ -233,15 +201,24 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
     return -1;
   }
 
+  @SuppressWarnings("unchecked")
   private boolean hasHigherPriority(PriorityEntry<T> a, PriorityEntry<T> b) {
     if (a == null) return false;
     if (b == null) return true;
 
-    if (a.priority != b.priority) {
-      return isMaxHeap ? a.priority > b.priority : a.priority < b.priority;
+    int comp;
+    if (comparator != null) {
+      comp = comparator.compare(a.entry, b.entry);
+    } else {
+      comp = ((Comparable<? super T>) a.entry).compareTo(b.entry);
     }
 
-    // if have same priority then use sequence number (earlier sequence number takes precedence)
+    // Positive means higher priority (Max-Heap order)
+    if (comp != 0) {
+      return comp > 0;
+    }
+
+    // Tie-breaker: earlier insertion sequence wins (FIFO)
     return a.sequenceNumber < b.sequenceNumber;
   }
 

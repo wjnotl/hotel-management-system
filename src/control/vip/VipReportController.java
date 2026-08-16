@@ -6,12 +6,19 @@ import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import entity.VipSystemConfig;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
+import util.TxtExportUtil;
 import view.vip.VipReportView;
 
 public class VipReportController {
@@ -49,14 +56,45 @@ public class VipReportController {
     }
   }
 
-  private void manageReportPipeline(int reportType) {
+  private static class ReportFilterState {
     String searchQuery = null;
     String tierFilter = null;
     String roomTypeFilter = null;
     String boilingFilter = null;
-    String sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
+    String datePresetLabel = "TODAY";
+    LocalDateTime startDate = LocalDate.now().atStartOfDay();
+    LocalDateTime endDate = LocalDateTime.now();
+    boolean customEndIsToday = false;
+    String sortAttribute;
     String sortDirection = "DESCENDING";
-    int recordLimit = 10; // Default: Top 10 Records
+    int recordLimit = 10;
+
+    ReportFilterState(int reportType) {
+      this.sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
+    }
+
+    void refreshPresetTimestamps() {
+      if ("TODAY".equals(datePresetLabel)) {
+        this.startDate = LocalDate.now().atStartOfDay();
+        this.endDate = LocalDateTime.now();
+      } else if ("YESTERDAY".equals(datePresetLabel)) {
+        LocalDate yest = LocalDate.now().minusDays(1);
+        this.startDate = yest.atStartOfDay();
+        this.endDate = yest.atTime(23, 59);
+      } else if ("LAST 7 DAYS".equals(datePresetLabel)) {
+        this.startDate = LocalDate.now().minusDays(6).atStartOfDay();
+        this.endDate = LocalDateTime.now();
+      } else if ("LAST 30 DAYS".equals(datePresetLabel)) {
+        this.startDate = LocalDate.now().minusDays(29).atStartOfDay();
+        this.endDate = LocalDateTime.now();
+      } else if (customEndIsToday) {
+        this.endDate = LocalDateTime.now();
+      }
+    }
+  }
+
+  private void manageReportPipeline(int reportType) {
+    ReportFilterState state = new ReportFilterState(reportType);
 
     String reportTitle =
         (reportType == 1)
@@ -65,75 +103,148 @@ public class VipReportController {
                 ? "VIP Penalty & Eviction Audit Report"
                 : "Room Holding Bay & Grace Window Report";
 
+    // Step 1: Open Filter & Sort Options screen FIRST!
+    boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
+    if (!generateSelected) {
+      return; // User selected Back (Option 6) -> Return to Analytics Hub
+    }
+
+    // Step 2: User selected Option 1 (Generate Report) -> Enter Report Screen Loop!
+    renderGeneratedReportLoop(reportType, reportTitle, state);
+  }
+
+  private void renderGeneratedReportLoop(
+      int reportType, String reportTitle, ReportFilterState state) {
+
     while (true) {
       try {
+        state.refreshPresetTimestamps();
         ListInterface<Reservation> allReservations = vipReservationRepo.getAllReservations();
         ListInterface<Reservation> filteredList =
             filterAndSortList(
                 allReservations,
-                searchQuery,
-                tierFilter,
-                roomTypeFilter,
-                boilingFilter,
-                sortAttribute,
-                sortDirection);
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.startDate,
+                state.endDate,
+                state.sortAttribute,
+                state.sortDirection,
+                reportType);
 
+        String scopeStr =
+            buildScopeString(
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.startDate,
+                state.endDate,
+                state.datePresetLabel);
+        String sortStr = state.sortAttribute + " (" + state.sortDirection + ")";
+        GetMenuInputResult result;
+
+        ConsoleUtil.clearBuffer();
+        ConsoleUtil.startRecording();
+
+        if (reportType == 1) {
+          VipReportView.SlaReportDTO dto = buildSlaReportDTO(filteredList, state.recordLimit);
+          result = reportView.renderSlaReportScreen(dto, scopeStr, sortStr, state.recordLimit);
+        } else if (reportType == 2) {
+          VipReportView.PenaltyReportDTO dto =
+              buildPenaltyReportDTO(filteredList, state.recordLimit);
+          result = reportView.renderPenaltyReportScreen(dto, scopeStr, sortStr, state.recordLimit);
+        } else {
+          VipReportView.HoldingReportDTO dto =
+              buildHoldingReportDTO(filteredList, state.recordLimit);
+          result = reportView.renderHoldingReportScreen(dto, scopeStr, sortStr, state.recordLimit);
+        }
+
+        if (result == null) {
+          continue; // Re-render whole report cleanly on invalid command input
+        }
+
+        String capturedReportText = ConsoleUtil.getCapturedString();
+
+        if ("Q".equalsIgnoreCase(result.input)) {
+          return; // Quit to Analytics Hub
+        } else if ("S".equalsIgnoreCase(result.input)) {
+          boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
+          if (!generateSelected) {
+            return; // Back from filter menu -> return to Analytics Hub
+          }
+          // generateSelected is true -> loop continues & re-renders report with new
+          // filters!
+        } else if ("R".equalsIgnoreCase(result.input)) {
+          // Refresh -> loop continues & re-fetches live data & re-renders report screen
+          // directly!
+        } else if ("E".equalsIgnoreCase(result.input)) {
+          String filePrefix = "unknown_report";
+          switch (reportType) {
+            case 1:
+              filePrefix = "vip/sla_report";
+              break;
+            case 2:
+              filePrefix = "vip/penalty_report";
+              break;
+            case 3:
+              filePrefix = "vip/holding_report";
+              break;
+          }
+
+          String exportedPath =
+              TxtExportUtil.export(
+                  filePrefix, reportTitle.toUpperCase() + "\n" + capturedReportText);
+          reportView.displayExportSuccessScreen(exportedPath);
+        }
+      } catch (Exception e) {
+        ConsoleUtil.stopRecording();
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean handleFilterControlPanel(
+      String reportTitle, ReportFilterState state, int reportType) {
+    while (true) {
+      try {
         GetMenuInputResult action =
             reportView.displayFilterControlPanel(
                 reportTitle,
-                searchQuery,
-                tierFilter,
-                roomTypeFilter,
-                boilingFilter,
-                sortAttribute,
-                sortDirection,
-                recordLimit);
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.datePresetLabel,
+                state.sortAttribute,
+                state.sortDirection,
+                state.recordLimit);
 
         int choice = action.getAsInt();
 
         if (choice == 1) {
-          searchQuery = handleSearchSubmenu(searchQuery);
+          return true; // 1. Generate Report
         } else if (choice == 2) {
-          tierFilter = handleTierSubmenu(tierFilter);
+          handleEditFiltersSubmenu(state); // 2. Edit Filters
         } else if (choice == 3) {
-          roomTypeFilter = handleRoomTypeSubmenu(roomTypeFilter);
+          handleSortOptionsSubmenu(state); // 3. Sort Options
         } else if (choice == 4) {
-          boilingFilter = handleBoilingSubmenu(boilingFilter);
+          state.recordLimit = handleRecordLimitSubmenu(state.recordLimit); // 4. Max Display Records
         } else if (choice == 5) {
-          sortAttribute = handleSortAttrSubmenu(sortAttribute);
-          sortDirection = handleSortDirSubmenu(sortDirection);
+          // 5. Reset All Options
+          state.searchQuery = null;
+          state.tierFilter = null;
+          state.roomTypeFilter = null;
+          state.boilingFilter = null;
+          state.datePresetLabel = "TODAY";
+          state.startDate = LocalDate.now().atStartOfDay();
+          state.endDate = LocalDate.now().atTime(LocalTime.MAX);
+          state.sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
+          state.sortDirection = "DESCENDING";
+          state.recordLimit = 10;
         } else if (choice == 6) {
-          recordLimit = handleRecordLimitSubmenu(recordLimit);
-        } else if (choice == 7) {
-          // Reset to defaults
-          searchQuery = null;
-          tierFilter = null;
-          roomTypeFilter = null;
-          boilingFilter = null;
-          sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
-          sortDirection = "DESCENDING";
-          recordLimit = 10;
-        } else if (choice == 8) {
-          // Generate Report Now!
-          String scopeStr =
-              buildScopeString(searchQuery, tierFilter, roomTypeFilter, boilingFilter);
-          String sortStr = sortAttribute + " (" + sortDirection + ")";
-
-          int confirmChoice =
-              reportView.displayExecutionConfirmationScreen(
-                  reportTitle, scopeStr, sortStr, filteredList.getNumberOfEntries(), recordLimit);
-
-          if (confirmChoice == 1) {
-            boolean exitToHub =
-                renderGeneratedReportLoop(reportType, filteredList, scopeStr, sortStr, recordLimit);
-            if (exitToHub) {
-              return; // Cleanly exit back to Analytics Hub!
-            }
-          } else if (confirmChoice == 3) {
-            return; // Exit to Hub
-          }
-        } else if (choice == 9) {
-          return; // Back to Hub
+          return false; // 6. Back to Analytics Hub
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -141,56 +252,246 @@ public class VipReportController {
     }
   }
 
-  private boolean renderGeneratedReportLoop(
-      int reportType,
-      ListInterface<Reservation> matchedList,
-      String scopeStr,
-      String sortStr,
-      int recordLimit) {
-
+  private void handleEditFiltersSubmenu(ReportFilterState state) {
     while (true) {
       try {
-        VipSystemConfig config = configRepo.getConfig();
-        GetMenuInputResult result;
-
-        if (reportType == 1) {
-          result =
-              reportView.renderSlaReportScreen(
-                  matchedList,
-                  guestRepo.getGuestList(),
-                  memberRepo.getMemberList(),
-                  config,
-                  scopeStr,
-                  sortStr,
-                  recordLimit);
-        } else if (reportType == 2) {
-          result =
-              reportView.renderPenaltyReportScreen(
-                  matchedList,
-                  guestRepo.getGuestList(),
-                  memberRepo.getMemberList(),
-                  config,
-                  scopeStr,
-                  sortStr,
-                  recordLimit);
-        } else {
-          result =
-              reportView.renderHoldingReportScreen(
-                  matchedList,
-                  guestRepo.getGuestList(),
-                  memberRepo.getMemberList(),
-                  config,
-                  scopeStr,
-                  sortStr,
-                  recordLimit);
+        GetMenuInputResult action =
+            reportView.displayEditFiltersSubmenu(
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.datePresetLabel);
+        int choice = action.getAsInt();
+        if (choice == 1) {
+          state.tierFilter = handleTierSubmenu(state.tierFilter);
+        } else if (choice == 2) {
+          state.boilingFilter = handleBoilingSubmenu(state.boilingFilter);
+        } else if (choice == 3) {
+          state.roomTypeFilter = handleRoomTypeSubmenu(state.roomTypeFilter);
+        } else if (choice == 4) {
+          handleDateFilterSubmenu(state);
+        } else if (choice == 5) {
+          state.searchQuery = handleSearchSubmenu(state.searchQuery);
+        } else if (choice == 6) {
+          return; // Back to Report Generation Configuration Menu
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
 
-        if ("E".equalsIgnoreCase(result.input)) {
-          return true; // Return true to signal Exit to Analytics Hub!
-        } else if ("S".equalsIgnoreCase(result.input)) {
-          return false; // Return false to re-open Filter Control Panel!
-        } else if ("R".equalsIgnoreCase(result.input)) {
-          // Refresh live view
+  private void handleDateFilterSubmenu(ReportFilterState state) {
+    while (true) {
+      try {
+        GetMenuInputResult res = reportView.displayDateFilterSubmenu(state.datePresetLabel);
+        int choice = res.getAsInt();
+        if (choice == 1) {
+          state.startDate = LocalDate.now().atStartOfDay();
+          state.endDate = LocalDateTime.now();
+          state.datePresetLabel = "TODAY";
+          return;
+        } else if (choice == 2) {
+          LocalDate yest = LocalDate.now().minusDays(1);
+          state.startDate = yest.atStartOfDay();
+          state.endDate = yest.atTime(23, 59);
+          state.datePresetLabel = "YESTERDAY";
+          return;
+        } else if (choice == 3) {
+          state.startDate = LocalDate.now().minusDays(6).atStartOfDay();
+          state.endDate = LocalDateTime.now();
+          state.datePresetLabel = "LAST 7 DAYS";
+          return;
+        } else if (choice == 4) {
+          state.startDate = LocalDate.now().minusDays(29).atStartOfDay();
+          state.endDate = LocalDateTime.now();
+          state.datePresetLabel = "LAST 30 DAYS";
+          return;
+        } else if (choice == 5) {
+          if (handleCustomDateRangeSubmenu(state)) {
+            return;
+          }
+        } else if (choice == 6) {
+          if (handleCustomDateTimeRangeSubmenu(state)) {
+            return;
+          }
+        } else if (choice == 7) {
+          state.startDate = null;
+          state.endDate = null;
+          state.datePresetLabel = "ALL TIME";
+          return;
+        } else if (choice == 8) {
+          return;
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean handleCustomDateRangeSubmenu(ReportFilterState state) {
+    DateTimeFormatter parseFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    LocalDate start = null;
+    String startStr = "N/A";
+
+    // Step 1: Prompt Start Date (Immediate validation loop)
+    while (true) {
+      String input =
+          reportView.promptCustomDateStep(
+              "1 of 2: Start Date",
+              "YYYY-MM-DD (e.g. 2026-08-01)",
+              "Enter Start Date [or 'C' to Cancel]: ",
+              null);
+      if (input == null) return false;
+      try {
+        start = LocalDate.parse(input, parseFmt);
+        if (start.isAfter(LocalDate.now())) {
+          ConsoleUtil.printError(
+              "Invalid Date! Start Date ("
+                  + input
+                  + ") cannot be in the future (Today is "
+                  + LocalDate.now()
+                  + ").");
+          continue;
+        }
+        startStr = input;
+        break;
+      } catch (DateTimeParseException e) {
+        ConsoleUtil.printError(
+            "Invalid Start Date Format! Please use YYYY-MM-DD format (e.g. 2026-08-01).");
+      }
+    }
+
+    // Step 2: Prompt End Date (Immediate validation loop)
+    while (true) {
+      String input =
+          reportView.promptCustomDateStep(
+              "2 of 2: End Date",
+              "YYYY-MM-DD (e.g. 2026-08-16)",
+              "Enter End Date [or 'C' to Cancel]: ",
+              "Start Date set to " + startStr);
+      if (input == null) return false;
+      try {
+        LocalDate end = LocalDate.parse(input, parseFmt);
+        if (end.isAfter(LocalDate.now())) {
+          ConsoleUtil.printError(
+              "Invalid Date! End Date ("
+                  + input
+                  + ") cannot be in the future (Today is "
+                  + LocalDate.now()
+                  + ").");
+          continue;
+        }
+        if (start == null || end.isBefore(start)) {
+          ConsoleUtil.printError(
+              "Invalid Range! End Date ("
+                  + input
+                  + ") cannot be before Start Date ("
+                  + startStr
+                  + ").");
+          continue;
+        }
+        state.startDate = start.atStartOfDay();
+        if (end.equals(LocalDate.now())) {
+          state.customEndIsToday = true;
+          state.endDate = LocalDateTime.now();
+        } else {
+          state.customEndIsToday = false;
+          state.endDate = end.atTime(23, 59);
+        }
+        state.datePresetLabel = startStr.equals(input) ? startStr : (startStr + " to " + input);
+        return true;
+      } catch (DateTimeParseException e) {
+        ConsoleUtil.printError(
+            "Invalid End Date Format! Please use YYYY-MM-DD format (e.g. 2026-08-16).");
+      }
+    }
+  }
+
+  private boolean handleCustomDateTimeRangeSubmenu(ReportFilterState state) {
+    DateTimeFormatter parseFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    DateTimeFormatter displayFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    LocalDateTime start = null;
+    String startStr = null;
+
+    // Step 1: Prompt Start Date-Time (Immediate validation loop)
+    while (true) {
+      String input =
+          reportView.promptCustomDateTimeStep(
+              "1 of 2: Start Date-Time",
+              "YYYY-MM-DD HH:mm (e.g. 2026-08-16 08:00)",
+              "Enter Start Date-Time [or 'C' to Cancel]: ",
+              null);
+      if (input == null) return false;
+      try {
+        start = LocalDateTime.parse(input, parseFmt);
+        if (start.isAfter(LocalDateTime.now())) {
+          ConsoleUtil.printError(
+              "Invalid Date-Time! Start Date-Time (" + input + ") cannot be in the future.");
+          continue;
+        }
+        startStr = input;
+        break;
+      } catch (DateTimeParseException e) {
+        ConsoleUtil.printError(
+            "Invalid Start Date-Time Format! Please use YYYY-MM-DD HH:mm format (e.g. 2026-08-16"
+                + " 08:00).");
+      }
+    }
+
+    // Step 2: Prompt End Date-Time (Immediate validation loop)
+    while (true) {
+      String input =
+          reportView.promptCustomDateTimeStep(
+              "2 of 2: End Date-Time",
+              "YYYY-MM-DD HH:mm (e.g. 2026-08-16 18:00)",
+              "Enter End Date-Time [or 'C' to Cancel]: ",
+              "Start Date-Time set to " + startStr);
+      if (input == null) return false;
+      try {
+        LocalDateTime end = LocalDateTime.parse(input, parseFmt);
+        if (end.isAfter(LocalDateTime.now())) {
+          ConsoleUtil.printError(
+              "Invalid Date-Time! End Date-Time (" + input + ") cannot be in the future.");
+          continue;
+        }
+        if (start == null || !end.isAfter(start)) {
+          ConsoleUtil.printError(
+              "Invalid Range! End Date-Time ("
+                  + input
+                  + ") must be AFTER Start Date-Time ("
+                  + startStr
+                  + ").");
+          continue;
+        }
+        state.startDate = start;
+        state.endDate = end;
+        state.datePresetLabel =
+            state.startDate.format(displayFmt) + " to " + state.endDate.format(displayFmt);
+        return true;
+      } catch (DateTimeParseException e) {
+        ConsoleUtil.printError(
+            "Invalid End Date-Time Format! Please use YYYY-MM-DD HH:mm format (e.g. 2026-08-16"
+                + " 18:00).");
+      }
+    }
+  }
+
+  private void handleSortOptionsSubmenu(ReportFilterState state) {
+    while (true) {
+      try {
+        GetMenuInputResult action =
+            reportView.displaySortOptionsSubmenu(state.sortAttribute, state.sortDirection);
+        int choice = action.getAsInt();
+        if (choice == 1) {
+          state.sortAttribute = handleSortAttrSubmenu(state.sortAttribute);
+        } else if (choice == 2) {
+          state.sortDirection = handleSortDirSubmenu(state.sortDirection);
+        } else if (choice == 3) {
+          return; // Back to Report Generation Configuration Menu
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -199,11 +500,17 @@ public class VipReportController {
   }
 
   private String handleSearchSubmenu(String currentSearch) {
-    String input = reportView.promptSearchInput();
-    if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-      return null;
+    while (true) {
+      try {
+        String input = reportView.promptSearchInput();
+        if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
+          return null;
+        }
+        return input.trim();
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-    return input.trim();
   }
 
   private String handleTierSubmenu(String currentTier) {
@@ -271,11 +578,21 @@ public class VipReportController {
       if (choice == 2) return 20;
       if (choice == 3) return 50;
       if (choice == 4) {
-        Integer custom = reportView.promptCustomRecordLimit();
+        Integer custom = promptCustomRecordLimit();
         return (custom == null) ? currentLimit : custom;
       }
       if (choice == 5) return 0; // 0 = Show All (Unlimited)
       if (choice == 6) return currentLimit;
+    }
+  }
+
+  private Integer promptCustomRecordLimit() {
+    while (true) {
+      try {
+        return reportView.promptCustomRecordLimit();
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -285,70 +602,105 @@ public class VipReportController {
       String tier,
       String roomType,
       String boiling,
+      LocalDateTime startDate,
+      LocalDateTime endDate,
       String sortAttr,
-      String sortDir) {
+      String sortDir,
+      int reportType) {
 
     if (source == null || source.isEmpty()) return new ArrayList<>();
 
-    ListInterface<Reservation> filtered = new ArrayList<>();
+    ListInterface<Reservation> filtered =
+        source.filter(
+            reservation -> {
+              if (reservation == null) return false;
 
-    for (int i = 1; i <= source.getNumberOfEntries(); i++) {
-      Reservation r = source.getEntry(i);
-      if (r == null) continue;
+              // Report 3 is Room Holding Bay & Grace Window Audit: strictly include holding
+              // bay records
+              if (reportType == 3) {
+                boolean enteredHoldingBay =
+                    reservation.getAllocatedTime() != null
+                        || reservation.getStatus() == Reservation.Status.ALLOCATED
+                        || reservation.getStatus() == Reservation.Status.NO_SHOW
+                        || reservation.getStatus() == Reservation.Status.CHECKED_IN;
+                if (!enteredHoldingBay) {
+                  return false;
+                }
+              }
 
-      Guest g = guestRepo.findById(r.getGuestId());
-      Member m =
-          (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+              Guest g = guestRepo.findById(reservation.getGuestId());
+              Member m =
+                  (g != null && g.getMemberId() != null)
+                      ? memberRepo.findById(g.getMemberId())
+                      : null;
 
-      boolean matchSearch = true;
-      boolean matchTier = true;
-      boolean matchRoom = true;
-      boolean matchBoiling = true;
+              boolean matchSearch = true;
+              boolean matchTier = true;
+              boolean matchRoom = true;
+              boolean matchBoiling = true;
+              boolean matchDate = true;
 
-      if (search != null && !search.trim().isEmpty()) {
-        String query = search.trim().toLowerCase();
-        boolean mRes =
-            r.getReservationId() != null && r.getReservationId().toLowerCase().contains(query);
-        boolean mConf =
-            r.getConfirmationNumber() != null
-                && r.getConfirmationNumber().toLowerCase().contains(query);
-        boolean mName =
-            g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
-        boolean mPhone =
-            g != null
-                && g.getPhoneNumber() != null
-                && g.getPhoneNumber().toLowerCase().contains(query);
-        matchSearch = mRes || mConf || mName || mPhone;
-      }
+              if (startDate != null || endDate != null) {
+                LocalDateTime resTime =
+                    (reservation.getAllocatedTime() != null)
+                        ? reservation.getAllocatedTime()
+                        : reservation.getQueueArrivalTime();
+                if (resTime != null) {
+                  if (startDate != null && resTime.isBefore(startDate)) matchDate = false;
+                  if (endDate != null && resTime.isAfter(endDate)) matchDate = false;
+                }
+              }
 
-      if (tier != null) {
-        String actualTier = (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER";
-        matchTier = tier.equalsIgnoreCase(actualTier);
-      }
+              if (search != null && !search.trim().isEmpty()) {
+                String query = search.trim().toLowerCase();
+                boolean mRes =
+                    reservation.getReservationId() != null
+                        && reservation.getReservationId().toLowerCase().contains(query);
+                boolean mConf =
+                    reservation.getConfirmationNumber() != null
+                        && reservation.getConfirmationNumber().toLowerCase().contains(query);
+                boolean mName =
+                    g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
+                boolean mPhone =
+                    g != null
+                        && g.getPhoneNumber() != null
+                        && g.getPhoneNumber().toLowerCase().contains(query);
+                matchSearch = mRes || mConf || mName || mPhone;
+              }
 
-      if (roomType != null) {
-        String actualRoom = (r.getRoomType() != null) ? r.getRoomType().name() : "";
-        matchRoom = roomType.equalsIgnoreCase(actualRoom);
-      }
+              if (tier != null) {
+                String actualTier =
+                    (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER";
+                matchTier = tier.equalsIgnoreCase(actualTier);
+              }
 
-      if (boiling != null) {
-        if ("BOILING".equalsIgnoreCase(boiling)) matchBoiling = r.getIsBoiling();
-        else if ("NORMAL".equalsIgnoreCase(boiling)) matchBoiling = !r.getIsBoiling();
-      }
+              if (roomType != null) {
+                String actualRoom =
+                    (reservation.getRoomType() != null) ? reservation.getRoomType().name() : "";
+                matchRoom = roomType.equalsIgnoreCase(actualRoom);
+              }
 
-      if (matchSearch && matchTier && matchRoom && matchBoiling) {
-        filtered.add(r);
-      }
-    }
+              if (boiling != null) {
+                if ("BOILING".equalsIgnoreCase(boiling)) matchBoiling = reservation.getIsBoiling();
+                else if ("NORMAL".equalsIgnoreCase(boiling))
+                  matchBoiling = !reservation.getIsBoiling();
+              }
+
+              return matchSearch && matchTier && matchRoom && matchBoiling && matchDate;
+            });
 
     boolean isAsc = "ASCENDING".equalsIgnoreCase(sortDir);
 
     if ("PRIORITY SCORE".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
-          (r1, r2) ->
-              isAsc
-                  ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
-                  : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore()));
+          (r1, r2) -> {
+            int cmp =
+                isAsc
+                    ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
+                    : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
+          });
     } else if ("STRIKE COUNT".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
           (r1, r2) -> {
@@ -356,7 +708,10 @@ public class VipReportController {
             Guest g2 = guestRepo.findById(r2.getGuestId());
             int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
             int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
-            return isAsc ? Integer.compare(s1, s2) : Integer.compare(s2, s1);
+
+            int cmp = isAsc ? Integer.compare(s1, s2) : Integer.compare(s2, s1);
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
           });
     } else if ("GUEST NAME".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
@@ -365,28 +720,356 @@ public class VipReportController {
             Guest g2 = guestRepo.findById(r2.getGuestId());
             String n1 = (g1 != null && g1.getName() != null) ? g1.getName() : "";
             String n2 = (g2 != null && g2.getName() != null) ? g2.getName() : "";
-            return isAsc ? n1.compareToIgnoreCase(n2) : n2.compareToIgnoreCase(n1);
+
+            int cmp = isAsc ? n1.compareToIgnoreCase(n2) : n2.compareToIgnoreCase(n1);
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
           });
     } else {
       // Default: PHYSICAL WAIT TIME
       filtered.sort(
-          (r1, r2) ->
-              isAsc
-                  ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
-                  : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime()));
+          (r1, r2) -> {
+            int cmp =
+                isAsc
+                    ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
+                    : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+            if (cmp != 0) return cmp;
+            return r1.getReservationId().compareTo(r2.getReservationId());
+          });
     }
 
     return filtered;
   }
 
-  private String buildScopeString(String search, String tier, String room, String boiling) {
+  private String buildScopeString(
+      String search,
+      String tier,
+      String room,
+      String boiling,
+      LocalDateTime startDate,
+      LocalDateTime endDate,
+      String datePresetLabel) {
     StringBuilder sb = new StringBuilder();
-    sb.append(tier == null ? "All Tiers" : tier).append(" | ");
-    sb.append(room == null ? "All Room Types" : room).append(" | ");
-    sb.append(boiling == null ? "All Boiling States" : boiling);
-    if (search != null) {
-      sb.append(" | Search: \"").append(search).append("\"");
+    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    String dateRangeStr;
+    if (startDate == null && endDate == null) {
+      dateRangeStr = "ALL TIME";
+    } else if (startDate == null) {
+      dateRangeStr = "Up to " + endDate.format(fmt);
+    } else if (endDate == null) {
+      dateRangeStr = "From " + startDate.format(fmt);
+    } else {
+      dateRangeStr = startDate.format(fmt) + " to " + endDate.format(fmt);
     }
+
+    sb.append("  - Date Range      : [ ").append(dateRangeStr).append(" ]\n");
+    sb.append("  - Membership Tier : ").append(tier == null ? "All Tiers" : tier).append("\n");
+    sb.append("  - Room Queue Type : ").append(room == null ? "All Room Types" : room).append("\n");
+    sb.append("  - Boiling Status  : ").append(boiling == null ? "All Boiling States" : boiling);
+
+    if (search != null && !search.trim().isEmpty()) {
+      sb.append("\n  - Search Query    : \"").append(search).append("\"");
+    }
+
     return sb.toString();
+  }
+
+  // ==========================================
+  // VIEW MODEL BUILDERS & DATA CALCULATIONS
+  // ==========================================
+
+  private VipReportView.SlaReportDTO buildSlaReportDTO(
+      ListInterface<Reservation> filteredList, int recordLimit) {
+    if (filteredList == null) {
+      return new VipReportView.SlaReportDTO(
+          new ArrayList<>(),
+          new VipReportView.SlaReportSummaryDTO(
+              0, 0, 0, 100.0, 100.0, 0, 0, 0, 100.0, 100.0, 0, 0, 0, 100.0, 100.0),
+          0);
+    }
+
+    int totalMatches = filteredList.getNumberOfEntries();
+    VipSystemConfig config = configRepo.getConfig();
+    ListInterface<Guest> guestList = guestRepo.getGuestList();
+    ListInterface<Member> memberList = memberRepo.getMemberList();
+
+    ListInterface<VipReportView.SlaReportRowDTO> rows = new ArrayList<>();
+    int displayCount =
+        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+
+    int diamondTotal = 0, goldTotal = 0, silverTotal = 0;
+    int diamondSlaMet = 0, goldSlaMet = 0, silverSlaMet = 0;
+
+    int rank = 1;
+    for (Reservation reservation : filteredList) {
+      if (reservation == null) continue;
+
+      Guest guest = guestList.find(g -> g.getGuestId().equalsIgnoreCase(reservation.getGuestId()));
+      Member member =
+          (guest != null && guest.getMemberId() != null)
+              ? memberList.find(m -> m.getMemberId().equalsIgnoreCase(guest.getMemberId()))
+              : null;
+      Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+
+      long wait = calculateWaitMins(reservation);
+      int targetMins = config.getPatienceLimitMins(tier);
+
+      if (tier == Member.LoyaltyTier.DIAMOND) {
+        diamondTotal++;
+        if (wait <= targetMins) diamondSlaMet++;
+      } else if (tier == Member.LoyaltyTier.GOLD) {
+        goldTotal++;
+        if (wait <= targetMins) goldSlaMet++;
+      } else {
+        silverTotal++;
+        if (wait <= targetMins) silverSlaMet++;
+      }
+
+      if (rank <= displayCount) {
+        String rankStr = rank + ".";
+        String name = (guest != null) ? guest.getName() : "N/A";
+        String tierStr =
+            (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+        String room =
+            (reservation.getRoomType() != null) ? reservation.getRoomType().name() : "N/A";
+        int strikes = (guest != null) ? guest.getStrikeCount() : 0;
+        String status = (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
+
+        rows.add(
+            new VipReportView.SlaReportRowDTO(rankStr, name, tierStr, room, wait, strikes, status));
+      }
+      rank++;
+    }
+
+    double dPct = (diamondTotal == 0) ? 100.0 : ((double) diamondSlaMet / diamondTotal) * 100.0;
+    double gPct = (goldTotal == 0) ? 100.0 : ((double) goldSlaMet / goldTotal) * 100.0;
+    double sPct = (silverTotal == 0) ? 100.0 : ((double) silverSlaMet / silverTotal) * 100.0;
+
+    VipReportView.SlaReportSummaryDTO summary =
+        new VipReportView.SlaReportSummaryDTO(
+            diamondTotal,
+            diamondSlaMet,
+            config.getDiamondPatienceLimitMins(),
+            dPct,
+            config.getDiamondSlaTargetPct(),
+            goldTotal,
+            goldSlaMet,
+            config.getGoldPatienceLimitMins(),
+            gPct,
+            config.getGoldSlaTargetPct(),
+            silverTotal,
+            silverSlaMet,
+            config.getSilverPatienceLimitMins(),
+            sPct,
+            config.getSilverSlaTargetPct());
+
+    return new VipReportView.SlaReportDTO(rows, summary, totalMatches);
+  }
+
+  private VipReportView.PenaltyReportDTO buildPenaltyReportDTO(
+      ListInterface<Reservation> filteredList, int recordLimit) {
+    if (filteredList == null) {
+      return new VipReportView.PenaltyReportDTO(
+          new ArrayList<>(),
+          new VipReportView.PenaltyReportSummaryDTO(
+              0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0),
+          0);
+    }
+
+    int totalMatches = filteredList.getNumberOfEntries();
+    VipSystemConfig config = configRepo.getConfig();
+    ListInterface<Guest> guestList = guestRepo.getGuestList();
+    ListInterface<Member> memberList = memberRepo.getMemberList();
+
+    ListInterface<VipReportView.PenaltyReportRowDTO> rows = new ArrayList<>();
+    int displayCount =
+        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+
+    // Single-value reduction using ListInterface.reduce
+    int totalStrikes =
+        filteredList.reduce(
+            0,
+            (sum, res) -> {
+              if (res == null) return sum;
+              Guest g =
+                  guestList.find(guest -> guest.getGuestId().equalsIgnoreCase(res.getGuestId()));
+              return sum + ((g != null) ? g.getStrikeCount() : 0);
+            });
+
+    int dTotal = 0, gTotal = 0, sTotal = 0;
+    int dEvicted = 0, gEvicted = 0, sEvicted = 0;
+
+    int rank = 1;
+    for (Reservation reservation : filteredList) {
+      if (reservation == null) continue;
+
+      Guest guest = guestList.find(g -> g.getGuestId().equalsIgnoreCase(reservation.getGuestId()));
+      Member member =
+          (guest != null && guest.getMemberId() != null)
+              ? memberList.find(m -> m.getMemberId().equalsIgnoreCase(guest.getMemberId()))
+              : null;
+      Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+
+      if (tier == Member.LoyaltyTier.DIAMOND) {
+        dTotal++;
+        if (reservation.getStatus() == Reservation.Status.NO_SHOW) dEvicted++;
+      } else if (tier == Member.LoyaltyTier.GOLD) {
+        gTotal++;
+        if (reservation.getStatus() == Reservation.Status.NO_SHOW) gEvicted++;
+      } else {
+        sTotal++;
+        if (reservation.getStatus() == Reservation.Status.NO_SHOW) sEvicted++;
+      }
+
+      if (rank <= displayCount) {
+        String rankStr = rank + ".";
+        String name = (guest != null) ? guest.getName() : "N/A";
+        String tierStr =
+            (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+        int strikes = (guest != null) ? guest.getStrikeCount() : 0;
+        String boiling = reservation.getIsBoiling() ? "[!]" : "[ ]";
+        String resolution =
+            (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
+        if (reservation.getStatus() == Reservation.Status.NO_SHOW) {
+          resolution = "Evicted (Max Strikes Exceeded)";
+        }
+
+        rows.add(
+            new VipReportView.PenaltyReportRowDTO(
+                rankStr, name, tierStr, strikes, boiling, resolution));
+      }
+      rank++;
+    }
+
+    double dRate = (dTotal == 0) ? 0.0 : ((double) dEvicted / dTotal) * 100.0;
+    double gRate = (gTotal == 0) ? 0.0 : ((double) gEvicted / gTotal) * 100.0;
+    double sRate = (sTotal == 0) ? 0.0 : ((double) sEvicted / sTotal) * 100.0;
+
+    VipReportView.PenaltyReportSummaryDTO summary =
+        new VipReportView.PenaltyReportSummaryDTO(
+            totalStrikes,
+            dTotal,
+            dEvicted,
+            dRate,
+            config.getDiamondEvictionRateTargetPct(),
+            gTotal,
+            gEvicted,
+            gRate,
+            config.getGoldEvictionRateTargetPct(),
+            sTotal,
+            sEvicted,
+            sRate,
+            config.getSilverEvictionRateTargetPct());
+
+    return new VipReportView.PenaltyReportDTO(rows, summary, totalMatches);
+  }
+
+  private VipReportView.HoldingReportDTO buildHoldingReportDTO(
+      ListInterface<Reservation> filteredList, int recordLimit) {
+    if (filteredList == null) {
+      return new VipReportView.HoldingReportDTO(
+          new ArrayList<>(), new VipReportView.HoldingReportSummaryDTO(0, 0.0, 0.0, 0.0), 0);
+    }
+
+    int totalMatches = filteredList.getNumberOfEntries();
+    VipSystemConfig config = configRepo.getConfig();
+    ListInterface<Guest> guestList = guestRepo.getGuestList();
+    ListInterface<Member> memberList = memberRepo.getMemberList();
+
+    ListInterface<VipReportView.HoldingReportRowDTO> rows = new ArrayList<>();
+    int displayCount =
+        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+
+    int rank = 1;
+    for (Reservation reservation : filteredList) {
+      if (reservation == null) continue;
+      if (rank > displayCount) break;
+
+      Guest guest = guestList.find(g -> g.getGuestId().equalsIgnoreCase(reservation.getGuestId()));
+      Member member =
+          (guest != null && guest.getMemberId() != null)
+              ? memberList.find(m -> m.getMemberId().equalsIgnoreCase(guest.getMemberId()))
+              : null;
+
+      String rankStr = rank + ".";
+      String name = (guest != null) ? guest.getName() : "N/A";
+      String tierStr =
+          (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+
+      int allowedGrace =
+          (reservation.getAllocatedGraceMins() != null && reservation.getAllocatedGraceMins() > 0)
+              ? reservation.getAllocatedGraceMins()
+              : config.getGraceWindowMins((member != null) ? member.getTier() : null);
+
+      String timeUsedStr = calculateTimeUsedStr(reservation, member, config);
+      String status = (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
+      String utilPctStr = calculateGraceUsedPctStr(reservation, member, config);
+
+      rows.add(
+          new VipReportView.HoldingReportRowDTO(
+              rankStr, name, tierStr, allowedGrace, timeUsedStr, status, utilPctStr));
+      rank++;
+    }
+
+    VipReportView.HoldingReportSummaryDTO summary =
+        new VipReportView.HoldingReportSummaryDTO(
+            totalMatches,
+            config.getDiamondGraceUtilTargetPct(),
+            config.getGoldGraceUtilTargetPct(),
+            config.getSilverGraceUtilTargetPct());
+
+    return new VipReportView.HoldingReportDTO(rows, summary, totalMatches);
+  }
+
+  private long calculateWaitMins(Reservation r) {
+    if (r == null || r.getQueueArrivalTime() == null) return 0;
+    return Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
+  }
+
+  private String calculateTimeUsedStr(Reservation r, Member m, VipSystemConfig config) {
+    if (r == null) return "N/A";
+
+    int allowedGraceMins =
+        (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
+            ? r.getAllocatedGraceMins()
+            : config.getGraceWindowMins((m != null) ? m.getTier() : null);
+
+    if (r.getStatus() == Reservation.Status.NO_SHOW) {
+      return allowedGraceMins + " Mins";
+    }
+
+    LocalDateTime startTime = r.getAllocatedTime();
+    if (startTime == null) return "N/A";
+
+    LocalDateTime endTime = LocalDateTime.now();
+    long elapsedMins = Duration.between(startTime, endTime).toMinutes();
+    if (elapsedMins < 0) elapsedMins = 0;
+    return elapsedMins + " Mins";
+  }
+
+  private String calculateGraceUsedPctStr(Reservation r, Member m, VipSystemConfig config) {
+    if (r == null) return "0.0";
+
+    int allowedGraceMins =
+        (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
+            ? r.getAllocatedGraceMins()
+            : config.getGraceWindowMins((m != null) ? m.getTier() : null);
+    if (allowedGraceMins <= 0) return "0.0";
+
+    if (r.getStatus() == Reservation.Status.NO_SHOW) {
+      return "100.0";
+    }
+
+    LocalDateTime startTime = r.getAllocatedTime();
+    if (startTime == null) return "0.0";
+
+    LocalDateTime endTime = LocalDateTime.now();
+    long elapsedMins = Duration.between(startTime, endTime).toMinutes();
+    if (elapsedMins < 0) elapsedMins = 0;
+
+    double pct = ((double) elapsedMins / allowedGraceMins) * 100.0;
+    pct = Math.min(100.0, Math.max(0.0, pct));
+    return String.format("%.1f", pct);
   }
 }

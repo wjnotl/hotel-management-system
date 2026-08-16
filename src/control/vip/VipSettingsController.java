@@ -5,9 +5,11 @@ import adt.LinkedStack;
 import adt.ListInterface;
 import adt.StackInterface;
 import entity.VipSystemConfig;
+import java.util.function.Function;
 import repo.AllocationRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
+import repo.RoomRepo;
 import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
@@ -21,18 +23,21 @@ public class VipSettingsController {
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final AllocationRepo allocationRepo;
+  private final RoomRepo roomRepo;
 
   public VipSettingsController(
       VipSystemConfigRepo configRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
-      AllocationRepo allocationRepo) {
+      AllocationRepo allocationRepo,
+      RoomRepo roomRepo) {
     this.configRepo = configRepo;
     this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.allocationRepo = allocationRepo;
+    this.roomRepo = roomRepo;
   }
 
   public void startSettingsManagement() {
@@ -323,8 +328,8 @@ public class VipSettingsController {
           return null;
         }
 
-        Double.parseDouble(num.trim());
-        return num.trim();
+        double val = Double.parseDouble(num.trim());
+        return VipSettingsView.formatNumber(val);
       } catch (NumberFormatException e) {
         ConsoleUtil.printError("Invalid numeric format! Enter a valid number or 'C' to cancel.");
       }
@@ -397,7 +402,7 @@ public class VipSettingsController {
         for (int strikeCount = 0; strikeCount <= tierMaxStrikes; strikeCount++) {
           double sVal = strikeCount;
 
-          java.util.function.Function<String, Double> resolver =
+          Function<String, Double> resolver =
               (var) -> {
                 if (var == null || var.trim().isEmpty()) return 0.0;
                 switch (var.trim().toUpperCase()) {
@@ -575,12 +580,7 @@ public class VipSettingsController {
                     formula);
 
           if (newVal != null) {
-            int oldVal =
-                (tier == 1)
-                    ? config.getDiamondBoilingLimitMins()
-                    : (tier == 2)
-                        ? config.getGoldBoilingLimitMins()
-                        : config.getSilverBoilingLimitMins();
+            int oldVal = config.getBoilingLimitMins(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondBoilingLimitMins(newVal);
             else if (tier == 2) config.setGoldBoilingLimitMins(newVal);
@@ -639,10 +639,7 @@ public class VipSettingsController {
                     "Silver Max Strikes", config.getSilverMaxStrikes(), 0, 10, formula);
 
           if (newVal != null) {
-            int oldVal =
-                (tier == 1)
-                    ? config.getDiamondMaxStrikes()
-                    : (tier == 2) ? config.getGoldMaxStrikes() : config.getSilverMaxStrikes();
+            int oldVal = config.getMaxStrikes(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondMaxStrikes(newVal);
             else if (tier == 2) config.setGoldMaxStrikes(newVal);
@@ -770,10 +767,7 @@ public class VipSettingsController {
                     "Silver Base Score", config.getSilverBaseValue(), 1, 100000, formula);
 
           if (newVal != null) {
-            int oldVal =
-                (tier == 1)
-                    ? config.getDiamondBaseValue()
-                    : (tier == 2) ? config.getGoldBaseValue() : config.getSilverBaseValue();
+            int oldVal = config.getBaseValue(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondBaseValue(newVal);
             else if (tier == 2) config.setGoldBaseValue(newVal);
@@ -836,10 +830,7 @@ public class VipSettingsController {
                     "Silver Boiling Boost", config.getSilverBoilingBoost(), 0.01, 50000.0, formula);
 
           if (newVal != null) {
-            double oldVal =
-                (tier == 1)
-                    ? config.getDiamondBoilingBoost()
-                    : (tier == 2) ? config.getGoldBoilingBoost() : config.getSilverBoilingBoost();
+            double oldVal = config.getBoilingBoost(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondBoilingBoost(newVal);
             else if (tier == 2) config.setGoldBoilingBoost(newVal);
@@ -906,10 +897,7 @@ public class VipSettingsController {
                     formula);
 
           if (newVal != null) {
-            double oldVal =
-                (tier == 1)
-                    ? config.getDiamondStrikePenalty()
-                    : (tier == 2) ? config.getGoldStrikePenalty() : config.getSilverStrikePenalty();
+            double oldVal = config.getStrikePenalty(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondStrikePenalty(newVal);
             else if (tier == 2) config.setGoldStrikePenalty(newVal);
@@ -937,14 +925,8 @@ public class VipSettingsController {
     while (true) {
       try {
         VipSystemConfig config = configRepo.getConfig();
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("REPORT ALERT TARGET THRESHOLDS (%)");
-        System.out.println("1. Tier SLA Attainment Targets (%)");
-        System.out.println("2. Tier Max Eviction Rate Limits (%)");
-        System.out.println("3. Tier Max Grace Utilization Limits (%)");
-        System.out.println("4. Back\n");
+        int choice = settingsView.displayReportAlertTargetsMenu();
 
-        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
         if (choice == 4) break;
 
         if (choice == 1) {
@@ -1112,71 +1094,141 @@ public class VipSettingsController {
   private void handleApplyToQueue() {
     VipSystemConfig config = configRepo.getConfig();
 
+    boolean evictOverStrikes = false;
+    boolean forceBoilingCheck = false;
+    boolean updateActiveGraceTimers = false;
+
+    int currentStep = 1;
+
     while (true) {
       try {
-        int choice1 =
-            settingsView.promptApplyOptionWithBack(
-                "STRIKE THRESHOLD EVICTION",
-                "Automatically cancel and evict waiting guests who exceed the active Tier Strike"
-                    + " Limits?");
-        if (choice1 == 3) return;
-        boolean evictOverStrikes = (choice1 == 1);
+        if (currentStep == 1) {
+          // STEP 1: STRIKE THRESHOLD EVICTION
+          int choice =
+              settingsView.promptWizardStep(
+                  1,
+                  3,
+                  "RULE 1: STRIKE THRESHOLD EVICTION",
+                  "Scan active waitlists and automatically cancel/evict waiting guests whose strike"
+                      + " count\n"
+                      + " meets or exceeds current Tier Max Strike limits?",
+                  false);
 
-        int choice2 =
-            settingsView.promptApplyOptionWithBack(
-                "BOILING STATUS RE-EVALUATION",
-                "Re-evaluate live wait times against active Patience Thresholds and update BOILING"
-                    + " flags?");
-        if (choice2 == 3) return;
-        boolean forceBoilingCheck = (choice2 == 1);
+          if (choice == 3) {
+            // Cancel wizard
+            return;
+          }
 
-        int choice3 =
-            settingsView.promptApplyOptionWithBack(
-                "ACTIVE ALLOCATION GRACE TIMERS",
-                "Reset active countdown timers in the Holding Bay using the newly configured Grace"
-                    + " Periods?");
-        if (choice3 == 3) return;
-        boolean updateActiveGraceTimers = (choice3 == 1);
+          evictOverStrikes = (choice == 1);
+          currentStep = 2;
 
-        boolean confirmExecution =
-            ConsoleUtil.showConfirmMessage(
-                "Confirm execution of selected queue reconciliation rules?");
-        if (!confirmExecution) return;
+        } else if (currentStep == 2) {
+          // STEP 2: BOILING STATUS RE-EVALUATION
+          int choice =
+              settingsView.promptWizardStep(
+                  2,
+                  3,
+                  "RULE 2: BOILING STATUS & PRIORITY BOOST RE-EVALUATION",
+                  "Re-evaluate live wait times against active Tier Patience Limits. Flag eligible"
+                      + " guests\n"
+                      + " as 'BOILING' and apply dynamic priority score boosts to accelerate their"
+                      + " queue position?",
+                  true);
 
-        int processedWaitlist =
-            vipReservationRepo.applySettingsToQueue(
-                config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck, configRepo);
+          if (choice == 3) {
+            // Previous Step (Go back to Step 1)
+            currentStep = 1;
+            continue;
+          } else if (choice == 4) {
+            // Cancel wizard
+            return;
+          }
 
-        int processedAllocations = 0;
-        if (updateActiveGraceTimers) {
-          processedAllocations =
-              allocationRepo.recalculateActiveGraceTimers(
-                  vipReservationRepo, guestRepo, memberRepo, configRepo);
+          forceBoilingCheck = (choice == 1);
+          currentStep = 3;
+
+        } else if (currentStep == 3) {
+          // STEP 3: ACTIVE ALLOCATION GRACE TIMERS
+          int choice =
+              settingsView.promptWizardStep(
+                  3,
+                  3,
+                  "RULE 3: HOLDING BAY GRACE TIMER RE-SYNCHRONIZATION",
+                  "Recalculate active room holding countdowns using updated Tier Grace Windows.\n"
+                      + " Holds exceeding updated grace limits will expire immediately for"
+                      + " auto-eviction.",
+                  true);
+
+          if (choice == 3) {
+            // Previous Step (Go back to Step 2)
+            currentStep = 2;
+            continue;
+          } else if (choice == 4) {
+            // Cancel wizard
+            return;
+          }
+
+          updateActiveGraceTimers = (choice == 1);
+          currentStep = 4;
+
+        } else if (currentStep == 4) {
+          // STEP 4: SUMMARY REVIEW & CONFIRMATION
+          boolean confirmExecution =
+              settingsView.promptReconciliationConfirmation(
+                  evictOverStrikes, forceBoilingCheck, updateActiveGraceTimers);
+
+          if (!confirmExecution) {
+            // User chose 'N' -> Return to Step 3 so they can review / adjust choices!
+            currentStep = 3;
+            continue;
+          }
+
+          // Execute reconciliation
+          int processedWaitlist =
+              vipReservationRepo.applySettingsToQueue(
+                  config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck);
+          VipController.scheduleNextBoilingTask(
+              vipReservationRepo, guestRepo, memberRepo, configRepo);
+
+          int processedAllocations = 0;
+          if (updateActiveGraceTimers) {
+            processedAllocations =
+                allocationRepo.recalculateActiveGraceTimers(
+                    roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
+            VipController.scheduleNextAutoExpirationTask(
+                allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
+          }
+
+          settingsView.displayApplySuccessScreen(processedWaitlist + processedAllocations);
+          break;
         }
-
-        settingsView.displayApplySuccessScreen(processedWaitlist + processedAllocations);
-        break;
-
       } catch (Exception e) {
-        ConsoleUtil.printError("Failed to apply settings: " + e.getMessage());
+        ConsoleUtil.printError("Error during queue reconciliation step: " + e.getMessage());
       }
     }
   }
 
   private void handleResetToDefaults() {
-    boolean confirmed =
-        ConsoleUtil.showConfirmMessage(
-            "Are you sure you want to reset all VIP rules, weights, and strategies to factory"
-                + " defaults?");
+    boolean confirmed = promptResetToDefaultsConfirmation();
 
     if (confirmed) {
       VipSystemConfig config = configRepo.getConfig();
       config.resetToDefaults();
       configRepo.updateConfig(config);
 
-      ConsoleUtil.clearScreen();
-      System.out.println(">> SUCCESS: System settings reset to baseline factory defaults.\n");
-      ConsoleUtil.printContinueMessage();
+      settingsView.displayResetSuccessScreen();
+    }
+  }
+
+  private boolean promptResetToDefaultsConfirmation() {
+    while (true) {
+      try {
+        return ConsoleUtil.showConfirmMessage(
+            "Are you sure you want to reset all VIP rules, weights, and strategies to factory"
+                + " defaults?");
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 }

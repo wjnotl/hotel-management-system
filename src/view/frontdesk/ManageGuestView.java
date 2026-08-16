@@ -11,16 +11,102 @@ import java.time.format.DateTimeFormatter;
 import util.ConsoleUtil;
 import util.TableUtil;
 
-public class GuestInformationView {
-  public String promptGuestIdInput() {
+public class ManageGuestView {
+
+  // ---------------------------------------------------------------------------
+  // Guest table (entry point)
+  // ---------------------------------------------------------------------------
+  public ConsoleUtil.GetMenuInputResult displayGuestTable(
+      ListInterface<Guest> guests, String searchQuery, int currentPage, int pageSize) {
+
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("Fetch Guest Information");
-    return ConsoleUtil.getStringInput("Enter Guest ID [C to cancel]: ");
+    ConsoleUtil.printTitleBox("Manage Guests", 72);
+
+    if (searchQuery != null && !searchQuery.isEmpty()) {
+      System.out.println("Filter: \"" + searchQuery + "\"");
+    }
+
+    if (guests == null) {
+      guests = new ArrayList<>();
+    }
+    int total = guests.getNumberOfEntries();
+    int totalPages = (total == 0) ? 1 : (int) Math.ceil((double) total / pageSize);
+
+    int[] colWidths = {5, 12, 24, 20, 14};
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(colWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.LEFT)
+            .setHAlign(2, TableUtil.Align.LEFT)
+            .setHAlign(3, TableUtil.Align.LEFT)
+            .setHAlign(4, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"NO.", "GUEST ID", "NAME", "EMAIL", "PHONE"}, settings);
+
+    if (total == 0) {
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+      TableUtil.TableSettings emptySettings =
+          new TableUtil.TableSettings(new int[] {87}).setHAlign(0, TableUtil.Align.CENTER);
+      String msg =
+          (searchQuery != null && !searchQuery.isEmpty())
+              ? "*** NO GUESTS MATCH \"" + searchQuery.toUpperCase() + "\" ***"
+              : "*** NO GUESTS FOUND ***";
+      TableUtil.printTableRow(new String[] {msg}, emptySettings);
+      TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+
+      System.out.println("\nPage 0 / 0 (Total: 0)\n");
+      System.out.println("[S] Search / Filter    [C] Back to Front Desk Menu\n");
+      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'C'});
+    }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      Guest g = guests.getEntry(i);
+      if (g == null) continue;
+      TableUtil.printTableRow(
+          new String[] {
+            String.valueOf(i),
+            g.getGuestId(),
+            g.getName(),
+            g.getEmail() != null ? g.getEmail() : "N/A",
+            g.getPhoneNumber() != null ? g.getPhoneNumber() : "N/A"
+          },
+          settings);
+    }
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+
+    System.out.printf("\nPage %d / %d (Total: %d)\n\n", currentPage, totalPages, total);
+    System.out.println("[N] Next Page    [P] Previous Page    [S] Search / Filter    [C] Back\n");
+
+    return ConsoleUtil.getMenuInput(
+        "Enter row number or command (" + startIndex + "-" + endIndex + "): ",
+        startIndex,
+        endIndex,
+        new char[] {'N', 'P', 'S', 'C'});
   }
 
-  public void displayGuestNotFound(String guestId) {
-    ConsoleUtil.printError("No guest found with ID \"" + guestId + "\".");
+  /** Prompts for a search/filter string. Returns null if cancelled. */
+  public String promptSearchQuery() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("Search Guests", 72);
+    System.out.println("Search by Guest ID or Name. Leave blank to clear the filter.");
+    System.out.println();
+    String input = ConsoleUtil.getStringInput("Search [C to cancel]: ");
+    if ("C".equalsIgnoreCase(input != null ? input.trim() : "")) {
+      return null;
+    }
+    return input;
   }
+
+  // ---------------------------------------------------------------------------
+  // Guest action submenu (unchanged from GuestInformationView, option 5 label updated)
+  // ---------------------------------------------------------------------------
 
   public int displayGuestActionSubmenu(Guest guest) {
     ConsoleUtil.clearScreen();
@@ -30,10 +116,22 @@ public class GuestInformationView {
     System.out.println("2. View Billing History");
     System.out.println("3. View Assigned Room History");
     System.out.println("4. View Reservation History");
-    System.out.println("5. ReEnter Guest ID");
+    System.out.println("5. Re-Select Guest");
     System.out.println("6. Back to Front Desk Menu\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Detail / history screens (identical to GuestInformationView)
+  // ---------------------------------------------------------------------------
+
+  public void displayGuestNotFound(String input) {
+    ConsoleUtil.printError(
+        "No guest found for \""
+            + input
+            + "\". "
+            + "Check the Guest ID or Reservation ID and try again.");
   }
 
   public void displayGuestDetails(
@@ -126,7 +224,7 @@ public class GuestInformationView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {77}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(new String[] {"*** NO BILLING RECORDS FOUND ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
@@ -253,7 +351,7 @@ public class GuestInformationView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {65}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {78}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO ROOM ASSIGNMENT HISTORY FOUND ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -316,7 +414,7 @@ public class GuestInformationView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {60}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {77}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(new String[] {"*** NO RESERVATION HISTORY FOUND ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
@@ -349,6 +447,10 @@ public class GuestInformationView {
 
     return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'N', 'P', 'C'});
   }
+
+  // ---------------------------------------------------------------------------
+  // Formatters
+  // ---------------------------------------------------------------------------
 
   private String formatDate(LocalDate date) {
     if (date == null) return "N/A";

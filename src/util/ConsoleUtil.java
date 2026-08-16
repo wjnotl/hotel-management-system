@@ -1,13 +1,30 @@
 package util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class ConsoleUtil {
   private static final Scanner scanner = new Scanner(System.in);
 
+  private static PrintStream originalOut;
+  private static final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+  public static boolean isRunningInIDE() {
+    return System.console() == null;
+  }
+
   public static void clearScreen() {
-    System.out.print("\033\143");
-    System.out.flush();
+    if (isRunningInIDE()) {
+      for (int i = 0; i < 50; i++) {
+        System.out.println();
+      }
+    } else {
+      System.out.print("\033\143");
+      System.out.flush();
+    }
   }
 
   public static void printTitleBox(String title) {
@@ -250,7 +267,13 @@ public class ConsoleUtil {
 
   public static String getStringInput(String prompt) {
     System.out.print(prompt);
-    return scanner.nextLine().trim();
+    String input = scanner.nextLine().trim();
+    if (input.matches("^[\\x20-\\x7E]*$")) {
+      return input;
+    }
+    throw new IllegalArgumentException(
+        "Unsupported characters detected! Please use standard English letters, numbers, and common"
+            + " symbols only (e.g. A-Z, 0-9).");
   }
 
   public static Integer getIntegerInput(String prompt, int min, int max) {
@@ -299,6 +322,60 @@ public class ConsoleUtil {
       return choice;
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Invalid input! Please provide a valid decimal number.");
+    }
+  }
+
+  public static void startRecording() {
+    if (originalOut == null) {
+      originalOut = System.out;
+      System.setOut(
+          new PrintStream(new DualStream(originalOut, buffer), true, StandardCharsets.UTF_8));
+    }
+  }
+
+  public static String getCapturedString() {
+    return buffer.toString(StandardCharsets.UTF_8);
+  }
+
+  public static void clearBuffer() {
+    buffer.reset();
+  }
+
+  public static void stopRecording() {
+    if (originalOut != null) {
+      System.setOut(originalOut);
+      originalOut = null;
+    }
+  }
+
+  private static class DualStream extends OutputStream {
+    private final PrintStream terminal;
+    private final ByteArrayOutputStream buffer;
+
+    public DualStream(PrintStream terminal, ByteArrayOutputStream buffer) {
+      this.terminal = terminal;
+      this.buffer = buffer;
+    }
+
+    @Override
+    public void write(int b) {
+      terminal.write(b);
+      buffer.write(b);
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) {
+      // Decode bytes to String so System.out uses Windows native terminal rendering
+      String text = new String(b, off, len, StandardCharsets.UTF_8);
+      terminal.print(text);
+
+      // Save raw UTF-8 bytes to memory buffer for export
+      buffer.write(b, off, len);
+    }
+
+    @Override
+    public void flush() {
+      terminal.flush();
     }
   }
 }

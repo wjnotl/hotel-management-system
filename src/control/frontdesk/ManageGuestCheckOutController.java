@@ -21,11 +21,24 @@ public class ManageGuestCheckOutController {
   private static final int PAGE_SIZE = 10;
 
   private final ManageGuestCheckOutView manageCheckOutView = new ManageGuestCheckOutView();
-  private final GuestRepo guestRepo = new GuestRepo();
-  private final BillingRepo billingRepo = new BillingRepo();
-  private final RoomRepo roomRepo = new RoomRepo();
-  private final RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
-  private final HousekeepingTaskRepo housekeepingTaskRepo = new HousekeepingTaskRepo();
+  private final GuestRepo guestRepo;
+  private final BillingRepo billingRepo;
+  private final RoomRepo roomRepo;
+  private final RoomStatusHistoryRepo roomStatusHistoryRepo;
+  private final HousekeepingTaskRepo housekeepingTaskRepo;
+
+  public ManageGuestCheckOutController(
+      GuestRepo guestRepo,
+      BillingRepo billingRepo,
+      RoomRepo roomRepo,
+      RoomStatusHistoryRepo roomStatusHistoryRepo,
+      HousekeepingTaskRepo housekeepingTaskRepo) {
+    this.guestRepo = guestRepo;
+    this.billingRepo = billingRepo;
+    this.roomRepo = roomRepo;
+    this.roomStatusHistoryRepo = roomStatusHistoryRepo;
+    this.housekeepingTaskRepo = housekeepingTaskRepo;
+  }
 
   public void start() {
     int currentPage = 1;

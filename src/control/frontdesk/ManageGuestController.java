@@ -10,69 +10,97 @@ import entity.Reservation;
 import java.util.Comparator;
 import repo.BillingRepo;
 import repo.GuestRepo;
-import repo.VipReservationRepo;
+import repo.ReservationRepo;
 import util.ConsoleUtil;
-import view.frontdesk.GuestInformationView;
+import view.frontdesk.ManageGuestView;
 
-public class GuestInformationController {
+public class ManageGuestController {
   private static final int PAGE_SIZE = 10;
 
-  private final GuestInformationView guestInformationView = new GuestInformationView();
-  private final GuestRepo guestRepo = new GuestRepo();
-  private final VipReservationRepo reservationRepo;
-  private final BillingRepo billingRepo = new BillingRepo();
+  private final ManageGuestView manageGuestView = new ManageGuestView();
+  private final GuestRepo guestRepo;
+  private final ReservationRepo reservationRepo;
+  private final BillingRepo billingRepo;
 
-  public GuestInformationController(VipReservationRepo reservationRepo) {
+  public ManageGuestController(
+      ReservationRepo reservationRepo, GuestRepo guestRepo, BillingRepo billingRepo) {
     this.reservationRepo = reservationRepo;
-  }
-
-  // Convenience constructor for callers that don't need to share a VipReservationRepo instance.
-  public GuestInformationController() {
-    this(new VipReservationRepo());
+    this.guestRepo = guestRepo;
+    this.billingRepo = billingRepo;
   }
 
   public void start() {
+    ListInterface<Guest> allGuests = guestRepo.getGuestList();
+    String searchQuery = "";
+    int currentPage = 1;
+
     while (true) {
       try {
-        String rawId = guestInformationView.promptGuestIdInput();
+        ListInterface<Guest> filtered = applyFilter(allGuests, searchQuery);
+        int total = filtered.getNumberOfEntries();
+        int totalPages = (total == 0) ? 1 : (int) Math.ceil((double) total / PAGE_SIZE);
+        if (currentPage > totalPages) currentPage = totalPages;
 
-        if (rawId == null || rawId.trim().isEmpty() || "C".equalsIgnoreCase(rawId.trim())) {
+        ConsoleUtil.GetMenuInputResult result =
+            manageGuestView.displayGuestTable(filtered, searchQuery, currentPage, PAGE_SIZE);
+
+        String raw = result.input.trim();
+
+        if ("C".equalsIgnoreCase(raw)) {
           return;
+        } else if ("N".equalsIgnoreCase(raw)) {
+          if (currentPage < totalPages) {
+            currentPage++;
+          } else {
+            ConsoleUtil.printError("Already on the last page!");
+          }
+        } else if ("P".equalsIgnoreCase(raw)) {
+          if (currentPage > 1) {
+            currentPage--;
+          } else {
+            ConsoleUtil.printError("Already on the first page!");
+          }
+        } else if ("S".equalsIgnoreCase(raw)) {
+          String newQuery = manageGuestView.promptSearchQuery();
+          if (newQuery != null) {
+            searchQuery = newQuery.trim();
+            currentPage = 1;
+          }
+        } else if (result.isNumber) {
+          int globalIndex = Integer.parseInt(raw);
+          if (globalIndex < 1 || globalIndex > total) {
+            ConsoleUtil.printError("Invalid row number. Enter a number shown in the table.");
+            continue;
+          }
+          Guest selected = filtered.getEntry(globalIndex);
+          if (selected == null) {
+            ConsoleUtil.printError("Guest not found.");
+            continue;
+          }
+          boolean reEnter = handleGuestActionSubmenu(selected);
+          if (!reEnter) {
+            // "Back to Front Desk Menu" chosen — propagate upward.
+            return;
+          }
+          // "Re-Select Guest" chosen — stay in the table loop.
         }
-
-        String guestId = rawId.trim();
-        // O(1) lookup - GuestRepo indexes Guest ID -> Guest in a HashMap internally.
-        Guest guest = guestRepo.findById(guestId);
-
-        if (guest == null) {
-          guestInformationView.displayGuestNotFound(guestId);
-          continue;
-        }
-
-        boolean reEnterGuestId = handleGuestActionSubmenu(guest);
-        if (reEnterGuestId) {
-          // "5. ReEnter Guest ID" was chosen - loop back to the guest ID prompt.
-          continue;
-        }
-        // "6. Back to Front Desk Menu" was chosen.
-        return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
-  // Returns true if the guest chose to re-enter a guest ID (option 5),
+  // Returns true if the guest chose to re-select a guest (option 5),
   // or false if they chose to go back to the Front Desk Menu (option 6).
   private boolean handleGuestActionSubmenu(Guest guest) {
     while (true) {
       try {
-        int action = guestInformationView.displayGuestActionSubmenu(guest);
+        int action = manageGuestView.displayGuestActionSubmenu(guest);
 
         if (action == 1) {
           Reservation latestReservation = findLatestReservationForGuest(guest.getGuestId());
           Billing latestBilling = findLatestBillingForGuest(guest.getGuestId());
-          guestInformationView.displayGuestDetails(guest, latestReservation, latestBilling);
+          manageGuestView.displayGuestDetails(guest, latestReservation, latestBilling);
         } else if (action == 2) {
           handleViewBillingHistory(guest);
         } else if (action == 3) {
@@ -98,8 +126,7 @@ public class GuestInformationController {
       try {
         int total = billingHistory.getNumberOfEntries();
         ConsoleUtil.GetMenuInputResult result =
-            guestInformationView.displayBillingHistory(
-                guest, billingHistory, currentPage, PAGE_SIZE);
+            manageGuestView.displayBillingHistory(guest, billingHistory, currentPage, PAGE_SIZE);
 
         if ("C".equalsIgnoreCase(result.input)) {
           return;
@@ -119,7 +146,7 @@ public class GuestInformationController {
         } else if (result.isNumber) {
           int index = Integer.parseInt(result.input);
           Billing selected = billingHistory.getEntry(index);
-          guestInformationView.displayReceipt(guest, selected);
+          manageGuestView.displayReceipt(guest, selected);
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -135,8 +162,7 @@ public class GuestInformationController {
       try {
         int total = roomHistory.getNumberOfEntries();
         ConsoleUtil.GetMenuInputResult result =
-            guestInformationView.displayAssignedRoomHistory(
-                guest, roomHistory, currentPage, PAGE_SIZE);
+            manageGuestView.displayAssignedRoomHistory(guest, roomHistory, currentPage, PAGE_SIZE);
 
         if ("C".equalsIgnoreCase(result.input)) {
           return;
@@ -169,7 +195,7 @@ public class GuestInformationController {
       try {
         int total = reservationHistory.getNumberOfEntries();
         ConsoleUtil.GetMenuInputResult result =
-            guestInformationView.displayReservationHistory(
+            manageGuestView.displayReservationHistory(
                 guest, reservationHistory, currentPage, PAGE_SIZE);
 
         if ("C".equalsIgnoreCase(result.input)) {
@@ -194,7 +220,28 @@ public class GuestInformationController {
     }
   }
 
+  // --- FILTER HELPER ---
+
+  // Case-insensitive match against Guest ID or Guest Name.
+  private ListInterface<Guest> applyFilter(ListInterface<Guest> all, String query) {
+    if (query == null || query.isEmpty()) {
+      return all;
+    }
+    String lower = query.toLowerCase();
+    ListInterface<Guest> result = new ArrayList<>();
+    for (int i = 1; i <= all.getNumberOfEntries(); i++) {
+      Guest g = all.getEntry(i);
+      if (g == null) continue;
+      if (g.getGuestId().toLowerCase().contains(lower)
+          || g.getName().toLowerCase().contains(lower)) {
+        result.add(g);
+      }
+    }
+    return result;
+  }
+
   // --- LOOKUP HELPERS ---
+
   private Reservation findLatestReservationForGuest(String guestId) {
     ListInterface<Reservation> all = reservationRepo.getAllReservations();
     Reservation latest = null;

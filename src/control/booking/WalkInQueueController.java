@@ -219,13 +219,14 @@ public class WalkInQueueController {
             new Reservation(
                 standardReservationRepo.generateReservationId(),
                 guest.getGuestId(),
-                standardReservationRepo.generateConfirmationNumber(vipReservationRepo),
+                standardReservationRepo.generateConfirmationNumber(),
                 roomType,
                 Reservation.Status.WAITING,
                 false,
                 0,
                 now,
-                now);
+                now,
+                false);
 
         standardReservationRepo.addReservation(walkIn);
 
@@ -648,13 +649,14 @@ public class WalkInQueueController {
         new Reservation(
             standardReservationRepo.generateReservationId(),
             guest.getGuestId(),
-            standardReservationRepo.generateConfirmationNumber(vipReservationRepo),
+            standardReservationRepo.generateConfirmationNumber(),
             roomType,
             Reservation.Status.ALLOCATED,
             false,
             0,
             now,
-            now);
+            now,
+            false);
 
     if (!standardReservationRepo.allocateDirect(direct)) {
       ConsoleUtil.printError("The reservation could not be recorded!");

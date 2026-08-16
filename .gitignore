@@ -19,8 +19,4 @@ lib/
 # --- Database Files ---
 *.dat
 
-.claude
-Assignment_Instruction&Information
-CLAUDE.md
-test
-test.bat
+exports/

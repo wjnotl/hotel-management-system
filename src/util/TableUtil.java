@@ -1,5 +1,6 @@
 package util;
 
+import adt.LinkedList;
 import adt.ListInterface;
 
 public class TableUtil {
@@ -107,25 +108,46 @@ public class TableUtil {
 
     switch (position) {
       case TOP:
-        borders = new String[] {"╔", "╦", "╗"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╔", "╦", "╗"};
         break;
       case MIDDLE:
-        borders = new String[] {"╠", "╬", "╣"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╠", "╬", "╣"};
         break;
       case BOTTOM:
-        borders = new String[] {"╚", "╩", "╝"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╚", "╩", "╝"};
         break;
       case HEADER_CLOSE:
-        borders = new String[] {"╠", "╩", "╣"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╠", "╩", "╣"};
         break;
       case SPAN_OPEN:
-        borders = new String[] {"╠", "╦", "╣"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "+", "+"}
+                : new String[] {"╠", "╦", "╣"};
         break;
       case PLAIN_ROW:
-        borders = new String[] {"╠", "═", "╣"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "-", "+"}
+                : new String[] {"╠", "═", "╣"};
         break;
       case PLAIN_BOTTOM:
-        borders = new String[] {"╚", "═", "╝"};
+        borders =
+            ConsoleUtil.isRunningInIDE()
+                ? new String[] {"+", "-", "+"}
+                : new String[] {"╚", "═", "╝"};
         break;
       default:
         throw new IllegalArgumentException("System Error: Invalid border position specified!");
@@ -133,7 +155,9 @@ public class TableUtil {
 
     System.out.print(borders[0]); // Left border
     for (int i = 0; i < settings.colWidths.length; i++) {
-      System.out.print("═".repeat(settings.colWidths[i]));
+      int cellBorderWidth = settings.colWidths[i] + 2; // Add 2 spaces padding (1 left + 1 right)
+      System.out.print((ConsoleUtil.isRunningInIDE() ? "-" : "═").repeat(cellBorderWidth));
+
       if (i < settings.colWidths.length - 1) {
         System.out.print(borders[1]); // Middle junction
       } else {
@@ -152,18 +176,18 @@ public class TableUtil {
       String text = (columns[i] == null) ? "" : columns[i];
 
       OverflowMode mode = settings.overflowModes[i];
-      int width = settings.colWidths[i];
+      int printableWidth = settings.colWidths[i];
       int customLimit = settings.customOverflowLimits[i];
 
       ListInterface<String> lines;
       if (mode == OverflowMode.TRUNCATE) {
-        lines = new adt.LinkedList<>();
-        lines.add(TextUtil.truncate(text, width));
+        lines = new LinkedList<>();
+        lines.add(TextUtil.truncate(text, printableWidth));
       } else if (mode == OverflowMode.TRUNCATE_AT) {
-        lines = new adt.LinkedList<>();
-        lines.add(TextUtil.truncate(text, customLimit));
+        lines = new LinkedList<>();
+        lines.add(TextUtil.truncate(text, Math.min(customLimit, printableWidth)));
       } else {
-        lines = TextUtil.wrapText(text, width);
+        lines = TextUtil.wrapText(text, printableWidth);
       }
 
       processedCellLines[i] = lines;
@@ -175,13 +199,12 @@ public class TableUtil {
 
     for (int lineIndex = 0; lineIndex < maxLinesRequired; lineIndex++) {
       for (int colIndex = 0; colIndex < columns.length; colIndex++) {
-        System.out.print("║");
+        System.out.print(ConsoleUtil.isRunningInIDE() ? "|" : "║");
 
         ListInterface<String> colLines = processedCellLines[colIndex];
         int totalLinesInCell = (colLines != null) ? colLines.getNumberOfEntries() : 0;
 
-        int totalWidth = settings.colWidths[colIndex];
-        int printableWidth = totalWidth - 2;
+        int printableWidth = settings.colWidths[colIndex];
 
         Align hAlign = settings.hAligns[colIndex];
         VAlign vAlign = settings.vAligns[colIndex];
@@ -230,7 +253,7 @@ public class TableUtil {
 
         System.out.print(" ");
       }
-      System.out.println("║");
+      System.out.println(ConsoleUtil.isRunningInIDE() ? "|" : "║");
     }
   }
 }

@@ -164,13 +164,14 @@ public class AdvanceBookingController {
             new Reservation(
                 standardReservationRepo.generateReservationId(),
                 guest.getGuestId(),
-                standardReservationRepo.generateConfirmationNumber(vipReservationRepo),
+                standardReservationRepo.generateConfirmationNumber(),
                 roomType,
                 Reservation.Status.RESERVED,
                 false,
                 0,
                 LocalDateTime.now(),
-                null);
+                null,
+                false);
 
         standardReservationRepo.addReservation(booking);
         advanceBookingView.displayNewBookingSuccessScreen(booking, guest);

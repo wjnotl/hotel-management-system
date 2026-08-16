@@ -1,5 +1,6 @@
 package view.vip;
 
+import adt.ArrayList;
 import adt.ListInterface;
 import entity.AllocationEntry;
 import entity.Guest;
@@ -12,11 +13,49 @@ import util.TableUtil;
 
 public class VipManageAllocationView {
 
+  public static class AllocationRowDTO {
+    private final String reservationId;
+    private final String guestName;
+    private final String tier;
+    private final String roomAssigned;
+    private final long expirationTimestamp;
+
+    public AllocationRowDTO(
+        String reservationId,
+        String guestName,
+        String tier,
+        String roomAssigned,
+        long expirationTimestamp) {
+      this.reservationId = reservationId;
+      this.guestName = guestName;
+      this.tier = tier;
+      this.roomAssigned = roomAssigned;
+      this.expirationTimestamp = expirationTimestamp;
+    }
+
+    public String getReservationId() {
+      return reservationId;
+    }
+
+    public String getGuestName() {
+      return guestName;
+    }
+
+    public String getTier() {
+      return tier;
+    }
+
+    public String getRoomAssigned() {
+      return roomAssigned;
+    }
+
+    public long getExpirationTimestamp() {
+      return expirationTimestamp;
+    }
+  }
+
   public GetMenuInputResult renderAllocationScreen(
-      ListInterface<AllocationEntry> list,
-      ListInterface<Reservation> reservationList,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
+      ListInterface<AllocationRowDTO> list,
       String search,
       String tier,
       String sort,
@@ -34,16 +73,17 @@ public class VipManageAllocationView {
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
     boolean hasActiveFilters = (search != null || tier != null);
 
-    int[] columnWidths = {4, 25, 12, 18, 18};
+    int[] columnWidths = {4, 11, 22, 10, 15, 18};
 
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.LEFT)
-            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.LEFT)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
-            .setTruncate(1);
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setTruncate(2);
 
     TableUtil.TableSettings headerSettings =
         new TableUtil.TableSettings(columnWidths)
@@ -52,19 +92,22 @@ public class VipManageAllocationView {
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
-            .setTruncate(1);
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setTruncate(2);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"NO.", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"}, headerSettings);
+        new String[] {"NO.", "RES ID", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"},
+        headerSettings);
 
     // WHEN 0 ALLOCATION MATCHES RETURNED:
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-      // Width 81 matches total grid width (4+25+12+18+18 = 77 + 4 internal walls)
+      // Width 95 matches total grid width (80 text + 12 padding + 5 internal walls - 2 empty
+      // padding = 95)
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {81}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {95}).setHAlign(0, TableUtil.Align.CENTER);
 
       String emptyMsg =
           hasActiveFilters
@@ -82,7 +125,8 @@ public class VipManageAllocationView {
         return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'E'});
       }
 
-      // SCENARIO 2: Holding Bay is completely empty -> Remove search, filter, and sort options
+      // SCENARIO 2: Holding Bay is completely empty -> Remove search, filter, and
+      // sort options
       else {
         System.out.println("[R] Refresh Table      [E] Exit to VIP Menu\n");
         return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'R', 'E'});
@@ -97,22 +141,21 @@ public class VipManageAllocationView {
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
     for (int i = startIndex; i <= endIndex; i++) {
-      AllocationEntry entry = list.getEntry(i);
-      if (entry == null) continue;
-
-      Reservation r = findReservationById(reservationList, entry.getReservationId());
-      Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
-      Member m =
-          (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+      AllocationRowDTO item = list.getEntry(i);
+      if (item == null) continue;
 
       int displayNum = i - startIndex + 1;
-      String guestName = (g != null) ? g.getName() : "N/A";
-      String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
-      String roomAssigned = "Room " + entry.getAssignedRoomNumber();
-      String graceTimer = formatTimerCountdown(entry.getExpirationTimestamp());
+      String graceTimer = formatTimerCountdown(item.getExpirationTimestamp());
 
       TableUtil.printTableRow(
-          new String[] {String.valueOf(displayNum), guestName, tierStr, roomAssigned, graceTimer},
+          new String[] {
+            String.valueOf(displayNum),
+            item.getReservationId(),
+            item.getGuestName(),
+            item.getTier(),
+            item.getRoomAssigned(),
+            graceTimer
+          },
           settings);
     }
 
@@ -120,19 +163,43 @@ public class VipManageAllocationView {
     System.out.printf(
         "Page %d / %d (Total Allocated Matches: %d)\n\n", currentPage, totalPages, totalMatches);
     System.out.println("[S] Search Guests      [O] Change Sort Order   [R] Refresh Table");
-    System.out.println("[P] Prev Page          [N] Next Page           [E] Exit to VIP Menu\n");
+
+    StringBuilder navLine = new StringBuilder();
+    ArrayList<Character> validList = new ArrayList<>();
+    validList.add('S');
+    validList.add('O');
+    validList.add('R');
+    validList.add('E');
+
+    if (currentPage > 1) {
+      navLine.append("[P] Prev Page          ");
+      validList.add('P');
+    }
+    if (currentPage < totalPages) {
+      navLine.append("[N] Next Page          ");
+      validList.add('N');
+    }
+
+    if (navLine.length() > 0) {
+      System.out.println(navLine.toString().trim() + "           [E] Exit to VIP Menu\n");
+    } else {
+      System.out.println("[E] Exit to VIP Menu\n");
+    }
+
+    char[] validChars = new char[validList.getNumberOfEntries()];
+    for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
+      validChars[i - 1] = validList.getEntry(i);
+    }
 
     int maxOptionNum = endIndex - startIndex + 1;
     String rangeStr = (maxOptionNum == 1) ? "1" : "1-" + maxOptionNum;
     String promptText = "Select a pending guest number to handle (" + rangeStr + "): ";
 
-    return ConsoleUtil.getMenuInput(
-        promptText, 1, maxOptionNum, new char[] {'S', 'O', 'R', 'P', 'N', 'E'});
+    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, validChars);
   }
 
   public int displayAllocationDetailScreen(
       AllocationEntry entry, Reservation r, Guest g, Member m) {
-
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ALLOCATION DETAILS & SETTLEMENT");
 
@@ -230,12 +297,18 @@ public class VipManageAllocationView {
     System.out.println(
         "   -> Increments strike count by 1. Re-enters queue using calculated score.");
     System.out.println(
-        "   -> Note: Reaching " + maxStrikes + " strikes triggers automatic eviction lockout.");
-    System.out.println("2. Evict & Remove Guest Entirely From System");
-    System.out.println("   -> Cancels reservation permanently and frees the room.");
-    System.out.println("3. Go Back to Allocation Settle Menu\n");
+        "   -> Note: Reaching " + maxStrikes + " strikes triggers automatic eviction lockout.\n");
+    System.out.println("2. Issue Strike ONLY (Do NOT Re-queue)");
+    System.out.println(
+        "   -> Increments strike count by 1. Cancels reservation without re-entering queue.\n");
+    System.out.println("3. Re-queue ONLY (No Strike Issued)");
+    System.out.println(
+        "   -> Returns reservation to waitlist queue without penalizing with a strike.\n");
+    System.out.println("4. Evict & Remove Guest Entirely From System");
+    System.out.println("   -> Cancels reservation permanently and frees the room.\n");
+    System.out.println("5. Back to Allocation Detail Screen\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
   public void displayCheckInSuccessScreen(Reservation r, Guest g, Room room) {
@@ -273,23 +346,50 @@ public class VipManageAllocationView {
 
   public int displayFilterMainMenu(String search, String tier) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("FILTER & SEARCH ALLOCATIONS");
-    System.out.println("Active Search : [ " + (search == null ? "None" : search) + " ]");
-    System.out.println("Active Tier   : [ " + (tier == null ? "ALL" : tier) + " ]\n");
+    ConsoleUtil.printTitleBox("SEARCH & ALLOCATION FILTERS");
+    System.out.println("Active Search  : [ " + (search == null ? "None" : search) + " ]");
+    System.out.println("Active Tier    : [ " + (tier == null ? "ALL" : tier) + " ]\n");
 
-    System.out.println("1. Search Pending Guest Name / Room");
-    System.out.println("2. Filter by Membership Tier");
-    System.out.println("3. Clear All Allocation Filters");
-    System.out.println("4. Back to Allocation Board\n");
+    System.out.println("1. Text Search Submenu");
+    System.out.println("2. Loyalty Tier Submenu");
+    System.out.println("3. Reset All Filters");
+    System.out.println("4. Apply and Return");
+    System.out.println("5. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
-  public String promptSearchInput() {
+  public int displaySearchSubmenu(String currentQuery) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("SEARCH PENDING ALLOCATIONS");
-    System.out.println("Enter the guest name or room string to look up in holding bay:\n");
-    return ConsoleUtil.getStringInput("[ Search Query ]: ");
+    ConsoleUtil.printTitleBox("SEARCH QUERY");
+    System.out.println("Searchable Fields: Reservation ID, Guest Name, Room Number");
+    System.out.println(
+        "Current Search   : [ " + (currentQuery == null ? "None" : currentQuery) + " ]\n");
+    System.out.println("1. Enter Search Term");
+    System.out.println("2. Clear Search Term");
+    System.out.println("3. Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public String promptSearchInput(String currentQuery) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH QUERY");
+    System.out.println("Searchable Fields: Reservation ID, Guest Name, Room Number");
+    System.out.println(
+        "Current Search   : [ " + (currentQuery == null ? "None" : currentQuery) + " ]\n");
+    return ConsoleUtil.getStringInput("Enter search term (Res ID / Guest Name / Room No): ");
+  }
+
+  public void displayRequeuedWithoutStrikeScreen(Guest guest) {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: GUEST RE-QUEUED WITHOUT STRIKE");
+    System.out.println(
+        "Guest "
+            + (guest != null ? guest.getName() : "N/A")
+            + " was re-queued in the waitlist without a strike penalty.");
+    System.out.println("Room holding reservation has been released.\n");
+    ConsoleUtil.printContinueMessage();
   }
 
   public int displayTierSubmenu(String currentTier) {
@@ -308,17 +408,89 @@ public class VipManageAllocationView {
 
   public String displaySortMenu() {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CHANGE ALLOCATION SORT ORDER");
-    System.out.println("1. Time Remaining / Grace Timer Countdown (Low to High)");
-    System.out.println("2. Guest Name Alphabetical (A -> Z)");
-    System.out.println("3. Room Number Order (Low to High)");
-    System.out.println("4. Back\n");
+    ConsoleUtil.printTitleBox("CHANGE SORT ORDER");
+    System.out.println("1. Grace Timer (Low -> High | Expiring Soonest)");
+    System.out.println("2. Grace Timer (High -> Low | Most Time Left)");
+    System.out.println("3. VIP Tier Rank (Diamond -> Silver)");
+    System.out.println("4. VIP Tier Rank (Silver -> Diamond)");
+    System.out.println("5. Guest Name (A -> Z)");
+    System.out.println("6. Guest Name (Z -> A)");
+    System.out.println("7. Room Number (Low -> High)");
+    System.out.println("8. Room Number (High -> Low)");
+    System.out.println("9. Reservation ID (Low -> High)");
+    System.out.println("10. Reservation ID (High -> Low)");
+    System.out.println("11. Back\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 11).getAsInt();
     if (choice == 1) return "TIME REMAINING (LOW -> HIGH)";
-    if (choice == 2) return "GUEST NAME (A -> Z)";
-    if (choice == 3) return "ROOM NUMBER (LOW -> HIGH)";
+    if (choice == 2) return "TIME REMAINING (HIGH -> LOW)";
+    if (choice == 3) return "TIER RANK (DIAMOND -> SILVER)";
+    if (choice == 4) return "TIER RANK (SILVER -> DIAMOND)";
+    if (choice == 5) return "GUEST NAME (A -> Z)";
+    if (choice == 6) return "GUEST NAME (Z -> A)";
+    if (choice == 7) return "ROOM NUMBER (LOW -> HIGH)";
+    if (choice == 8) return "ROOM NUMBER (HIGH -> LOW)";
+    if (choice == 9) return "RESERVATION ID (LOW -> HIGH)";
+    if (choice == 10) return "RESERVATION ID (HIGH -> LOW)";
     return null;
+  }
+
+  public Integer promptStayDuration(AllocationEntry entry, Guest guest) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM ALLOCATION & CHECK-IN");
+    System.out.println(" Target Guest   : " + (guest != null ? guest.getName() : "N/A"));
+    System.out.println(" Room Assigned  : Room " + entry.getAssignedRoomNumber());
+    System.out.println("------------------------------------------------------");
+    System.out.println(" Press ENTER or 'C' to Cancel & Return\n");
+
+    return ConsoleUtil.getIntegerInput(
+        " Enter Duration of Stay (Number of Days/Nights) [1 - 30]: ", 1, 30);
+  }
+
+  public void displayEvictionLockoutScreen(Guest guest) {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: EVICTION LOCKOUT ENFORCED");
+    System.out.println(
+        "Guest "
+            + (guest != null ? guest.getName() : "N/A")
+            + " has accumulated "
+            + (guest != null ? guest.getStrikeCount() : 0)
+            + " strikes (MAX LIMIT REACHED).");
+    System.out.println("Cannot re-enter queue. Reservation evicted and room freed.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  public void displayStrikeIssuedScreen(Guest guest) {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: STRIKE ISSUED & RE-QUEUED");
+    System.out.println(
+        "Guest "
+            + (guest != null ? guest.getName() : "N/A")
+            + " strike count is now "
+            + (guest != null ? guest.getStrikeCount() : 0)
+            + ".");
+    System.out.println("Reservation re-entered waitlist queue.\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  public void displayStrikeIssuedWithoutRequeueScreen(Guest guest) {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: STRIKE ISSUED (RESERVATION CANCELLED)");
+    System.out.println(
+        "Guest "
+            + (guest != null ? guest.getName() : "N/A")
+            + " strike count is now "
+            + (guest != null ? guest.getStrikeCount() : 0)
+            + ".");
+    System.out.println("Reservation cancelled and room freed (NOT re-queued in waitlist).\n");
+    ConsoleUtil.printContinueMessage();
+  }
+
+  public void displayEvictionCompletedScreen() {
+    ConsoleUtil.clearScreen();
+    System.out.println(">> STATUS: EVICTION COMPLETED");
+    System.out.println("Booking record marked as NO_SHOW and removed from active system.\n");
+    ConsoleUtil.printContinueMessage();
   }
 
   private String formatTimerCountdown(long expirationMs) {
@@ -330,32 +502,5 @@ public class VipManageAllocationView {
     long mins = totalSec / 60;
     long secs = totalSec % 60;
     return String.format("%02d:%02d LEFT", mins, secs);
-  }
-
-  private Reservation findReservationById(ListInterface<Reservation> list, String resId) {
-    if (list == null || resId == null) return null;
-    for (int i = 1; i <= list.getNumberOfEntries(); i++) {
-      Reservation r = list.getEntry(i);
-      if (r != null && resId.equalsIgnoreCase(r.getReservationId())) return r;
-    }
-    return null;
-  }
-
-  private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
-    if (guestList == null || guestId == null) return null;
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) return g;
-    }
-    return null;
-  }
-
-  private Member findMember(ListInterface<Member> memberList, String memberId) {
-    if (memberList == null || memberId == null) return null;
-    for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
-      Member m = memberList.getEntry(i);
-      if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) return m;
-    }
-    return null;
   }
 }

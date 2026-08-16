@@ -11,7 +11,7 @@ import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 
 public class ManageGuestCheckOutView {
-  private final GuestInformationView guestInformationView = new GuestInformationView();
+  private final ManageGuestView manageguestview = new ManageGuestView();
 
   // Reused so the check-out receipt matches the one printed from Guest Information exactly.
   public GetMenuInputResult renderCheckOutScreen(
@@ -65,7 +65,7 @@ public class ManageGuestCheckOutView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {74}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {89}).setHAlign(0, TableUtil.Align.CENTER);
 
       boolean hasFilters =
           guestIdFilter != null
@@ -309,7 +309,7 @@ public class ManageGuestCheckOutView {
   }
 
   public void displayReceipt(Guest guest, Billing billing) {
-    guestInformationView.displayReceipt(guest, billing);
+    manageguestview.displayReceipt(guest, billing);
   }
 
   public void displayCheckOutSuccess(Guest guest, Billing billing, Room room) {

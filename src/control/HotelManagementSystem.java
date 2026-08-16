@@ -20,9 +20,12 @@ public class HotelManagementSystem {
   private static MemberRepo memberRepo = new MemberRepo();
   private static RoomRepo roomRepo = new RoomRepo();
   private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
-  private static StandardReservationRepo standardReservationRepo = new StandardReservationRepo();
-  private static VipReservationRepo vipReservationRepo = new VipReservationRepo();
+  private static ReservationRepo reservationRepo = new ReservationRepo();
+  private static StandardReservationRepo standardReservationRepo =
+      new StandardReservationRepo(reservationRepo);
+  private static VipReservationRepo vipReservationRepo = new VipReservationRepo(reservationRepo);
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
+  private static BillingRepo billingRepo = new BillingRepo();
 
   // private static BillingRepo billingRepo = new BillingRepo();
   public static void main(String[] args) {
@@ -32,7 +35,16 @@ public class HotelManagementSystem {
       return;
     }
 
-    VipController.startMidnightStrikeResetScheduler(guestRepo);
+    // Process any holding allocations that expired while offline/shutdown & arm auto-expiration
+    // scheduler
+    VipController.scheduleNextAutoExpirationTask(
+        allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+
+    // Process any boiling transitions that occurred while offline/shutdown & arm boiling scheduler
+    VipController.scheduleNextBoilingTask(
+        vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+
+    VipController.startMidnightStrikeResetScheduler(guestRepo, vipSystemConfigRepo);
 
     while (true) {
       try {
@@ -61,7 +73,14 @@ public class HotelManagementSystem {
                   housekeepingSettingsRepo)
               .start();
         } else if ("4".equals(choice)) {
-          new FrontDeskController().start();
+          new FrontDeskController(
+                  guestRepo,
+                  billingRepo,
+                  reservationRepo,
+                  roomStatusHistoryRepo,
+                  houseKeepingTaskRepo,
+                  roomRepo)
+              .start();
         } else if ("5".equals(choice)) {
           if (ConsoleUtil.showConfirmMessage("Are you sure you want to exit?")) {
             mainMenuView.displayExitMessage();

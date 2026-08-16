@@ -48,7 +48,7 @@ public class ManageRoomStatusView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {42}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {51}).setHAlign(0, TableUtil.Align.CENTER);
 
       boolean hasFilters =
           roomNumberFilter != null || roomTypeFilter != null || roomStatusFilter != null;
@@ -199,19 +199,12 @@ public class ManageRoomStatusView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println("\n-- Room Actions --");
-    System.out.println("1. Assign Room (attach a reservation)");
-    System.out.println("2. Change Room (move current reservation to another room)");
-    System.out.println("3. Mark Room as  VACANT_CLEAN (Available) ");
-    System.out.println("4. Mark Room as Occupied");
-    System.out.println("5. Back to Room List\n");
+    System.out.println("1. Change Room (move current reservation to another room)");
+    System.out.println("2. Mark Room as  VACANT_CLEAN (Available) ");
+    System.out.println("3. Mark Room as Occupied (Unavailable)");
+    System.out.println("4. Back to Room List\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
-  }
-
-  public String promptConfirmationNumberInput() {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("ASSIGN ROOM");
-    return ConsoleUtil.getStringInput("Enter Reservation Confirmation Number [C to cancel]: ");
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   public String promptTargetRoomNumberInput() {
