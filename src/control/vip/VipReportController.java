@@ -924,17 +924,21 @@ public class VipReportController {
           : null;
       Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
+      int strikes = (guest != null) ? guest.getStrikeCount() : 0;
+      int maxStrikes = config.getMaxStrikes(tier);
+      boolean isEvicted = (strikes >= maxStrikes);
+
       if (tier == Member.LoyaltyTier.DIAMOND) {
         dTotal++;
-        if (reservation.getStatus() == Reservation.Status.NO_SHOW)
+        if (isEvicted)
           dEvicted++;
       } else if (tier == Member.LoyaltyTier.GOLD) {
         gTotal++;
-        if (reservation.getStatus() == Reservation.Status.NO_SHOW)
+        if (isEvicted)
           gEvicted++;
       } else {
         sTotal++;
-        if (reservation.getStatus() == Reservation.Status.NO_SHOW)
+        if (isEvicted)
           sEvicted++;
       }
 
@@ -942,18 +946,18 @@ public class VipReportController {
         String rankStr = rank + ".";
         String name = (guest != null) ? guest.getName() : "N/A";
         String tierStr = (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
-        int strikes = (guest != null) ? guest.getStrikeCount() : 0;
         String boiling = reservation.getIsBoiling() ? "[!]" : "[ ]";
-        String resolution = (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
-        if (reservation.getStatus() == Reservation.Status.NO_SHOW) {
-          resolution = "Evicted (Max Strikes Exceeded)";
-        }
+
+        String statusStr = (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
+        String evictedStr = isEvicted ? "YES" : "NO";
+
+        String resId = (reservation.getReservationId() != null) ? reservation.getReservationId() : "N/A";
 
         rows.add(
             new VipReportView.PenaltyReportRowDTO(
-                rankStr, name, tierStr, strikes, boiling, resolution));
+                rankStr, resId, name, tierStr, strikes, boiling, statusStr, evictedStr));
+        rank++;
       }
-      rank++;
     }
 
     double dRate = (dTotal == 0) ? 0.0 : ((double) dEvicted / dTotal) * 100.0;
@@ -1017,9 +1021,11 @@ public class VipReportController {
       String status = (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
       String utilPctStr = calculateGraceUsedPctStr(reservation, member, config);
 
+      String resId = (reservation.getReservationId() != null) ? reservation.getReservationId() : "N/A";
+
       rows.add(
           new VipReportView.HoldingReportRowDTO(
-              rankStr, name, tierStr, allowedGrace, timeUsedStr, status, utilPctStr));
+              rankStr, resId, name, tierStr, allowedGrace, timeUsedStr, status, utilPctStr));
       rank++;
     }
 
