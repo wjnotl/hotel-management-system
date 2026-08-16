@@ -708,9 +708,19 @@ public class VipReportView {
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
     int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {6, 20, 12, 14, 12, 9, 15};
+    int[] columnWidths = {4, 22, 12, 14, 12, 9, 15};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.CENTER);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
@@ -720,12 +730,12 @@ public class VipReportView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {"RANK", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"},
-        settings);
+        headerSettings);
 
     if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {94}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {106}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -792,7 +802,7 @@ public class VipReportView {
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
     int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {6, 22, 12, 10, 10, 28};
+    int[] columnWidths = {4, 24, 12, 10, 10, 28};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
@@ -802,15 +812,24 @@ public class VipReportView {
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.LEFT);
 
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER);
+
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {"RANK", "GUEST NAME", "TIER", "STRIKES", "BOILING", "RESOLUTION STATUS"},
-        settings);
+        headerSettings);
 
     if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {103}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -876,11 +895,21 @@ public class VipReportView {
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
     int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {6, 20, 12, 16, 12, 14, 14};
+    int[] columnWidths = {4, 20, 12, 16, 12, 14, 14};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
             .setHAlign(1, TableUtil.Align.LEFT)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.CENTER);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
@@ -892,12 +921,12 @@ public class VipReportView {
         new String[] {
           "RANK", "GUEST NAME", "TIER", "ALLOWED GRACE", "TIME USED", "HOLD STATUS", "GRACE USED %"
         },
-        settings);
+        headerSettings);
 
     if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {94}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {112}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);

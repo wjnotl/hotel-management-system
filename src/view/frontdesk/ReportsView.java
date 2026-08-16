@@ -86,7 +86,7 @@ public class ReportsView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {107}).setHAlign(0, TableUtil.Align.CENTER);
 
       boolean hasFilters = dateFilter != null || paymentStatusFilter != null;
       String emptyMsg =
@@ -303,7 +303,7 @@ public class ReportsView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {88}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {109}).setHAlign(0, TableUtil.Align.CENTER);
 
       String emptyMsg =
           roomTypeFilter != null

@@ -155,7 +155,8 @@ public class TableUtil {
 
     System.out.print(borders[0]); // Left border
     for (int i = 0; i < settings.colWidths.length; i++) {
-      System.out.print((ConsoleUtil.isRunningInIDE() ? "-" : "═").repeat(settings.colWidths[i]));
+      int cellBorderWidth = settings.colWidths[i] + 2; // Add 2 spaces padding (1 left + 1 right)
+      System.out.print((ConsoleUtil.isRunningInIDE() ? "-" : "═").repeat(cellBorderWidth));
 
       if (i < settings.colWidths.length - 1) {
         System.out.print(borders[1]); // Middle junction
@@ -175,18 +176,18 @@ public class TableUtil {
       String text = (columns[i] == null) ? "" : columns[i];
 
       OverflowMode mode = settings.overflowModes[i];
-      int width = settings.colWidths[i];
+      int printableWidth = settings.colWidths[i];
       int customLimit = settings.customOverflowLimits[i];
 
       ListInterface<String> lines;
       if (mode == OverflowMode.TRUNCATE) {
         lines = new LinkedList<>();
-        lines.add(TextUtil.truncate(text, width));
+        lines.add(TextUtil.truncate(text, printableWidth));
       } else if (mode == OverflowMode.TRUNCATE_AT) {
         lines = new LinkedList<>();
-        lines.add(TextUtil.truncate(text, customLimit));
+        lines.add(TextUtil.truncate(text, Math.min(customLimit, printableWidth)));
       } else {
-        lines = TextUtil.wrapText(text, width);
+        lines = TextUtil.wrapText(text, printableWidth);
       }
 
       processedCellLines[i] = lines;
@@ -203,8 +204,7 @@ public class TableUtil {
         ListInterface<String> colLines = processedCellLines[colIndex];
         int totalLinesInCell = (colLines != null) ? colLines.getNumberOfEntries() : 0;
 
-        int totalWidth = settings.colWidths[colIndex];
-        int printableWidth = totalWidth - 2;
+        int printableWidth = settings.colWidths[colIndex];
 
         Align hAlign = settings.hAligns[colIndex];
         VAlign vAlign = settings.vAligns[colIndex];

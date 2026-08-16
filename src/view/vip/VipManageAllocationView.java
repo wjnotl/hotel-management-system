@@ -104,9 +104,10 @@ public class VipManageAllocationView {
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-      // Width 85 matches total grid width (4+11+22+10+15+18 = 80 + 5 internal walls)
+      // Width 95 matches total grid width (80 text + 12 padding + 5 internal walls - 2 empty
+      // padding = 95)
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {85}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {95}).setHAlign(0, TableUtil.Align.CENTER);
 
       String emptyMsg =
           hasActiveFilters

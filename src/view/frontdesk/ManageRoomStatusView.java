@@ -48,7 +48,7 @@ public class ManageRoomStatusView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {42}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {51}).setHAlign(0, TableUtil.Align.CENTER);
 
       boolean hasFilters =
           roomNumberFilter != null || roomTypeFilter != null || roomStatusFilter != null;

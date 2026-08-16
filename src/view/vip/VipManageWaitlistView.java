@@ -142,7 +142,7 @@ public class VipManageWaitlistView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {88}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {102}).setHAlign(0, TableUtil.Align.CENTER);
 
       String emptyMsg =
           hasActiveFilters

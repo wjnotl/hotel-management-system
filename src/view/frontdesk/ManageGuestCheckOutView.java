@@ -65,7 +65,7 @@ public class ManageGuestCheckOutView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {74}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {89}).setHAlign(0, TableUtil.Align.CENTER);
 
       boolean hasFilters =
           guestIdFilter != null

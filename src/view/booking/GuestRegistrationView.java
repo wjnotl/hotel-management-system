@@ -8,7 +8,7 @@ import util.TextUtil;
 
 public class GuestRegistrationView {
 
-  private static final int[] SPAN_WIDTH = {81};
+  private static final int[] SPAN_WIDTH = {83};
   private static final int[] KV_WIDTHS = {22, 58};
   private static final int SCREEN_WIDTH = 83;
   private static final int TOTAL_STEPS = 5;

@@ -15,8 +15,8 @@ import util.TextUtil;
 public class AdvanceBookingView {
 
   private static final int[] BOOKING_WIDTHS = {5, 12, 22, 14, 24};
-  private static final int[] SPAN_WIDTH = {81};
-  private static final int[] KV_WIDTHS = {22, 58};
+  private static final int[] SPAN_WIDTH = {89};
+  private static final int[] KV_WIDTHS = {22, 66};
   private static final int SCREEN_WIDTH = 83;
 
   public GetMenuInputResult renderAdvanceScreen(
