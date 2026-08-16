@@ -6,6 +6,7 @@ import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import entity.VipSystemConfig;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -142,42 +143,22 @@ public class VipReportController {
                 state.endDate,
                 state.datePresetLabel);
         String sortStr = state.sortAttribute + " (" + state.sortDirection + ")";
-        VipSystemConfig config = configRepo.getConfig();
         GetMenuInputResult result;
 
         ConsoleUtil.clearBuffer();
         ConsoleUtil.startRecording();
 
         if (reportType == 1) {
-          result =
-              reportView.renderSlaReportScreen(
-                  filteredList,
-                  guestRepo.getGuestList(),
-                  memberRepo.getMemberList(),
-                  config,
-                  scopeStr,
-                  sortStr,
-                  state.recordLimit);
+          VipReportView.SlaReportDTO dto = buildSlaReportDTO(filteredList, state.recordLimit);
+          result = reportView.renderSlaReportScreen(dto, scopeStr, sortStr, state.recordLimit);
         } else if (reportType == 2) {
-          result =
-              reportView.renderPenaltyReportScreen(
-                  filteredList,
-                  guestRepo.getGuestList(),
-                  memberRepo.getMemberList(),
-                  config,
-                  scopeStr,
-                  sortStr,
-                  state.recordLimit);
+          VipReportView.PenaltyReportDTO dto =
+              buildPenaltyReportDTO(filteredList, state.recordLimit);
+          result = reportView.renderPenaltyReportScreen(dto, scopeStr, sortStr, state.recordLimit);
         } else {
-          result =
-              reportView.renderHoldingReportScreen(
-                  filteredList,
-                  guestRepo.getGuestList(),
-                  memberRepo.getMemberList(),
-                  config,
-                  scopeStr,
-                  sortStr,
-                  state.recordLimit);
+          VipReportView.HoldingReportDTO dto =
+              buildHoldingReportDTO(filteredList, state.recordLimit);
+          result = reportView.renderHoldingReportScreen(dto, scopeStr, sortStr, state.recordLimit);
         }
 
         if (result == null) {
@@ -791,5 +772,308 @@ public class VipReportController {
     }
 
     return sb.toString();
+  }
+
+  // ==========================================
+  // VIEW MODEL BUILDERS & DATA CALCULATIONS
+  // ==========================================
+
+  private VipReportView.SlaReportDTO buildSlaReportDTO(
+      ListInterface<Reservation> filteredList, int recordLimit) {
+    if (filteredList == null) {
+      return new VipReportView.SlaReportDTO(
+          new ArrayList<>(),
+          new VipReportView.SlaReportSummaryDTO(
+              0, 0, 0, 100.0, 100.0, 0, 0, 0, 100.0, 100.0, 0, 0, 0, 100.0, 100.0),
+          0);
+    }
+
+    int totalMatches = filteredList.getNumberOfEntries();
+    VipSystemConfig config = configRepo.getConfig();
+    ListInterface<Guest> guestList = guestRepo.getGuestList();
+    ListInterface<Member> memberList = memberRepo.getMemberList();
+
+    ListInterface<VipReportView.SlaReportRowDTO> rows = new ArrayList<>();
+    int displayCount =
+        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+
+    int diamondTotal = 0, goldTotal = 0, silverTotal = 0;
+    int diamondSlaMet = 0, goldSlaMet = 0, silverSlaMet = 0;
+
+    for (int i = 1; i <= totalMatches; i++) {
+      Reservation reservation = filteredList.getEntry(i);
+      if (reservation == null) continue;
+
+      Guest guest = guestList.find(g -> g.getGuestId().equalsIgnoreCase(reservation.getGuestId()));
+      Member member =
+          (guest != null && guest.getMemberId() != null)
+              ? memberList.find(m -> m.getMemberId().equalsIgnoreCase(guest.getMemberId()))
+              : null;
+      Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+
+      long wait = calculateWaitMins(reservation);
+      int targetMins =
+          (tier == Member.LoyaltyTier.DIAMOND)
+              ? config.getDiamondPatienceLimitMins()
+              : (tier == Member.LoyaltyTier.GOLD)
+                  ? config.getGoldPatienceLimitMins()
+                  : config.getSilverPatienceLimitMins();
+
+      if (tier == Member.LoyaltyTier.DIAMOND) {
+        diamondTotal++;
+        if (wait <= targetMins) diamondSlaMet++;
+      } else if (tier == Member.LoyaltyTier.GOLD) {
+        goldTotal++;
+        if (wait <= targetMins) goldSlaMet++;
+      } else {
+        silverTotal++;
+        if (wait <= targetMins) silverSlaMet++;
+      }
+
+      if (i <= displayCount) {
+        String rank = i + ".";
+        String name = (guest != null) ? guest.getName() : "N/A";
+        String tierStr =
+            (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+        String room =
+            (reservation.getRoomType() != null) ? reservation.getRoomType().name() : "N/A";
+        int strikes = (guest != null) ? guest.getStrikeCount() : 0;
+        String status = (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
+
+        rows.add(
+            new VipReportView.SlaReportRowDTO(rank, name, tierStr, room, wait, strikes, status));
+      }
+    }
+
+    double dPct = (diamondTotal == 0) ? 100.0 : ((double) diamondSlaMet / diamondTotal) * 100.0;
+    double gPct = (goldTotal == 0) ? 100.0 : ((double) goldSlaMet / goldTotal) * 100.0;
+    double sPct = (silverTotal == 0) ? 100.0 : ((double) silverSlaMet / silverTotal) * 100.0;
+
+    VipReportView.SlaReportSummaryDTO summary =
+        new VipReportView.SlaReportSummaryDTO(
+            diamondTotal,
+            diamondSlaMet,
+            config.getDiamondPatienceLimitMins(),
+            dPct,
+            config.getDiamondSlaTargetPct(),
+            goldTotal,
+            goldSlaMet,
+            config.getGoldPatienceLimitMins(),
+            gPct,
+            config.getGoldSlaTargetPct(),
+            silverTotal,
+            silverSlaMet,
+            config.getSilverPatienceLimitMins(),
+            sPct,
+            config.getSilverSlaTargetPct());
+
+    return new VipReportView.SlaReportDTO(rows, summary, totalMatches);
+  }
+
+  private VipReportView.PenaltyReportDTO buildPenaltyReportDTO(
+      ListInterface<Reservation> filteredList, int recordLimit) {
+    if (filteredList == null) {
+      return new VipReportView.PenaltyReportDTO(
+          new ArrayList<>(),
+          new VipReportView.PenaltyReportSummaryDTO(
+              0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0),
+          0);
+    }
+
+    int totalMatches = filteredList.getNumberOfEntries();
+    VipSystemConfig config = configRepo.getConfig();
+    ListInterface<Guest> guestList = guestRepo.getGuestList();
+    ListInterface<Member> memberList = memberRepo.getMemberList();
+
+    ListInterface<VipReportView.PenaltyReportRowDTO> rows = new ArrayList<>();
+    int displayCount =
+        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+
+    int dTotal = 0, gTotal = 0, sTotal = 0;
+    int dEvicted = 0, gEvicted = 0, sEvicted = 0;
+    int totalStrikes = 0;
+
+    for (int i = 1; i <= totalMatches; i++) {
+      Reservation reservation = filteredList.getEntry(i);
+      if (reservation == null) continue;
+
+      Guest guest = guestList.find(g -> g.getGuestId().equalsIgnoreCase(reservation.getGuestId()));
+      Member member =
+          (guest != null && guest.getMemberId() != null)
+              ? memberList.find(m -> m.getMemberId().equalsIgnoreCase(guest.getMemberId()))
+              : null;
+      Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+
+      if (guest != null) totalStrikes += guest.getStrikeCount();
+
+      if (tier == Member.LoyaltyTier.DIAMOND) {
+        dTotal++;
+        if (reservation.getStatus() == Reservation.Status.NO_SHOW) dEvicted++;
+      } else if (tier == Member.LoyaltyTier.GOLD) {
+        gTotal++;
+        if (reservation.getStatus() == Reservation.Status.NO_SHOW) gEvicted++;
+      } else {
+        sTotal++;
+        if (reservation.getStatus() == Reservation.Status.NO_SHOW) sEvicted++;
+      }
+
+      if (i <= displayCount) {
+        String rank = i + ".";
+        String name = (guest != null) ? guest.getName() : "N/A";
+        String tierStr =
+            (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+        int strikes = (guest != null) ? guest.getStrikeCount() : 0;
+        String boiling = reservation.getIsBoiling() ? "[!]" : "[ ]";
+        String resolution =
+            (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
+        if (reservation.getStatus() == Reservation.Status.NO_SHOW) {
+          resolution = "Evicted (Max Strikes Exceeded)";
+        }
+
+        rows.add(
+            new VipReportView.PenaltyReportRowDTO(
+                rank, name, tierStr, strikes, boiling, resolution));
+      }
+    }
+
+    double dRate = (dTotal == 0) ? 0.0 : ((double) dEvicted / dTotal) * 100.0;
+    double gRate = (gTotal == 0) ? 0.0 : ((double) gEvicted / gTotal) * 100.0;
+    double sRate = (sTotal == 0) ? 0.0 : ((double) sEvicted / sTotal) * 100.0;
+
+    VipReportView.PenaltyReportSummaryDTO summary =
+        new VipReportView.PenaltyReportSummaryDTO(
+            totalStrikes,
+            dTotal,
+            dEvicted,
+            dRate,
+            config.getDiamondEvictionRateTargetPct(),
+            gTotal,
+            gEvicted,
+            gRate,
+            config.getGoldEvictionRateTargetPct(),
+            sTotal,
+            sEvicted,
+            sRate,
+            config.getSilverEvictionRateTargetPct());
+
+    return new VipReportView.PenaltyReportDTO(rows, summary, totalMatches);
+  }
+
+  private VipReportView.HoldingReportDTO buildHoldingReportDTO(
+      ListInterface<Reservation> filteredList, int recordLimit) {
+    if (filteredList == null) {
+      return new VipReportView.HoldingReportDTO(
+          new ArrayList<>(), new VipReportView.HoldingReportSummaryDTO(0, 0.0, 0.0, 0.0), 0);
+    }
+
+    int totalMatches = filteredList.getNumberOfEntries();
+    VipSystemConfig config = configRepo.getConfig();
+    ListInterface<Guest> guestList = guestRepo.getGuestList();
+    ListInterface<Member> memberList = memberRepo.getMemberList();
+
+    ListInterface<VipReportView.HoldingReportRowDTO> rows = new ArrayList<>();
+    int displayCount =
+        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+
+    for (int i = 1; i <= displayCount; i++) {
+      Reservation reservation = filteredList.getEntry(i);
+      if (reservation == null) continue;
+
+      Guest guest = guestList.find(g -> g.getGuestId().equalsIgnoreCase(reservation.getGuestId()));
+      Member member =
+          (guest != null && guest.getMemberId() != null)
+              ? memberList.find(m -> m.getMemberId().equalsIgnoreCase(guest.getMemberId()))
+              : null;
+
+      String rank = i + ".";
+      String name = (guest != null) ? guest.getName() : "N/A";
+      String tierStr =
+          (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+
+      int allowedGrace =
+          (reservation.getAllocatedGraceMins() != null && reservation.getAllocatedGraceMins() > 0)
+              ? reservation.getAllocatedGraceMins()
+              : getGraceMinsForTier(member, config);
+
+      String timeUsedStr = calculateTimeUsedStr(reservation, member, config);
+      String status = (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
+      String utilPctStr = calculateGraceUsedPctStr(reservation, member, config);
+
+      rows.add(
+          new VipReportView.HoldingReportRowDTO(
+              rank, name, tierStr, allowedGrace, timeUsedStr, status, utilPctStr));
+    }
+
+    VipReportView.HoldingReportSummaryDTO summary =
+        new VipReportView.HoldingReportSummaryDTO(
+            totalMatches,
+            config.getDiamondGraceUtilTargetPct(),
+            config.getGoldGraceUtilTargetPct(),
+            config.getSilverGraceUtilTargetPct());
+
+    return new VipReportView.HoldingReportDTO(rows, summary, totalMatches);
+  }
+
+  private long calculateWaitMins(Reservation r) {
+    if (r == null || r.getQueueArrivalTime() == null) return 0;
+    return Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
+  }
+
+  private int getGraceMinsForTier(Member m, VipSystemConfig config) {
+    if (m == null || m.getTier() == null) return config.getSilverGraceWindowMins();
+    switch (m.getTier()) {
+      case DIAMOND:
+        return config.getDiamondGraceWindowMins();
+      case GOLD:
+        return config.getGoldGraceWindowMins();
+      default:
+        return config.getSilverGraceWindowMins();
+    }
+  }
+
+  private String calculateTimeUsedStr(Reservation r, Member m, VipSystemConfig config) {
+    if (r == null) return "N/A";
+
+    int allowedGraceMins =
+        (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
+            ? r.getAllocatedGraceMins()
+            : getGraceMinsForTier(m, config);
+
+    if (r.getStatus() == Reservation.Status.NO_SHOW) {
+      return allowedGraceMins + " Mins";
+    }
+
+    LocalDateTime startTime = r.getAllocatedTime();
+    if (startTime == null) return "N/A";
+
+    LocalDateTime endTime = LocalDateTime.now();
+    long elapsedMins = Duration.between(startTime, endTime).toMinutes();
+    if (elapsedMins < 0) elapsedMins = 0;
+    return elapsedMins + " Mins";
+  }
+
+  private String calculateGraceUsedPctStr(Reservation r, Member m, VipSystemConfig config) {
+    if (r == null) return "0.0";
+
+    int allowedGraceMins =
+        (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
+            ? r.getAllocatedGraceMins()
+            : getGraceMinsForTier(m, config);
+    if (allowedGraceMins <= 0) return "0.0";
+
+    if (r.getStatus() == Reservation.Status.NO_SHOW) {
+      return "100.0";
+    }
+
+    LocalDateTime startTime = r.getAllocatedTime();
+    if (startTime == null) return "0.0";
+
+    LocalDateTime endTime = LocalDateTime.now();
+    long elapsedMins = Duration.between(startTime, endTime).toMinutes();
+    if (elapsedMins < 0) elapsedMins = 0;
+
+    double pct = ((double) elapsedMins / allowedGraceMins) * 100.0;
+    pct = Math.min(100.0, Math.max(0.0, pct));
+    return String.format("%.1f", pct);
   }
 }

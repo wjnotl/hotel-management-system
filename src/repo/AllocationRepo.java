@@ -2,6 +2,7 @@ package repo;
 
 import adt.ArrayList;
 import adt.ListInterface;
+import control.vip.VipController;
 import entity.AllocationEntry;
 import entity.Guest;
 import entity.Member;
@@ -145,7 +146,9 @@ public class AllocationRepo {
                       LocalDateTime.now(),
                       true);
 
-              vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
+              vipReservationRepo.addReservation(newRes);
+              VipController.scheduleNextBoilingTask(
+                  vipReservationRepo, guestRepo, memberRepo, configRepo);
             }
           }
         }
@@ -232,7 +235,9 @@ public class AllocationRepo {
                             LocalDateTime.now(),
                             true);
 
-                    vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
+                    vipReservationRepo.addReservation(newRes);
+                    VipController.scheduleNextBoilingTask(
+                        vipReservationRepo, guestRepo, memberRepo, configRepo);
                   }
                 }
               }

@@ -57,17 +57,12 @@ public class VipManageAllocationController {
         ListInterface<AllocationEntry> filteredList =
             filterAndSortAllocations(rawAllocations, searchQuery, tierFilter, sortCriteria);
 
+        ListInterface<VipManageAllocationView.AllocationRowDTO> displayDtos =
+            buildAllocationRowDTO(filteredList);
+
         ConsoleUtil.GetMenuInputResult result =
             allocationView.renderAllocationScreen(
-                filteredList,
-                vipReservationRepo.getAllReservations(),
-                guestRepo.getGuestList(),
-                memberRepo.getMemberList(),
-                searchQuery,
-                tierFilter,
-                sortCriteria,
-                currentPage,
-                pageSize);
+                displayDtos, searchQuery, tierFilter, sortCriteria, currentPage, pageSize);
 
         if ("E".equalsIgnoreCase(result.input)) {
           break;
@@ -294,7 +289,9 @@ public class VipManageAllocationController {
                     LocalDateTime.now(),
                     true);
 
-            vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.addReservation(newRes);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
@@ -317,8 +314,9 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
-            vipReservationRepo.cancelReservation(
-                reservation, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.cancelReservation(reservation);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
@@ -360,7 +358,9 @@ public class VipManageAllocationController {
                     LocalDateTime.now(),
                     true);
 
-            vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.addReservation(newRes);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
@@ -378,8 +378,9 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
-            vipReservationRepo.cancelReservation(
-                reservation, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.cancelReservation(reservation);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
@@ -654,5 +655,36 @@ public class VipManageAllocationController {
     }
 
     return filtered;
+  }
+
+  private ListInterface<VipManageAllocationView.AllocationRowDTO> buildAllocationRowDTO(
+      ListInterface<AllocationEntry> entries) {
+    if (entries == null) return new ArrayList<>();
+    ListInterface<VipManageAllocationView.AllocationRowDTO> dtos = new ArrayList<>();
+    ListInterface<Reservation> reservationList = vipReservationRepo.getAllReservations();
+
+    for (int i = 1; i <= entries.getNumberOfEntries(); i++) {
+      AllocationEntry entry = entries.getEntry(i);
+      if (entry == null) continue;
+
+      Reservation reservation =
+          reservationList.find(
+              r -> entry.getReservationId().equalsIgnoreCase(r.getReservationId()));
+      Guest guest = (reservation != null) ? guestRepo.findById(reservation.getGuestId()) : null;
+      Member member =
+          (guest != null && guest.getMemberId() != null)
+              ? memberRepo.findById(guest.getMemberId())
+              : null;
+
+      String resId = entry.getReservationId();
+      String guestName = (guest != null) ? guest.getName() : "N/A";
+      String tierStr = (member != null) ? member.getTier().name() : "NON-MEMBER";
+      String roomAssigned = "Room " + entry.getAssignedRoomNumber();
+
+      dtos.add(
+          new VipManageAllocationView.AllocationRowDTO(
+              resId, guestName, tierStr, roomAssigned, entry.getExpirationTimestamp()));
+    }
+    return dtos;
   }
 }

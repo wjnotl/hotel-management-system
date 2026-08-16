@@ -74,11 +74,12 @@ public class VipManageWaitlistController {
         ListInterface<Reservation> filteredList =
             filterAndSortList(rawList, searchQuery, tierFilter, boilingFilter, sortCriteria);
 
+        ListInterface<VipManageWaitlistView.WaitlistRowDTO> displayDtos =
+            buildWaitlistRowDTO(filteredList);
+
         ConsoleUtil.GetMenuInputResult result =
             waitlistView.renderWaitlistScreen(
-                filteredList,
-                guestRepo.getGuestList(),
-                memberRepo.getMemberList(),
+                displayDtos,
                 roomType,
                 searchQuery,
                 tierFilter,
@@ -253,7 +254,9 @@ public class VipManageWaitlistController {
             now,
             true);
 
-    vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
+    vipReservationRepo.addReservation(newRes);
+    VipController.scheduleNextBoilingTask(
+        vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     waitlistView.displayAddGuestSuccessScreen(resId, guest, roomType);
   }
@@ -343,8 +346,9 @@ public class VipManageWaitlistController {
           boolean confirmed = promptCancelConfirmation(selected, g, m);
 
           if (confirmed) {
-            vipReservationRepo.cancelReservation(
-                selected, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.cancelReservation(selected);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
             waitlistView.displayCancelSuccessScreen(selected.getReservationId());
             break;
           }
@@ -420,6 +424,8 @@ public class VipManageWaitlistController {
     roomRepo.updateRoom(vacantRoom);
 
     vipReservationRepo.allocateReservation(reservation, guestRepo, memberRepo, vipSystemConfigRepo);
+    VipController.scheduleNextBoilingTask(
+        vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     int remainingCount = vipReservationRepo.getListByRoomType(roomType).getNumberOfEntries();
 
@@ -660,5 +666,33 @@ public class VipManageWaitlistController {
       default:
         return 0;
     }
+  }
+
+  private ListInterface<VipManageWaitlistView.WaitlistRowDTO> buildWaitlistRowDTO(
+      ListInterface<Reservation> list) {
+    if (list == null) return new ArrayList<>();
+    ListInterface<VipManageWaitlistView.WaitlistRowDTO> dtos = new ArrayList<>();
+
+    for (int i = 1; i <= list.getNumberOfEntries(); i++) {
+      Reservation r = list.getEntry(i);
+      if (r == null) continue;
+
+      Guest g = guestRepo.findById(r.getGuestId());
+      Member m =
+          (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+
+      String resId = r.getReservationId();
+      String guestName = (g != null) ? g.getName() : "N/A";
+      String phoneNo = (g != null && g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
+      String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+      boolean boiling = r.getIsBoiling();
+      int strikes = (g != null) ? g.getStrikeCount() : 0;
+      int score = r.getPriorityScore();
+
+      dtos.add(
+          new VipManageWaitlistView.WaitlistRowDTO(
+              resId, guestName, phoneNo, tierStr, boiling, strikes, score));
+    }
+    return dtos;
   }
 }

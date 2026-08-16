@@ -13,11 +13,49 @@ import util.TableUtil;
 
 public class VipManageAllocationView {
 
+  public static class AllocationRowDTO {
+    private final String reservationId;
+    private final String guestName;
+    private final String tier;
+    private final String roomAssigned;
+    private final long expirationTimestamp;
+
+    public AllocationRowDTO(
+        String reservationId,
+        String guestName,
+        String tier,
+        String roomAssigned,
+        long expirationTimestamp) {
+      this.reservationId = reservationId;
+      this.guestName = guestName;
+      this.tier = tier;
+      this.roomAssigned = roomAssigned;
+      this.expirationTimestamp = expirationTimestamp;
+    }
+
+    public String getReservationId() {
+      return reservationId;
+    }
+
+    public String getGuestName() {
+      return guestName;
+    }
+
+    public String getTier() {
+      return tier;
+    }
+
+    public String getRoomAssigned() {
+      return roomAssigned;
+    }
+
+    public long getExpirationTimestamp() {
+      return expirationTimestamp;
+    }
+  }
+
   public GetMenuInputResult renderAllocationScreen(
-      ListInterface<AllocationEntry> list,
-      ListInterface<Reservation> reservationList,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
+      ListInterface<AllocationRowDTO> list,
       String search,
       String tier,
       String sort,
@@ -102,29 +140,20 @@ public class VipManageAllocationView {
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
     for (int i = startIndex; i <= endIndex; i++) {
-      AllocationEntry entry = list.getEntry(i);
-      if (entry == null) continue;
-
-      Reservation reservation =
-          reservationList.find(
-              r -> entry.getReservationId().equalsIgnoreCase(r.getReservationId()));
-
-      Guest guest = (reservation != null) ? findGuest(guestList, reservation.getGuestId()) : null;
-      Member member =
-          (guest != null && guest.getMemberId() != null)
-              ? findMember(memberList, guest.getMemberId())
-              : null;
+      AllocationRowDTO item = list.getEntry(i);
+      if (item == null) continue;
 
       int displayNum = i - startIndex + 1;
-      String resId = entry.getReservationId();
-      String guestName = (guest != null) ? guest.getName() : "N/A";
-      String tierStr = (member != null) ? member.getTier().name() : "NON-MEMBER";
-      String roomAssigned = "Room " + entry.getAssignedRoomNumber();
-      String graceTimer = formatTimerCountdown(entry.getExpirationTimestamp());
+      String graceTimer = formatTimerCountdown(item.getExpirationTimestamp());
 
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum), resId, guestName, tierStr, roomAssigned, graceTimer
+            String.valueOf(displayNum),
+            item.getReservationId(),
+            item.getGuestName(),
+            item.getTier(),
+            item.getRoomAssigned(),
+            graceTimer
           },
           settings);
     }
@@ -472,23 +501,5 @@ public class VipManageAllocationView {
     long mins = totalSec / 60;
     long secs = totalSec % 60;
     return String.format("%02d:%02d LEFT", mins, secs);
-  }
-
-  private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
-    if (guestList == null || guestId == null) return null;
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) return g;
-    }
-    return null;
-  }
-
-  private Member findMember(ListInterface<Member> memberList, String memberId) {
-    if (memberList == null || memberId == null) return null;
-    for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
-      Member m = memberList.getEntry(i);
-      if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) return m;
-    }
-    return null;
   }
 }

@@ -1,8 +1,14 @@
 package control.vip;
 
+import adt.PriorityQueueInterface;
+import entity.Guest;
+import entity.Member;
+import entity.Reservation;
+import entity.VipSystemConfig;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import repo.AllocationRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
@@ -79,6 +85,138 @@ public class VipController {
         ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  public static void scheduleNextBoilingTask(
+      VipReservationRepo vipReservationRepo,
+      GuestRepo guestRepo,
+      MemberRepo memberRepo,
+      VipSystemConfigRepo configRepo) {
+    if (vipReservationRepo == null || configRepo == null) return;
+    VipSystemConfig config = configRepo.getConfig();
+    var vipReservationList = vipReservationRepo.getAllReservations();
+
+    if (config == null || vipReservationList == null || vipReservationList.isEmpty()) return;
+
+    long now = System.currentTimeMillis();
+
+    // 1. Process any overdue boiling targets synchronously (where targetMs <= now)
+    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
+      Reservation reservation = vipReservationList.getEntry(i);
+      if (reservation != null
+          && reservation.getStatus() == Reservation.Status.WAITING
+          && !reservation.getIsBoiling()
+          && reservation.getQueueArrivalTime() != null) {
+        Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
+        Member m =
+            (g != null && g.getMemberId() != null && memberRepo != null)
+                ? memberRepo.findById(g.getMemberId())
+                : null;
+        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+
+        int limitMins =
+            (tier == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondBoilingLimitMins()
+                : (tier == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldBoilingLimitMins()
+                    : config.getSilverBoilingLimitMins();
+
+        long targetMs =
+            reservation
+                    .getQueueArrivalTime()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+                + (limitMins * 60 * 1000L);
+
+        if (targetMs <= now) {
+          reservation.setBoiling(true);
+          int newScore = vipReservationRepo.calculatePriorityScore(reservation, g, m, config);
+          reservation.setPriorityScore(newScore);
+          vipReservationRepo.updateReservation(reservation);
+
+          PriorityQueueInterface<Reservation> heap =
+              vipReservationRepo.getHeapByRoomType(reservation.getRoomType());
+          if (heap != null) {
+            heap.updatePriority(reservation);
+          }
+        }
+      }
+    }
+
+    // 2. Find the earliest FUTURE boiling target (where targetMs > now)
+    Reservation earliestFutureRes = null;
+    long earliestFutureTargetMs = Long.MAX_VALUE;
+
+    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
+      Reservation reservation = vipReservationList.getEntry(i);
+      if (reservation != null
+          && reservation.getStatus() == Reservation.Status.WAITING
+          && !reservation.getIsBoiling()
+          && reservation.getQueueArrivalTime() != null) {
+        Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
+        Member m =
+            (g != null && g.getMemberId() != null && memberRepo != null)
+                ? memberRepo.findById(g.getMemberId())
+                : null;
+        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+
+        int limitMins =
+            (tier == Member.LoyaltyTier.DIAMOND)
+                ? config.getDiamondBoilingLimitMins()
+                : (tier == Member.LoyaltyTier.GOLD)
+                    ? config.getGoldBoilingLimitMins()
+                    : config.getSilverBoilingLimitMins();
+
+        long targetMs =
+            reservation
+                    .getQueueArrivalTime()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+                + (limitMins * 60 * 1000L);
+
+        if (targetMs > now && targetMs < earliestFutureTargetMs) {
+          earliestFutureTargetMs = targetMs;
+          earliestFutureRes = reservation;
+        }
+      }
+    }
+
+    if (earliestFutureRes == null) return;
+
+    final Reservation targetRes = earliestFutureRes;
+    long delayMs = Math.max(1, earliestFutureTargetMs - now);
+
+    TaskSchedulerUtil.scheduleOnce(
+        delayMs,
+        () -> {
+          try {
+            if (targetRes.getStatus() == Reservation.Status.WAITING && !targetRes.getIsBoiling()) {
+              targetRes.setBoiling(true);
+
+              Guest g = (guestRepo != null) ? guestRepo.findById(targetRes.getGuestId()) : null;
+              Member m =
+                  (g != null && g.getMemberId() != null && memberRepo != null)
+                      ? memberRepo.findById(g.getMemberId())
+                      : null;
+
+              int newScore = vipReservationRepo.calculatePriorityScore(targetRes, g, m, config);
+              targetRes.setPriorityScore(newScore);
+              vipReservationRepo.updateReservation(targetRes);
+
+              PriorityQueueInterface<Reservation> heap =
+                  vipReservationRepo.getHeapByRoomType(targetRes.getRoomType());
+              if (heap != null) {
+                heap.updatePriority(targetRes);
+              }
+
+              // Re-arm scheduler for the NEXT earliest non-boiling reservation
+              scheduleNextBoilingTask(vipReservationRepo, guestRepo, memberRepo, configRepo);
+            }
+          } catch (Exception ignored) {
+          }
+        });
   }
 
   public static void startMidnightStrikeResetScheduler(
