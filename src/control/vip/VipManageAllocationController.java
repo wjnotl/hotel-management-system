@@ -255,7 +255,12 @@ public class VipManageAllocationController {
             continue;
           }
 
-          if (guest != null && guest.getStrikeCount() >= maxStrikes) {
+          if (guest != null) {
+            guest.setStrikeCount(guest.getStrikeCount() + 1);
+            guestRepo.updateGuest(guest);
+          }
+
+          if (guest != null && guest.getStrikeCount() > maxStrikes) {
             if (reservation != null) {
               reservation.setStatus(Reservation.Status.NO_SHOW);
               vipReservationRepo.updateReservation(reservation);
@@ -265,11 +270,6 @@ public class VipManageAllocationController {
                 entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
             allocationView.displayEvictionLockoutScreen(guest);
             return true;
-          }
-
-          if (guest != null) {
-            guest.setStrikeCount(guest.getStrikeCount() + 1);
-            guestRepo.updateGuest(guest);
           }
 
           if (reservation != null) {
