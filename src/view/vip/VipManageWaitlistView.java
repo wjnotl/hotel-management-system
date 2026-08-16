@@ -151,7 +151,7 @@ public class VipManageWaitlistView {
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-      TableUtil.TableSettings emptySettings = new TableUtil.TableSettings(new int[] { 106 }).setHAlign(0,
+      TableUtil.TableSettings emptySettings = new TableUtil.TableSettings(new int[] { 109 }).setHAlign(0,
           TableUtil.Align.CENTER);
 
       String emptyMsg = hasActiveFilters
@@ -266,7 +266,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("CONFIRM ADD GUEST TO WAITLIST", 83);
 
     int[] kvWidths = { 20, 60 };
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
         .setHAlign(0, TableUtil.Align.LEFT)
@@ -333,7 +333,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("CONFIRM ROOM ASSIGNMENT", 83);
 
     int[] kvWidths = { 20, 60 };
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
         .setHAlign(0, TableUtil.Align.LEFT)
@@ -429,7 +429,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("CONFIRM CANCEL RESERVATION", 83);
 
     int[] kvWidths = { 20, 60 };
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
         .setHAlign(0, TableUtil.Align.LEFT)
@@ -499,7 +499,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("ALLOCATION ENTRY CREATED");
 
     int[] kvWidths = { 20, 60 };
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
         .setHAlign(0, TableUtil.Align.LEFT)
@@ -532,7 +532,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("WARNING: MAX STRIKE LIMIT EXCEEDED");
 
     int[] kvWidths = { 20, 60 };
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
         .setHAlign(0, TableUtil.Align.LEFT)
@@ -590,7 +590,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("ENTRY DENIED - NON-MEMBER");
 
     int[] kvWidths = { 20, 60 };
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
         .setHAlign(0, TableUtil.Align.LEFT)
@@ -630,7 +630,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("VALIDATION ERROR", 83);
 
     int[] kvWidths = { 20, 60 };
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
         .setHAlign(0, TableUtil.Align.LEFT)

@@ -202,7 +202,7 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ALLOCATION DETAILS & SETTLEMENT");
 
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
     int[] kvWidths = { 22, 58 };
 
     TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
@@ -258,7 +258,7 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CANCEL ALLOCATION RESOLUTION PATHS");
 
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
     int[] kvWidths = { 20, 60 };
 
     TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
@@ -310,7 +310,7 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK-IN COMPLETE");
 
-    int[] fullWidth = { 81 };
+    int[] fullWidth = { 83 };
     int[] kvWidths = { 20, 60 };
 
     TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
