@@ -788,7 +788,9 @@ public class VipReportView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"RANK", "RES ID", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"},
+        new String[] {
+          "RANK", "RES ID", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"
+        },
         headerSettings);
 
     if (rows == null || rowCount == 0) {
@@ -984,7 +986,14 @@ public class VipReportView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {
-          "RANK", "RES ID", "GUEST NAME", "TIER", "ALLOWED GRACE", "TIME USED", "HOLD STATUS", "GRACE USED %"
+          "RANK",
+          "RES ID",
+          "GUEST NAME",
+          "TIER",
+          "ALLOWED GRACE",
+          "TIME USED",
+          "HOLD STATUS",
+          "GRACE USED %"
         },
         headerSettings);
 
@@ -1170,8 +1179,10 @@ public class VipReportView {
         || summary.getGoldUtilPct() > summary.getGoldTargetPct()
         || summary.getSilverUtilPct() > summary.getSilverTargetPct()) {
       System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
-      System.out.println(" [!] VIP GRACE UTILIZATION ALERT: Grace window usage exceeds target threshold!");
-      System.out.println(" REMEDIATION: Open Settings -> Tweak Operational Rules -> Reduce Grace Window (Mins)");
+      System.out.println(
+          " [!] VIP GRACE UTILIZATION ALERT: Grace window usage exceeds target threshold!");
+      System.out.println(
+          " REMEDIATION: Open Settings -> Tweak Operational Rules -> Reduce Grace Window (Mins)");
       System.out.println(" to release unclaimed held rooms faster.\n");
     } else {
       System.out.println(
