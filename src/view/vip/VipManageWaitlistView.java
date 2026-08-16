@@ -23,9 +23,12 @@ public class VipManageWaitlistView {
     System.out.println("4. Back to VIP Menu\n");
 
     int choice = ConsoleUtil.getMenuInput("Choose a queue to manage: ", 1, 4).getAsInt();
-    if (choice == 1) return Room.RoomType.LUXURY;
-    if (choice == 2) return Room.RoomType.SUITE;
-    if (choice == 3) return Room.RoomType.STANDARD;
+    if (choice == 1)
+      return Room.RoomType.LUXURY;
+    if (choice == 2)
+      return Room.RoomType.SUITE;
+    if (choice == 3)
+      return Room.RoomType.STANDARD;
     return null;
   }
 
@@ -34,6 +37,7 @@ public class VipManageWaitlistView {
     private final String guestName;
     private final String phoneNumber;
     private final String tier;
+    private final String waitTime;
     private final boolean isBoiling;
     private final int strikes;
     private final int priorityScore;
@@ -43,6 +47,7 @@ public class VipManageWaitlistView {
         String guestName,
         String phoneNumber,
         String tier,
+        String waitTime,
         boolean isBoiling,
         int strikes,
         int priorityScore) {
@@ -50,6 +55,7 @@ public class VipManageWaitlistView {
       this.guestName = guestName;
       this.phoneNumber = phoneNumber;
       this.tier = tier;
+      this.waitTime = waitTime;
       this.isBoiling = isBoiling;
       this.strikes = strikes;
       this.priorityScore = priorityScore;
@@ -69,6 +75,10 @@ public class VipManageWaitlistView {
 
     public String getTier() {
       return tier;
+    }
+
+    public String getWaitTime() {
+      return waitTime;
     }
 
     public boolean getIsBoiling() {
@@ -106,34 +116,34 @@ public class VipManageWaitlistView {
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
     boolean hasActiveFilters = (search != null || tier != null || boiling != null);
 
-    int[] columnWidths = {4, 11, 18, 14, 10, 9, 8, 7};
+    int[] columnWidths = { 4, 11, 16, 13, 10, 10, 8, 7, 6 };
 
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER)
-            .setHAlign(7, TableUtil.Align.RIGHT)
-            .setTruncate(2);
+    TableUtil.TableSettings settings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(0, TableUtil.Align.CENTER)
+        .setHAlign(1, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.CENTER)
+        .setHAlign(6, TableUtil.Align.CENTER)
+        .setHAlign(7, TableUtil.Align.CENTER)
+        .setHAlign(8, TableUtil.Align.RIGHT)
+        .setTruncate(2);
 
-    TableUtil.TableSettings headerSettings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(2, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER)
-            .setHAlign(7, TableUtil.Align.CENTER)
-            .setTruncate(2);
+    TableUtil.TableSettings headerSettings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(0, TableUtil.Align.CENTER)
+        .setHAlign(1, TableUtil.Align.CENTER)
+        .setHAlign(2, TableUtil.Align.CENTER)
+        .setHAlign(3, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.CENTER)
+        .setHAlign(6, TableUtil.Align.CENTER)
+        .setHAlign(7, TableUtil.Align.CENTER)
+        .setHAlign(8, TableUtil.Align.CENTER)
+        .setTruncate(2);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {
-          "NO.", "RES ID", "GUEST NAME", "PHONE NO.", "TIER", "BOILING", "STRIKES", "SCORE"
+            "NO.", "RES ID", "GUEST NAME", "PHONE NO.", "TIER", "WAIT TIME", "BOILING", "STRIKES", "SCORE"
         },
         headerSettings);
 
@@ -141,15 +151,14 @@ public class VipManageWaitlistView {
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-      TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {102}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.TableSettings emptySettings = new TableUtil.TableSettings(new int[] { 106 }).setHAlign(0,
+          TableUtil.Align.CENTER);
 
-      String emptyMsg =
-          hasActiveFilters
-              ? "*** NO GUESTS MATCH ACTIVE SEARCH / FILTERS IN " + roomType.name() + " QUEUE ***"
-              : "*** NO GUESTS WAITING IN " + roomType.name() + " QUEUE ***";
+      String emptyMsg = hasActiveFilters
+          ? "*** NO GUESTS MATCH ACTIVE SEARCH / FILTERS IN " + roomType.name() + " QUEUE ***"
+          : "*** NO GUESTS WAITING IN " + roomType.name() + " QUEUE ***";
 
-      TableUtil.printTableRow(new String[] {emptyMsg}, emptySettings);
+      TableUtil.printTableRow(new String[] { emptyMsg }, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
       System.out.println("Page 0 / 0 (Total Matches: 0)\n");
@@ -159,7 +168,7 @@ public class VipManageWaitlistView {
         System.out.println("[A] Add Guest          [S] Search / Filter     [R] Refresh Table");
         System.out.println("[E] Exit to Queue Menu\n");
 
-        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'A', 'S', 'R', 'E'});
+        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] { 'A', 'S', 'R', 'E' });
       }
 
       // SCENARIO 2: Queue is completely empty naturally -> Remove all
@@ -168,7 +177,7 @@ public class VipManageWaitlistView {
         System.out.println(
             "[A] Add Guest          [R] Refresh Table       [E] Exit to Queue Menu\n");
 
-        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'A', 'R', 'E'});
+        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] { 'A', 'R', 'E' });
       }
     }
 
@@ -181,21 +190,23 @@ public class VipManageWaitlistView {
 
     for (int i = startIndex; i <= endIndex; i++) {
       WaitlistRowDTO item = list.getEntry(i);
-      if (item == null) continue;
+      if (item == null)
+        continue;
 
       int displayNum = i - startIndex + 1;
       String boilingStr = item.getIsBoiling() ? "[!]" : "[ ]";
 
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum),
-            item.getReservationId(),
-            item.getGuestName(),
-            item.getPhoneNumber(),
-            item.getTier(),
-            boilingStr,
-            String.valueOf(item.getStrikes()),
-            String.valueOf(item.getPriorityScore())
+              String.valueOf(displayNum),
+              item.getReservationId(),
+              item.getGuestName(),
+              item.getPhoneNumber(),
+              item.getTier(),
+              item.getWaitTime(),
+              boilingStr,
+              String.valueOf(item.getStrikes()),
+              String.valueOf(item.getPriorityScore())
           },
           settings);
     }
@@ -254,141 +265,133 @@ public class VipManageWaitlistView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CONFIRM ADD GUEST TO WAITLIST", 83);
 
-    int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] kvWidths = { 20, 60 };
+    int[] fullWidth = { 81 };
 
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
     // Section 1: Guest Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "GUEST DETAILS" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
-    TableUtil.printTableRow(new String[] {"Guest ID", g.getGuestId()}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Guest ID", g.getGuestId() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(new String[] {"Guest Name", g.getName()}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Guest Name", g.getName() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "IC / Passport No", (g.getIcNumber() != null ? g.getIcNumber() : g.getPassportNumber())
+            "IC / Passport No", (g.getIcNumber() != null ? g.getIcNumber() : g.getPassportNumber())
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Phone Number", (g.getPhoneNumber() != null ? g.getPhoneNumber() : "N/A")},
+        new String[] { "Phone Number", (g.getPhoneNumber() != null ? g.getPhoneNumber() : "N/A") },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Email Address", (g.getEmail() != null ? g.getEmail() : "N/A")}, kvSettings);
+        new String[] { "Email Address", (g.getEmail() != null ? g.getEmail() : "N/A") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
 
     // Section 2: Loyalty & Priority
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"LOYALTY & PRIORITY"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "LOYALTY & PRIORITY" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
-        new String[] {"Loyalty Member ID", (g.getMemberId() != null ? g.getMemberId() : "N/A")},
+        new String[] { "Loyalty Member ID", (g.getMemberId() != null ? g.getMemberId() : "N/A") },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Loyalty Tier", (m != null ? m.getTier().name() : "NON-MEMBER")}, kvSettings);
+        new String[] { "Loyalty Tier", (m != null ? m.getTier().name() : "NON-MEMBER") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Strike Count", String.valueOf(g.getStrikeCount())}, kvSettings);
+        new String[] { "Strike Count", String.valueOf(g.getStrikeCount()) }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(new String[] {"Target Queue", roomType.name()}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Target Queue", roomType.name() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Calculated Score", String.valueOf(baseScore)}, kvSettings);
+        new String[] { "Calculated Score", String.valueOf(baseScore) }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
-    GetMenuInputResult input =
-        ConsoleUtil.getMenuInput(
-            "Add this guest to the " + roomType.name() + " waitlist queue? (Y/N): ",
-            new char[] {'Y', 'N'});
+    GetMenuInputResult input = ConsoleUtil.getMenuInput(
+        "Add this guest to the " + roomType.name() + " waitlist queue? (Y/N): ",
+        new char[] { 'Y', 'N' });
     return "Y".equalsIgnoreCase(input.input);
   }
 
   public boolean displayDequeueConfirmationScreen(
       Reservation r, Guest g, Member m, Room room, int graceMins) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CONFIRM VIP ROOM ALLOCATION", 83);
+    ConsoleUtil.printTitleBox("CONFIRM ROOM ASSIGNMENT", 83);
 
-    int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] kvWidths = { 20, 60 };
+    int[] fullWidth = { 81 };
 
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
     // Section 1: Reservation & Booking Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"RESERVATION & BOOKING DETAILS"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "RESERVATION & BOOKING DETAILS" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
-    TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Reservation ID", r.getReservationId() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Confirmation Code", r.getConfirmationNumber()}, kvSettings);
+        new String[] { "Requested Room Type", r.getRoomType().name() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Requested Room Type", r.getRoomType().name()}, kvSettings);
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(
-        new String[] {"Queue Arrival Time", formatTime(r.getQueueArrivalTime())}, kvSettings);
+        new String[] { "Queue Arrival Time", formatTime(r.getQueueArrivalTime()) }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
 
     // Section 2: Guest & Loyalty Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"GUEST & LOYALTY DETAILS"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "GUEST & LOYALTY DETAILS" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
-        new String[] {"Guest ID", (g != null ? g.getGuestId() : r.getGuestId())}, kvSettings);
+        new String[] { "Guest ID", (g != null ? g.getGuestId() : r.getGuestId()) }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
+        new String[] { "Guest Name", (g != null ? g.getName() : "N/A") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "IC / Passport No",
-          (g != null ? (g.getIcNumber() != null ? g.getIcNumber() : g.getPassportNumber()) : "N/A")
+            "IC / Passport No",
+            (g != null ? (g.getIcNumber() != null ? g.getIcNumber() : g.getPassportNumber()) : "N/A")
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "Phone Number", (g != null && g.getPhoneNumber() != null ? g.getPhoneNumber() : "N/A")
+            "Phone Number", (g != null && g.getPhoneNumber() != null ? g.getPhoneNumber() : "N/A")
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "Loyalty Member ID", (g != null && g.getMemberId() != null ? g.getMemberId() : "N/A")
+            "Loyalty Member ID", (g != null && g.getMemberId() != null ? g.getMemberId() : "N/A")
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Loyalty Tier", (m != null ? m.getTier().name() : "NON-MEMBER")}, kvSettings);
+        new String[] { "Loyalty Tier", (m != null ? m.getTier().name() : "NON-MEMBER") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Strike Count", String.valueOf(g != null ? g.getStrikeCount() : 0)},
+        new String[] { "Strike Count", String.valueOf(g != null ? g.getStrikeCount() : 0) },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
@@ -396,29 +399,28 @@ public class VipManageWaitlistView {
 
     // Section 3: Room Allocation Hold
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"ROOM ALLOCATION HOLD"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "ROOM ALLOCATION HOLD" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
-        new String[] {"Priority Score", String.valueOf(r.getPriorityScore())}, kvSettings);
+        new String[] { "Priority Score", String.valueOf(r.getPriorityScore()) }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Boiling Status", (r.getIsBoiling() ? "BOILING [!]" : "NORMAL [ ]")},
+        new String[] { "Boiling Status", (r.getIsBoiling() ? "BOILING [!]" : "NORMAL [ ]") },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "Assigned Room No", room.getRoomNumber() + " (" + room.getRoomType().name() + ")"
+            "Assigned Room No", room.getRoomNumber() + " (" + room.getRoomType().name() + ")"
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(new String[] {"Hold Expiration", graceMins + " Minutes"}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Hold Expiration", graceMins + " Mins" }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
-    GetMenuInputResult input =
-        ConsoleUtil.getMenuInput(
-            "Assign room & create allocation entry? (Y/N): ", new char[] {'Y', 'N'});
+    GetMenuInputResult input = ConsoleUtil.getMenuInput(
+        "Assign room & hold for guest? (Y/N): ", new char[] { 'Y', 'N' });
     return "Y".equalsIgnoreCase(input.input);
   }
 
@@ -426,69 +428,63 @@ public class VipManageWaitlistView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CONFIRM CANCEL RESERVATION", 83);
 
-    int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] kvWidths = { 20, 60 };
+    int[] fullWidth = { 81 };
 
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
     // Section 1: Reservation Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"RESERVATION DETAILS"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "RESERVATION DETAILS" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
-    TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Reservation ID", r.getReservationId() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Confirmation Code", r.getConfirmationNumber()}, kvSettings);
+        new String[] { "Requested Room Type", r.getRoomType().name() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Requested Room Type", r.getRoomType().name()}, kvSettings);
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(
-        new String[] {"Queue Arrival Time", formatTime(r.getQueueArrivalTime())}, kvSettings);
+        new String[] { "Queue Arrival Time", formatTime(r.getQueueArrivalTime()) }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
 
     // Section 2: Guest Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "GUEST DETAILS" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
-        new String[] {"Guest ID", (g != null ? g.getGuestId() : r.getGuestId())}, kvSettings);
+        new String[] { "Guest ID", (g != null ? g.getGuestId() : r.getGuestId()) }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
+        new String[] { "Guest Name", (g != null ? g.getName() : "N/A") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "Phone Number", (g != null && g.getPhoneNumber() != null ? g.getPhoneNumber() : "N/A")
+            "Phone Number", (g != null && g.getPhoneNumber() != null ? g.getPhoneNumber() : "N/A")
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Loyalty Tier", (m != null ? m.getTier().name() : "NON-MEMBER")}, kvSettings);
+        new String[] { "Loyalty Tier", (m != null ? m.getTier().name() : "NON-MEMBER") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Priority Score", String.valueOf(r.getPriorityScore())}, kvSettings);
+        new String[] { "Priority Score", String.valueOf(r.getPriorityScore()) }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Strike Count", String.valueOf(g != null ? g.getStrikeCount() : 0)},
+        new String[] { "Strike Count", String.valueOf(g != null ? g.getStrikeCount() : 0) },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
-    GetMenuInputResult input =
-        ConsoleUtil.getMenuInput(
-            "Are you sure you want to remove this reservation from the waitlist? (Y/N): ",
-            new char[] {'Y', 'N'});
+    GetMenuInputResult input = ConsoleUtil.getMenuInput(
+        "Are you sure you want to remove this reservation from the waitlist? (Y/N): ",
+        new char[] { 'Y', 'N' });
     return "Y".equalsIgnoreCase(input.input);
   }
 
@@ -502,34 +498,29 @@ public class VipManageWaitlistView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ALLOCATION ENTRY CREATED");
 
-    int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] kvWidths = { 20, 60 };
+    int[] fullWidth = { 81 };
 
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"STATUS: ROOM HELD IN MANAGE ALLOCATION"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "STATUS: ROOM HELD IN MANAGE ALLOCATION" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
-    TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Reservation ID", r.getReservationId() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Confirmation Code", r.getConfirmationNumber()}, kvSettings);
+        new String[] { "Guest Name", (g != null ? g.getName() : "N/A") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
+        new String[] { "Assigned Room", entry.getAssignedRoomNumber() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Assigned Room", entry.getAssignedRoomNumber()}, kvSettings);
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(
-        new String[] {"Remaining in Queue", remainingWaitlistCount + " Guests"}, kvSettings);
+        new String[] { "Remaining in Queue", remainingWaitlistCount + " Guests" }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
@@ -540,36 +531,34 @@ public class VipManageWaitlistView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("WARNING: MAX STRIKE LIMIT EXCEEDED");
 
-    int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] kvWidths = { 20, 60 };
+    int[] fullWidth = { 81 };
 
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"STATUS: [!] ACCOUNT FLAGGED / EVICTION LOCKOUT"}, fullSettings);
+        new String[] { "STATUS: [!] ACCOUNT FLAGGED / EVICTION LOCKOUT" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
-        new String[] {"Target Guest", g.getName() + " (" + g.getGuestId() + ")"}, kvSettings);
+        new String[] { "Target Guest", g.getName() + " (" + g.getGuestId() + ")" }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Member Tier", (m != null ? m.getTier().name() : "NON-MEMBER")}, kvSettings);
+        new String[] { "Member Tier", (m != null ? m.getTier().name() : "NON-MEMBER") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Strikes Today", g.getStrikeCount() + " / " + maxStrikes}, kvSettings);
+        new String[] { "Strikes Today", g.getStrikeCount() + " / " + maxStrikes }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "System Notice",
-          "Guest has exceeded maximum no-show strikes. Authorization required to grant waitlist"
-              + " entry."
+            "System Notice",
+            "Guest has exceeded maximum no-show strikes. Authorization required to grant waitlist"
+                + " entry."
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
@@ -591,9 +580,8 @@ public class VipManageWaitlistView {
         " This will reset the guest's strike count from "
             + (g != null ? g.getStrikeCount() : 0)
             + " to 0.\n");
-    GetMenuInputResult input =
-        ConsoleUtil.getMenuInput(
-            "Authorize override and reset strikes to 0? (Y/N): ", new char[] {'Y', 'N'});
+    GetMenuInputResult input = ConsoleUtil.getMenuInput(
+        "Authorize override and reset strikes to 0? (Y/N): ", new char[] { 'Y', 'N' });
     return "Y".equalsIgnoreCase(input.input);
   }
 
@@ -601,36 +589,34 @@ public class VipManageWaitlistView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ENTRY DENIED - NON-MEMBER");
 
-    int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] kvWidths = { 20, 60 };
+    int[] fullWidth = { 81 };
 
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"STATUS: [X] ENTRY DENIED - NON-MEMBER PROFILE"}, fullSettings);
+        new String[] { "STATUS: [X] ENTRY DENIED - NON-MEMBER PROFILE" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
-        new String[] {"Target Guest", g.getName() + " (" + g.getGuestId() + ")"}, kvSettings);
+        new String[] { "Target Guest", g.getName() + " (" + g.getGuestId() + ")" }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "Loyalty Member", (g.getMemberId() != null ? g.getMemberId() : "NONE (Not a Member)")
+            "Loyalty Member", (g.getMemberId() != null ? g.getMemberId() : "NONE (Not a Member)")
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "System Policy",
-          "VIP Waitlist access is strictly reserved for Loyalty Members (Diamond, Gold, Silver). "
-              + "Non-members cannot join the VIP waitlist queue."
+            "System Policy",
+            "VIP Waitlist access is strictly reserved for Loyalty Members (Diamond, Gold, Silver). "
+                + "Non-members cannot join the VIP waitlist queue."
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
@@ -643,28 +629,26 @@ public class VipManageWaitlistView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("VALIDATION ERROR", 83);
 
-    int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] kvWidths = { 20, 60 };
+    int[] fullWidth = { 81 };
 
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"STATUS: [X] CUSTOMER NOT FOUND"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "STATUS: [X] CUSTOMER NOT FOUND" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
-    TableUtil.printTableRow(new String[] {"Searched Term", searchedTerm}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Searched Term", searchedTerm }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "System Notice",
-          "The identifier typed does not match any registered guest. Please verify the reference"
-              + " code or card ID."
+            "System Notice",
+            "The identifier typed does not match any registered guest. Please verify the reference"
+                + " code or card ID."
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
@@ -754,23 +738,33 @@ public class VipManageWaitlistView {
     System.out.println("11. Back\n");
 
     int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 11).getAsInt();
-    if (choice == 1) return "SCORE (HIGH -> LOW)";
-    if (choice == 2) return "SCORE (LOW -> HIGH)";
-    if (choice == 3) return "STRIKES (LOWEST -> HIGHEST)";
-    if (choice == 4) return "STRIKES (HIGHEST -> LOWEST)";
-    if (choice == 5) return "TIER RANK (DIAMOND -> SILVER)";
-    if (choice == 6) return "TIER RANK (SILVER -> DIAMOND)";
-    if (choice == 7) return "WAIT TIME (LONGEST -> SHORTEST)";
-    if (choice == 8) return "WAIT TIME (SHORTEST -> LONGEST)";
-    if (choice == 9) return "RESERVATION ID (LOW -> HIGH)";
-    if (choice == 10) return "RESERVATION ID (HIGH -> LOW)";
+    if (choice == 1)
+      return "SCORE (HIGH -> LOW)";
+    if (choice == 2)
+      return "SCORE (LOW -> HIGH)";
+    if (choice == 3)
+      return "STRIKES (LOWEST -> HIGHEST)";
+    if (choice == 4)
+      return "STRIKES (HIGHEST -> LOWEST)";
+    if (choice == 5)
+      return "TIER RANK (DIAMOND -> SILVER)";
+    if (choice == 6)
+      return "TIER RANK (SILVER -> DIAMOND)";
+    if (choice == 7)
+      return "WAIT TIME (LONGEST -> SHORTEST)";
+    if (choice == 8)
+      return "WAIT TIME (SHORTEST -> LONGEST)";
+    if (choice == 9)
+      return "RESERVATION ID (LOW -> HIGH)";
+    if (choice == 10)
+      return "RESERVATION ID (HIGH -> LOW)";
     return null;
   }
 
   public int displayGuestActionSubmenu(Reservation r) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("QUEUE ACTION: " + r.getReservationId());
-    System.out.println("1. Dequeue & Assign Room");
+    ConsoleUtil.printTitleBox("WAITLIST ACTION: " + r.getReservationId());
+    System.out.println("1. Assign Room & Hold");
     System.out.println("2. Cancel Reservation");
     System.out.println("3. Back\n");
 
@@ -806,39 +800,39 @@ public class VipManageWaitlistView {
   }
 
   private String formatTime(LocalDateTime dateTime) {
-    if (dateTime == null) return "N/A";
+    if (dateTime == null)
+      return "N/A";
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
     return dateTime.format(formatter);
   }
 
   public Guest displayGuestDisambiguationScreen(
       ListInterface<Guest> matches, ListInterface<Member> memberList, String searchQuery) {
-    if (matches == null || matches.isEmpty()) return null;
+    if (matches == null || matches.isEmpty())
+      return null;
 
     int pageSize = 10;
     int totalMatches = matches.getNumberOfEntries();
     int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
     int currentPage = 1;
 
-    int[] columnWidths = {4, 10, 18, 18, 14, 18};
+    int[] columnWidths = { 4, 10, 18, 18, 14, 18 };
 
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setTruncate(2);
+    TableUtil.TableSettings settings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(0, TableUtil.Align.CENTER)
+        .setHAlign(1, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.CENTER)
+        .setTruncate(2);
 
-    TableUtil.TableSettings headerSettings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(2, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setTruncate(2);
+    TableUtil.TableSettings headerSettings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(0, TableUtil.Align.CENTER)
+        .setHAlign(1, TableUtil.Align.CENTER)
+        .setHAlign(2, TableUtil.Align.CENTER)
+        .setHAlign(3, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.CENTER)
+        .setTruncate(2);
 
     while (true) {
       ConsoleUtil.clearScreen();
@@ -854,7 +848,7 @@ public class VipManageWaitlistView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
       TableUtil.printTableRow(
           new String[] {
-            "NO.", "GUEST ID", "GUEST NAME", "IC / PASSPORT NO.", "PHONE NO.", "MEMBER TIER"
+              "NO.", "GUEST ID", "GUEST NAME", "IC / PASSPORT NO.", "PHONE NO.", "MEMBER TIER"
           },
           headerSettings);
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
@@ -865,20 +859,20 @@ public class VipManageWaitlistView {
 
       for (int i = startIndex; i <= endIndex; i++) {
         Guest g = matches.getEntry(i);
-        if (g == null) continue;
+        if (g == null)
+          continue;
 
         Member m = (g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
-        String icOrPass =
-            (g.getIcNumber() != null && !g.getIcNumber().isEmpty())
-                ? g.getIcNumber()
-                : (g.getPassportNumber() != null ? g.getPassportNumber() : "N/A");
+        String icOrPass = (g.getIcNumber() != null && !g.getIcNumber().isEmpty())
+            ? g.getIcNumber()
+            : (g.getPassportNumber() != null ? g.getPassportNumber() : "N/A");
         String phone = (g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
         String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
 
         int displayNum = i - startIndex + 1;
         TableUtil.printTableRow(
             new String[] {
-              String.valueOf(displayNum), g.getGuestId(), g.getName(), icOrPass, phone, tierStr
+                String.valueOf(displayNum), g.getGuestId(), g.getName(), icOrPass, phone, tierStr
             },
             settings);
       }
@@ -910,9 +904,8 @@ public class VipManageWaitlistView {
 
       try {
         String rangeStr = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
-        GetMenuInputResult input =
-            ConsoleUtil.getMenuInput(
-                "Select guest index (" + rangeStr + ") or command: ", 1, rowsOnPage, validChars);
+        GetMenuInputResult input = ConsoleUtil.getMenuInput(
+            "Select guest index (" + rangeStr + ") or command: ", 1, rowsOnPage, validChars);
 
         if (!input.isNumber) {
           char cmd = input.input.toUpperCase().charAt(0);
@@ -942,10 +935,12 @@ public class VipManageWaitlistView {
   }
 
   private Member findMember(ListInterface<Member> memberList, String memberId) {
-    if (memberList == null || memberId == null) return null;
+    if (memberList == null || memberId == null)
+      return null;
     for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
       Member m = memberList.getEntry(i);
-      if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) return m;
+      if (m != null && memberId.equalsIgnoreCase(m.getMemberId()))
+        return m;
     }
     return null;
   }

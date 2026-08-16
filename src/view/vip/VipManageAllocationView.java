@@ -73,48 +73,46 @@ public class VipManageAllocationView {
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
     boolean hasActiveFilters = (search != null || tier != null);
 
-    int[] columnWidths = {4, 11, 22, 10, 15, 18};
+    int[] columnWidths = { 4, 11, 22, 10, 15, 18 };
 
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(2, TableUtil.Align.LEFT)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setTruncate(2);
+    TableUtil.TableSettings settings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(0, TableUtil.Align.CENTER)
+        .setHAlign(1, TableUtil.Align.CENTER)
+        .setHAlign(2, TableUtil.Align.LEFT)
+        .setHAlign(3, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.CENTER)
+        .setTruncate(2);
 
-    TableUtil.TableSettings headerSettings =
-        new TableUtil.TableSettings(columnWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.CENTER)
-            .setHAlign(2, TableUtil.Align.CENTER)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setTruncate(2);
+    TableUtil.TableSettings headerSettings = new TableUtil.TableSettings(columnWidths)
+        .setHAlign(0, TableUtil.Align.CENTER)
+        .setHAlign(1, TableUtil.Align.CENTER)
+        .setHAlign(2, TableUtil.Align.CENTER)
+        .setHAlign(3, TableUtil.Align.CENTER)
+        .setHAlign(4, TableUtil.Align.CENTER)
+        .setHAlign(5, TableUtil.Align.CENTER)
+        .setTruncate(2);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"NO.", "RES ID", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"},
+        new String[] { "NO.", "RES ID", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER" },
         headerSettings);
 
     // WHEN 0 ALLOCATION MATCHES RETURNED:
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-      // Width 95 matches total grid width (80 text + 12 padding + 5 internal walls - 2 empty
+      // Width 95 matches total grid width (80 text + 12 padding + 5 internal walls -
+      // 2 empty
       // padding = 95)
-      TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {95}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.TableSettings emptySettings = new TableUtil.TableSettings(new int[] { 95 }).setHAlign(0,
+          TableUtil.Align.CENTER);
 
-      String emptyMsg =
-          hasActiveFilters
-              ? "*** NO PENDING ALLOCATIONS FOUND FOR ACTIVE FILTERS ***"
-              : "*** NO ROOM ALLOCATIONS PENDING ***";
+      String emptyMsg = hasActiveFilters
+          ? "*** NO PENDING ALLOCATIONS FOUND FOR ACTIVE FILTERS ***"
+          : "*** NO ROOM ALLOCATIONS PENDING ***";
 
-      TableUtil.printTableRow(new String[] {emptyMsg}, emptySettings);
+      TableUtil.printTableRow(new String[] { emptyMsg }, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
       System.out.println("Page 0 / 0 (Total Allocated Matches: 0)\n");
@@ -122,14 +120,14 @@ public class VipManageAllocationView {
       // SCENARIO 1: Filters Active -> Allow staff to adjust/clear filters or refresh
       if (hasActiveFilters) {
         System.out.println("[S] Search / Filter    [R] Refresh Table       [E] Exit to VIP Menu\n");
-        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'E'});
+        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] { 'S', 'R', 'E' });
       }
 
       // SCENARIO 2: Holding Bay is completely empty -> Remove search, filter, and
       // sort options
       else {
         System.out.println("[R] Refresh Table      [E] Exit to VIP Menu\n");
-        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'R', 'E'});
+        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] { 'R', 'E' });
       }
     }
 
@@ -142,19 +140,20 @@ public class VipManageAllocationView {
 
     for (int i = startIndex; i <= endIndex; i++) {
       AllocationRowDTO item = list.getEntry(i);
-      if (item == null) continue;
+      if (item == null)
+        continue;
 
       int displayNum = i - startIndex + 1;
       String graceTimer = formatTimerCountdown(item.getExpirationTimestamp());
 
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum),
-            item.getReservationId(),
-            item.getGuestName(),
-            item.getTier(),
-            item.getRoomAssigned(),
-            graceTimer
+              String.valueOf(displayNum),
+              item.getReservationId(),
+              item.getGuestName(),
+              item.getTier(),
+              item.getRoomAssigned(),
+              graceTimer
           },
           settings);
     }
@@ -203,54 +202,52 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ALLOCATION DETAILS & SETTLEMENT");
 
-    int[] fullWidth = {81};
-    int[] kvWidths = {22, 58};
+    int[] fullWidth = { 81 };
+    int[] kvWidths = { 22, 58 };
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"HOLDING BAY ALLOCATION SUMMARY"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "HOLDING BAY ALLOCATION SUMMARY" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
-        new String[] {"Reservation ID", (r != null ? r.getReservationId() : "N/A")}, kvSettings);
+        new String[] { "Reservation ID", (r != null ? r.getReservationId() : "N/A") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
+        new String[] { "Guest Name", (g != null ? g.getName() : "N/A") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Phone Number", (g != null ? g.getPhoneNumber() : "N/A")}, kvSettings);
+        new String[] { "Phone Number", (g != null ? g.getPhoneNumber() : "N/A") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Membership Tier", (m != null ? m.getTier().name() : "NON-MEMBER")},
+        new String[] { "Membership Tier", (m != null ? m.getTier().name() : "NON-MEMBER") },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "Assigned Room", "Room " + (entry != null ? entry.getAssignedRoomNumber() : "N/A")
+            "Assigned Room", "Room " + (entry != null ? entry.getAssignedRoomNumber() : "N/A")
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Current Strikes", (g != null ? g.getStrikeCount() : 0) + " strikes"},
+        new String[] { "Current Strikes", (g != null ? g.getStrikeCount() : 0) + " strikes" },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "Grace Countdown",
-          formatTimerCountdown(entry != null ? entry.getExpirationTimestamp() : 0)
+            "Grace Countdown",
+            formatTimerCountdown(entry != null ? entry.getExpirationTimestamp() : 0)
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println("\nSelect an action to proceed:");
     System.out.println(
-        "1. Confirm Allocate (Guest arrived, prompt stay duration & complete check-in)");
+        "1. Complete Check-In (Guest arrived, prompt stay duration & generate confirmation code)");
     System.out.println("2. Cancel Allocation (Guest no-show / resolve penalty path)");
     System.out.println("3. Go Back to Allocation List\n");
 
@@ -261,33 +258,31 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CANCEL ALLOCATION RESOLUTION PATHS");
 
-    int[] fullWidth = {81};
-    int[] kvWidths = {20, 60};
+    int[] fullWidth = { 81 };
+    int[] kvWidths = { 20, 60 };
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"NO-SHOW EVICTION PROCESSING"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "NO-SHOW EVICTION PROCESSING" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(
         new String[] {
-          "Target Profile",
-          (g != null ? g.getName() : "N/A") + " (" + (g != null ? g.getGuestId() : "N/A") + ")"
+            "Target Profile",
+            (g != null ? g.getName() : "N/A") + " (" + (g != null ? g.getGuestId() : "N/A") + ")"
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Member Tier", (m != null ? m.getTier().name() : "NON-MEMBER")}, kvSettings);
+        new String[] { "Member Tier", (m != null ? m.getTier().name() : "NON-MEMBER") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {
-          "Strike Count", String.valueOf(g != null ? g.getStrikeCount() : 0) + " / " + maxStrikes
+            "Strike Count", String.valueOf(g != null ? g.getStrikeCount() : 0) + " / " + maxStrikes
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
@@ -315,29 +310,36 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK-IN COMPLETE");
 
-    int[] fullWidth = {81};
-    int[] kvWidths = {20, 60};
+    int[] fullWidth = { 81 };
+    int[] kvWidths = { 20, 60 };
 
-    TableUtil.TableSettings fullSettings =
-        new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
+    TableUtil.TableSettings fullSettings = new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(kvWidths)
+        .setHAlign(0, TableUtil.Align.LEFT)
+        .setHAlign(1, TableUtil.Align.LEFT);
 
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"STATUS: GUEST CHECKED-IN TO ROOM"}, fullSettings);
+    TableUtil.printTableRow(new String[] { "STATUS: GUEST CHECKED-IN TO ROOM" }, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
-    TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
+    TableUtil.printTableRow(new String[] { "Reservation ID", r.getReservationId() }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
+        new String[] {
+            "Confirmation Code",
+            (r.getConfirmationNumber() != null && !r.getConfirmationNumber().trim().isEmpty()
+                ? r.getConfirmationNumber()
+                : "N/A")
+        },
+        kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
-        new String[] {"Room Number", (room != null ? room.getRoomNumber() : "N/A")}, kvSettings);
+        new String[] { "Guest Name", (g != null ? g.getName() : "N/A") }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(new String[] {"Room Status", "OCCUPIED"}, kvSettings);
+    TableUtil.printTableRow(
+        new String[] { "Room Number", (room != null ? room.getRoomNumber() : "N/A") }, kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableRow(new String[] { "Room Status", "OCCUPIED" }, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
@@ -422,22 +424,32 @@ public class VipManageAllocationView {
     System.out.println("11. Back\n");
 
     int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 11).getAsInt();
-    if (choice == 1) return "TIME REMAINING (LOW -> HIGH)";
-    if (choice == 2) return "TIME REMAINING (HIGH -> LOW)";
-    if (choice == 3) return "TIER RANK (DIAMOND -> SILVER)";
-    if (choice == 4) return "TIER RANK (SILVER -> DIAMOND)";
-    if (choice == 5) return "GUEST NAME (A -> Z)";
-    if (choice == 6) return "GUEST NAME (Z -> A)";
-    if (choice == 7) return "ROOM NUMBER (LOW -> HIGH)";
-    if (choice == 8) return "ROOM NUMBER (HIGH -> LOW)";
-    if (choice == 9) return "RESERVATION ID (LOW -> HIGH)";
-    if (choice == 10) return "RESERVATION ID (HIGH -> LOW)";
+    if (choice == 1)
+      return "TIME REMAINING (LOW -> HIGH)";
+    if (choice == 2)
+      return "TIME REMAINING (HIGH -> LOW)";
+    if (choice == 3)
+      return "TIER RANK (DIAMOND -> SILVER)";
+    if (choice == 4)
+      return "TIER RANK (SILVER -> DIAMOND)";
+    if (choice == 5)
+      return "GUEST NAME (A -> Z)";
+    if (choice == 6)
+      return "GUEST NAME (Z -> A)";
+    if (choice == 7)
+      return "ROOM NUMBER (LOW -> HIGH)";
+    if (choice == 8)
+      return "ROOM NUMBER (HIGH -> LOW)";
+    if (choice == 9)
+      return "RESERVATION ID (LOW -> HIGH)";
+    if (choice == 10)
+      return "RESERVATION ID (HIGH -> LOW)";
     return null;
   }
 
   public Integer promptStayDuration(AllocationEntry entry, Guest guest) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CONFIRM ALLOCATION & CHECK-IN");
+    ConsoleUtil.printTitleBox("CONFIRM GUEST CHECK-IN");
     System.out.println(" Target Guest   : " + (guest != null ? guest.getName() : "N/A"));
     System.out.println(" Room Assigned  : Room " + entry.getAssignedRoomNumber());
     System.out.println("------------------------------------------------------");
