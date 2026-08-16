@@ -1,11 +1,6 @@
 package view.vip;
 
 import adt.ListInterface;
-import entity.Guest;
-import entity.Member;
-import entity.Reservation;
-import entity.VipSystemConfig;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import util.ConsoleUtil;
@@ -220,14 +215,480 @@ public class VipReportView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3);
   }
 
+  // ==========================================
+  // VIEW MODEL DTO CLASSES (STATIC INNER)
+  // ==========================================
+
+  public static class SlaReportRowDTO {
+    private final String rank;
+    private final String guestName;
+    private final String tier;
+    private final String roomType;
+    private final long waitMins;
+    private final int strikes;
+    private final String status;
+
+    public SlaReportRowDTO(
+        String rank,
+        String guestName,
+        String tier,
+        String roomType,
+        long waitMins,
+        int strikes,
+        String status) {
+      this.rank = rank;
+      this.guestName = guestName;
+      this.tier = tier;
+      this.roomType = roomType;
+      this.waitMins = waitMins;
+      this.strikes = strikes;
+      this.status = status;
+    }
+
+    public String getRank() {
+      return rank;
+    }
+
+    public String getGuestName() {
+      return guestName;
+    }
+
+    public String getTier() {
+      return tier;
+    }
+
+    public String getRoomType() {
+      return roomType;
+    }
+
+    public long getWaitMins() {
+      return waitMins;
+    }
+
+    public int getStrikes() {
+      return strikes;
+    }
+
+    public String getStatus() {
+      return status;
+    }
+  }
+
+  public static class SlaReportSummaryDTO {
+    private final int diamondTotal, diamondSlaMet, diamondLimitMins;
+    private final double diamondSlaPct, diamondSlaTargetPct;
+    private final int goldTotal, goldSlaMet, goldLimitMins;
+    private final double goldSlaPct, goldSlaTargetPct;
+    private final int silverTotal, silverSlaMet, silverLimitMins;
+    private final double silverSlaPct, silverSlaTargetPct;
+
+    public SlaReportSummaryDTO(
+        int diamondTotal,
+        int diamondSlaMet,
+        int diamondLimitMins,
+        double diamondSlaPct,
+        double diamondSlaTargetPct,
+        int goldTotal,
+        int goldSlaMet,
+        int goldLimitMins,
+        double goldSlaPct,
+        double goldSlaTargetPct,
+        int silverTotal,
+        int silverSlaMet,
+        int silverLimitMins,
+        double silverSlaPct,
+        double silverSlaTargetPct) {
+      this.diamondTotal = diamondTotal;
+      this.diamondSlaMet = diamondSlaMet;
+      this.diamondLimitMins = diamondLimitMins;
+      this.diamondSlaPct = diamondSlaPct;
+      this.diamondSlaTargetPct = diamondSlaTargetPct;
+      this.goldTotal = goldTotal;
+      this.goldSlaMet = goldSlaMet;
+      this.goldLimitMins = goldLimitMins;
+      this.goldSlaPct = goldSlaPct;
+      this.goldSlaTargetPct = goldSlaTargetPct;
+      this.silverTotal = silverTotal;
+      this.silverSlaMet = silverSlaMet;
+      this.silverLimitMins = silverLimitMins;
+      this.silverSlaPct = silverSlaPct;
+      this.silverSlaTargetPct = silverSlaTargetPct;
+    }
+
+    public int getDiamondTotal() {
+      return diamondTotal;
+    }
+
+    public int getDiamondSlaMet() {
+      return diamondSlaMet;
+    }
+
+    public int getDiamondLimitMins() {
+      return diamondLimitMins;
+    }
+
+    public double getDiamondSlaPct() {
+      return diamondSlaPct;
+    }
+
+    public double getDiamondSlaTargetPct() {
+      return diamondSlaTargetPct;
+    }
+
+    public int getGoldTotal() {
+      return goldTotal;
+    }
+
+    public int getGoldSlaMet() {
+      return goldSlaMet;
+    }
+
+    public int getGoldLimitMins() {
+      return goldLimitMins;
+    }
+
+    public double getGoldSlaPct() {
+      return goldSlaPct;
+    }
+
+    public double getGoldSlaTargetPct() {
+      return goldSlaTargetPct;
+    }
+
+    public int getSilverTotal() {
+      return silverTotal;
+    }
+
+    public int getSilverSlaMet() {
+      return silverSlaMet;
+    }
+
+    public int getSilverLimitMins() {
+      return silverLimitMins;
+    }
+
+    public double getSilverSlaPct() {
+      return silverSlaPct;
+    }
+
+    public double getSilverSlaTargetPct() {
+      return silverSlaTargetPct;
+    }
+  }
+
+  public static class SlaReportDTO {
+    private final ListInterface<SlaReportRowDTO> rows;
+    private final SlaReportSummaryDTO summary;
+    private final int totalMatches;
+
+    public SlaReportDTO(
+        ListInterface<SlaReportRowDTO> rows, SlaReportSummaryDTO summary, int totalMatches) {
+      this.rows = rows;
+      this.summary = summary;
+      this.totalMatches = totalMatches;
+    }
+
+    public ListInterface<SlaReportRowDTO> getRows() {
+      return rows;
+    }
+
+    public SlaReportSummaryDTO getSummary() {
+      return summary;
+    }
+
+    public int getTotalMatches() {
+      return totalMatches;
+    }
+  }
+
+  public static class PenaltyReportRowDTO {
+    private final String rank;
+    private final String guestName;
+    private final String tier;
+    private final int strikes;
+    private final String boiling;
+    private final String resolutionStatus;
+
+    public PenaltyReportRowDTO(
+        String rank,
+        String guestName,
+        String tier,
+        int strikes,
+        String boiling,
+        String resolutionStatus) {
+      this.rank = rank;
+      this.guestName = guestName;
+      this.tier = tier;
+      this.strikes = strikes;
+      this.boiling = boiling;
+      this.resolutionStatus = resolutionStatus;
+    }
+
+    public String getRank() {
+      return rank;
+    }
+
+    public String getGuestName() {
+      return guestName;
+    }
+
+    public String getTier() {
+      return tier;
+    }
+
+    public int getStrikes() {
+      return strikes;
+    }
+
+    public String getBoiling() {
+      return boiling;
+    }
+
+    public String getResolutionStatus() {
+      return resolutionStatus;
+    }
+  }
+
+  public static class PenaltyReportSummaryDTO {
+    private final int totalStrikes;
+    private final int diamondTotal, diamondEvicted;
+    private final double diamondRate, diamondMaxTarget;
+    private final int goldTotal, goldEvicted;
+    private final double goldRate, goldMaxTarget;
+    private final int silverTotal, silverEvicted;
+    private final double silverRate, silverMaxTarget;
+
+    public PenaltyReportSummaryDTO(
+        int totalStrikes,
+        int diamondTotal,
+        int diamondEvicted,
+        double diamondRate,
+        double diamondMaxTarget,
+        int goldTotal,
+        int goldEvicted,
+        double goldRate,
+        double goldMaxTarget,
+        int silverTotal,
+        int silverEvicted,
+        double silverRate,
+        double silverMaxTarget) {
+      this.totalStrikes = totalStrikes;
+      this.diamondTotal = diamondTotal;
+      this.diamondEvicted = diamondEvicted;
+      this.diamondRate = diamondRate;
+      this.diamondMaxTarget = diamondMaxTarget;
+      this.goldTotal = goldTotal;
+      this.goldEvicted = goldEvicted;
+      this.goldRate = goldRate;
+      this.goldMaxTarget = goldMaxTarget;
+      this.silverTotal = silverTotal;
+      this.silverEvicted = silverEvicted;
+      this.silverRate = silverRate;
+      this.silverMaxTarget = silverMaxTarget;
+    }
+
+    public int getTotalStrikes() {
+      return totalStrikes;
+    }
+
+    public int getDiamondTotal() {
+      return diamondTotal;
+    }
+
+    public int getDiamondEvicted() {
+      return diamondEvicted;
+    }
+
+    public double getDiamondRate() {
+      return diamondRate;
+    }
+
+    public double getDiamondMaxTarget() {
+      return diamondMaxTarget;
+    }
+
+    public int getGoldTotal() {
+      return goldTotal;
+    }
+
+    public int getGoldEvicted() {
+      return goldEvicted;
+    }
+
+    public double getGoldRate() {
+      return goldRate;
+    }
+
+    public double getGoldMaxTarget() {
+      return goldMaxTarget;
+    }
+
+    public int getSilverTotal() {
+      return silverTotal;
+    }
+
+    public int getSilverEvicted() {
+      return silverEvicted;
+    }
+
+    public double getSilverRate() {
+      return silverRate;
+    }
+
+    public double getSilverMaxTarget() {
+      return silverMaxTarget;
+    }
+  }
+
+  public static class PenaltyReportDTO {
+    private final ListInterface<PenaltyReportRowDTO> rows;
+    private final PenaltyReportSummaryDTO summary;
+    private final int totalMatches;
+
+    public PenaltyReportDTO(
+        ListInterface<PenaltyReportRowDTO> rows,
+        PenaltyReportSummaryDTO summary,
+        int totalMatches) {
+      this.rows = rows;
+      this.summary = summary;
+      this.totalMatches = totalMatches;
+    }
+
+    public ListInterface<PenaltyReportRowDTO> getRows() {
+      return rows;
+    }
+
+    public PenaltyReportSummaryDTO getSummary() {
+      return summary;
+    }
+
+    public int getTotalMatches() {
+      return totalMatches;
+    }
+  }
+
+  public static class HoldingReportRowDTO {
+    private final String rank;
+    private final String guestName;
+    private final String tier;
+    private final int allowedGraceMins;
+    private final String timeUsedStr;
+    private final String holdStatus;
+    private final String graceUsedPctStr;
+
+    public HoldingReportRowDTO(
+        String rank,
+        String guestName,
+        String tier,
+        int allowedGraceMins,
+        String timeUsedStr,
+        String holdStatus,
+        String graceUsedPctStr) {
+      this.rank = rank;
+      this.guestName = guestName;
+      this.tier = tier;
+      this.allowedGraceMins = allowedGraceMins;
+      this.timeUsedStr = timeUsedStr;
+      this.holdStatus = holdStatus;
+      this.graceUsedPctStr = graceUsedPctStr;
+    }
+
+    public String getRank() {
+      return rank;
+    }
+
+    public String getGuestName() {
+      return guestName;
+    }
+
+    public String getTier() {
+      return tier;
+    }
+
+    public int getAllowedGraceMins() {
+      return allowedGraceMins;
+    }
+
+    public String getTimeUsedStr() {
+      return timeUsedStr;
+    }
+
+    public String getHoldStatus() {
+      return holdStatus;
+    }
+
+    public String getGraceUsedPctStr() {
+      return graceUsedPctStr;
+    }
+  }
+
+  public static class HoldingReportSummaryDTO {
+    private final int totalHeld;
+    private final double diamondGraceUtilTarget;
+    private final double goldGraceUtilTarget;
+    private final double silverGraceUtilTarget;
+
+    public HoldingReportSummaryDTO(
+        int totalHeld,
+        double diamondGraceUtilTarget,
+        double goldGraceUtilTarget,
+        double silverGraceUtilTarget) {
+      this.totalHeld = totalHeld;
+      this.diamondGraceUtilTarget = diamondGraceUtilTarget;
+      this.goldGraceUtilTarget = goldGraceUtilTarget;
+      this.silverGraceUtilTarget = silverGraceUtilTarget;
+    }
+
+    public int getTotalHeld() {
+      return totalHeld;
+    }
+
+    public double getDiamondGraceUtilTarget() {
+      return diamondGraceUtilTarget;
+    }
+
+    public double getGoldGraceUtilTarget() {
+      return goldGraceUtilTarget;
+    }
+
+    public double getSilverGraceUtilTarget() {
+      return silverGraceUtilTarget;
+    }
+  }
+
+  public static class HoldingReportDTO {
+    private final ListInterface<HoldingReportRowDTO> rows;
+    private final HoldingReportSummaryDTO summary;
+    private final int totalMatches;
+
+    public HoldingReportDTO(
+        ListInterface<HoldingReportRowDTO> rows,
+        HoldingReportSummaryDTO summary,
+        int totalMatches) {
+      this.rows = rows;
+      this.summary = summary;
+      this.totalMatches = totalMatches;
+    }
+
+    public ListInterface<HoldingReportRowDTO> getRows() {
+      return rows;
+    }
+
+    public HoldingReportSummaryDTO getSummary() {
+      return summary;
+    }
+
+    public int getTotalMatches() {
+      return totalMatches;
+    }
+  }
+
+  // ==========================================
+  // RENDER REPORT SCREENS
+  // ==========================================
+
   public GetMenuInputResult renderSlaReportScreen(
-      ListInterface<Reservation> matchedList,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
-      VipSystemConfig config,
-      String scopeStr,
-      String sortStr,
-      int recordLimit) {
+      SlaReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("REPORT 1: WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT", 88);
@@ -242,13 +703,24 @@ public class VipReportView {
     System.out.println(scopeStr);
     System.out.println("Sort Order  : " + sortStr + "\n");
 
-    int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
-    int displayCount =
-        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+    int totalMatches = (viewModel == null) ? 0 : viewModel.getTotalMatches();
+    ListInterface<SlaReportRowDTO> rows = (viewModel == null) ? null : viewModel.getRows();
+    int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
+    int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {6, 20, 12, 14, 12, 9, 15};
+    int[] columnWidths = {4, 22, 12, 14, 12, 9, 15};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.CENTER);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
@@ -258,12 +730,12 @@ public class VipReportView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {"RANK", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"},
-        settings);
+        headerSettings);
 
-    if (matchedList == null || totalMatches == 0) {
+    if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {94}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {106}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -271,22 +743,16 @@ public class VipReportView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
       for (int i = 1; i <= displayCount; i++) {
-        Reservation r = matchedList.getEntry(i);
-        Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
-
-        String rank = i + ".";
-        String name = (g != null) ? g.getName() : "N/A";
-        String tier = (m != null) ? m.getTier().name() : "NON-MEMBER";
-        String room = (r != null) ? r.getRoomType().name() : "N/A";
-        long waitMins = calculateWaitMins(r);
-        int strikes = (g != null) ? g.getStrikeCount() : 0;
-        String status = (r != null) ? r.getStatus().name() : "N/A";
-
+        SlaReportRowDTO row = rows.getEntry(i);
         TableUtil.printTableRow(
             new String[] {
-              rank, name, tier, room, waitMins + " Mins", String.valueOf(strikes), status
+              row.getRank(),
+              row.getGuestName(),
+              row.getTier(),
+              row.getRoomType(),
+              row.getWaitMins() + " Mins",
+              String.valueOf(row.getStrikes()),
+              row.getStatus()
             },
             settings);
       }
@@ -295,7 +761,9 @@ public class VipReportView {
 
     System.out.printf("\nDisplaying %d of %d Matched Records\n", displayCount, totalMatches);
 
-    printSlaSummaryBlock(matchedList, guestList, memberList, config);
+    if (viewModel != null && viewModel.getSummary() != null) {
+      printSlaSummaryBlock(viewModel.getSummary());
+    }
 
     ConsoleUtil.stopRecording();
 
@@ -314,13 +782,7 @@ public class VipReportView {
   }
 
   public GetMenuInputResult renderPenaltyReportScreen(
-      ListInterface<Reservation> matchedList,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
-      VipSystemConfig config,
-      String scopeStr,
-      String sortStr,
-      int recordLimit) {
+      PenaltyReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("REPORT 2: VIP PENALTY & EVICTION AUDIT REPORT", 88);
@@ -335,11 +797,12 @@ public class VipReportView {
     System.out.println(scopeStr);
     System.out.println("Sort Order  : " + sortStr + "\n");
 
-    int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
-    int displayCount =
-        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+    int totalMatches = (viewModel == null) ? 0 : viewModel.getTotalMatches();
+    ListInterface<PenaltyReportRowDTO> rows = (viewModel == null) ? null : viewModel.getRows();
+    int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
+    int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {6, 22, 12, 10, 10, 28};
+    int[] columnWidths = {4, 24, 12, 10, 10, 28};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
@@ -349,15 +812,24 @@ public class VipReportView {
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.LEFT);
 
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER);
+
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {"RANK", "GUEST NAME", "TIER", "STRIKES", "BOILING", "RESOLUTION STATUS"},
-        settings);
+        headerSettings);
 
-    if (matchedList == null || totalMatches == 0) {
+    if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {93}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {103}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -365,24 +837,16 @@ public class VipReportView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
       for (int i = 1; i <= displayCount; i++) {
-        Reservation r = matchedList.getEntry(i);
-        Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
-
-        String rank = i + ".";
-        String name = (g != null) ? g.getName() : "N/A";
-        String tier = (m != null) ? m.getTier().name() : "NON-MEMBER";
-        int strikes = (g != null) ? g.getStrikeCount() : 0;
-        String boiling = (r != null && r.getIsBoiling()) ? "[!]" : "[ ]";
-        String resolution = (r != null) ? r.getStatus().name() : "N/A";
-
-        if (r != null && r.getStatus() == Reservation.Status.NO_SHOW) {
-          resolution = "Evicted (Max Strikes Exceeded)";
-        }
-
+        PenaltyReportRowDTO row = rows.getEntry(i);
         TableUtil.printTableRow(
-            new String[] {rank, name, tier, String.valueOf(strikes), boiling, resolution},
+            new String[] {
+              row.getRank(),
+              row.getGuestName(),
+              row.getTier(),
+              String.valueOf(row.getStrikes()),
+              row.getBoiling(),
+              row.getResolutionStatus()
+            },
             settings);
       }
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
@@ -390,7 +854,9 @@ public class VipReportView {
 
     System.out.printf("\nDisplaying %d of %d Matched Records\n", displayCount, totalMatches);
 
-    printPenaltySummaryBlock(matchedList, guestList, memberList, config);
+    if (viewModel != null && viewModel.getSummary() != null) {
+      printPenaltySummaryBlock(viewModel.getSummary());
+    }
 
     ConsoleUtil.stopRecording();
 
@@ -409,13 +875,7 @@ public class VipReportView {
   }
 
   public GetMenuInputResult renderHoldingReportScreen(
-      ListInterface<Reservation> matchedList,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
-      VipSystemConfig config,
-      String scopeStr,
-      String sortStr,
-      int recordLimit) {
+      HoldingReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("REPORT 3: ROOM HOLDING BAY & GRACE WINDOW AUDIT", 88);
@@ -430,15 +890,26 @@ public class VipReportView {
     System.out.println(scopeStr);
     System.out.println("Sort Order  : " + sortStr + "\n");
 
-    int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
-    int displayCount =
-        (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
+    int totalMatches = (viewModel == null) ? 0 : viewModel.getTotalMatches();
+    ListInterface<HoldingReportRowDTO> rows = (viewModel == null) ? null : viewModel.getRows();
+    int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
+    int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {6, 20, 12, 16, 12, 14, 14};
+    int[] columnWidths = {4, 20, 12, 16, 12, 14, 14};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
             .setHAlign(1, TableUtil.Align.LEFT)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.CENTER);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
@@ -450,12 +921,12 @@ public class VipReportView {
         new String[] {
           "RANK", "GUEST NAME", "TIER", "ALLOWED GRACE", "TIME USED", "HOLD STATUS", "GRACE USED %"
         },
-        settings);
+        headerSettings);
 
-    if (matchedList == null || totalMatches == 0) {
+    if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {94}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {112}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -463,27 +934,16 @@ public class VipReportView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
       for (int i = 1; i <= displayCount; i++) {
-        Reservation r = matchedList.getEntry(i);
-        Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
-
-        String rank = i + ".";
-        String name = (g != null) ? g.getName() : "N/A";
-        String tier = (m != null) ? m.getTier().name() : "NON-MEMBER";
-
-        int allowedGrace =
-            (r != null && r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
-                ? r.getAllocatedGraceMins()
-                : getGraceMinsForTier(m, config);
-
-        String timeUsedStr = calculateTimeUsedStr(r, m, config);
-        String status = (r != null) ? r.getStatus().name() : "N/A";
-        String utilPctStr = calculateGraceUsedPctStr(r, m, config);
-
+        HoldingReportRowDTO row = rows.getEntry(i);
         TableUtil.printTableRow(
             new String[] {
-              rank, name, tier, allowedGrace + " Mins", timeUsedStr, status, utilPctStr
+              row.getRank(),
+              row.getGuestName(),
+              row.getTier(),
+              row.getAllowedGraceMins() + " Mins",
+              row.getTimeUsedStr(),
+              row.getHoldStatus(),
+              row.getGraceUsedPctStr()
             },
             settings);
       }
@@ -492,7 +952,9 @@ public class VipReportView {
 
     System.out.printf("\nDisplaying %d of %d Matched Records\n", displayCount, totalMatches);
 
-    printHoldingSummaryBlock(matchedList, guestList, memberList, config);
+    if (viewModel != null && viewModel.getSummary() != null) {
+      printHoldingSummaryBlock(viewModel.getSummary());
+    }
 
     ConsoleUtil.stopRecording();
 
@@ -510,92 +972,45 @@ public class VipReportView {
     }
   }
 
-  private void printSlaSummaryBlock(
-      ListInterface<Reservation> list,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
-      VipSystemConfig config) {
-
-    int diamondTotal = 0, goldTotal = 0, silverTotal = 0;
-    int diamondSlaMet = 0, goldSlaMet = 0, silverSlaMet = 0;
-
-    if (list != null) {
-      for (int i = 1; i <= list.getNumberOfEntries(); i++) {
-        Reservation r = list.getEntry(i);
-        if (r == null) continue;
-
-        Guest g = findGuest(guestList, r.getGuestId());
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
-        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
-
-        long wait = calculateWaitMins(r);
-        int targetMins =
-            (tier == Member.LoyaltyTier.DIAMOND)
-                ? config.getDiamondPatienceLimitMins()
-                : (tier == Member.LoyaltyTier.GOLD)
-                    ? config.getGoldPatienceLimitMins()
-                    : config.getSilverPatienceLimitMins();
-
-        if (tier == Member.LoyaltyTier.DIAMOND) {
-          diamondTotal++;
-          if (wait <= targetMins) diamondSlaMet++;
-        } else if (tier == Member.LoyaltyTier.GOLD) {
-          goldTotal++;
-          if (wait <= targetMins) goldSlaMet++;
-        } else {
-          silverTotal++;
-          if (wait <= targetMins) silverSlaMet++;
-        }
-      }
-    }
-
-    double dPct = (diamondTotal == 0) ? 100.0 : ((double) diamondSlaMet / diamondTotal) * 100.0;
-    double gPct = (goldTotal == 0) ? 100.0 : ((double) goldSlaMet / goldTotal) * 100.0;
-    double sPct = (silverTotal == 0) ? 100.0 : ((double) silverSlaMet / silverTotal) * 100.0;
-
-    int dLimit = config.getDiamondPatienceLimitMins();
-    int gLimit = config.getGoldPatienceLimitMins();
-    int sLimit = config.getSilverPatienceLimitMins();
-
-    double dTarget = config.getDiamondSlaTargetPct();
-    double gTarget = config.getGoldSlaTargetPct();
-    double sTarget = config.getSilverSlaTargetPct();
-
+  private void printSlaSummaryBlock(SlaReportSummaryDTO summary) {
     System.out.println(
         "\n--------------------------------------------------------------------------\n");
     System.out.println("ALGORITHM SUMMARY METRICS (SLA PERFORMANCE):\n");
     System.out.printf(
         " DIAMOND TIER (Limit: <= %d Mins) : %d / %d Met SLA (Actual: %.1f%%  |  Target: %.1f%%) ->"
             + " %s\n",
-        dLimit,
-        diamondSlaMet,
-        diamondTotal,
-        dPct,
-        dTarget,
-        (dPct >= dTarget ? "[OK]" : "[!] SLA BREACH"));
+        summary.getDiamondLimitMins(),
+        summary.getDiamondSlaMet(),
+        summary.getDiamondTotal(),
+        summary.getDiamondSlaPct(),
+        summary.getDiamondSlaTargetPct(),
+        (summary.getDiamondSlaPct() >= summary.getDiamondSlaTargetPct()
+            ? "[OK]"
+            : "[!] SLA BREACH"));
     System.out.printf(
         " GOLD TIER    (Limit: <= %d Mins) : %d / %d Met SLA (Actual: %.1f%%  |  Target: %.1f%%) ->"
             + " %s\n",
-        gLimit,
-        goldSlaMet,
-        goldTotal,
-        gPct,
-        gTarget,
-        (gPct >= gTarget ? "[OK]" : "[!] SLA BREACH"));
+        summary.getGoldLimitMins(),
+        summary.getGoldSlaMet(),
+        summary.getGoldTotal(),
+        summary.getGoldSlaPct(),
+        summary.getGoldSlaTargetPct(),
+        (summary.getGoldSlaPct() >= summary.getGoldSlaTargetPct() ? "[OK]" : "[!] SLA BREACH"));
     System.out.printf(
         " SILVER TIER  (Limit: <= %d Mins) : %d / %d Met SLA (Actual: %.1f%%  |  Target: %.1f%%) ->"
             + " %s\n\n",
-        sLimit,
-        silverSlaMet,
-        silverTotal,
-        sPct,
-        sTarget,
-        (sPct >= sTarget ? "[OK]" : "[!] SLA BREACH"));
+        summary.getSilverLimitMins(),
+        summary.getSilverSlaMet(),
+        summary.getSilverTotal(),
+        summary.getSilverSlaPct(),
+        summary.getSilverSlaTargetPct(),
+        (summary.getSilverSlaPct() >= summary.getSilverSlaTargetPct() ? "[OK]" : "[!] SLA BREACH"));
     System.out.println(
         "--------------------------------------------------------------------------\n");
 
-    if (dPct < dTarget || gPct < gTarget || sPct < sTarget) {
+    if (summary.getDiamondSlaPct() < summary.getDiamondSlaTargetPct()
+        || summary.getGoldSlaPct() < summary.getGoldSlaTargetPct()
+        || summary.getSilverSlaPct() < summary.getSilverSlaTargetPct()) {
       System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
       System.out.println(" [!] Critical SLA breach detected in one or more member tiers!");
       System.out.println(" REMEDIATION: Open Settings -> Tweak Operational Rules -> Lower Boiling");
@@ -608,66 +1023,38 @@ public class VipReportView {
         "--------------------------------------------------------------------------");
   }
 
-  private void printPenaltySummaryBlock(
-      ListInterface<Reservation> list,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
-      VipSystemConfig config) {
-
-    int dTotal = 0, gTotal = 0, sTotal = 0;
-    int dEvicted = 0, gEvicted = 0, sEvicted = 0;
-    int totalStrikes = 0;
-
-    if (list != null) {
-      for (int i = 1; i <= list.getNumberOfEntries(); i++) {
-        Reservation r = list.getEntry(i);
-        if (r == null) continue;
-
-        Guest g = findGuest(guestList, r.getGuestId());
-        Member m =
-            (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
-        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
-
-        if (g != null) totalStrikes += g.getStrikeCount();
-
-        if (tier == Member.LoyaltyTier.DIAMOND) {
-          dTotal++;
-          if (r.getStatus() == Reservation.Status.NO_SHOW) dEvicted++;
-        } else if (tier == Member.LoyaltyTier.GOLD) {
-          gTotal++;
-          if (r.getStatus() == Reservation.Status.NO_SHOW) gEvicted++;
-        } else {
-          sTotal++;
-          if (r.getStatus() == Reservation.Status.NO_SHOW) sEvicted++;
-        }
-      }
-    }
-
-    double dRate = (dTotal == 0) ? 0.0 : ((double) dEvicted / dTotal) * 100.0;
-    double gRate = (gTotal == 0) ? 0.0 : ((double) gEvicted / gTotal) * 100.0;
-    double sRate = (sTotal == 0) ? 0.0 : ((double) sEvicted / sTotal) * 100.0;
-
-    double dMax = config.getDiamondEvictionRateTargetPct();
-    double gMax = config.getGoldEvictionRateTargetPct();
-    double sMax = config.getSilverEvictionRateTargetPct();
-
+  private void printPenaltySummaryBlock(PenaltyReportSummaryDTO summary) {
     System.out.println(
         "\n--------------------------------------------------------------------------\n");
     System.out.println("ALGORITHM SUMMARY METRICS (EVICTION AUDIT):\n");
-    System.out.printf(" - Total Strikes Logged: %d Penalty Strikes\n\n", totalStrikes);
+    System.out.printf(" - Total Strikes Logged: %d Penalty Strikes\n\n", summary.getTotalStrikes());
     System.out.printf(
         " DIAMOND EVICTIONS : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n",
-        dEvicted, dTotal, dRate, dMax, (dRate <= dMax ? "[OK]" : "[!] HIGH EVICTION"));
+        summary.getDiamondEvicted(),
+        summary.getDiamondTotal(),
+        summary.getDiamondRate(),
+        summary.getDiamondMaxTarget(),
+        (summary.getDiamondRate() <= summary.getDiamondMaxTarget() ? "[OK]" : "[!] HIGH EVICTION"));
     System.out.printf(
         " GOLD EVICTIONS    : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n",
-        gEvicted, gTotal, gRate, gMax, (gRate <= gMax ? "[OK]" : "[!] HIGH EVICTION"));
+        summary.getGoldEvicted(),
+        summary.getGoldTotal(),
+        summary.getGoldRate(),
+        summary.getGoldMaxTarget(),
+        (summary.getGoldRate() <= summary.getGoldMaxTarget() ? "[OK]" : "[!] HIGH EVICTION"));
     System.out.printf(
         " SILVER EVICTIONS  : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n\n",
-        sEvicted, sTotal, sRate, sMax, (sRate <= sMax ? "[OK]" : "[!] HIGH EVICTION"));
+        summary.getSilverEvicted(),
+        summary.getSilverTotal(),
+        summary.getSilverRate(),
+        summary.getSilverMaxTarget(),
+        (summary.getSilverRate() <= summary.getSilverMaxTarget() ? "[OK]" : "[!] HIGH EVICTION"));
     System.out.println(
         "--------------------------------------------------------------------------\n");
 
-    if (dRate > dMax || gRate > gMax || sRate > sMax) {
+    if (summary.getDiamondRate() > summary.getDiamondMaxTarget()
+        || summary.getGoldRate() > summary.getGoldMaxTarget()
+        || summary.getSilverRate() > summary.getSilverMaxTarget()) {
       System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
       System.out.println(" [!] VIP EVICTION ALERT: Eviction rate exceeds tier target threshold!");
       System.out.println(
@@ -681,23 +1068,16 @@ public class VipReportView {
         "--------------------------------------------------------------------------");
   }
 
-  private void printHoldingSummaryBlock(
-      ListInterface<Reservation> list,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
-      VipSystemConfig config) {
-
-    int totalHeld = (list == null) ? 0 : list.getNumberOfEntries();
+  private void printHoldingSummaryBlock(HoldingReportSummaryDTO summary) {
     System.out.println(
         "\n--------------------------------------------------------------------------\n");
     System.out.println("ALGORITHM SUMMARY METRICS (HOLDING BAY AUDIT):\n");
-    System.out.printf(" - Total Holding Bay Entries : %d Rooms Held\n\n", totalHeld);
+    System.out.printf(" - Total Holding Bay Entries : %d Rooms Held\n\n", summary.getTotalHeld());
     System.out.printf(
-        " - DIAMOND MAX GRACE TARGET  : %.1f%%\n", config.getDiamondGraceUtilTargetPct());
+        " - DIAMOND MAX GRACE TARGET  : %.1f%%\n", summary.getDiamondGraceUtilTarget());
+    System.out.printf(" - GOLD MAX GRACE TARGET     : %.1f%%\n", summary.getGoldGraceUtilTarget());
     System.out.printf(
-        " - GOLD MAX GRACE TARGET     : %.1f%%\n", config.getGoldGraceUtilTargetPct());
-    System.out.printf(
-        " - SILVER MAX GRACE TARGET   : %.1f%%\n\n", config.getSilverGraceUtilTargetPct());
+        " - SILVER MAX GRACE TARGET   : %.1f%%\n\n", summary.getSilverGraceUtilTarget());
     System.out.println(
         "--------------------------------------------------------------------------\n");
     System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
@@ -705,87 +1085,6 @@ public class VipReportView {
     System.out.println(" to reduce the hold period and free unclaimed rooms faster.\n");
     System.out.println(
         "--------------------------------------------------------------------------");
-  }
-
-  private long calculateWaitMins(Reservation r) {
-    if (r == null || r.getQueueArrivalTime() == null) return 0;
-    return Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
-  }
-
-  private int getGraceMinsForTier(Member m, VipSystemConfig config) {
-    if (m == null || m.getTier() == null) return config.getSilverGraceWindowMins();
-    switch (m.getTier()) {
-      case DIAMOND:
-        return config.getDiamondGraceWindowMins();
-      case GOLD:
-        return config.getGoldGraceWindowMins();
-      default:
-        return config.getSilverGraceWindowMins();
-    }
-  }
-
-  private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
-    if (guestList == null || guestId == null) return null;
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) return g;
-    }
-    return null;
-  }
-
-  private Member findMember(ListInterface<Member> memberList, String memberId) {
-    if (memberList == null || memberId == null) return null;
-    for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
-      Member m = memberList.getEntry(i);
-      if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) return m;
-    }
-    return null;
-  }
-
-  private String calculateTimeUsedStr(Reservation r, Member m, VipSystemConfig config) {
-    if (r == null) return "N/A";
-
-    int allowedGraceMins =
-        (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
-            ? r.getAllocatedGraceMins()
-            : getGraceMinsForTier(m, config);
-
-    if (r.getStatus() == Reservation.Status.NO_SHOW) {
-      return allowedGraceMins + " Mins";
-    }
-
-    LocalDateTime startTime = r.getAllocatedTime();
-    if (startTime == null) return "N/A";
-
-    LocalDateTime endTime = LocalDateTime.now();
-    long elapsedMins = Duration.between(startTime, endTime).toMinutes();
-    if (elapsedMins < 0) elapsedMins = 0;
-    return elapsedMins + " Mins";
-  }
-
-  private String calculateGraceUsedPctStr(Reservation r, Member m, VipSystemConfig config) {
-    if (r == null) return "0.0";
-
-    int allowedGraceMins =
-        (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
-            ? r.getAllocatedGraceMins()
-            : getGraceMinsForTier(m, config);
-    if (allowedGraceMins <= 0) return "0.0";
-
-    if (r.getStatus() == Reservation.Status.NO_SHOW) {
-      return "100.0";
-    }
-
-    LocalDateTime startTime = r.getAllocatedTime();
-    if (startTime == null) return "0.0";
-
-    LocalDateTime endTime = LocalDateTime.now();
-    long elapsedMins = Duration.between(startTime, endTime).toMinutes();
-    if (elapsedMins < 0) elapsedMins = 0;
-
-    double pct = ((double) elapsedMins / allowedGraceMins) * 100.0;
-    pct = Math.min(100.0, Math.max(0.0, pct));
-    return String.format("%.1f", pct);
   }
 
   public void displayExportSuccessScreen(String filePath) {

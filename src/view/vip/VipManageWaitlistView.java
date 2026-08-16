@@ -29,10 +29,63 @@ public class VipManageWaitlistView {
     return null;
   }
 
+  public static class WaitlistRowDTO {
+    private final String reservationId;
+    private final String guestName;
+    private final String phoneNumber;
+    private final String tier;
+    private final boolean isBoiling;
+    private final int strikes;
+    private final int priorityScore;
+
+    public WaitlistRowDTO(
+        String reservationId,
+        String guestName,
+        String phoneNumber,
+        String tier,
+        boolean isBoiling,
+        int strikes,
+        int priorityScore) {
+      this.reservationId = reservationId;
+      this.guestName = guestName;
+      this.phoneNumber = phoneNumber;
+      this.tier = tier;
+      this.isBoiling = isBoiling;
+      this.strikes = strikes;
+      this.priorityScore = priorityScore;
+    }
+
+    public String getReservationId() {
+      return reservationId;
+    }
+
+    public String getGuestName() {
+      return guestName;
+    }
+
+    public String getPhoneNumber() {
+      return phoneNumber;
+    }
+
+    public String getTier() {
+      return tier;
+    }
+
+    public boolean getIsBoiling() {
+      return isBoiling;
+    }
+
+    public int getStrikes() {
+      return strikes;
+    }
+
+    public int getPriorityScore() {
+      return priorityScore;
+    }
+  }
+
   public GetMenuInputResult renderWaitlistScreen(
-      ListInterface<Reservation> list,
-      ListInterface<Guest> guestList,
-      ListInterface<Member> memberList,
+      ListInterface<WaitlistRowDTO> list,
       Room.RoomType roomType,
       String search,
       String tier,
@@ -89,7 +142,7 @@ public class VipManageWaitlistView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {88}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {102}).setHAlign(0, TableUtil.Align.CENTER);
 
       String emptyMsg =
           hasActiveFilters
@@ -127,31 +180,22 @@ public class VipManageWaitlistView {
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
     for (int i = startIndex; i <= endIndex; i++) {
-      Reservation r = list.getEntry(i);
-      if (r == null) continue;
-
-      Guest g = findGuest(guestList, r.getGuestId());
-      Member m =
-          (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+      WaitlistRowDTO item = list.getEntry(i);
+      if (item == null) continue;
 
       int displayNum = i - startIndex + 1;
-      String resId = r.getReservationId();
-      String guestName = (g != null) ? g.getName() : "N/A";
-      String phoneNo = (g != null && g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
-      String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
-      String boilingStr = r.getIsBoiling() ? "[!]" : "[ ]";
-      int strikes = (g != null) ? g.getStrikeCount() : 0;
+      String boilingStr = item.getIsBoiling() ? "[!]" : "[ ]";
 
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(displayNum),
-            resId,
-            guestName,
-            phoneNo,
-            tierStr,
+            item.getReservationId(),
+            item.getGuestName(),
+            item.getPhoneNumber(),
+            item.getTier(),
             boilingStr,
-            String.valueOf(strikes),
-            String.valueOf(r.getPriorityScore())
+            String.valueOf(item.getStrikes()),
+            String.valueOf(item.getPriorityScore())
           },
           settings);
     }
@@ -765,17 +809,6 @@ public class VipManageWaitlistView {
     if (dateTime == null) return "N/A";
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
     return dateTime.format(formatter);
-  }
-
-  private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
-    if (guestList == null || guestId == null) return null;
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null
-          && (guestId.equalsIgnoreCase(g.getGuestId()) || guestId.equalsIgnoreCase(g.getName())))
-        return g;
-    }
-    return null;
   }
 
   public Guest displayGuestDisambiguationScreen(

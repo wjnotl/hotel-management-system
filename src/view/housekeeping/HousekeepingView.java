@@ -82,7 +82,7 @@ public class HousekeepingView {
               : "*** TASK BOARD IS CURRENTLY EMPTY ***";
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {75}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {83}).setHAlign(0, TableUtil.Align.CENTER);
 
       TableUtil.printTableRow(new String[] {emptyMessage}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -328,7 +328,7 @@ public class HousekeepingView {
               : "*** NO STAFF ON RECORD ***";
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {64}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {76}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(new String[] {emptyMessage}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 
@@ -575,7 +575,7 @@ public class HousekeepingView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {41}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {48}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(new String[] {"*** NO MATCHING ROOMS FOUND ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 

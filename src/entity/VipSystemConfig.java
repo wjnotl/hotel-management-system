@@ -375,4 +375,71 @@ public class VipSystemConfig implements Serializable {
   public void setLastStrikeResetDate(String lastStrikeResetDate) {
     this.lastStrikeResetDate = lastStrikeResetDate;
   }
+
+  // Tier-Based Helper Methods
+  public int getPatienceLimitMins(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondPatienceLimitMins;
+    if (tier == Member.LoyaltyTier.GOLD) return goldPatienceLimitMins;
+    return silverPatienceLimitMins;
+  }
+
+  public int getBoilingLimitMins(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondBoilingLimitMins;
+    if (tier == Member.LoyaltyTier.GOLD) return goldBoilingLimitMins;
+    return silverBoilingLimitMins;
+  }
+
+  public int getGraceWindowMins(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondGraceWindowMins;
+    if (tier == Member.LoyaltyTier.GOLD) return goldGraceWindowMins;
+    return silverGraceWindowMins;
+  }
+
+  public int getMaxStrikes(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondMaxStrikes;
+    if (tier == Member.LoyaltyTier.GOLD) return goldMaxStrikes;
+    return silverMaxStrikes;
+  }
+
+  public int getBaseValue(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondBaseValue;
+    if (tier == Member.LoyaltyTier.GOLD) return goldBaseValue;
+    return silverBaseValue;
+  }
+
+  public double getBoilingBoost(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondBoilingBoost;
+    if (tier == Member.LoyaltyTier.GOLD) return goldBoilingBoost;
+    return silverBoilingBoost;
+  }
+
+  public double getStrikePenalty(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondStrikePenalty;
+    if (tier == Member.LoyaltyTier.GOLD) return goldStrikePenalty;
+    return silverStrikePenalty;
+  }
+
+  public double getSlaTargetPct(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondSlaTargetPct;
+    if (tier == Member.LoyaltyTier.GOLD) return goldSlaTargetPct;
+    return silverSlaTargetPct;
+  }
+
+  public double getEvictionRateTargetPct(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondEvictionRateTargetPct;
+    if (tier == Member.LoyaltyTier.GOLD) return goldEvictionRateTargetPct;
+    return silverEvictionRateTargetPct;
+  }
+
+  public double getGraceUtilTargetPct(Member.LoyaltyTier tier) {
+    if (tier == Member.LoyaltyTier.DIAMOND) return diamondGraceUtilTargetPct;
+    if (tier == Member.LoyaltyTier.GOLD) return goldGraceUtilTargetPct;
+    return silverGraceUtilTargetPct;
+  }
+
+  public Member.LoyaltyTier getTierFromIndex(int index) {
+    if (index == 1) return Member.LoyaltyTier.DIAMOND;
+    if (index == 2) return Member.LoyaltyTier.GOLD;
+    return Member.LoyaltyTier.SILVER;
+  }
 }

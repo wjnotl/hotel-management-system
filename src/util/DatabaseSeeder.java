@@ -972,7 +972,7 @@ public class DatabaseSeeder {
             arrivalTime,
             true);
 
-    repo.addReservation(r, guestRepo, memberRepo, vipSystemConfigRepo);
+    repo.addReservation(r);
     return r;
   }
 

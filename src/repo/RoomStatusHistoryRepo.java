@@ -1,7 +1,7 @@
 package repo;
 
 import adt.ArrayList;
-import adt.HashMap;
+import adt.DoublyLinkedHashMap;
 import adt.LinkedStack;
 import adt.ListInterface;
 import adt.MapInterface;
@@ -30,7 +30,7 @@ public class RoomStatusHistoryRepo {
     // Rebuild each room's undo stack by replaying its transitions in original order.
     // Note-only entries (fromStatus == null) don't represent a real transition, so they're
     // skipped here — nothing to undo back to.
-    this.historyByRoom = new HashMap<>();
+    this.historyByRoom = new DoublyLinkedHashMap<>();
     for (int i = 1; i <= logList.getNumberOfEntries(); i++) {
       RoomStatusLogEntry entry = logList.getEntry(i);
       if (entry == null || entry.getFromStatus() == null) continue;

@@ -6,7 +6,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public interface ListInterface<T> {
+public interface ListInterface<T> extends Iterable<T> {
 
   // Appends a new item to the tail end of the list.
   public boolean add(T newEntry);
@@ -57,4 +57,9 @@ public interface ListInterface<T> {
 
   // Gives back a standard iterator to cleanly traverse elements sequentially.
   public Iterator<T> getIterator();
+
+  @Override
+  default Iterator<T> iterator() {
+    return getIterator();
+  }
 }

@@ -17,9 +17,9 @@ import util.TextUtil;
 public class WalkInQueueView {
 
   private static final int[] LINE_WIDTHS = {5, 5, 12, 22, 12, 10, 9};
-  private static final int[] HOLD_WIDTHS = {5, 12, 22, 11, 12, 14};
-  private static final int[] SPAN_WIDTH = {81};
-  private static final int[] KV_WIDTHS = {22, 58};
+  private static final int[] HOLD_WIDTHS = {5, 12, 24, 11, 12, 14};
+  private static final int[] SPAN_WIDTH = {93};
+  private static final int[] KV_WIDTHS = {22, 70};
   private static final int SCREEN_WIDTH = 83;
 
   public Room.RoomType displayQueueSelectionMenu() {

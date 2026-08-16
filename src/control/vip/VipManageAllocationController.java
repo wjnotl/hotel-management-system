@@ -57,17 +57,12 @@ public class VipManageAllocationController {
         ListInterface<AllocationEntry> filteredList =
             filterAndSortAllocations(rawAllocations, searchQuery, tierFilter, sortCriteria);
 
+        ListInterface<VipManageAllocationView.AllocationRowDTO> displayDtos =
+            buildAllocationRowDTO(filteredList);
+
         ConsoleUtil.GetMenuInputResult result =
             allocationView.renderAllocationScreen(
-                filteredList,
-                vipReservationRepo.getAllReservations(),
-                guestRepo.getGuestList(),
-                memberRepo.getMemberList(),
-                searchQuery,
-                tierFilter,
-                sortCriteria,
-                currentPage,
-                pageSize);
+                displayDtos, searchQuery, tierFilter, sortCriteria, currentPage, pageSize);
 
         if ("E".equalsIgnoreCase(result.input)) {
           break;
@@ -193,8 +188,9 @@ public class VipManageAllocationController {
     vipReservationRepo.updateReservation(reservation);
 
     // 3. Remove hold entry from AllocationRepo
-    allocationRepo.removeAllocationEntry(
-        entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+    allocationRepo.removeAllocationEntry(entry);
+    VipController.scheduleNextAutoExpirationTask(
+        allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     allocationView.displayCheckInSuccessScreen(reservation, guest, room);
     return true; // Successfully checked in!
@@ -236,12 +232,7 @@ public class VipManageAllocationController {
 
     VipSystemConfig config = vipSystemConfigRepo.getConfig();
     Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
-    int maxStrikes =
-        (tier == Member.LoyaltyTier.DIAMOND)
-            ? config.getDiamondMaxStrikes()
-            : (tier == Member.LoyaltyTier.GOLD)
-                ? config.getGoldMaxStrikes()
-                : config.getSilverMaxStrikes();
+    int maxStrikes = config.getMaxStrikes(tier);
 
     while (true) {
       try {
@@ -266,8 +257,14 @@ public class VipManageAllocationController {
               vipReservationRepo.updateReservation(reservation);
             }
             freeHeldRoom(entry);
-            allocationRepo.removeAllocationEntry(
-                entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+            allocationRepo.removeAllocationEntry(entry);
+            VipController.scheduleNextAutoExpirationTask(
+                allocationRepo,
+                roomRepo,
+                vipReservationRepo,
+                guestRepo,
+                memberRepo,
+                vipSystemConfigRepo);
             allocationView.displayEvictionLockoutScreen(guest);
             return true;
           }
@@ -294,12 +291,20 @@ public class VipManageAllocationController {
                     LocalDateTime.now(),
                     true);
 
-            vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.addReservation(newRes);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(
-              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+          allocationRepo.removeAllocationEntry(entry);
+          VipController.scheduleNextAutoExpirationTask(
+              allocationRepo,
+              roomRepo,
+              vipReservationRepo,
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
           allocationView.displayStrikeIssuedScreen(guest);
           return true;
 
@@ -317,13 +322,20 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
-            vipReservationRepo.cancelReservation(
-                reservation, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.cancelReservation(reservation);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(
-              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+          allocationRepo.removeAllocationEntry(entry);
+          VipController.scheduleNextAutoExpirationTask(
+              allocationRepo,
+              roomRepo,
+              vipReservationRepo,
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
           allocationView.displayStrikeIssuedWithoutRequeueScreen(guest);
           return true;
 
@@ -360,12 +372,20 @@ public class VipManageAllocationController {
                     LocalDateTime.now(),
                     true);
 
-            vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.addReservation(newRes);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(
-              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+          allocationRepo.removeAllocationEntry(entry);
+          VipController.scheduleNextAutoExpirationTask(
+              allocationRepo,
+              roomRepo,
+              vipReservationRepo,
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
           allocationView.displayRequeuedWithoutStrikeScreen(guest);
           return true;
 
@@ -378,13 +398,20 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
-            vipReservationRepo.cancelReservation(
-                reservation, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.cancelReservation(reservation);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(
-              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+          allocationRepo.removeAllocationEntry(entry);
+          VipController.scheduleNextAutoExpirationTask(
+              allocationRepo,
+              roomRepo,
+              vipReservationRepo,
+              guestRepo,
+              memberRepo,
+              vipSystemConfigRepo);
           allocationView.displayEvictionCompletedScreen();
           return true;
 
@@ -536,43 +563,43 @@ public class VipManageAllocationController {
       return new ArrayList<>();
     }
 
-    ListInterface<AllocationEntry> filtered = new ArrayList<>();
+    ListInterface<AllocationEntry> filtered =
+        source.filter(
+            entry -> {
+              if (entry == null) return false;
 
-    for (int i = 1; i <= source.getNumberOfEntries(); i++) {
-      AllocationEntry entry = source.getEntry(i);
-      if (entry == null) continue;
+              Reservation r = vipReservationRepo.findById(entry.getReservationId());
+              Guest g = (r != null) ? guestRepo.findById(r.getGuestId()) : null;
+              Member m =
+                  (g != null && g.getMemberId() != null)
+                      ? memberRepo.findById(g.getMemberId())
+                      : null;
 
-      Reservation r = vipReservationRepo.findById(entry.getReservationId());
-      Guest g = (r != null) ? guestRepo.findById(r.getGuestId()) : null;
-      Member m =
-          (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+              boolean matchesSearch = true;
+              boolean matchesTier = true;
 
-      boolean matchesSearch = true;
-      boolean matchesTier = true;
+              if (search != null && !search.trim().isEmpty()) {
+                String query = search.trim().toLowerCase();
+                boolean matchName =
+                    g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
+                boolean matchRoom =
+                    entry.getAssignedRoomNumber() != null
+                        && entry.getAssignedRoomNumber().toLowerCase().contains(query);
+                boolean matchConf =
+                    entry.getReservationId() != null
+                        && entry.getReservationId().toLowerCase().contains(query);
 
-      if (search != null && !search.trim().isEmpty()) {
-        String query = search.trim().toLowerCase();
-        boolean matchName =
-            g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
-        boolean matchRoom =
-            entry.getAssignedRoomNumber() != null
-                && entry.getAssignedRoomNumber().toLowerCase().contains(query);
-        boolean matchConf =
-            entry.getReservationId() != null
-                && entry.getReservationId().toLowerCase().contains(query);
+                matchesSearch = matchName || matchRoom || matchConf;
+              }
 
-        matchesSearch = matchName || matchRoom || matchConf;
-      }
+              if (tier != null) {
+                String actualTier =
+                    (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER";
+                matchesTier = tier.equalsIgnoreCase(actualTier);
+              }
 
-      if (tier != null) {
-        String actualTier = (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER";
-        matchesTier = tier.equalsIgnoreCase(actualTier);
-      }
-
-      if (matchesSearch && matchesTier) {
-        filtered.add(entry);
-      }
-    }
+              return matchesSearch && matchesTier;
+            });
 
     if ("TIME REMAINING (HIGH -> LOW)".equalsIgnoreCase(sort)) {
       filtered.sort(
@@ -654,5 +681,31 @@ public class VipManageAllocationController {
     }
 
     return filtered;
+  }
+
+  private ListInterface<VipManageAllocationView.AllocationRowDTO> buildAllocationRowDTO(
+      ListInterface<AllocationEntry> entries) {
+    if (entries == null) return new ArrayList<>();
+    ListInterface<Reservation> reservationList = vipReservationRepo.getAllReservations();
+
+    return entries.map(
+        entry -> {
+          Reservation reservation =
+              reservationList.find(
+                  r -> entry.getReservationId().equalsIgnoreCase(r.getReservationId()));
+          Guest guest = (reservation != null) ? guestRepo.findById(reservation.getGuestId()) : null;
+          Member member =
+              (guest != null && guest.getMemberId() != null)
+                  ? memberRepo.findById(guest.getMemberId())
+                  : null;
+
+          String resId = entry.getReservationId();
+          String guestName = (guest != null) ? guest.getName() : "N/A";
+          String tierStr = (member != null) ? member.getTier().name() : "NON-MEMBER";
+          String roomAssigned = "Room " + entry.getAssignedRoomNumber();
+
+          return new VipManageAllocationView.AllocationRowDTO(
+              resId, guestName, tierStr, roomAssigned, entry.getExpirationTimestamp());
+        });
   }
 }

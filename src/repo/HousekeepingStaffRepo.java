@@ -1,7 +1,7 @@
 package repo;
 
 import adt.ArrayList;
-import adt.HashMap;
+import adt.DoublyLinkedHashMap;
 import adt.ListInterface;
 import adt.MapInterface;
 import entity.HousekeepingStaff;
@@ -24,7 +24,7 @@ public class HousekeepingStaffRepo {
     }
 
     // Rebuild the lookup map from the stored list.
-    this.staffById = new HashMap<>();
+    this.staffById = new DoublyLinkedHashMap<>();
     for (int i = 1; i <= staffList.getNumberOfEntries(); i++) {
       HousekeepingStaff s = staffList.getEntry(i);
       if (s != null) {

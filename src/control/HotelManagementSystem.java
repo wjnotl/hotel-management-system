@@ -37,11 +37,12 @@ public class HotelManagementSystem {
 
     // Process any holding allocations that expired while offline/shutdown & arm auto-expiration
     // scheduler
-    allocationRepo.processExpiredAllocationsOnStartup(
-        roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+    VipController.scheduleNextAutoExpirationTask(
+        allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     // Process any boiling transitions that occurred while offline/shutdown & arm boiling scheduler
-    vipReservationRepo.processBoilingOnStartup(guestRepo, memberRepo, vipSystemConfigRepo);
+    VipController.scheduleNextBoilingTask(
+        vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     VipController.startMidnightStrikeResetScheduler(guestRepo, vipSystemConfigRepo);
 

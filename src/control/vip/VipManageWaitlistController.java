@@ -74,11 +74,12 @@ public class VipManageWaitlistController {
         ListInterface<Reservation> filteredList =
             filterAndSortList(rawList, searchQuery, tierFilter, boilingFilter, sortCriteria);
 
+        ListInterface<VipManageWaitlistView.WaitlistRowDTO> displayDtos =
+            buildWaitlistRowDTO(filteredList);
+
         ConsoleUtil.GetMenuInputResult result =
             waitlistView.renderWaitlistScreen(
-                filteredList,
-                guestRepo.getGuestList(),
-                memberRepo.getMemberList(),
+                displayDtos,
                 roomType,
                 searchQuery,
                 tierFilter,
@@ -173,7 +174,7 @@ public class VipManageWaitlistController {
   private boolean processAddGuestSelection(
       Guest guest, Room.RoomType roomType, VipSystemConfig config) {
     Member member = (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
-    int maxStrikes = getTierMaxStrikes(member, config);
+    int maxStrikes = config.getMaxStrikes((member != null) ? member.getTier() : null);
 
     if (!handleStrikeOverrideFlow(guest, member, maxStrikes)) {
       return false;
@@ -195,21 +196,6 @@ public class VipManageWaitlistController {
 
     createWaitlistReservation(guest, member, roomType, baseScore);
     return true;
-  }
-
-  private int getTierMaxStrikes(Member member, VipSystemConfig config) {
-    if (member == null || member.getTier() == null) {
-      return config.getSilverMaxStrikes();
-    }
-    switch (member.getTier()) {
-      case DIAMOND:
-        return config.getDiamondMaxStrikes();
-      case GOLD:
-        return config.getGoldMaxStrikes();
-      case SILVER:
-      default:
-        return config.getSilverMaxStrikes();
-    }
   }
 
   private boolean handleStrikeOverrideFlow(Guest guest, Member member, int maxStrikes) {
@@ -253,7 +239,9 @@ public class VipManageWaitlistController {
             now,
             true);
 
-    vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
+    vipReservationRepo.addReservation(newRes);
+    VipController.scheduleNextBoilingTask(
+        vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     waitlistView.displayAddGuestSuccessScreen(resId, guest, roomType);
   }
@@ -343,8 +331,9 @@ public class VipManageWaitlistController {
           boolean confirmed = promptCancelConfirmation(selected, g, m);
 
           if (confirmed) {
-            vipReservationRepo.cancelReservation(
-                selected, guestRepo, memberRepo, vipSystemConfigRepo);
+            vipReservationRepo.cancelReservation(selected);
+            VipController.scheduleNextBoilingTask(
+                vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
             waitlistView.displayCancelSuccessScreen(selected.getReservationId());
             break;
           }
@@ -392,12 +381,7 @@ public class VipManageWaitlistController {
 
     VipSystemConfig config = vipSystemConfigRepo.getConfig();
     Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
-    int graceMins =
-        (tier == Member.LoyaltyTier.DIAMOND)
-            ? config.getDiamondGraceWindowMins()
-            : (tier == Member.LoyaltyTier.GOLD)
-                ? config.getGoldGraceWindowMins()
-                : config.getSilverGraceWindowMins();
+    int graceMins = config.getGraceWindowMins(tier);
 
     boolean confirmed = promptDequeueConfirmation(reservation, g, m, vacantRoom, graceMins);
     if (!confirmed) {
@@ -412,14 +396,17 @@ public class VipManageWaitlistController {
             vacantRoom.getRoomNumber(),
             System.currentTimeMillis() + holdDurationMs);
 
-    allocationRepo.addAllocationEntry(
-        entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+    allocationRepo.addAllocationEntry(entry);
+    VipController.scheduleNextAutoExpirationTask(
+        allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     vacantRoom.setStatus(Room.Status.OCCUPIED);
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
     roomRepo.updateRoom(vacantRoom);
 
     vipReservationRepo.allocateReservation(reservation, guestRepo, memberRepo, vipSystemConfigRepo);
+    VipController.scheduleNextBoilingTask(
+        vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     int remainingCount = vipReservationRepo.getListByRoomType(roomType).getNumberOfEntries();
 
@@ -537,51 +524,51 @@ public class VipManageWaitlistController {
       return new ArrayList<>();
     }
 
-    ListInterface<Reservation> filtered = new ArrayList<>();
+    ListInterface<Reservation> filtered =
+        source.filter(
+            r -> {
+              if (r == null) return false;
 
-    for (int i = 1; i <= source.getNumberOfEntries(); i++) {
-      Reservation r = source.getEntry(i);
-      if (r == null) continue;
+              Guest g = guestRepo.findById(r.getGuestId());
+              Member m =
+                  (g != null && g.getMemberId() != null)
+                      ? memberRepo.findById(g.getMemberId())
+                      : null;
 
-      Guest g = guestRepo.findById(r.getGuestId());
-      Member m =
-          (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+              boolean matchesSearch = true;
+              boolean matchesTier = true;
+              boolean matchesBoiling = true;
 
-      boolean matchesSearch = true;
-      boolean matchesTier = true;
-      boolean matchesBoiling = true;
+              if (search != null && !search.trim().isEmpty()) {
+                String query = search.trim().toLowerCase();
+                boolean matchResId =
+                    r.getReservationId() != null
+                        && r.getReservationId().toLowerCase().contains(query);
+                boolean matchName =
+                    g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
+                boolean matchPhone =
+                    g != null
+                        && g.getPhoneNumber() != null
+                        && g.getPhoneNumber().toLowerCase().contains(query);
 
-      if (search != null && !search.trim().isEmpty()) {
-        String query = search.trim().toLowerCase();
-        boolean matchResId =
-            r.getReservationId() != null && r.getReservationId().toLowerCase().contains(query);
-        boolean matchName =
-            g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
-        boolean matchPhone =
-            g != null
-                && g.getPhoneNumber() != null
-                && g.getPhoneNumber().toLowerCase().contains(query);
+                matchesSearch = matchResId || matchName || matchPhone;
+              }
 
-        matchesSearch = matchResId || matchName || matchPhone;
-      }
+              if (tier != null) {
+                String actualTier = (m != null && m.getTier() != null) ? m.getTier().name() : "";
+                matchesTier = tier.equalsIgnoreCase(actualTier);
+              }
 
-      if (tier != null) {
-        String actualTier = (m != null && m.getTier() != null) ? m.getTier().name() : "";
-        matchesTier = tier.equalsIgnoreCase(actualTier);
-      }
+              if (boiling != null) {
+                if ("BOILING".equalsIgnoreCase(boiling)) {
+                  matchesBoiling = r.getIsBoiling();
+                } else if ("NORMAL".equalsIgnoreCase(boiling)) {
+                  matchesBoiling = !r.getIsBoiling();
+                }
+              }
 
-      if (boiling != null) {
-        if ("BOILING".equalsIgnoreCase(boiling)) {
-          matchesBoiling = r.getIsBoiling();
-        } else if ("NORMAL".equalsIgnoreCase(boiling)) {
-          matchesBoiling = !r.getIsBoiling();
-        }
-      }
-
-      if (matchesSearch && matchesTier && matchesBoiling) {
-        filtered.add(r);
-      }
-    }
+              return matchesSearch && matchesTier && matchesBoiling;
+            });
 
     if ("SCORE (LOW -> HIGH)".equalsIgnoreCase(sort)) {
       filtered.sort((r1, r2) -> Integer.compare(r1.getPriorityScore(), r2.getPriorityScore()));
@@ -660,5 +647,27 @@ public class VipManageWaitlistController {
       default:
         return 0;
     }
+  }
+
+  private ListInterface<VipManageWaitlistView.WaitlistRowDTO> buildWaitlistRowDTO(
+      ListInterface<Reservation> list) {
+    if (list == null) return new ArrayList<>();
+    return list.map(
+        r -> {
+          Guest g = guestRepo.findById(r.getGuestId());
+          Member m =
+              (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+
+          String resId = r.getReservationId();
+          String guestName = (g != null) ? g.getName() : "N/A";
+          String phoneNo = (g != null && g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
+          String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+          boolean boiling = r.getIsBoiling();
+          int strikes = (g != null) ? g.getStrikeCount() : 0;
+          int score = r.getPriorityScore();
+
+          return new VipManageWaitlistView.WaitlistRowDTO(
+              resId, guestName, phoneNo, tierStr, boiling, strikes, score);
+        });
   }
 }
