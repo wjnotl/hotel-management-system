@@ -61,7 +61,6 @@ public class WalkInQueueView {
     int waiting = queue.getNumberOfEntries();
     Reservation next = queue.peek();
     Guest nextGuest = (next != null) ? findGuest(guestList, next.getGuestId()) : null;
-    boolean blocked = vacantRooms <= vipWaiting;
 
     System.out.println(
         "WAITING IN LINE   : "
@@ -80,11 +79,7 @@ public class WalkInQueueView {
                     + ")"));
     System.out.println("VACANT CLEAN ROOMS: " + vacantRooms);
     System.out.println(
-        "VIP AHEAD OF LINE : "
-            + vipWaiting
-            + (blocked
-                ? "   ->  BLOCKED BY VIP BYPASS (needs [V] override)"
-                : "   ->  LINE CAN BE SERVED"));
+        "VIP AHEAD OF LINE : " + vipWaiting + "   ->  " + verdictFor(vacantRooms, vipWaiting));
     System.out.println(
         "SEARCH QUERY      : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
     System.out.println("TIER FILTER       : [ " + (tier == null ? "ALL" : tier) + " ]");
@@ -120,6 +115,26 @@ public class WalkInQueueView {
     String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
     return ConsoleUtil.getMenuInput(
         "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
+  }
+
+  // Rooms are held back one per waiting VIP rather than the whole type being frozen, so a line can
+  // legitimately be servable while VIPs are still waiting. Printing the leftover count says that
+  // out loud, otherwise the header reads as though the bypass was ignored.
+  private String verdictFor(int vacantRooms, int vipWaiting) {
+    if (vacantRooms == 0) {
+      return "NO VACANT CLEAN ROOM OF THIS TYPE";
+    }
+    if (vacantRooms <= vipWaiting) {
+      return "BLOCKED BY VIP BYPASS (needs [V] override)";
+    }
+    if (vipWaiting == 0) {
+      return "LINE CAN BE SERVED (" + vacantRooms + " free, no VIP waiting)";
+    }
+    return "LINE CAN BE SERVED ("
+        + (vacantRooms - vipWaiting)
+        + " spare after "
+        + vipWaiting
+        + " VIP hold(s))";
   }
 
   private int countRowsOnPage(int totalMatches, int currentPage, int pageSize) {
@@ -738,12 +753,26 @@ public class WalkInQueueView {
     ConsoleUtil.printContinueMessage();
   }
 
-  public Integer promptHoldSelection(int holdCount) {
+  public Integer promptHoldSelection(
+      ListInterface<Reservation> holds,
+      ListInterface<Guest> guestList,
+      ListInterface<Room> roomList,
+      int graceMinutes) {
+
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK IN A HELD ROOM", SCREEN_WIDTH);
-    System.out.println("Select the hold number shown in the HOLDS table.\n");
+
+    // Opening this screen clears the queue screen the holds were listed on, so the table is
+    // reprinted here. Asking for a number with nothing on screen to read is how the clerk ends up
+    // checking in the wrong guest.
+    printHoldTable(holds, guestList, roomList, graceMinutes);
+    System.out.println();
+
+    int holdCount = (holds == null) ? 0 : holds.getNumberOfEntries();
     return ConsoleUtil.getIntegerInput(
-        "Enter hold number [1 - " + holdCount + "] (blank or 'C' to cancel): ", 1, holdCount);
+        "Enter the NO. of the hold to check in [1 - " + holdCount + "] (blank or 'C' to cancel): ",
+        1,
+        holdCount);
   }
 
   public Integer promptStayDays(Reservation r, Guest g, Room room) {
