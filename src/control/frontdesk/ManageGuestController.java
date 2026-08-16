@@ -11,7 +11,6 @@ import java.util.Comparator;
 import repo.BillingRepo;
 import repo.GuestRepo;
 import repo.ReservationRepo;
-import repo.VipReservationRepo;
 import util.ConsoleUtil;
 import view.frontdesk.ManageGuestView;
 
@@ -23,7 +22,8 @@ public class ManageGuestController {
   private final ReservationRepo reservationRepo;
   private final BillingRepo billingRepo;
 
-  public ManageGuestController(ReservationRepo reservationRepo, GuestRepo guestRepo, BillingRepo billingRepo) {
+  public ManageGuestController(
+      ReservationRepo reservationRepo, GuestRepo guestRepo, BillingRepo billingRepo) {
     this.reservationRepo = reservationRepo;
     this.guestRepo = guestRepo;
     this.billingRepo = billingRepo;

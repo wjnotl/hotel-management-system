@@ -163,7 +163,8 @@ public class LinkedList<T> implements ListInterface<T>, Serializable {
     return filtered;
   }
 
-  @Override public T find(Predicate<T> predicate) {
+  @Override
+  public T find(Predicate<T> predicate) {
     if (predicate == null) return null;
 
     Node currentNode = firstNode;

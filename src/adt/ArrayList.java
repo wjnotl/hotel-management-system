@@ -148,7 +148,8 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
     return filtered;
   }
 
-  @Override public T find(Predicate<T> predicate) {
+  @Override
+  public T find(Predicate<T> predicate) {
     if (predicate == null) return null;
 
     for (int i = 1; i <= numOfEntries; i++) {

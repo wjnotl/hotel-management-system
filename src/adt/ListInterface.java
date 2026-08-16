@@ -58,4 +58,3 @@ public interface ListInterface<T> {
   // Gives back a standard iterator to cleanly traverse elements sequentially.
   public Iterator<T> getIterator();
 }
-
