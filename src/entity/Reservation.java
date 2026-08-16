@@ -11,6 +11,7 @@ public class Reservation implements Serializable {
     WAITING,
     ALLOCATED,
     CHECKED_IN,
+    CHECKED_OUT,
     NO_SHOW,
     CANCELLED
   }
