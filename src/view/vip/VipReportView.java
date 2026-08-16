@@ -221,6 +221,7 @@ public class VipReportView {
 
   public static class SlaReportRowDTO {
     private final String rank;
+    private final String reservationId;
     private final String guestName;
     private final String tier;
     private final String roomType;
@@ -230,6 +231,7 @@ public class VipReportView {
 
     public SlaReportRowDTO(
         String rank,
+        String reservationId,
         String guestName,
         String tier,
         String roomType,
@@ -237,6 +239,7 @@ public class VipReportView {
         int strikes,
         String status) {
       this.rank = rank;
+      this.reservationId = reservationId;
       this.guestName = guestName;
       this.tier = tier;
       this.roomType = roomType;
@@ -247,6 +250,10 @@ public class VipReportView {
 
     public String getRank() {
       return rank;
+    }
+
+    public String getReservationId() {
+      return reservationId;
     }
 
     public String getGuestName() {
@@ -708,14 +715,15 @@ public class VipReportView {
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
     int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {4, 22, 12, 14, 12, 9, 15};
+    int[] columnWidths = {4, 11, 20, 12, 14, 12, 9, 15};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
-            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER);
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.CENTER);
 
     TableUtil.TableSettings headerSettings =
         new TableUtil.TableSettings(columnWidths)
@@ -725,17 +733,18 @@ public class VipReportView {
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER);
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"RANK", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"},
+        new String[] {"RANK", "RES ID", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"},
         headerSettings);
 
     if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {106}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {118}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -747,6 +756,7 @@ public class VipReportView {
         TableUtil.printTableRow(
             new String[] {
               row.getRank(),
+              row.getReservationId(),
               row.getGuestName(),
               row.getTier(),
               row.getRoomType(),
