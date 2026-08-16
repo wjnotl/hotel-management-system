@@ -632,23 +632,23 @@ public class VipReportController {
     ListInterface<Reservation> filtered = new ArrayList<>();
 
     for (int i = 1; i <= source.getNumberOfEntries(); i++) {
-      Reservation r = source.getEntry(i);
-      if (r == null) continue;
+      Reservation reservation = source.getEntry(i);
+      if (reservation == null) continue;
 
       // Report 3 is Room Holding Bay & Grace Window Audit: strictly include holding
       // bay records
       if (reportType == 3) {
         boolean enteredHoldingBay =
-            r.getAllocatedTime() != null
-                || r.getStatus() == Reservation.Status.ALLOCATED
-                || r.getStatus() == Reservation.Status.NO_SHOW
-                || r.getStatus() == Reservation.Status.CHECKED_IN;
+            reservation.getAllocatedTime() != null
+                || reservation.getStatus() == Reservation.Status.ALLOCATED
+                || reservation.getStatus() == Reservation.Status.NO_SHOW
+                || reservation.getStatus() == Reservation.Status.CHECKED_IN;
         if (!enteredHoldingBay) {
           continue;
         }
       }
 
-      Guest g = guestRepo.findById(r.getGuestId());
+      Guest g = guestRepo.findById(reservation.getGuestId());
       Member m =
           (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
@@ -660,7 +660,9 @@ public class VipReportController {
 
       if (startDate != null || endDate != null) {
         LocalDateTime resTime =
-            (r.getAllocatedTime() != null) ? r.getAllocatedTime() : r.getQueueArrivalTime();
+            (reservation.getAllocatedTime() != null)
+                ? reservation.getAllocatedTime()
+                : reservation.getQueueArrivalTime();
         if (resTime != null) {
           if (startDate != null && resTime.isBefore(startDate)) matchDate = false;
           if (endDate != null && resTime.isAfter(endDate)) matchDate = false;
@@ -670,10 +672,11 @@ public class VipReportController {
       if (search != null && !search.trim().isEmpty()) {
         String query = search.trim().toLowerCase();
         boolean mRes =
-            r.getReservationId() != null && r.getReservationId().toLowerCase().contains(query);
+            reservation.getReservationId() != null
+                && reservation.getReservationId().toLowerCase().contains(query);
         boolean mConf =
-            r.getConfirmationNumber() != null
-                && r.getConfirmationNumber().toLowerCase().contains(query);
+            reservation.getConfirmationNumber() != null
+                && reservation.getConfirmationNumber().toLowerCase().contains(query);
         boolean mName =
             g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
         boolean mPhone =
@@ -689,17 +692,18 @@ public class VipReportController {
       }
 
       if (roomType != null) {
-        String actualRoom = (r.getRoomType() != null) ? r.getRoomType().name() : "";
+        String actualRoom =
+            (reservation.getRoomType() != null) ? reservation.getRoomType().name() : "";
         matchRoom = roomType.equalsIgnoreCase(actualRoom);
       }
 
       if (boiling != null) {
-        if ("BOILING".equalsIgnoreCase(boiling)) matchBoiling = r.getIsBoiling();
-        else if ("NORMAL".equalsIgnoreCase(boiling)) matchBoiling = !r.getIsBoiling();
+        if ("BOILING".equalsIgnoreCase(boiling)) matchBoiling = reservation.getIsBoiling();
+        else if ("NORMAL".equalsIgnoreCase(boiling)) matchBoiling = !reservation.getIsBoiling();
       }
 
       if (matchSearch && matchTier && matchRoom && matchBoiling && matchDate) {
-        filtered.add(r);
+        filtered.add(reservation);
       }
     }
 

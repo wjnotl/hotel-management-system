@@ -10,15 +10,12 @@ import entity.Room;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Iterator;
-import util.BinaryFileUtil;
-import util.NumberUtil;
 
 public class StandardReservationRepo {
   public static final int GRACE_MINUTES = 15;
   public static final int MAX_STRIKES = 3;
 
-  private final BinaryFileUtil<ListInterface<Reservation>> fileUtil;
-  private ListInterface<Reservation> masterList;
+  private final ReservationRepo reservationRepo;
 
   // Small enough that the array actually fills and doubles during a normal shift, which is
   // what makes the circular growth visible on screen instead of theoretical.
@@ -31,22 +28,18 @@ public class StandardReservationRepo {
   private CircularArrayQueue<Reservation> suiteQueue;
   private CircularArrayQueue<Reservation> standardQueue;
 
-  public StandardReservationRepo() {
-    this.fileUtil = new BinaryFileUtil<>("standard_reservations.dat");
+  public StandardReservationRepo(ReservationRepo reservationRepo) {
+    this.reservationRepo = reservationRepo;
     load();
   }
 
   private void load() {
-    this.masterList = fileUtil.retrieveFromFile();
-    if (this.masterList == null) {
-      this.masterList = new ArrayList<>();
-    }
-
     this.luxuryQueue = new CircularArrayQueue<>(INITIAL_QUEUE_CAPACITY);
     this.suiteQueue = new CircularArrayQueue<>(INITIAL_QUEUE_CAPACITY);
     this.standardQueue = new CircularArrayQueue<>(INITIAL_QUEUE_CAPACITY);
 
     ListInterface<Reservation> waiting = new ArrayList<>();
+    var masterList = reservationRepo.getAllReservations().filter(r -> !r.getIsVip());
     for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
       Reservation r = masterList.getEntry(i);
       if (r != null && r.getRoomType() != null && r.getStatus() == Reservation.Status.WAITING) {
@@ -72,10 +65,6 @@ public class StandardReservationRepo {
     }
   }
 
-  private void save() {
-    fileUtil.saveToFile(masterList);
-  }
-
   private CircularArrayQueue<Reservation> queueFor(Room.RoomType roomType) {
     if (roomType == Room.RoomType.LUXURY) return luxuryQueue;
     if (roomType == Room.RoomType.SUITE) return suiteQueue;
@@ -96,10 +85,6 @@ public class StandardReservationRepo {
     return queueFor(roomType).canExpand();
   }
 
-  public ListInterface<Reservation> getAllReservations() {
-    return masterList;
-  }
-
   // Walks the queue front to back without disturbing it, so screens and reports can page
   // through the line while the queue itself stays a queue.
   public ListInterface<Reservation> snapshotQueue(Room.RoomType roomType) {
@@ -116,6 +101,7 @@ public class StandardReservationRepo {
 
   public ListInterface<Reservation> getHoldsByRoomType(Room.RoomType roomType) {
     ListInterface<Reservation> holds = new ArrayList<>();
+    var masterList = reservationRepo.getAllReservations().filter(r -> !r.getIsVip());
     for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
       Reservation r = masterList.getEntry(i);
       if (r != null
@@ -137,31 +123,10 @@ public class StandardReservationRepo {
     return holds;
   }
 
-  public Reservation findById(String reservationId) {
-    if (reservationId == null) return null;
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
-      if (r != null && reservationId.equalsIgnoreCase(r.getReservationId())) {
-        return r;
-      }
-    }
-    return null;
-  }
-
-  public Reservation findByConfirmationNumber(String confirmationNumber) {
-    if (confirmationNumber == null) return null;
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
-      if (r != null && confirmationNumber.equalsIgnoreCase(r.getConfirmationNumber())) {
-        return r;
-      }
-    }
-    return null;
-  }
-
   public void addReservation(Reservation reservation) {
     if (reservation == null || reservation.getRoomType() == null) return;
 
+    var masterList = reservationRepo.getAllReservations();
     if (!masterList.contains(reservation)) {
       masterList.add(reservation);
     }
@@ -173,21 +138,11 @@ public class StandardReservationRepo {
       }
     }
 
-    save();
+    reservationRepo.save();
   }
 
   public boolean updateReservation(Reservation updatedReservation) {
-    if (updatedReservation == null) return false;
-
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation existing = masterList.getEntry(i);
-      if (existing != null && existing.equals(updatedReservation)) {
-        masterList.replace(i, updatedReservation);
-        save();
-        return true;
-      }
-    }
-    return false;
+    return reservationRepo.updateReservation(updatedReservation);
   }
 
   // An advance booking becomes a body standing in the line.
@@ -223,9 +178,10 @@ public class StandardReservationRepo {
     reservation.setStatus(Reservation.Status.ALLOCATED);
     reservation.setAllocatedTime(now);
 
+    var masterList = reservationRepo.getAllReservations();
     if (!masterList.contains(reservation)) {
       masterList.add(reservation);
-      save();
+      reservationRepo.save();
       return true;
     }
     return updateReservation(reservation);
@@ -272,7 +228,7 @@ public class StandardReservationRepo {
     }
 
     queue.clear();
-    save();
+    reservationRepo.save();
     return closed;
   }
 
@@ -282,6 +238,8 @@ public class StandardReservationRepo {
   public int sweepLapsedHolds(RoomRepo roomRepo, GuestRepo guestRepo) {
     LocalDateTime now = LocalDateTime.now();
     int lapsed = 0;
+
+    var masterList = reservationRepo.getAllReservations().filter(r -> !r.getIsVip());
 
     for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
       Reservation r = masterList.getEntry(i);
@@ -321,7 +279,7 @@ public class StandardReservationRepo {
     }
 
     if (lapsed > 0) {
-      save();
+      reservationRepo.save();
     }
     return lapsed;
   }
@@ -351,49 +309,15 @@ public class StandardReservationRepo {
     roomRepo.updateRoom(room);
   }
 
-  // The VIP store mints "RES-" ids, so a "STD-" prefix cannot be handed out twice.
-  // Reservation.equals compares the id alone and the queue routes contains, getPosition
-  // and remove through it, so a duplicate would make the queue act on the wrong record.
   public String generateReservationId() {
-    int maxId = 10000;
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
-      if (r != null && r.getReservationId() != null && r.getReservationId().startsWith("STD-")) {
-        try {
-          int num = Integer.parseInt(r.getReservationId().substring(4));
-          if (num > maxId) {
-            maxId = num;
-          }
-        } catch (NumberFormatException ignored) {
-        }
-      }
-    }
-    return "STD-" + (maxId + 1);
+    return reservationRepo.generateReservationId();
   }
 
-  // Rooms link back to a booking by confirmation number only, so a code shared with the VIP
-  // store would make front-desk lookups resolve to the wrong guest.
-  public String generateConfirmationNumber(VipReservationRepo vipReservationRepo) {
-    while (true) {
-      String code = NumberUtil.generateDigitPin(8);
-      if (findByConfirmationNumber(code) == null && !existsInVipStore(code, vipReservationRepo)) {
-        return code;
-      }
-    }
+  public String generateConfirmationNumber() {
+    return reservationRepo.generateConfirmationNumber();
   }
 
-  private boolean existsInVipStore(String code, VipReservationRepo vipReservationRepo) {
-    if (vipReservationRepo == null) return false;
-
-    ListInterface<Reservation> vipList = vipReservationRepo.getAllReservations();
-    if (vipList == null) return false;
-
-    for (int i = 1; i <= vipList.getNumberOfEntries(); i++) {
-      Reservation r = vipList.getEntry(i);
-      if (r != null && code.equalsIgnoreCase(r.getConfirmationNumber())) {
-        return true;
-      }
-    }
-    return false;
+  public ListInterface<Reservation> getAllReservations() {
+    return reservationRepo.getAllReservations().filter(r -> !r.getIsVip());
   }
 }

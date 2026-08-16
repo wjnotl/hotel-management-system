@@ -10,7 +10,7 @@ import entity.Reservation;
 import java.util.Comparator;
 import repo.BillingRepo;
 import repo.GuestRepo;
-import repo.VipReservationRepo;
+import repo.ReservationRepo;
 import util.ConsoleUtil;
 import view.frontdesk.ManageGuestView;
 
@@ -18,17 +18,15 @@ public class ManageGuestController {
   private static final int PAGE_SIZE = 10;
 
   private final ManageGuestView manageGuestView = new ManageGuestView();
-  private final GuestRepo guestRepo = new GuestRepo();
-  private final VipReservationRepo reservationRepo;
-  private final BillingRepo billingRepo = new BillingRepo();
+  private final GuestRepo guestRepo;
+  private final ReservationRepo reservationRepo;
+  private final BillingRepo billingRepo;
 
-  public ManageGuestController(VipReservationRepo reservationRepo) {
+  public ManageGuestController(
+      ReservationRepo reservationRepo, GuestRepo guestRepo, BillingRepo billingRepo) {
     this.reservationRepo = reservationRepo;
-  }
-
-  // Convenience constructor for callers that don't need to share a VipReservationRepo instance.
-  public ManageGuestController() {
-    this(new VipReservationRepo());
+    this.guestRepo = guestRepo;
+    this.billingRepo = billingRepo;
   }
 
   public void start() {

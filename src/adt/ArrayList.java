@@ -3,6 +3,9 @@ package adt;
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class ArrayList<T> implements ListInterface<T>, Serializable {
   private static final long serialVersionUID = 1L;
@@ -131,6 +134,59 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
     }
 
     quickSort(0, numOfEntries - 1, comparator);
+  }
+
+  @Override
+  public ListInterface<T> filter(Predicate<T> predicate) {
+    ListInterface<T> filtered = new ArrayList<>();
+    for (int i = 1; i <= numOfEntries; i++) {
+      T entry = array[i - 1];
+      if (entry != null && predicate.test(entry)) {
+        filtered.add(entry);
+      }
+    }
+    return filtered;
+  }
+
+  @Override
+  public T find(Predicate<T> predicate) {
+    if (predicate == null) return null;
+
+    for (int i = 1; i <= numOfEntries; i++) {
+      T entry = array[i - 1];
+      if (entry != null && predicate.test(entry)) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public <R> ListInterface<R> map(Function<T, R> mapper) {
+    ListInterface<R> mappedList = new ArrayList<>();
+    if (mapper == null) return mappedList;
+
+    for (int i = 1; i <= numOfEntries; i++) {
+      T entry = array[i - 1];
+      if (entry != null) {
+        mappedList.add(mapper.apply(entry));
+      }
+    }
+    return mappedList;
+  }
+
+  @Override
+  public <U> U reduce(U identity, BiFunction<U, T, U> accumulator) {
+    U result = identity;
+    if (accumulator == null) return result;
+
+    for (int i = 1; i <= numOfEntries; i++) {
+      T entry = array[i - 1];
+      if (entry != null) {
+        result = accumulator.apply(result, entry);
+      }
+    }
+    return result;
   }
 
   @Override

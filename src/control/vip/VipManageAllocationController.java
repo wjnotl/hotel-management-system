@@ -291,7 +291,8 @@ public class VipManageAllocationController {
                     reservation.getIsBoiling(),
                     newScore,
                     LocalDateTime.now(),
-                    LocalDateTime.now());
+                    LocalDateTime.now(),
+                    true);
 
             vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
           }
@@ -356,7 +357,8 @@ public class VipManageAllocationController {
                     reservation.getIsBoiling(),
                     newScore,
                     LocalDateTime.now(),
-                    LocalDateTime.now());
+                    LocalDateTime.now(),
+                    true);
 
             vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
           }

@@ -14,12 +14,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.function.Function;
-import util.BinaryFileUtil;
 import util.TaskSchedulerUtil;
 
 public class VipReservationRepo {
-  private final BinaryFileUtil<ListInterface<Reservation>> fileUtil;
-  private ListInterface<Reservation> masterList;
+  private ReservationRepo reservationRepo;
 
   // 3 Dedicated Lists for O(1) queue separation
   private ListInterface<Reservation> luxuryList;
@@ -31,17 +29,12 @@ public class VipReservationRepo {
   private PriorityQueueInterface<Reservation> suiteVipQueue;
   private PriorityQueueInterface<Reservation> standardVipQueue;
 
-  public VipReservationRepo() {
-    this.fileUtil = new BinaryFileUtil<>("vip_reservations.dat");
+  public VipReservationRepo(ReservationRepo reservationRepo) {
+    this.reservationRepo = reservationRepo;
     load();
   }
 
   private void load() {
-    this.masterList = fileUtil.retrieveFromFile();
-    if (this.masterList == null) {
-      this.masterList = new ArrayList<>(25, true);
-    }
-
     this.luxuryList = new ArrayList<>();
     this.suiteList = new ArrayList<>();
     this.standardList = new ArrayList<>();
@@ -70,8 +63,10 @@ public class VipReservationRepo {
     this.suiteVipQueue = new BinaryHeapPriorityQueue<>(vipReservationComparator);
     this.standardVipQueue = new BinaryHeapPriorityQueue<>(vipReservationComparator);
 
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
+    var vipReservationList = reservationRepo.getAllReservations().filter(r -> r.getIsVip());
+
+    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
+      Reservation r = vipReservationList.getEntry(i);
       if (r != null && r.getRoomType() != null && r.getStatus() == Reservation.Status.WAITING) {
         getListByRoomType(r.getRoomType()).add(r);
         getHeapByRoomType(r.getRoomType()).enqueue(r);
@@ -91,10 +86,6 @@ public class VipReservationRepo {
     return standardVipQueue;
   }
 
-  private void save() {
-    fileUtil.saveToFile(masterList);
-  }
-
   public void addReservation(
       Reservation reservation,
       GuestRepo guestRepo,
@@ -102,8 +93,8 @@ public class VipReservationRepo {
       VipSystemConfigRepo configRepo) {
     if (reservation == null || reservation.getRoomType() == null) return;
 
-    if (!masterList.contains(reservation)) {
-      masterList.add(reservation);
+    if (!reservationRepo.getAllReservations().contains(reservation)) {
+      reservationRepo.getAllReservations().add(reservation);
     } else {
       updateReservation(reservation);
     }
@@ -113,7 +104,7 @@ public class VipReservationRepo {
       getHeapByRoomType(reservation.getRoomType()).enqueue(reservation);
     }
 
-    save();
+    reservationRepo.save();
     scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
   }
 
@@ -162,17 +153,7 @@ public class VipReservationRepo {
   }
 
   public boolean updateReservation(Reservation updatedRes) {
-    if (updatedRes == null || masterList == null) return false;
-
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation existing = masterList.getEntry(i);
-      if (existing != null && existing.equals(updatedRes)) {
-        masterList.replace(i, updatedRes);
-        save();
-        return true;
-      }
-    }
-    return false;
+    return reservationRepo.updateReservation(updatedRes);
   }
 
   public boolean cancelReservation(
@@ -194,21 +175,6 @@ public class VipReservationRepo {
 
     scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
     return heapRemoved || listRemoved || updatedInMaster;
-  }
-
-  public Reservation findById(String reservationId) {
-    if (reservationId == null || masterList == null) return null;
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
-      if (r != null && reservationId.equalsIgnoreCase(r.getReservationId())) {
-        return r;
-      }
-    }
-    return null;
-  }
-
-  public ListInterface<Reservation> getAllReservations() {
-    return masterList;
   }
 
   public int calculatePriorityScore(
@@ -282,7 +248,8 @@ public class VipReservationRepo {
       boolean forceBoilingCheck,
       VipSystemConfigRepo configRepo) {
 
-    if (masterList == null || config == null) return 0;
+    var vipReservationList = reservationRepo.getAllReservations().filter(r -> r.getIsVip());
+    if (vipReservationList == null || config == null) return 0;
     int affectedCount = 0;
 
     luxuryList.clear();
@@ -293,11 +260,11 @@ public class VipReservationRepo {
     suiteVipQueue.clear();
     standardVipQueue.clear();
 
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
+    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
+      Reservation reservation = vipReservationList.getEntry(i);
 
-      if (r != null && r.getStatus() == Reservation.Status.WAITING) {
-        Guest guest = (guestRepo != null) ? guestRepo.findById(r.getGuestId()) : null;
+      if (reservation != null && reservation.getStatus() == Reservation.Status.WAITING) {
+        Guest guest = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
         Member member =
             (memberRepo != null && guest != null) ? memberRepo.findById(guest.getMemberId()) : null;
 
@@ -310,34 +277,43 @@ public class VipReservationRepo {
                     : config.getSilverMaxStrikes();
 
         if (evictOverStrikes && guest != null && guest.getStrikeCount() > maxStrikes) {
-          r.setStatus(Reservation.Status.NO_SHOW);
-          updateReservation(r);
+          reservation.setStatus(Reservation.Status.NO_SHOW);
+          updateReservation(reservation);
           affectedCount++;
           continue;
         }
 
-        if (forceBoilingCheck && r.getQueueArrivalTime() != null) {
+        boolean affected = false;
+
+        if (forceBoilingCheck && reservation.getQueueArrivalTime() != null) {
           double waitMins =
-              Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
+              Duration.between(reservation.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
           double boilingLimit =
               (tier == Member.LoyaltyTier.DIAMOND)
                   ? config.getDiamondBoilingLimitMins()
                   : (tier == Member.LoyaltyTier.GOLD)
                       ? config.getGoldBoilingLimitMins()
                       : config.getSilverBoilingLimitMins();
-          r.setBoiling(waitMins >= boilingLimit);
+          reservation.setBoiling(waitMins >= boilingLimit);
+          affected = true;
         }
 
-        int newScore = calculatePriorityScore(r, guest, member, config);
-        r.setPriorityScore(newScore);
+        int newScore = calculatePriorityScore(reservation, guest, member, config);
+        if (reservation.getPriorityScore() != newScore) {
+          reservation.setPriorityScore(newScore);
+          affected = true;
+        }
 
-        getListByRoomType(r.getRoomType()).add(r);
-        getHeapByRoomType(r.getRoomType()).enqueue(r);
-        affectedCount++;
+        getListByRoomType(reservation.getRoomType()).add(reservation);
+        getHeapByRoomType(reservation.getRoomType()).enqueue(reservation);
+
+        if (affected) {
+          updateReservation(reservation);
+          affectedCount++;
+        }
       }
     }
 
-    save();
     scheduleNextBoilingTask(guestRepo, memberRepo, configRepo);
     return affectedCount;
   }
@@ -352,19 +328,21 @@ public class VipReservationRepo {
   private void scheduleNextBoilingTask(
       GuestRepo guestRepo, MemberRepo memberRepo, VipSystemConfigRepo configRepo) {
     VipSystemConfig config = (configRepo != null) ? configRepo.getConfig() : null;
-    if (config == null || masterList == null || masterList.isEmpty()) return;
+
+    var vipReservationList = reservationRepo.getAllReservations().filter(r -> r.getIsVip());
+
+    if (config == null || vipReservationList == null || vipReservationList.isEmpty()) return;
 
     long now = System.currentTimeMillis();
 
     // 1. Process any overdue boiling targets synchronously (where targetMs <= now)
-    boolean modified = false;
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
-      if (r != null
-          && r.getStatus() == Reservation.Status.WAITING
-          && !r.getIsBoiling()
-          && r.getQueueArrivalTime() != null) {
-        Guest g = (guestRepo != null) ? guestRepo.findById(r.getGuestId()) : null;
+    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
+      Reservation reservation = vipReservationList.getEntry(i);
+      if (reservation != null
+          && reservation.getStatus() == Reservation.Status.WAITING
+          && !reservation.getIsBoiling()
+          && reservation.getQueueArrivalTime() != null) {
+        Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
         Member m =
             (g != null && g.getMemberId() != null && memberRepo != null)
                 ? memberRepo.findById(g.getMemberId())
@@ -379,38 +357,38 @@ public class VipReservationRepo {
                     : config.getSilverBoilingLimitMins();
 
         long targetMs =
-            r.getQueueArrivalTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            reservation
+                    .getQueueArrivalTime()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
                 + (limitMins * 60 * 1000L);
 
         if (targetMs <= now) {
-          r.setBoiling(true);
-          int newScore = calculatePriorityScore(r, g, m, config);
-          r.setPriorityScore(newScore);
-          modified = true;
+          reservation.setBoiling(true);
+          int newScore = calculatePriorityScore(reservation, g, m, config);
+          reservation.setPriorityScore(newScore);
+          updateReservation(reservation);
 
-          PriorityQueueInterface<Reservation> heap = getHeapByRoomType(r.getRoomType());
+          PriorityQueueInterface<Reservation> heap = getHeapByRoomType(reservation.getRoomType());
           if (heap != null) {
-            heap.updatePriority(r);
+            heap.updatePriority(reservation);
           }
         }
       }
-    }
-
-    if (modified) {
-      save();
     }
 
     // 2. Find the earliest FUTURE boiling target (where targetMs > now)
     Reservation earliestFutureRes = null;
     long earliestFutureTargetMs = Long.MAX_VALUE;
 
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
-      if (r != null
-          && r.getStatus() == Reservation.Status.WAITING
-          && !r.getIsBoiling()
-          && r.getQueueArrivalTime() != null) {
-        Guest g = (guestRepo != null) ? guestRepo.findById(r.getGuestId()) : null;
+    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
+      Reservation reservation = vipReservationList.getEntry(i);
+      if (reservation != null
+          && reservation.getStatus() == Reservation.Status.WAITING
+          && !reservation.getIsBoiling()
+          && reservation.getQueueArrivalTime() != null) {
+        Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
         Member m =
             (g != null && g.getMemberId() != null && memberRepo != null)
                 ? memberRepo.findById(g.getMemberId())
@@ -425,12 +403,16 @@ public class VipReservationRepo {
                     : config.getSilverBoilingLimitMins();
 
         long targetMs =
-            r.getQueueArrivalTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            reservation
+                    .getQueueArrivalTime()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
                 + (limitMins * 60 * 1000L);
 
         if (targetMs > now && targetMs < earliestFutureTargetMs) {
           earliestFutureTargetMs = targetMs;
-          earliestFutureRes = r;
+          earliestFutureRes = reservation;
         }
       }
     }
@@ -470,57 +452,19 @@ public class VipReservationRepo {
         });
   }
 
+  public Reservation findById(String reservationId) {
+    return reservationRepo.findById(reservationId);
+  }
+
   public String generateReservationId() {
-    int maxId = 10000;
-    if (masterList != null) {
-      for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-        Reservation r = masterList.getEntry(i);
-        if (r != null && r.getReservationId() != null && r.getReservationId().startsWith("RES-")) {
-          try {
-            int num = Integer.parseInt(r.getReservationId().substring(4));
-            if (num > maxId) {
-              maxId = num;
-            }
-          } catch (NumberFormatException ignored) {
-          }
-        }
-      }
-    }
-    return "RES-" + (maxId + 1);
+    return reservationRepo.generateReservationId();
   }
 
   public String generateConfirmationNumber() {
-    while (true) {
-      String code = util.NumberUtil.generateDigitPin(8);
-      if (findByActiveConfirmationNumber(code) == null) {
-        return code;
-      }
-    }
+    return reservationRepo.generateConfirmationNumber();
   }
 
-  public Reservation findByActiveConfirmationNumber(String confirmationNumber) {
-    if (confirmationNumber == null || masterList == null) return null;
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
-      if (r != null
-          && confirmationNumber.equalsIgnoreCase(r.getConfirmationNumber())
-          && (r.getStatus() == Reservation.Status.WAITING
-              || r.getStatus() == Reservation.Status.ALLOCATED
-              || r.getStatus() == Reservation.Status.CHECKED_IN)) {
-        return r;
-      }
-    }
-    return null;
-  }
-
-  public Reservation findByConfirmationNumber(String confirmationNumber) {
-    if (confirmationNumber == null || masterList == null) return null;
-    for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
-      Reservation r = masterList.getEntry(i);
-      if (r != null && confirmationNumber.equalsIgnoreCase(r.getConfirmationNumber())) {
-        return r;
-      }
-    }
-    return null;
+  public ListInterface<Reservation> getAllReservations() {
+    return reservationRepo.getAllReservations().filter(r -> r.getIsVip());
   }
 }

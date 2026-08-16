@@ -28,6 +28,7 @@ public class Reservation implements Serializable {
   private LocalDateTime allocatedTime; // Useful for completed history & analytics
   private Integer allocatedGraceMins; // Snapshot of grace limit set during allocation
   private LocalDateTime checkOutTime;
+  private boolean isVip;
 
   public Reservation(
       String reservationId,
@@ -38,7 +39,8 @@ public class Reservation implements Serializable {
       boolean isBoiling,
       int priorityScore,
       LocalDateTime reservationTime,
-      LocalDateTime queueArrivalTime) {
+      LocalDateTime queueArrivalTime,
+      boolean isVip) {
     this.reservationId = reservationId;
     this.guestId = guestId;
     this.confirmationNumber = confirmationNumber;
@@ -48,6 +50,7 @@ public class Reservation implements Serializable {
     this.priorityScore = priorityScore;
     this.reservationTime = reservationTime;
     this.queueArrivalTime = queueArrivalTime;
+    this.isVip = isVip;
   }
 
   public String getReservationId() {
@@ -152,6 +155,14 @@ public class Reservation implements Serializable {
 
   public void setCheckOutTime(LocalDateTime checkOutTime) {
     this.checkOutTime = checkOutTime;
+  }
+
+  public boolean getIsVip() {
+    return isVip;
+  }
+
+  public void setIsVip(boolean isVip) {
+    this.isVip = isVip;
   }
 
   @Override
