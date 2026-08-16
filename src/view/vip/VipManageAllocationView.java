@@ -105,15 +105,20 @@ public class VipManageAllocationView {
       AllocationEntry entry = list.getEntry(i);
       if (entry == null) continue;
 
-      Reservation r = findReservationById(reservationList, entry.getReservationId());
-      Guest g = (r != null) ? findGuest(guestList, r.getGuestId()) : null;
-      Member m =
-          (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+      Reservation reservation =
+          reservationList.find(
+              r -> entry.getReservationId().equalsIgnoreCase(r.getReservationId()));
+
+      Guest guest = (reservation != null) ? findGuest(guestList, reservation.getGuestId()) : null;
+      Member member =
+          (guest != null && guest.getMemberId() != null)
+              ? findMember(memberList, guest.getMemberId())
+              : null;
 
       int displayNum = i - startIndex + 1;
       String resId = entry.getReservationId();
-      String guestName = (g != null) ? g.getName() : "N/A";
-      String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+      String guestName = (guest != null) ? guest.getName() : "N/A";
+      String tierStr = (member != null) ? member.getTier().name() : "NON-MEMBER";
       String roomAssigned = "Room " + entry.getAssignedRoomNumber();
       String graceTimer = formatTimerCountdown(entry.getExpirationTimestamp());
 
@@ -467,15 +472,6 @@ public class VipManageAllocationView {
     long mins = totalSec / 60;
     long secs = totalSec % 60;
     return String.format("%02d:%02d LEFT", mins, secs);
-  }
-
-  private Reservation findReservationById(ListInterface<Reservation> list, String resId) {
-    if (list == null || resId == null) return null;
-    for (int i = 1; i <= list.getNumberOfEntries(); i++) {
-      Reservation r = list.getEntry(i);
-      if (r != null && resId.equalsIgnoreCase(r.getReservationId())) return r;
-    }
-    return null;
   }
 
   private Guest findGuest(ListInterface<Guest> guestList, String guestId) {

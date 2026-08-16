@@ -142,7 +142,8 @@ public class AllocationRepo {
                       res.getIsBoiling(),
                       newScore,
                       LocalDateTime.now(),
-                      LocalDateTime.now());
+                      LocalDateTime.now(),
+                      true);
 
               vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
             }
@@ -228,7 +229,8 @@ public class AllocationRepo {
                             res.getIsBoiling(),
                             newScore,
                             LocalDateTime.now(),
-                            LocalDateTime.now());
+                            LocalDateTime.now(),
+                            true);
 
                     vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, configRepo);
                   }

@@ -3,6 +3,9 @@ package adt;
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class LinkedList<T> implements ListInterface<T>, Serializable {
   private static final long serialVersionUID = 1L;
@@ -144,6 +147,66 @@ public class LinkedList<T> implements ListInterface<T>, Serializable {
       return;
     }
     firstNode = mergeSort(firstNode, comparator);
+  }
+
+  @Override
+  public ListInterface<T> filter(Predicate<T> predicate) {
+    ListInterface<T> filtered = new LinkedList<>();
+    Node currentNode = firstNode;
+    while (currentNode != null) {
+      T entry = currentNode.data;
+      if (entry != null && predicate.test(entry)) {
+        filtered.add(entry);
+      }
+      currentNode = currentNode.next;
+    }
+    return filtered;
+  }
+
+  @Override public T find(Predicate<T> predicate) {
+    if (predicate == null) return null;
+
+    Node currentNode = firstNode;
+    while (currentNode != null) {
+      T entry = currentNode.data;
+      if (entry != null && predicate.test(entry)) {
+        return entry;
+      }
+      currentNode = currentNode.next;
+    }
+    return null;
+  }
+
+  @Override
+  public <R> ListInterface<R> map(Function<T, R> mapper) {
+    ListInterface<R> mappedList = new LinkedList<>();
+    if (mapper == null) return mappedList;
+
+    Node currentNode = firstNode;
+    while (currentNode != null) {
+      T entry = currentNode.data;
+      if (entry != null) {
+        mappedList.add(mapper.apply(entry));
+      }
+      currentNode = currentNode.next;
+    }
+    return mappedList;
+  }
+
+  @Override
+  public <U> U reduce(U identity, BiFunction<U, T, U> accumulator) {
+    U result = identity;
+    if (accumulator == null) return result;
+
+    Node currentNode = firstNode;
+    while (currentNode != null) {
+      T entry = currentNode.data;
+      if (entry != null) {
+        result = accumulator.apply(result, entry);
+      }
+      currentNode = currentNode.next;
+    }
+    return result;
   }
 
   @Override

@@ -6,9 +6,9 @@ import entity.Guest;
 import entity.Reservation;
 import entity.Room;
 import repo.GuestRepo;
+import repo.ReservationRepo;
 import repo.RoomRepo;
 import repo.RoomStatusHistoryRepo;
-import repo.VipReservationRepo;
 import util.ConsoleUtil;
 import view.frontdesk.ManageRoomStatusView;
 
@@ -17,21 +17,19 @@ public class ManageRoomStatusController {
 
   private final ManageRoomStatusView roomStatusView = new ManageRoomStatusView();
   private final RoomRepo roomRepo;
-  private final RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
-  private final VipReservationRepo vipReservationRepo;
+  private final RoomStatusHistoryRepo roomStatusHistoryRepo;
+  private final ReservationRepo reservationRepo;
   private final GuestRepo guestRepo;
 
   public ManageRoomStatusController(
-      RoomRepo roomRepo, VipReservationRepo vipReservationRepo, GuestRepo guestRepo) {
+      RoomRepo roomRepo,
+      ReservationRepo reservationRepo,
+      GuestRepo guestRepo,
+      RoomStatusHistoryRepo roomStatusHistoryRepo) {
     this.roomRepo = roomRepo;
-    this.vipReservationRepo = vipReservationRepo;
+    this.reservationRepo = reservationRepo;
     this.guestRepo = guestRepo;
-  }
-
-  // Convenience constructor for callers (e.g. FrontDeskController) that just want to wire this
-  // screen in without owning its repo instances.
-  public ManageRoomStatusController() {
-    this(new RoomRepo(), new VipReservationRepo(), new GuestRepo());
+    this.roomStatusHistoryRepo = roomStatusHistoryRepo;
   }
 
   public void start() {
@@ -295,7 +293,7 @@ public class ManageRoomStatusController {
 
   private Reservation findReservationByConfirmationNumberValue(String confirmationNumber) {
     if (confirmationNumber == null) return null;
-    ListInterface<Reservation> all = vipReservationRepo.getAllReservations();
+    ListInterface<Reservation> all = reservationRepo.getAllReservations();
     for (int i = 1; i <= all.getNumberOfEntries(); i++) {
       Reservation r = all.getEntry(i);
       if (r != null && confirmationNumber.equalsIgnoreCase(r.getConfirmationNumber())) {

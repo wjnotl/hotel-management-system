@@ -250,7 +250,8 @@ public class VipManageWaitlistController {
             false,
             baseScore,
             now,
-            now);
+            now,
+            true);
 
     vipReservationRepo.addReservation(newRes, guestRepo, memberRepo, vipSystemConfigRepo);
 

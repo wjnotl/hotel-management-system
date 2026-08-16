@@ -19,9 +19,15 @@ public class ReportsController {
   private static final int PAGE_SIZE = 10;
 
   private final ReportsView reportsView = new ReportsView();
-  private final BillingRepo billingRepo = new BillingRepo();
-  private final GuestRepo guestRepo = new GuestRepo();
-  private final RoomRepo roomRepo = new RoomRepo();
+  private final BillingRepo billingRepo;
+  private final GuestRepo guestRepo;
+  private final RoomRepo roomRepo;
+
+  public ReportsController(BillingRepo billingRepo, GuestRepo guestRepo, RoomRepo roomRepo) {
+    this.billingRepo = billingRepo;
+    this.guestRepo = guestRepo;
+    this.roomRepo = roomRepo;
+  }
 
   public void start() {
     while (true) {
