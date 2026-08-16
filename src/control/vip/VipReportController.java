@@ -6,6 +6,11 @@ import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import entity.VipSystemConfig;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.VipReservationRepo;
@@ -55,12 +60,35 @@ public class VipReportController {
     String tierFilter = null;
     String roomTypeFilter = null;
     String boilingFilter = null;
+    String datePresetLabel = "TODAY";
+    LocalDateTime startDate = LocalDate.now().atStartOfDay();
+    LocalDateTime endDate = LocalDateTime.now();
+    boolean customEndIsToday = false;
     String sortAttribute;
     String sortDirection = "DESCENDING";
     int recordLimit = 10;
 
     ReportFilterState(int reportType) {
       this.sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
+    }
+
+    void refreshPresetTimestamps() {
+      if ("TODAY".equals(datePresetLabel)) {
+        this.startDate = LocalDate.now().atStartOfDay();
+        this.endDate = LocalDateTime.now();
+      } else if ("YESTERDAY".equals(datePresetLabel)) {
+        LocalDate yest = LocalDate.now().minusDays(1);
+        this.startDate = yest.atStartOfDay();
+        this.endDate = yest.atTime(23, 59);
+      } else if ("LAST 7 DAYS".equals(datePresetLabel)) {
+        this.startDate = LocalDate.now().minusDays(6).atStartOfDay();
+        this.endDate = LocalDateTime.now();
+      } else if ("LAST 30 DAYS".equals(datePresetLabel)) {
+        this.startDate = LocalDate.now().minusDays(29).atStartOfDay();
+        this.endDate = LocalDateTime.now();
+      } else if (customEndIsToday) {
+        this.endDate = LocalDateTime.now();
+      }
     }
   }
 
@@ -89,6 +117,7 @@ public class VipReportController {
 
     while (true) {
       try {
+        state.refreshPresetTimestamps();
         ListInterface<Reservation> allReservations = vipReservationRepo.getAllReservations();
         ListInterface<Reservation> filteredList =
             filterAndSortList(
@@ -97,13 +126,21 @@ public class VipReportController {
                 state.tierFilter,
                 state.roomTypeFilter,
                 state.boilingFilter,
+                state.startDate,
+                state.endDate,
                 state.sortAttribute,
                 state.sortDirection,
                 reportType);
 
         String scopeStr =
             buildScopeString(
-                state.searchQuery, state.tierFilter, state.roomTypeFilter, state.boilingFilter);
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.startDate,
+                state.endDate,
+                state.datePresetLabel);
         String sortStr = state.sortAttribute + " (" + state.sortDirection + ")";
         VipSystemConfig config = configRepo.getConfig();
         GetMenuInputResult result;
@@ -156,9 +193,11 @@ public class VipReportController {
           if (!generateSelected) {
             return; // Back from filter menu -> return to Analytics Hub
           }
-          // generateSelected is true -> loop continues & re-renders report with new filters!
+          // generateSelected is true -> loop continues & re-renders report with new
+          // filters!
         } else if ("R".equalsIgnoreCase(result.input)) {
-          // Refresh -> loop continues & re-fetches live data & re-renders report screen directly!
+          // Refresh -> loop continues & re-fetches live data & re-renders report screen
+          // directly!
         } else if ("E".equalsIgnoreCase(result.input)) {
           String filePrefix = "unknown_report";
           switch (reportType) {
@@ -196,6 +235,7 @@ public class VipReportController {
                 state.tierFilter,
                 state.roomTypeFilter,
                 state.boilingFilter,
+                state.datePresetLabel,
                 state.sortAttribute,
                 state.sortDirection,
                 state.recordLimit);
@@ -216,6 +256,9 @@ public class VipReportController {
           state.tierFilter = null;
           state.roomTypeFilter = null;
           state.boilingFilter = null;
+          state.datePresetLabel = "TODAY";
+          state.startDate = LocalDate.now().atStartOfDay();
+          state.endDate = LocalDate.now().atTime(LocalTime.MAX);
           state.sortAttribute = (reportType == 2) ? "STRIKE COUNT" : "PHYSICAL WAIT TIME";
           state.sortDirection = "DESCENDING";
           state.recordLimit = 10;
@@ -233,7 +276,11 @@ public class VipReportController {
       try {
         GetMenuInputResult action =
             reportView.displayEditFiltersSubmenu(
-                state.searchQuery, state.tierFilter, state.roomTypeFilter, state.boilingFilter);
+                state.searchQuery,
+                state.tierFilter,
+                state.roomTypeFilter,
+                state.boilingFilter,
+                state.datePresetLabel);
         int choice = action.getAsInt();
         if (choice == 1) {
           state.tierFilter = handleTierSubmenu(state.tierFilter);
@@ -242,12 +289,212 @@ public class VipReportController {
         } else if (choice == 3) {
           state.roomTypeFilter = handleRoomTypeSubmenu(state.roomTypeFilter);
         } else if (choice == 4) {
-          state.searchQuery = handleSearchSubmenu(state.searchQuery);
+          handleDateFilterSubmenu(state);
         } else if (choice == 5) {
+          state.searchQuery = handleSearchSubmenu(state.searchQuery);
+        } else if (choice == 6) {
           return; // Back to Report Generation Configuration Menu
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void handleDateFilterSubmenu(ReportFilterState state) {
+    while (true) {
+      try {
+        GetMenuInputResult res = reportView.displayDateFilterSubmenu(state.datePresetLabel);
+        int choice = res.getAsInt();
+        if (choice == 1) {
+          state.startDate = LocalDate.now().atStartOfDay();
+          state.endDate = LocalDateTime.now();
+          state.datePresetLabel = "TODAY";
+          return;
+        } else if (choice == 2) {
+          LocalDate yest = LocalDate.now().minusDays(1);
+          state.startDate = yest.atStartOfDay();
+          state.endDate = yest.atTime(23, 59);
+          state.datePresetLabel = "YESTERDAY";
+          return;
+        } else if (choice == 3) {
+          state.startDate = LocalDate.now().minusDays(6).atStartOfDay();
+          state.endDate = LocalDateTime.now();
+          state.datePresetLabel = "LAST 7 DAYS";
+          return;
+        } else if (choice == 4) {
+          state.startDate = LocalDate.now().minusDays(29).atStartOfDay();
+          state.endDate = LocalDateTime.now();
+          state.datePresetLabel = "LAST 30 DAYS";
+          return;
+        } else if (choice == 5) {
+          if (handleCustomDateRangeSubmenu(state)) {
+            return;
+          }
+        } else if (choice == 6) {
+          if (handleCustomDateTimeRangeSubmenu(state)) {
+            return;
+          }
+        } else if (choice == 7) {
+          state.startDate = null;
+          state.endDate = null;
+          state.datePresetLabel = "ALL TIME";
+          return;
+        } else if (choice == 8) {
+          return;
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean handleCustomDateRangeSubmenu(ReportFilterState state) {
+    DateTimeFormatter parseFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    LocalDate start = null;
+    String startStr = "N/A";
+
+    // Step 1: Prompt Start Date (Immediate validation loop)
+    while (true) {
+      String input =
+          reportView.promptCustomDateStep(
+              "1 of 2: Start Date",
+              "YYYY-MM-DD (e.g. 2026-08-01)",
+              "Enter Start Date [or 'C' to Cancel]: ",
+              null);
+      if (input == null) return false;
+      try {
+        start = LocalDate.parse(input, parseFmt);
+        if (start.isAfter(LocalDate.now())) {
+          ConsoleUtil.printError(
+              "Invalid Date! Start Date ("
+                  + input
+                  + ") cannot be in the future (Today is "
+                  + LocalDate.now()
+                  + ").");
+          continue;
+        }
+        startStr = input;
+        break;
+      } catch (DateTimeParseException e) {
+        ConsoleUtil.printError(
+            "Invalid Start Date Format! Please use YYYY-MM-DD format (e.g. 2026-08-01).");
+      }
+    }
+
+    // Step 2: Prompt End Date (Immediate validation loop)
+    while (true) {
+      String input =
+          reportView.promptCustomDateStep(
+              "2 of 2: End Date",
+              "YYYY-MM-DD (e.g. 2026-08-16)",
+              "Enter End Date [or 'C' to Cancel]: ",
+              "Start Date set to " + startStr);
+      if (input == null) return false;
+      try {
+        LocalDate end = LocalDate.parse(input, parseFmt);
+        if (end.isAfter(LocalDate.now())) {
+          ConsoleUtil.printError(
+              "Invalid Date! End Date ("
+                  + input
+                  + ") cannot be in the future (Today is "
+                  + LocalDate.now()
+                  + ").");
+          continue;
+        }
+        if (start == null || end.isBefore(start)) {
+          ConsoleUtil.printError(
+              "Invalid Range! End Date ("
+                  + input
+                  + ") cannot be before Start Date ("
+                  + startStr
+                  + ").");
+          continue;
+        }
+        state.startDate = start.atStartOfDay();
+        if (end.equals(LocalDate.now())) {
+          state.customEndIsToday = true;
+          state.endDate = LocalDateTime.now();
+        } else {
+          state.customEndIsToday = false;
+          state.endDate = end.atTime(23, 59);
+        }
+        state.datePresetLabel = startStr.equals(input) ? startStr : (startStr + " to " + input);
+        return true;
+      } catch (DateTimeParseException e) {
+        ConsoleUtil.printError(
+            "Invalid End Date Format! Please use YYYY-MM-DD format (e.g. 2026-08-16).");
+      }
+    }
+  }
+
+  private boolean handleCustomDateTimeRangeSubmenu(ReportFilterState state) {
+    DateTimeFormatter parseFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    DateTimeFormatter displayFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    LocalDateTime start = null;
+    String startStr = null;
+
+    // Step 1: Prompt Start Date-Time (Immediate validation loop)
+    while (true) {
+      String input =
+          reportView.promptCustomDateTimeStep(
+              "1 of 2: Start Date-Time",
+              "YYYY-MM-DD HH:mm (e.g. 2026-08-16 08:00)",
+              "Enter Start Date-Time [or 'C' to Cancel]: ",
+              null);
+      if (input == null) return false;
+      try {
+        start = LocalDateTime.parse(input, parseFmt);
+        if (start.isAfter(LocalDateTime.now())) {
+          ConsoleUtil.printError(
+              "Invalid Date-Time! Start Date-Time (" + input + ") cannot be in the future.");
+          continue;
+        }
+        startStr = input;
+        break;
+      } catch (DateTimeParseException e) {
+        ConsoleUtil.printError(
+            "Invalid Start Date-Time Format! Please use YYYY-MM-DD HH:mm format (e.g. 2026-08-16"
+                + " 08:00).");
+      }
+    }
+
+    // Step 2: Prompt End Date-Time (Immediate validation loop)
+    while (true) {
+      String input =
+          reportView.promptCustomDateTimeStep(
+              "2 of 2: End Date-Time",
+              "YYYY-MM-DD HH:mm (e.g. 2026-08-16 18:00)",
+              "Enter End Date-Time [or 'C' to Cancel]: ",
+              "Start Date-Time set to " + startStr);
+      if (input == null) return false;
+      try {
+        LocalDateTime end = LocalDateTime.parse(input, parseFmt);
+        if (end.isAfter(LocalDateTime.now())) {
+          ConsoleUtil.printError(
+              "Invalid Date-Time! End Date-Time (" + input + ") cannot be in the future.");
+          continue;
+        }
+        if (start == null || !end.isAfter(start)) {
+          ConsoleUtil.printError(
+              "Invalid Range! End Date-Time ("
+                  + input
+                  + ") must be AFTER Start Date-Time ("
+                  + startStr
+                  + ").");
+          continue;
+        }
+        state.startDate = start;
+        state.endDate = end;
+        state.datePresetLabel =
+            state.startDate.format(displayFmt) + " to " + state.endDate.format(displayFmt);
+        return true;
+      } catch (DateTimeParseException e) {
+        ConsoleUtil.printError(
+            "Invalid End Date-Time Format! Please use YYYY-MM-DD HH:mm format (e.g. 2026-08-16"
+                + " 18:00).");
       }
     }
   }
@@ -374,6 +621,8 @@ public class VipReportController {
       String tier,
       String roomType,
       String boiling,
+      LocalDateTime startDate,
+      LocalDateTime endDate,
       String sortAttr,
       String sortDir,
       int reportType) {
@@ -386,7 +635,8 @@ public class VipReportController {
       Reservation r = source.getEntry(i);
       if (r == null) continue;
 
-      // Report 3 is Room Holding Bay & Grace Window Audit: strictly include holding bay records
+      // Report 3 is Room Holding Bay & Grace Window Audit: strictly include holding
+      // bay records
       if (reportType == 3) {
         boolean enteredHoldingBay =
             r.getAllocatedTime() != null
@@ -406,6 +656,16 @@ public class VipReportController {
       boolean matchTier = true;
       boolean matchRoom = true;
       boolean matchBoiling = true;
+      boolean matchDate = true;
+
+      if (startDate != null || endDate != null) {
+        LocalDateTime resTime =
+            (r.getAllocatedTime() != null) ? r.getAllocatedTime() : r.getQueueArrivalTime();
+        if (resTime != null) {
+          if (startDate != null && resTime.isBefore(startDate)) matchDate = false;
+          if (endDate != null && resTime.isAfter(endDate)) matchDate = false;
+        }
+      }
 
       if (search != null && !search.trim().isEmpty()) {
         String query = search.trim().toLowerCase();
@@ -438,7 +698,7 @@ public class VipReportController {
         else if ("NORMAL".equalsIgnoreCase(boiling)) matchBoiling = !r.getIsBoiling();
       }
 
-      if (matchSearch && matchTier && matchRoom && matchBoiling) {
+      if (matchSearch && matchTier && matchRoom && matchBoiling && matchDate) {
         filtered.add(r);
       }
     }
@@ -495,14 +755,37 @@ public class VipReportController {
     return filtered;
   }
 
-  private String buildScopeString(String search, String tier, String room, String boiling) {
-    StringBuilder sb = new StringBuilder("All-Time System Audit | ");
-    sb.append(tier == null ? "All Tiers" : tier).append(" | ");
-    sb.append(room == null ? "All Room Types" : room).append(" | ");
-    sb.append(boiling == null ? "All Boiling States" : boiling);
-    if (search != null) {
-      sb.append(" | Search: \"").append(search).append("\"");
+  private String buildScopeString(
+      String search,
+      String tier,
+      String room,
+      String boiling,
+      LocalDateTime startDate,
+      LocalDateTime endDate,
+      String datePresetLabel) {
+    StringBuilder sb = new StringBuilder();
+    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    String dateRangeStr;
+    if (startDate == null && endDate == null) {
+      dateRangeStr = "ALL TIME";
+    } else if (startDate == null) {
+      dateRangeStr = "Up to " + endDate.format(fmt);
+    } else if (endDate == null) {
+      dateRangeStr = "From " + startDate.format(fmt);
+    } else {
+      dateRangeStr = startDate.format(fmt) + " to " + endDate.format(fmt);
     }
+
+    sb.append("  - Date Range      : [ ").append(dateRangeStr).append(" ]\n");
+    sb.append("  - Membership Tier : ").append(tier == null ? "All Tiers" : tier).append("\n");
+    sb.append("  - Room Queue Type : ").append(room == null ? "All Room Types" : room).append("\n");
+    sb.append("  - Boiling Status  : ").append(boiling == null ? "All Boiling States" : boiling);
+
+    if (search != null && !search.trim().isEmpty()) {
+      sb.append("\n  - Search Query    : \"").append(search).append("\"");
+    }
+
     return sb.toString();
   }
 }

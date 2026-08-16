@@ -213,7 +213,7 @@ public class VipManageWaitlistController {
   }
 
   private boolean handleStrikeOverrideFlow(Guest guest, Member member, int maxStrikes) {
-    if (guest.getStrikeCount() < maxStrikes) {
+    if (guest.getStrikeCount() <= maxStrikes) {
       return true;
     }
     while (true) {

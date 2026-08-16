@@ -122,16 +122,13 @@ public class AllocationRepo {
                         ? config.getGoldMaxStrikes()
                         : config.getSilverMaxStrikes();
 
-            if (guest.getStrikeCount() >= maxStrikes) {
-              res.setStatus(Reservation.Status.NO_SHOW);
-              vipReservationRepo.updateReservation(res);
-            } else {
-              res.setStatus(Reservation.Status.NO_SHOW);
-              vipReservationRepo.updateReservation(res);
+            guest.setStrikeCount(guest.getStrikeCount() + 1);
+            guestRepo.updateGuest(guest);
 
-              guest.setStrikeCount(guest.getStrikeCount() + 1);
-              guestRepo.updateGuest(guest);
+            res.setStatus(Reservation.Status.NO_SHOW);
+            vipReservationRepo.updateReservation(res);
 
+            if (guest.getStrikeCount() <= maxStrikes) {
               int newScore = vipReservationRepo.calculatePriorityScore(res, guest, member, config);
 
               String newResId = vipReservationRepo.generateReservationId();
@@ -209,16 +206,13 @@ public class AllocationRepo {
                               ? config.getGoldMaxStrikes()
                               : config.getSilverMaxStrikes();
 
-                  if (guest.getStrikeCount() >= maxStrikes) {
-                    res.setStatus(Reservation.Status.NO_SHOW);
-                    vipReservationRepo.updateReservation(res);
-                  } else {
-                    res.setStatus(Reservation.Status.NO_SHOW);
-                    vipReservationRepo.updateReservation(res);
+                  guest.setStrikeCount(guest.getStrikeCount() + 1);
+                  guestRepo.updateGuest(guest);
 
-                    guest.setStrikeCount(guest.getStrikeCount() + 1);
-                    guestRepo.updateGuest(guest);
+                  res.setStatus(Reservation.Status.NO_SHOW);
+                  vipReservationRepo.updateReservation(res);
 
+                  if (guest.getStrikeCount() <= maxStrikes) {
                     int newScore =
                         vipReservationRepo.calculatePriorityScore(
                             res, guest, member, configRepo.getConfig());
@@ -267,8 +261,7 @@ public class AllocationRepo {
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
     // Delegates directly to scheduleNextAutoExpirationTask which processes overdue holds
-    // synchronously
-    // and arms the timer for future expirations.
+    // synchronously and arms the timer for future expirations.
     scheduleNextAutoExpirationTask(roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
   }
 

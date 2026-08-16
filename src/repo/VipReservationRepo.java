@@ -309,7 +309,7 @@ public class VipReservationRepo {
                     ? config.getGoldMaxStrikes()
                     : config.getSilverMaxStrikes();
 
-        if (evictOverStrikes && guest != null && guest.getStrikeCount() >= maxStrikes) {
+        if (evictOverStrikes && guest != null && guest.getStrikeCount() > maxStrikes) {
           r.setStatus(Reservation.Status.NO_SHOW);
           updateReservation(r);
           affectedCount++;

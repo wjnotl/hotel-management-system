@@ -35,6 +35,7 @@ public class VipReportView {
       String tier,
       String roomType,
       String boiling,
+      String datePreset,
       String sortAttr,
       String sortDir,
       int recordLimit) {
@@ -51,6 +52,8 @@ public class VipReportView {
         "  - Room Queue Type    : [ " + (roomType == null ? "ALL ROOM TYPES" : roomType) + " ]");
     System.out.println(
         "  - Boiling Status     : [ " + (boiling == null ? "ALL STATES" : boiling) + " ]");
+    System.out.println(
+        "  - Date Range Filter  : [ " + (datePreset == null ? "ALL TIME" : datePreset) + " ]");
     System.out.println("  - Sort Attribute     : [ " + sortAttr + " ]");
     System.out.println("  - Sort Direction     : [ " + sortDir + " ]");
     System.out.println(
@@ -70,7 +73,7 @@ public class VipReportView {
   }
 
   public GetMenuInputResult displayEditFiltersSubmenu(
-      String search, String tier, String roomType, String boiling) {
+      String search, String tier, String roomType, String boiling, String datePreset) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("EDIT FILTERS", 88);
     System.out.println(
@@ -81,16 +84,36 @@ public class VipReportView {
     System.out.println(
         "  - Room Queue Type    : [ " + (roomType == null ? "ALL ROOM TYPES" : roomType) + " ]");
     System.out.println(
-        "  - Boiling Status     : [ " + (boiling == null ? "ALL STATES" : boiling) + " ]\n");
+        "  - Boiling Status     : [ " + (boiling == null ? "ALL STATES" : boiling) + " ]");
+    System.out.println(
+        "  - Date Range Filter  : [ " + (datePreset == null ? "ALL TIME" : datePreset) + " ]\n");
     System.out.println(
         "--------------------------------------------------------------------------\n");
     System.out.println("1. Membership Tier");
     System.out.println("2. Boiling Status");
     System.out.println("3. Room Queue Type");
-    System.out.println("4. Search Query");
-    System.out.println("5. Back\n");
+    System.out.println("4. Date Range Filter");
+    System.out.println("5. Search Query");
+    System.out.println("6. Back\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5);
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6);
+  }
+
+  public GetMenuInputResult displayDateFilterSubmenu(String currentPreset) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("DATE RANGE FILTER OPTIONS", 88);
+    System.out.println(
+        "Active Preset: [ " + (currentPreset == null ? "ALL TIME" : currentPreset) + " ]\n");
+    System.out.println("1. Today (00:00 - 23:59)");
+    System.out.println("2. Yesterday");
+    System.out.println("3. Last 7 Days");
+    System.out.println("4. Last 30 Days");
+    System.out.println("5. Custom Date Range (YYYY-MM-DD to YYYY-MM-DD)");
+    System.out.println("6. Custom Date & Time Range (YYYY-MM-DD HH:mm to YYYY-MM-DD HH:mm)");
+    System.out.println("7. All Time (No Date Filter)");
+    System.out.println("8. Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 8);
   }
 
   public GetMenuInputResult displaySortOptionsSubmenu(String sortAttr, String sortDir) {
@@ -215,8 +238,9 @@ public class VipReportView {
     System.out.println(
         "Generated At: "
             + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-    System.out.println("Active Scope : " + scopeStr);
-    System.out.println("Sort Order   : " + sortStr + "\n");
+    System.out.println("Active Scope:");
+    System.out.println(scopeStr);
+    System.out.println("Sort Order  : " + sortStr + "\n");
 
     int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
     int displayCount =
@@ -307,8 +331,9 @@ public class VipReportView {
     System.out.println(
         "Generated At: "
             + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-    System.out.println("Active Scope : " + scopeStr);
-    System.out.println("Sort Order   : " + sortStr + "\n");
+    System.out.println("Active Scope:");
+    System.out.println(scopeStr);
+    System.out.println("Sort Order  : " + sortStr + "\n");
 
     int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
     int displayCount =
@@ -401,8 +426,9 @@ public class VipReportView {
     System.out.println(
         "Generated At: "
             + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-    System.out.println("Active Scope : " + scopeStr);
-    System.out.println("Sort Order   : " + sortStr + "\n");
+    System.out.println("Active Scope:");
+    System.out.println(scopeStr);
+    System.out.println("Sort Order  : " + sortStr + "\n");
 
     int totalMatches = (matchedList == null) ? 0 : matchedList.getNumberOfEntries();
     int displayCount =
@@ -768,5 +794,39 @@ public class VipReportView {
     System.out.println(" >> SUCCESS: Report successfully exported to disk!");
     System.out.println(" >> File Location: " + filePath + "\n");
     ConsoleUtil.printContinueMessage();
+  }
+
+  public String promptCustomDateStep(
+      String stepTitle, String formatInfo, String promptLabel, String currentContext) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CUSTOM DATE RANGE FILTER", 88);
+    System.out.println("Step: [ " + stepTitle + " ]");
+    if (currentContext != null && !currentContext.isEmpty()) {
+      System.out.println("Context: " + currentContext);
+    }
+    System.out.println("Expected Format: " + formatInfo);
+    System.out.println("Type 'C' to cancel.\n");
+    String input = ConsoleUtil.getStringInput(promptLabel);
+    if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
+      return null;
+    }
+    return input.trim();
+  }
+
+  public String promptCustomDateTimeStep(
+      String stepTitle, String formatInfo, String promptLabel, String currentContext) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CUSTOM DATE & TIME RANGE FILTER", 88);
+    System.out.println("Step: [ " + stepTitle + " ]");
+    if (currentContext != null && !currentContext.isEmpty()) {
+      System.out.println("Context: " + currentContext);
+    }
+    System.out.println("Expected Format: " + formatInfo);
+    System.out.println("Type 'C' to cancel.\n");
+    String input = ConsoleUtil.getStringInput(promptLabel);
+    if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
+      return null;
+    }
+    return input.trim();
   }
 }
