@@ -354,7 +354,12 @@ public class WalkInQueueController {
       return;
     }
 
-    Integer selection = walkInQueueView.promptHoldSelection(holds.getNumberOfEntries());
+    Integer selection =
+        walkInQueueView.promptHoldSelection(
+            holds,
+            guestRepo.getGuestList(),
+            roomRepo.getRoomList(),
+            StandardReservationRepo.GRACE_MINUTES);
     if (selection == null) {
       return;
     }
