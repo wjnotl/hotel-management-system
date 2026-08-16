@@ -104,7 +104,8 @@ public class VipManageAllocationView {
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-      // Width 95 matches total grid width (80 text + 12 padding + 5 internal walls - 2 empty
+      // Width 95 matches total grid width (80 text + 12 padding + 5 internal walls -
+      // 2 empty
       // padding = 95)
       TableUtil.TableSettings emptySettings =
           new TableUtil.TableSettings(new int[] {95}).setHAlign(0, TableUtil.Align.CENTER);
@@ -203,7 +204,7 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ALLOCATION DETAILS & SETTLEMENT");
 
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
     int[] kvWidths = {22, 58};
 
     TableUtil.TableSettings fullSettings =
@@ -250,7 +251,7 @@ public class VipManageAllocationView {
 
     System.out.println("\nSelect an action to proceed:");
     System.out.println(
-        "1. Confirm Allocate (Guest arrived, prompt stay duration & complete check-in)");
+        "1. Complete Check-In (Guest arrived, prompt stay duration & generate confirmation code)");
     System.out.println("2. Cancel Allocation (Guest no-show / resolve penalty path)");
     System.out.println("3. Go Back to Allocation List\n");
 
@@ -261,7 +262,7 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CANCEL ALLOCATION RESOLUTION PATHS");
 
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
     int[] kvWidths = {20, 60};
 
     TableUtil.TableSettings fullSettings =
@@ -315,7 +316,7 @@ public class VipManageAllocationView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK-IN COMPLETE");
 
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
     int[] kvWidths = {20, 60};
 
     TableUtil.TableSettings fullSettings =
@@ -330,6 +331,15 @@ public class VipManageAllocationView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableRow(
+        new String[] {
+          "Confirmation Code",
+          (r.getConfirmationNumber() != null && !r.getConfirmationNumber().trim().isEmpty()
+              ? r.getConfirmationNumber()
+              : "N/A")
+        },
+        kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
@@ -437,7 +447,7 @@ public class VipManageAllocationView {
 
   public Integer promptStayDuration(AllocationEntry entry, Guest guest) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CONFIRM ALLOCATION & CHECK-IN");
+    ConsoleUtil.printTitleBox("CONFIRM GUEST CHECK-IN");
     System.out.println(" Target Guest   : " + (guest != null ? guest.getName() : "N/A"));
     System.out.println(" Room Assigned  : Room " + entry.getAssignedRoomNumber());
     System.out.println("------------------------------------------------------");

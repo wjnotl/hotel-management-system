@@ -34,6 +34,7 @@ public class VipManageWaitlistView {
     private final String guestName;
     private final String phoneNumber;
     private final String tier;
+    private final String waitTime;
     private final boolean isBoiling;
     private final int strikes;
     private final int priorityScore;
@@ -43,6 +44,7 @@ public class VipManageWaitlistView {
         String guestName,
         String phoneNumber,
         String tier,
+        String waitTime,
         boolean isBoiling,
         int strikes,
         int priorityScore) {
@@ -50,6 +52,7 @@ public class VipManageWaitlistView {
       this.guestName = guestName;
       this.phoneNumber = phoneNumber;
       this.tier = tier;
+      this.waitTime = waitTime;
       this.isBoiling = isBoiling;
       this.strikes = strikes;
       this.priorityScore = priorityScore;
@@ -69,6 +72,10 @@ public class VipManageWaitlistView {
 
     public String getTier() {
       return tier;
+    }
+
+    public String getWaitTime() {
+      return waitTime;
     }
 
     public boolean getIsBoiling() {
@@ -106,7 +113,7 @@ public class VipManageWaitlistView {
     int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
     boolean hasActiveFilters = (search != null || tier != null || boiling != null);
 
-    int[] columnWidths = {4, 11, 18, 14, 10, 9, 8, 7};
+    int[] columnWidths = {4, 11, 16, 13, 10, 10, 8, 7, 6};
 
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
@@ -115,7 +122,8 @@ public class VipManageWaitlistView {
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.CENTER)
             .setHAlign(6, TableUtil.Align.CENTER)
-            .setHAlign(7, TableUtil.Align.RIGHT)
+            .setHAlign(7, TableUtil.Align.CENTER)
+            .setHAlign(8, TableUtil.Align.RIGHT)
             .setTruncate(2);
 
     TableUtil.TableSettings headerSettings =
@@ -128,12 +136,21 @@ public class VipManageWaitlistView {
             .setHAlign(5, TableUtil.Align.CENTER)
             .setHAlign(6, TableUtil.Align.CENTER)
             .setHAlign(7, TableUtil.Align.CENTER)
+            .setHAlign(8, TableUtil.Align.CENTER)
             .setTruncate(2);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {
-          "NO.", "RES ID", "GUEST NAME", "PHONE NO.", "TIER", "BOILING", "STRIKES", "SCORE"
+          "NO.",
+          "RES ID",
+          "GUEST NAME",
+          "PHONE NO.",
+          "TIER",
+          "WAIT TIME",
+          "BOILING",
+          "STRIKES",
+          "SCORE"
         },
         headerSettings);
 
@@ -142,7 +159,7 @@ public class VipManageWaitlistView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {102}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {109}).setHAlign(0, TableUtil.Align.CENTER);
 
       String emptyMsg =
           hasActiveFilters
@@ -193,6 +210,7 @@ public class VipManageWaitlistView {
             item.getGuestName(),
             item.getPhoneNumber(),
             item.getTier(),
+            item.getWaitTime(),
             boilingStr,
             String.valueOf(item.getStrikes()),
             String.valueOf(item.getPriorityScore())
@@ -255,7 +273,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("CONFIRM ADD GUEST TO WAITLIST", 83);
 
     int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
 
     TableUtil.TableSettings kvSettings =
         new TableUtil.TableSettings(kvWidths)
@@ -322,10 +340,10 @@ public class VipManageWaitlistView {
   public boolean displayDequeueConfirmationScreen(
       Reservation r, Guest g, Member m, Room room, int graceMins) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CONFIRM VIP ROOM ALLOCATION", 83);
+    ConsoleUtil.printTitleBox("CONFIRM ROOM ASSIGNMENT", 83);
 
     int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
 
     TableUtil.TableSettings kvSettings =
         new TableUtil.TableSettings(kvWidths)
@@ -341,9 +359,6 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(
-        new String[] {"Confirmation Code", r.getConfirmationNumber()}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {"Requested Room Type", r.getRoomType().name()}, kvSettings);
@@ -412,13 +427,12 @@ public class VipManageWaitlistView {
         },
         kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(new String[] {"Hold Expiration", graceMins + " Minutes"}, kvSettings);
+    TableUtil.printTableRow(new String[] {"Hold Expiration", graceMins + " Mins"}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
     GetMenuInputResult input =
-        ConsoleUtil.getMenuInput(
-            "Assign room & create allocation entry? (Y/N): ", new char[] {'Y', 'N'});
+        ConsoleUtil.getMenuInput("Assign room & hold for guest? (Y/N): ", new char[] {'Y', 'N'});
     return "Y".equalsIgnoreCase(input.input);
   }
 
@@ -427,7 +441,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("CONFIRM CANCEL RESERVATION", 83);
 
     int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
 
     TableUtil.TableSettings kvSettings =
         new TableUtil.TableSettings(kvWidths)
@@ -443,9 +457,6 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(
-        new String[] {"Confirmation Code", r.getConfirmationNumber()}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {"Requested Room Type", r.getRoomType().name()}, kvSettings);
@@ -503,7 +514,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("ALLOCATION ENTRY CREATED");
 
     int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
 
     TableUtil.TableSettings kvSettings =
         new TableUtil.TableSettings(kvWidths)
@@ -518,9 +529,6 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
 
     TableUtil.printTableRow(new String[] {"Reservation ID", r.getReservationId()}, kvSettings);
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    TableUtil.printTableRow(
-        new String[] {"Confirmation Code", r.getConfirmationNumber()}, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(
         new String[] {"Guest Name", (g != null ? g.getName() : "N/A")}, kvSettings);
@@ -541,7 +549,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("WARNING: MAX STRIKE LIMIT EXCEEDED");
 
     int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
 
     TableUtil.TableSettings kvSettings =
         new TableUtil.TableSettings(kvWidths)
@@ -602,7 +610,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("ENTRY DENIED - NON-MEMBER");
 
     int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
 
     TableUtil.TableSettings kvSettings =
         new TableUtil.TableSettings(kvWidths)
@@ -644,7 +652,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("VALIDATION ERROR", 83);
 
     int[] kvWidths = {20, 60};
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
 
     TableUtil.TableSettings kvSettings =
         new TableUtil.TableSettings(kvWidths)
@@ -769,8 +777,8 @@ public class VipManageWaitlistView {
 
   public int displayGuestActionSubmenu(Reservation r) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("QUEUE ACTION: " + r.getReservationId());
-    System.out.println("1. Dequeue & Assign Room");
+    ConsoleUtil.printTitleBox("WAITLIST ACTION: " + r.getReservationId());
+    System.out.println("1. Assign Room & Hold");
     System.out.println("2. Cancel Reservation");
     System.out.println("3. Back\n");
 

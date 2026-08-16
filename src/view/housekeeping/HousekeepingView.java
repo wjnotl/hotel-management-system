@@ -328,7 +328,7 @@ public class HousekeepingView {
               : "*** NO STAFF ON RECORD ***";
 
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {76}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {80}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(new String[] {emptyMessage}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
 

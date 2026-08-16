@@ -316,7 +316,7 @@ public class ManageGuestCheckOutView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK-OUT COMPLETE");
 
-    int[] fullWidth = {81};
+    int[] fullWidth = {83};
     int[] kvWidths = {20, 60};
     TableUtil.TableSettings fullSettings =
         new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);

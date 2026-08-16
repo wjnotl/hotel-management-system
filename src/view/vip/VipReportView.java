@@ -221,6 +221,7 @@ public class VipReportView {
 
   public static class SlaReportRowDTO {
     private final String rank;
+    private final String reservationId;
     private final String guestName;
     private final String tier;
     private final String roomType;
@@ -230,6 +231,7 @@ public class VipReportView {
 
     public SlaReportRowDTO(
         String rank,
+        String reservationId,
         String guestName,
         String tier,
         String roomType,
@@ -237,6 +239,7 @@ public class VipReportView {
         int strikes,
         String status) {
       this.rank = rank;
+      this.reservationId = reservationId;
       this.guestName = guestName;
       this.tier = tier;
       this.roomType = roomType;
@@ -247,6 +250,10 @@ public class VipReportView {
 
     public String getRank() {
       return rank;
+    }
+
+    public String getReservationId() {
+      return reservationId;
     }
 
     public String getGuestName() {
@@ -403,29 +410,36 @@ public class VipReportView {
 
   public static class PenaltyReportRowDTO {
     private final String rank;
+    private final String reservationId;
     private final String guestName;
     private final String tier;
     private final int strikes;
-    private final String boiling;
-    private final String resolutionStatus;
+    private final String status;
+    private final String evicted;
 
     public PenaltyReportRowDTO(
         String rank,
+        String reservationId,
         String guestName,
         String tier,
         int strikes,
-        String boiling,
-        String resolutionStatus) {
+        String status,
+        String evicted) {
       this.rank = rank;
+      this.reservationId = reservationId;
       this.guestName = guestName;
       this.tier = tier;
       this.strikes = strikes;
-      this.boiling = boiling;
-      this.resolutionStatus = resolutionStatus;
+      this.status = status;
+      this.evicted = evicted;
     }
 
     public String getRank() {
       return rank;
+    }
+
+    public String getReservationId() {
+      return reservationId;
     }
 
     public String getGuestName() {
@@ -440,12 +454,12 @@ public class VipReportView {
       return strikes;
     }
 
-    public String getBoiling() {
-      return boiling;
+    public String getStatus() {
+      return status;
     }
 
-    public String getResolutionStatus() {
-      return resolutionStatus;
+    public String getEvicted() {
+      return evicted;
     }
   }
 
@@ -569,6 +583,7 @@ public class VipReportView {
 
   public static class HoldingReportRowDTO {
     private final String rank;
+    private final String reservationId;
     private final String guestName;
     private final String tier;
     private final int allowedGraceMins;
@@ -578,6 +593,7 @@ public class VipReportView {
 
     public HoldingReportRowDTO(
         String rank,
+        String reservationId,
         String guestName,
         String tier,
         int allowedGraceMins,
@@ -585,6 +601,7 @@ public class VipReportView {
         String holdStatus,
         String graceUsedPctStr) {
       this.rank = rank;
+      this.reservationId = reservationId;
       this.guestName = guestName;
       this.tier = tier;
       this.allowedGraceMins = allowedGraceMins;
@@ -595,6 +612,10 @@ public class VipReportView {
 
     public String getRank() {
       return rank;
+    }
+
+    public String getReservationId() {
+      return reservationId;
     }
 
     public String getGuestName() {
@@ -624,35 +645,71 @@ public class VipReportView {
 
   public static class HoldingReportSummaryDTO {
     private final int totalHeld;
-    private final double diamondGraceUtilTarget;
-    private final double goldGraceUtilTarget;
-    private final double silverGraceUtilTarget;
+    private final int diamondLimitMins, goldLimitMins, silverLimitMins;
+    private final double diamondUtilPct, goldUtilPct, silverUtilPct;
+    private final double diamondTargetPct, goldTargetPct, silverTargetPct;
 
     public HoldingReportSummaryDTO(
         int totalHeld,
-        double diamondGraceUtilTarget,
-        double goldGraceUtilTarget,
-        double silverGraceUtilTarget) {
+        int diamondLimitMins,
+        double diamondUtilPct,
+        double diamondTargetPct,
+        int goldLimitMins,
+        double goldUtilPct,
+        double goldTargetPct,
+        int silverLimitMins,
+        double silverUtilPct,
+        double silverTargetPct) {
       this.totalHeld = totalHeld;
-      this.diamondGraceUtilTarget = diamondGraceUtilTarget;
-      this.goldGraceUtilTarget = goldGraceUtilTarget;
-      this.silverGraceUtilTarget = silverGraceUtilTarget;
+      this.diamondLimitMins = diamondLimitMins;
+      this.diamondUtilPct = diamondUtilPct;
+      this.diamondTargetPct = diamondTargetPct;
+      this.goldLimitMins = goldLimitMins;
+      this.goldUtilPct = goldUtilPct;
+      this.goldTargetPct = goldTargetPct;
+      this.silverLimitMins = silverLimitMins;
+      this.silverUtilPct = silverUtilPct;
+      this.silverTargetPct = silverTargetPct;
     }
 
     public int getTotalHeld() {
       return totalHeld;
     }
 
-    public double getDiamondGraceUtilTarget() {
-      return diamondGraceUtilTarget;
+    public int getDiamondLimitMins() {
+      return diamondLimitMins;
     }
 
-    public double getGoldGraceUtilTarget() {
-      return goldGraceUtilTarget;
+    public double getDiamondUtilPct() {
+      return diamondUtilPct;
     }
 
-    public double getSilverGraceUtilTarget() {
-      return silverGraceUtilTarget;
+    public double getDiamondTargetPct() {
+      return diamondTargetPct;
+    }
+
+    public int getGoldLimitMins() {
+      return goldLimitMins;
+    }
+
+    public double getGoldUtilPct() {
+      return goldUtilPct;
+    }
+
+    public double getGoldTargetPct() {
+      return goldTargetPct;
+    }
+
+    public int getSilverLimitMins() {
+      return silverLimitMins;
+    }
+
+    public double getSilverUtilPct() {
+      return silverUtilPct;
+    }
+
+    public double getSilverTargetPct() {
+      return silverTargetPct;
     }
   }
 
@@ -708,14 +765,15 @@ public class VipReportView {
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
     int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {4, 22, 12, 14, 12, 9, 15};
+    int[] columnWidths = {4, 11, 20, 12, 14, 12, 9, 15};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
-            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER);
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.CENTER);
 
     TableUtil.TableSettings headerSettings =
         new TableUtil.TableSettings(columnWidths)
@@ -725,17 +783,20 @@ public class VipReportView {
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER);
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"RANK", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"},
+        new String[] {
+          "RANK", "RES ID", "GUEST NAME", "TIER", "ROOM TYPE", "WAIT TIME", "STRIKES", "STATUS"
+        },
         headerSettings);
 
     if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {106}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {118}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -747,6 +808,7 @@ public class VipReportView {
         TableUtil.printTableRow(
             new String[] {
               row.getRank(),
+              row.getReservationId(),
               row.getGuestName(),
               row.getTier(),
               row.getRoomType(),
@@ -802,15 +864,16 @@ public class VipReportView {
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
     int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {4, 24, 12, 10, 10, 28};
+    int[] columnWidths = {4, 11, 22, 12, 9, 14, 9};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.LEFT)
-            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.LEFT)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.LEFT);
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.CENTER);
 
     TableUtil.TableSettings headerSettings =
         new TableUtil.TableSettings(columnWidths)
@@ -819,17 +882,18 @@ public class VipReportView {
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER);
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"RANK", "GUEST NAME", "TIER", "STRIKES", "BOILING", "RESOLUTION STATUS"},
+        new String[] {"RANK", "RES ID", "GUEST NAME", "TIER", "STRIKES", "STATUS", "EVICTED"},
         headerSettings);
 
     if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {103}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {99}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -841,11 +905,12 @@ public class VipReportView {
         TableUtil.printTableRow(
             new String[] {
               row.getRank(),
+              row.getReservationId(),
               row.getGuestName(),
               row.getTier(),
               String.valueOf(row.getStrikes()),
-              row.getBoiling(),
-              row.getResolutionStatus()
+              row.getStatus(),
+              row.getEvicted()
             },
             settings);
       }
@@ -895,16 +960,17 @@ public class VipReportView {
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
     int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
-    int[] columnWidths = {4, 20, 12, 16, 12, 14, 14};
+    int[] columnWidths = {4, 11, 18, 12, 15, 12, 13, 13};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(columnWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.LEFT)
-            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.LEFT)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER);
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.CENTER);
 
     TableUtil.TableSettings headerSettings =
         new TableUtil.TableSettings(columnWidths)
@@ -914,19 +980,27 @@ public class VipReportView {
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
             .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER);
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {
-          "RANK", "GUEST NAME", "TIER", "ALLOWED GRACE", "TIME USED", "HOLD STATUS", "GRACE USED %"
+          "RANK",
+          "RES ID",
+          "GUEST NAME",
+          "TIER",
+          "ALLOWED GRACE",
+          "TIME USED",
+          "HOLD STATUS",
+          "GRACE USED %"
         },
         headerSettings);
 
     if (rows == null || rowCount == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {112}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {119}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(
           new String[] {"*** NO MATCHING RECORDS FOUND FOR REPORT ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
@@ -938,6 +1012,7 @@ public class VipReportView {
         TableUtil.printTableRow(
             new String[] {
               row.getRank(),
+              row.getReservationId(),
               row.getGuestName(),
               row.getTier(),
               row.getAllowedGraceMins() + " Mins",
@@ -1074,15 +1149,45 @@ public class VipReportView {
     System.out.println("ALGORITHM SUMMARY METRICS (HOLDING BAY AUDIT):\n");
     System.out.printf(" - Total Holding Bay Entries : %d Rooms Held\n\n", summary.getTotalHeld());
     System.out.printf(
-        " - DIAMOND MAX GRACE TARGET  : %.1f%%\n", summary.getDiamondGraceUtilTarget());
-    System.out.printf(" - GOLD MAX GRACE TARGET     : %.1f%%\n", summary.getGoldGraceUtilTarget());
+        " DIAMOND GRACE UTIL (Limit: <= %d Mins) : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
+        summary.getDiamondLimitMins(),
+        summary.getDiamondUtilPct(),
+        summary.getDiamondTargetPct(),
+        (summary.getDiamondUtilPct() <= summary.getDiamondTargetPct()
+            ? "[OK]"
+            : "[!] HIGH GRACE UTILIZATION"));
     System.out.printf(
-        " - SILVER MAX GRACE TARGET   : %.1f%%\n\n", summary.getSilverGraceUtilTarget());
+        " GOLD GRACE UTIL    (Limit: <= %d Mins) : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
+        summary.getGoldLimitMins(),
+        summary.getGoldUtilPct(),
+        summary.getGoldTargetPct(),
+        (summary.getGoldUtilPct() <= summary.getGoldTargetPct()
+            ? "[OK]"
+            : "[!] HIGH GRACE UTILIZATION"));
+    System.out.printf(
+        " SILVER GRACE UTIL  (Limit: <= %d Mins) : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n\n",
+        summary.getSilverLimitMins(),
+        summary.getSilverUtilPct(),
+        summary.getSilverTargetPct(),
+        (summary.getSilverUtilPct() <= summary.getSilverTargetPct()
+            ? "[OK]"
+            : "[!] HIGH GRACE UTILIZATION"));
     System.out.println(
         "--------------------------------------------------------------------------\n");
-    System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
-    System.out.println(" If rooms sit idle in holding bay, navigate to Settings -> Grace Windows");
-    System.out.println(" to reduce the hold period and free unclaimed rooms faster.\n");
+
+    if (summary.getDiamondUtilPct() > summary.getDiamondTargetPct()
+        || summary.getGoldUtilPct() > summary.getGoldTargetPct()
+        || summary.getSilverUtilPct() > summary.getSilverTargetPct()) {
+      System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
+      System.out.println(
+          " [!] VIP GRACE UTILIZATION ALERT: Grace window usage exceeds target threshold!");
+      System.out.println(
+          " REMEDIATION: Open Settings -> Tweak Operational Rules -> Reduce Grace Window (Mins)");
+      System.out.println(" to release unclaimed held rooms faster.\n");
+    } else {
+      System.out.println(
+          "EXECUTIVE STATUS: Holding bay grace window utilization is within acceptable targets.\n");
+    }
     System.out.println(
         "--------------------------------------------------------------------------");
   }

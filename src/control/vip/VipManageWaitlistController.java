@@ -649,6 +649,14 @@ public class VipManageWaitlistController {
     }
   }
 
+  private String formatWaitTime(java.time.LocalDateTime arrivalTime) {
+    if (arrivalTime == null) return "N/A";
+    long minutes =
+        java.time.Duration.between(arrivalTime, java.time.LocalDateTime.now()).toMinutes();
+    if (minutes < 0) minutes = 0;
+    return minutes + " Mins";
+  }
+
   private ListInterface<VipManageWaitlistView.WaitlistRowDTO> buildWaitlistRowDTO(
       ListInterface<Reservation> list) {
     if (list == null) return new ArrayList<>();
@@ -662,12 +670,13 @@ public class VipManageWaitlistController {
           String guestName = (g != null) ? g.getName() : "N/A";
           String phoneNo = (g != null && g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
           String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+          String waitTimeStr = formatWaitTime(r.getQueueArrivalTime());
           boolean boiling = r.getIsBoiling();
           int strikes = (g != null) ? g.getStrikeCount() : 0;
           int score = r.getPriorityScore();
 
           return new VipManageWaitlistView.WaitlistRowDTO(
-              resId, guestName, phoneNo, tierStr, boiling, strikes, score);
+              resId, guestName, phoneNo, tierStr, waitTimeStr, boiling, strikes, score);
         });
   }
 }
