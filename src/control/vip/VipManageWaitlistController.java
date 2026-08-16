@@ -416,8 +416,9 @@ public class VipManageWaitlistController {
             vacantRoom.getRoomNumber(),
             System.currentTimeMillis() + holdDurationMs);
 
-    allocationRepo.addAllocationEntry(
-        entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+    allocationRepo.addAllocationEntry(entry);
+    VipController.scheduleNextAutoExpirationTask(
+        allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     vacantRoom.setStatus(Room.Status.OCCUPIED);
     vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());

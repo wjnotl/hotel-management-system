@@ -1212,6 +1212,8 @@ public class VipSettingsController {
             processedAllocations =
                 allocationRepo.recalculateActiveGraceTimers(
                     roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
+            VipController.scheduleNextAutoExpirationTask(
+                allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
           }
 
           settingsView.displayApplySuccessScreen(processedWaitlist + processedAllocations);

@@ -188,8 +188,9 @@ public class VipManageAllocationController {
     vipReservationRepo.updateReservation(reservation);
 
     // 3. Remove hold entry from AllocationRepo
-    allocationRepo.removeAllocationEntry(
-        entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+    allocationRepo.removeAllocationEntry(entry);
+    VipController.scheduleNextAutoExpirationTask(
+        allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     allocationView.displayCheckInSuccessScreen(reservation, guest, room);
     return true; // Successfully checked in!
@@ -261,8 +262,9 @@ public class VipManageAllocationController {
               vipReservationRepo.updateReservation(reservation);
             }
             freeHeldRoom(entry);
-            allocationRepo.removeAllocationEntry(
-                entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+            allocationRepo.removeAllocationEntry(entry);
+            VipController.scheduleNextAutoExpirationTask(
+                allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
             allocationView.displayEvictionLockoutScreen(guest);
             return true;
           }
@@ -295,8 +297,9 @@ public class VipManageAllocationController {
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(
-              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+          allocationRepo.removeAllocationEntry(entry);
+          VipController.scheduleNextAutoExpirationTask(
+              allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           allocationView.displayStrikeIssuedScreen(guest);
           return true;
 
@@ -320,8 +323,9 @@ public class VipManageAllocationController {
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(
-              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+          allocationRepo.removeAllocationEntry(entry);
+          VipController.scheduleNextAutoExpirationTask(
+              allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           allocationView.displayStrikeIssuedWithoutRequeueScreen(guest);
           return true;
 
@@ -364,8 +368,9 @@ public class VipManageAllocationController {
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(
-              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+          allocationRepo.removeAllocationEntry(entry);
+          VipController.scheduleNextAutoExpirationTask(
+              allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           allocationView.displayRequeuedWithoutStrikeScreen(guest);
           return true;
 
@@ -384,8 +389,9 @@ public class VipManageAllocationController {
           }
 
           freeHeldRoom(entry);
-          allocationRepo.removeAllocationEntry(
-              entry, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
+          allocationRepo.removeAllocationEntry(entry);
+          VipController.scheduleNextAutoExpirationTask(
+              allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           allocationView.displayEvictionCompletedScreen();
           return true;
 
