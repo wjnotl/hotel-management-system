@@ -119,12 +119,7 @@ public class VipReservationRepo {
 
     VipSystemConfig config = (configRepo != null) ? configRepo.getConfig() : null;
     Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
-    int graceMins =
-        (tier == Member.LoyaltyTier.DIAMOND)
-            ? (config != null ? config.getDiamondGraceWindowMins() : 45)
-            : (tier == Member.LoyaltyTier.GOLD)
-                ? (config != null ? config.getGoldGraceWindowMins() : 30)
-                : (config != null ? config.getSilverGraceWindowMins() : 15);
+    int graceMins = (config != null) ? config.getGraceWindowMins(tier) : 15;
 
     if (reservation.getAllocatedTime() == null) {
       reservation.setAllocatedTime(LocalDateTime.now());
@@ -174,23 +169,13 @@ public class VipReservationRepo {
         (var) -> {
           switch (var.toUpperCase()) {
             case "TIER":
-              return (tier == Member.LoyaltyTier.DIAMOND)
-                  ? (double) config.getDiamondBaseValue()
-                  : (tier == Member.LoyaltyTier.GOLD)
-                      ? (double) config.getGoldBaseValue()
-                      : (tier == Member.LoyaltyTier.SILVER)
-                          ? (double) config.getSilverBaseValue()
-                          : 1000.0;
+              return (double) config.getBaseValue(tier);
 
             case "STRIKES":
               return (guest != null) ? (double) guest.getStrikeCount() : 0.0;
 
             case "W_STRIKE":
-              return (tier == Member.LoyaltyTier.DIAMOND)
-                  ? config.getDiamondStrikePenalty()
-                  : (tier == Member.LoyaltyTier.GOLD)
-                      ? config.getGoldStrikePenalty()
-                      : config.getSilverStrikePenalty();
+              return config.getStrikePenalty(tier);
 
             case "BOILING":
               double wait =
@@ -198,22 +183,13 @@ public class VipReservationRepo {
                       ? Duration.between(reservation.getQueueArrivalTime(), LocalDateTime.now())
                           .toMinutes()
                       : 0.0;
-              double boilingLimit =
-                  (tier == Member.LoyaltyTier.DIAMOND)
-                      ? config.getDiamondBoilingLimitMins()
-                      : (tier == Member.LoyaltyTier.GOLD)
-                          ? config.getGoldBoilingLimitMins()
-                          : config.getSilverBoilingLimitMins();
+              double boilingLimit = config.getBoilingLimitMins(tier);
               boolean isBoiling = wait >= boilingLimit;
               if (reservation != null) reservation.setBoiling(isBoiling);
               return isBoiling ? 1.0 : 0.0;
 
             case "W_BOILING":
-              return (tier == Member.LoyaltyTier.DIAMOND)
-                  ? config.getDiamondBoilingBoost()
-                  : (tier == Member.LoyaltyTier.GOLD)
-                      ? config.getGoldBoilingBoost()
-                      : config.getSilverBoilingBoost();
+              return config.getBoilingBoost(tier);
 
             default:
               return 0.0;
@@ -253,12 +229,7 @@ public class VipReservationRepo {
             (memberRepo != null && guest != null) ? memberRepo.findById(guest.getMemberId()) : null;
 
         Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
-        int maxStrikes =
-            (tier == Member.LoyaltyTier.DIAMOND)
-                ? config.getDiamondMaxStrikes()
-                : (tier == Member.LoyaltyTier.GOLD)
-                    ? config.getGoldMaxStrikes()
-                    : config.getSilverMaxStrikes();
+        int maxStrikes = config.getMaxStrikes(tier);
 
         if (evictOverStrikes && guest != null && guest.getStrikeCount() > maxStrikes) {
           reservation.setStatus(Reservation.Status.NO_SHOW);
@@ -272,12 +243,7 @@ public class VipReservationRepo {
         if (forceBoilingCheck && reservation.getQueueArrivalTime() != null) {
           double waitMins =
               Duration.between(reservation.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
-          double boilingLimit =
-              (tier == Member.LoyaltyTier.DIAMOND)
-                  ? config.getDiamondBoilingLimitMins()
-                  : (tier == Member.LoyaltyTier.GOLD)
-                      ? config.getGoldBoilingLimitMins()
-                      : config.getSilverBoilingLimitMins();
+          double boilingLimit = config.getBoilingLimitMins(tier);
           reservation.setBoiling(waitMins >= boilingLimit);
           affected = true;
         }

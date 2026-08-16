@@ -1,13 +1,19 @@
 package repo;
 
 import adt.ArrayList;
+import adt.DoublyLinkedHashMap;
 import adt.ListInterface;
+import adt.MapInterface;
 import entity.Room;
 import util.BinaryFileUtil;
 
 public class RoomRepo {
   private final BinaryFileUtil<ListInterface<Room>> fileUtil;
   private ListInterface<Room> roomList;
+
+  // Bounded LRU Cache (Capacity: 50 active room entries)
+  private final MapInterface<String, Room> roomLruCache =
+      new DoublyLinkedHashMap<>(16, 0.75, 50, true);
 
   public RoomRepo() {
     this.fileUtil = new BinaryFileUtil<>("rooms.dat");
@@ -28,6 +34,9 @@ public class RoomRepo {
   public void addRoom(Room room) {
     if (room == null) return;
     roomList.add(room);
+    if (room.getRoomNumber() != null) {
+      roomLruCache.put(room.getRoomNumber().toLowerCase(), room);
+    }
     save();
   }
 
@@ -38,6 +47,9 @@ public class RoomRepo {
       Room existing = roomList.getEntry(i);
       if (existing != null && existing.equals(updatedRoom)) {
         roomList.replace(i, updatedRoom);
+        if (updatedRoom.getRoomNumber() != null) {
+          roomLruCache.put(updatedRoom.getRoomNumber().toLowerCase(), updatedRoom);
+        }
         save();
         return true;
       }
@@ -47,9 +59,18 @@ public class RoomRepo {
 
   public Room findByRoomNumber(String roomNumber) {
     if (roomNumber == null || roomList == null) return null;
+
+    // 1. O(1) Fast LRU Cache Hit
+    Room cached = roomLruCache.get(roomNumber.toLowerCase());
+    if (cached != null) {
+      return cached;
+    }
+
+    // 2. Cache Miss: Scan list & populate LRU cache
     for (int i = 1; i <= roomList.getNumberOfEntries(); i++) {
       Room r = roomList.getEntry(i);
       if (r != null && roomNumber.equalsIgnoreCase(r.getRoomNumber())) {
+        roomLruCache.put(roomNumber.toLowerCase(), r);
         return r;
       }
     }

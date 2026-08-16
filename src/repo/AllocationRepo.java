@@ -80,20 +80,12 @@ public class AllocationRepo {
             (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
         Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
-        int newGraceMins =
-            (tier == Member.LoyaltyTier.DIAMOND)
-                ? config.getDiamondGraceWindowMins()
-                : (tier == Member.LoyaltyTier.GOLD)
-                    ? config.getGoldGraceWindowMins()
-                    : config.getSilverGraceWindowMins();
+        int newGraceMins = config.getGraceWindowMins(tier);
 
         long newExpiration;
         if (r != null && r.getAllocatedTime() != null) {
           long startMs =
-              r.getAllocatedTime()
-                  .atZone(ZoneId.systemDefault())
-                  .toInstant()
-                  .toEpochMilli();
+              r.getAllocatedTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
           newExpiration = startMs + (newGraceMins * 60 * 1000L);
           r.setAllocatedGraceMins(newGraceMins);
           vipReservationRepo.updateReservation(r);

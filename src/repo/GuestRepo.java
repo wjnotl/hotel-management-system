@@ -1,7 +1,9 @@
 package repo;
 
 import adt.ArrayList;
+import adt.DoublyLinkedHashMap;
 import adt.ListInterface;
+import adt.MapInterface;
 import entity.Guest;
 import java.time.LocalDate;
 import util.BinaryFileUtil;
@@ -9,6 +11,10 @@ import util.BinaryFileUtil;
 public class GuestRepo {
   private final BinaryFileUtil<ListInterface<Guest>> fileUtil;
   private ListInterface<Guest> guestList;
+
+  // Bounded LRU Cache (Capacity: 50 active guest entries)
+  private final MapInterface<String, Guest> guestLruCache =
+      new DoublyLinkedHashMap<>(16, 0.75, 50, true);
 
   public GuestRepo() {
     this.fileUtil = new BinaryFileUtil<>("guests.dat");
@@ -29,6 +35,9 @@ public class GuestRepo {
   public void addGuest(Guest guest) {
     if (guest == null) return;
     guestList.add(guest);
+    if (guest.getGuestId() != null) {
+      guestLruCache.put(guest.getGuestId().toLowerCase(), guest);
+    }
     save();
   }
 
@@ -39,6 +48,9 @@ public class GuestRepo {
       Guest existing = guestList.getEntry(i);
       if (existing != null && existing.equals(updatedGuest)) {
         guestList.replace(i, updatedGuest);
+        if (updatedGuest.getGuestId() != null) {
+          guestLruCache.put(updatedGuest.getGuestId().toLowerCase(), updatedGuest);
+        }
         save();
         return true;
       }
@@ -54,9 +66,18 @@ public class GuestRepo {
 
   public Guest findById(String guestId) {
     if (guestId == null || guestList == null) return null;
+
+    // 1. O(1) Fast LRU Cache Hit
+    Guest cached = guestLruCache.get(guestId.toLowerCase());
+    if (cached != null) {
+      return cached;
+    }
+
+    // 2. Cache Miss: Scan list & populate LRU cache
     for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
       Guest g = guestList.getEntry(i);
       if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) {
+        guestLruCache.put(guestId.toLowerCase(), g);
         return g;
       }
     }

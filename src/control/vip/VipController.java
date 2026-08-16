@@ -102,46 +102,46 @@ public class VipController {
 
     long now = System.currentTimeMillis();
 
+    // Filter waiting non-boiling reservations using ADT filter
+    var waitingList =
+        vipReservationList.filter(
+            r ->
+                r != null
+                    && r.getStatus() == Reservation.Status.WAITING
+                    && !r.getIsBoiling()
+                    && r.getQueueArrivalTime() != null);
+
+    if (waitingList.isEmpty()) return;
+
     // 1. Process any overdue boiling targets synchronously (where targetMs <= now)
-    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
-      Reservation reservation = vipReservationList.getEntry(i);
-      if (reservation != null
-          && reservation.getStatus() == Reservation.Status.WAITING
-          && !reservation.getIsBoiling()
-          && reservation.getQueueArrivalTime() != null) {
-        Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
-        Member m =
-            (g != null && g.getMemberId() != null && memberRepo != null)
-                ? memberRepo.findById(g.getMemberId())
-                : null;
-        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+    for (Reservation reservation : waitingList) {
+      Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
+      Member m =
+          (g != null && g.getMemberId() != null && memberRepo != null)
+              ? memberRepo.findById(g.getMemberId())
+              : null;
+      Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
 
-        int limitMins =
-            (tier == Member.LoyaltyTier.DIAMOND)
-                ? config.getDiamondBoilingLimitMins()
-                : (tier == Member.LoyaltyTier.GOLD)
-                    ? config.getGoldBoilingLimitMins()
-                    : config.getSilverBoilingLimitMins();
+      int limitMins = config.getBoilingLimitMins(tier);
 
-        long targetMs =
-            reservation
-                    .getQueueArrivalTime()
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
-                + (limitMins * 60 * 1000L);
+      long targetMs =
+          reservation
+                  .getQueueArrivalTime()
+                  .atZone(ZoneId.systemDefault())
+                  .toInstant()
+                  .toEpochMilli()
+              + (limitMins * 60 * 1000L);
 
-        if (targetMs <= now) {
-          reservation.setBoiling(true);
-          int newScore = vipReservationRepo.calculatePriorityScore(reservation, g, m, config);
-          reservation.setPriorityScore(newScore);
-          vipReservationRepo.updateReservation(reservation);
+      if (targetMs <= now) {
+        reservation.setBoiling(true);
+        int newScore = vipReservationRepo.calculatePriorityScore(reservation, g, m, config);
+        reservation.setPriorityScore(newScore);
+        vipReservationRepo.updateReservation(reservation);
 
-          PriorityQueueInterface<Reservation> heap =
-              vipReservationRepo.getHeapByRoomType(reservation.getRoomType());
-          if (heap != null) {
-            heap.updatePriority(reservation);
-          }
+        PriorityQueueInterface<Reservation> heap =
+            vipReservationRepo.getHeapByRoomType(reservation.getRoomType());
+        if (heap != null) {
+          heap.updatePriority(reservation);
         }
       }
     }
@@ -150,38 +150,29 @@ public class VipController {
     Reservation earliestFutureRes = null;
     long earliestFutureTargetMs = Long.MAX_VALUE;
 
-    for (int i = 1; i <= vipReservationList.getNumberOfEntries(); i++) {
-      Reservation reservation = vipReservationList.getEntry(i);
-      if (reservation != null
-          && reservation.getStatus() == Reservation.Status.WAITING
-          && !reservation.getIsBoiling()
-          && reservation.getQueueArrivalTime() != null) {
-        Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
-        Member m =
-            (g != null && g.getMemberId() != null && memberRepo != null)
-                ? memberRepo.findById(g.getMemberId())
-                : null;
-        Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
+    for (Reservation reservation : waitingList) {
+      if (reservation.getIsBoiling()) continue; // Skip if it just became boiling above
 
-        int limitMins =
-            (tier == Member.LoyaltyTier.DIAMOND)
-                ? config.getDiamondBoilingLimitMins()
-                : (tier == Member.LoyaltyTier.GOLD)
-                    ? config.getGoldBoilingLimitMins()
-                    : config.getSilverBoilingLimitMins();
+      Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
+      Member m =
+          (g != null && g.getMemberId() != null && memberRepo != null)
+              ? memberRepo.findById(g.getMemberId())
+              : null;
+      Member.LoyaltyTier tier = (m != null) ? m.getTier() : null;
 
-        long targetMs =
-            reservation
-                    .getQueueArrivalTime()
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
-                + (limitMins * 60 * 1000L);
+      int limitMins = config.getBoilingLimitMins(tier);
 
-        if (targetMs > now && targetMs < earliestFutureTargetMs) {
-          earliestFutureTargetMs = targetMs;
-          earliestFutureRes = reservation;
-        }
+      long targetMs =
+          reservation
+                  .getQueueArrivalTime()
+                  .atZone(ZoneId.systemDefault())
+                  .toInstant()
+                  .toEpochMilli()
+              + (limitMins * 60 * 1000L);
+
+      if (targetMs > now && targetMs < earliestFutureTargetMs) {
+        earliestFutureTargetMs = targetMs;
+        earliestFutureRes = reservation;
       }
     }
 
@@ -264,13 +255,12 @@ public class VipController {
 
     long now = System.currentTimeMillis();
 
-    // 1. Process any overdue expired allocations synchronously (where expirationTimestamp <= now)
-    boolean processedOverdue = false;
-    for (int i = allocationList.getNumberOfEntries(); i >= 1; i--) {
-      AllocationEntry entry = allocationList.getEntry(i);
-      if (entry != null && entry.getExpirationTimestamp() <= now) {
-        allocationList.removeAt(i);
-        processedOverdue = true;
+    // 1. Process any overdue expired allocations synchronously (where
+    // expirationTimestamp <= now)
+    var overdueList = allocationList.filter(e -> e != null && e.getExpirationTimestamp() <= now);
+    if (!overdueList.isEmpty()) {
+      for (AllocationEntry entry : overdueList) {
+        allocationRepo.removeAllocationEntry(entry);
 
         Room room = roomRepo.findByRoomNumber(entry.getAssignedRoomNumber());
         if (room != null) {
@@ -287,12 +277,8 @@ public class VipController {
                 (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
 
             VipSystemConfig config = configRepo.getConfig();
-            int maxStrikes =
-                (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
-                    ? config.getDiamondMaxStrikes()
-                    : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
-                        ? config.getGoldMaxStrikes()
-                        : config.getSilverMaxStrikes();
+            Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+            int maxStrikes = config.getMaxStrikes(tier);
 
             guest.setStrikeCount(guest.getStrikeCount() + 1);
             guestRepo.updateGuest(guest);
@@ -325,19 +311,16 @@ public class VipController {
       }
     }
 
-    if (processedOverdue) {
-      allocationRepo.save();
-    }
+    // 2. Find the earliest FUTURE expiration target (where expirationTimestamp >
+    // now)
+    var futureList = allocationList.filter(e -> e != null && e.getExpirationTimestamp() > now);
+    if (futureList.isEmpty()) return;
 
-    // 2. Find the earliest FUTURE expiration target (where expirationTimestamp > now)
     AllocationEntry earliestFutureEntry = null;
     long earliestFutureTime = Long.MAX_VALUE;
 
-    for (int i = 1; i <= allocationList.getNumberOfEntries(); i++) {
-      AllocationEntry current = allocationList.getEntry(i);
-      if (current != null
-          && current.getExpirationTimestamp() > now
-          && current.getExpirationTimestamp() < earliestFutureTime) {
+    for (AllocationEntry current : futureList) {
+      if (current.getExpirationTimestamp() < earliestFutureTime) {
         earliestFutureTime = current.getExpirationTimestamp();
         earliestFutureEntry = current;
       }
@@ -373,12 +356,8 @@ public class VipController {
                           : null;
 
                   VipSystemConfig config = configRepo.getConfig();
-                  int maxStrikes =
-                      (member != null && member.getTier() == Member.LoyaltyTier.DIAMOND)
-                          ? config.getDiamondMaxStrikes()
-                          : (member != null && member.getTier() == Member.LoyaltyTier.GOLD)
-                              ? config.getGoldMaxStrikes()
-                              : config.getSilverMaxStrikes();
+                  Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+                  int maxStrikes = config.getMaxStrikes(tier);
 
                   guest.setStrikeCount(guest.getStrikeCount() + 1);
                   guestRepo.updateGuest(guest);

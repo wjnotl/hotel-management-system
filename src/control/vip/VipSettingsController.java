@@ -580,12 +580,7 @@ public class VipSettingsController {
                     formula);
 
           if (newVal != null) {
-            int oldVal =
-                (tier == 1)
-                    ? config.getDiamondBoilingLimitMins()
-                    : (tier == 2)
-                        ? config.getGoldBoilingLimitMins()
-                        : config.getSilverBoilingLimitMins();
+            int oldVal = config.getBoilingLimitMins(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondBoilingLimitMins(newVal);
             else if (tier == 2) config.setGoldBoilingLimitMins(newVal);
@@ -644,10 +639,7 @@ public class VipSettingsController {
                     "Silver Max Strikes", config.getSilverMaxStrikes(), 0, 10, formula);
 
           if (newVal != null) {
-            int oldVal =
-                (tier == 1)
-                    ? config.getDiamondMaxStrikes()
-                    : (tier == 2) ? config.getGoldMaxStrikes() : config.getSilverMaxStrikes();
+            int oldVal = config.getMaxStrikes(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondMaxStrikes(newVal);
             else if (tier == 2) config.setGoldMaxStrikes(newVal);
@@ -775,10 +767,7 @@ public class VipSettingsController {
                     "Silver Base Score", config.getSilverBaseValue(), 1, 100000, formula);
 
           if (newVal != null) {
-            int oldVal =
-                (tier == 1)
-                    ? config.getDiamondBaseValue()
-                    : (tier == 2) ? config.getGoldBaseValue() : config.getSilverBaseValue();
+            int oldVal = config.getBaseValue(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondBaseValue(newVal);
             else if (tier == 2) config.setGoldBaseValue(newVal);
@@ -841,10 +830,7 @@ public class VipSettingsController {
                     "Silver Boiling Boost", config.getSilverBoilingBoost(), 0.01, 50000.0, formula);
 
           if (newVal != null) {
-            double oldVal =
-                (tier == 1)
-                    ? config.getDiamondBoilingBoost()
-                    : (tier == 2) ? config.getGoldBoilingBoost() : config.getSilverBoilingBoost();
+            double oldVal = config.getBoilingBoost(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondBoilingBoost(newVal);
             else if (tier == 2) config.setGoldBoilingBoost(newVal);
@@ -911,10 +897,7 @@ public class VipSettingsController {
                     formula);
 
           if (newVal != null) {
-            double oldVal =
-                (tier == 1)
-                    ? config.getDiamondStrikePenalty()
-                    : (tier == 2) ? config.getGoldStrikePenalty() : config.getSilverStrikePenalty();
+            double oldVal = config.getStrikePenalty(config.getTierFromIndex(tier));
 
             if (tier == 1) config.setDiamondStrikePenalty(newVal);
             else if (tier == 2) config.setGoldStrikePenalty(newVal);
