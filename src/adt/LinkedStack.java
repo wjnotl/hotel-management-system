@@ -63,8 +63,6 @@ public class LinkedStack<T> implements StackInterface<T>, Serializable {
     return new LinkedStackIterator();
   }
 
-  // NESTED STRUCTURAL LAYER
-
   private class Node implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -76,8 +74,6 @@ public class LinkedStack<T> implements StackInterface<T>, Serializable {
       this.next = null;
     }
   }
-
-  // ITERATOR IMPLEMENTATION (top -> bottom, most recent first)
 
   private class LinkedStackIterator implements Iterator<T> {
     private Node currentNode = topNode;

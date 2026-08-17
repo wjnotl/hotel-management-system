@@ -25,6 +25,6 @@ public interface MapInterface<K, V> {
   // Flushes all key-value entries from the map.
   public void clear();
 
-  // Yields an iterator to step through all the keys.
+  // Gives back an iterator to step through all the key-value pairs
   public Iterator<K> getKeyIterator();
 }

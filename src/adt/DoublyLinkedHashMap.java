@@ -9,7 +9,7 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
     private V value;
     private Node<K, V> next; // Bucket collision chain pointer
 
-    // Doubly-linked pointers for LRU access ordering
+    // Doubly-linked pointers
     private Node<K, V> accessPrev;
     private Node<K, V> accessNext;
 
@@ -31,9 +31,8 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
   private final double loadFactorThreshold;
   private boolean enableLru;
 
-  // Doubly linked list pointers for LRU access tracking (head = MRU, tail = LRU)
-  private Node<K, V> head;
-  private Node<K, V> tail;
+  private Node<K, V> head; // Most Recently Used
+  private Node<K, V> tail; // Least Recently Used
 
   public DoublyLinkedHashMap() {
     this(DEFAULT_BUCKET_COUNT, LOAD_FACTOR_THRESHOLD, -1, false);
@@ -96,25 +95,23 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
     // Capacity limit handling
     if (hasLimit() && numberOfEntries >= maxCapacity) {
       if (!enableLru) {
-        return false; // Reject insertion when full if LRU is disabled
+        return false;
       } else {
-        evictLru(); // Evict Least Recently Used entry when full if LRU is enabled
-        index = getBucketIndex(key, buckets.length); // Recalculate bucket index
+        evictLru();
+        index = getBucketIndex(key, buckets.length);
       }
     }
 
-    // Expand buckets before inserting if load factor limit is hit
+    // Expand buckets before inserting
     if ((double) numberOfEntries / buckets.length > loadFactorThreshold) {
       resize();
       index = getBucketIndex(key, buckets.length);
     }
 
-    // Create new node and insert at head of bucket chain
     Node<K, V> newNode = new Node<>(key, value, buckets[index]);
     buckets[index] = newNode;
     numberOfEntries++;
 
-    // Track LRU access order if enabled
     if (enableLru) {
       addToHead(newNode);
     }
@@ -198,8 +195,6 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
     return new KeyIterator();
   }
 
-  // --- LRU DOUBLY-LINKED LIST HELPERS ---
-
   private void addToHead(Node<K, V> node) {
     if (node == null) return;
     node.accessPrev = null;
@@ -243,10 +238,8 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
   private void evictLru() {
     if (tail == null) return;
     K lruKey = tail.key;
-    remove(lruKey); // Removes from hash bucket and doubly linked list
+    remove(lruKey);
   }
-
-  // --- INTERNAL HELPERS ---
 
   private boolean hasLimit() {
     return maxCapacity > -1;
@@ -272,8 +265,6 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
       curr = curr.accessNext;
     }
   }
-
-  // --- ITERATOR IMPLEMENTATION ---
 
   private class KeyIterator implements Iterator<K> {
     private Node<K, V> currentNode;

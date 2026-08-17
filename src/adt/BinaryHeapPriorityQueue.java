@@ -179,8 +179,6 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
     return new PriorityQueueIterator();
   }
 
-  // --- INTERNAL HELPERS ---
-
   @SuppressWarnings("unchecked")
   private void grow() {
     int newCapacity = (array.length - 1) * 2 + 1;
@@ -213,12 +211,12 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
       comp = ((Comparable<? super T>) a.entry).compareTo(b.entry);
     }
 
-    // Positive means higher priority (Max-Heap order)
+    // Positive means higher priority
     if (comp != 0) {
       return comp > 0;
     }
 
-    // Tie-breaker: earlier insertion sequence wins (FIFO)
+    // Tie-breaker resolution
     return a.sequenceNumber < b.sequenceNumber;
   }
 
@@ -263,8 +261,6 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
       i = best;
     }
   }
-
-  // --- ITERATOR IMPLEMENTATION ---
 
   private class PriorityQueueIterator implements Iterator<T> {
     private int position = 1;

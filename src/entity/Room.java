@@ -83,8 +83,10 @@ public class Room implements Serializable {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj) return true;
-    if (obj == null || getClass() != obj.getClass()) return false;
+    if (this == obj)
+      return true;
+    if (obj == null || getClass() != obj.getClass())
+      return false;
     Room other = (Room) obj;
     return roomNumber != null && roomNumber.equals(other.roomNumber);
   }

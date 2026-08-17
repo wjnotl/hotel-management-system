@@ -15,16 +15,19 @@ public class HousekeepingSettings implements Serializable {
   private int cleanTimeSuiteMinutes;
   private int cleanTimeLuxuryMinutes;
 
-  // --- Task Rules: overdue threshold (minutes) before a task is considered overdue ---
+  // --- Task Rules: overdue threshold (minutes) before a task is considered
+  // overdue ---
   private int overdueThresholdMinutes;
 
-  // --- Task Rules: which task types are allowed to jump the queue (Add Urgent Task) ---
+  // --- Task Rules: which task types are allowed to jump the queue (Add Urgent
+  // Task) ---
   private boolean queueJumpStandardClean;
   private boolean queueJumpDeepClean;
   private boolean queueJumpTurnover;
   private boolean queueJumpMaintenanceCheck;
 
-  // --- Staff Configuration: shift schedules (free-text, e.g. "07:00 - 15:00") ---
+  // --- Staff Configuration: shift schedules (free-text, e.g. "07:00 - 15:00")
+  // ---
   private String morningShiftSchedule;
   private String afternoonShiftSchedule;
   private String nightShiftSchedule;
