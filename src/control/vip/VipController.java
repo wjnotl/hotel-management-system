@@ -102,7 +102,6 @@ public class VipController {
 
     long now = System.currentTimeMillis();
 
-    // Filter waiting non-boiling reservations using ADT filter
     var waitingList =
         vipReservationList.filter(
             r ->
@@ -113,7 +112,7 @@ public class VipController {
 
     if (waitingList.isEmpty()) return;
 
-    // 1. Process any overdue boiling targets synchronously (where targetMs <= now)
+    // Process overdue boiling targets
     for (Reservation reservation : waitingList) {
       Guest g = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
       Member m =
@@ -146,7 +145,7 @@ public class VipController {
       }
     }
 
-    // 2. Find the earliest FUTURE boiling target (where targetMs > now)
+    // Find the earliest FUTURE boiling target
     Reservation earliestFutureRes = null;
     long earliestFutureTargetMs = Long.MAX_VALUE;
 
@@ -204,7 +203,7 @@ public class VipController {
                 heap.updatePriority(targetRes);
               }
 
-              // Re-arm scheduler for the NEXT earliest non-boiling reservation
+              // Schedule for the NEXT earliest non-boiling reservation
               scheduleNextBoilingTask(vipReservationRepo, guestRepo, memberRepo, configRepo);
             }
           } catch (Exception ignored) {
@@ -216,7 +215,7 @@ public class VipController {
       GuestRepo guestRepo, VipSystemConfigRepo configRepo) {
     if (guestRepo == null || configRepo == null) return;
 
-    // 1. Startup check: Check if midnight passed while system was offline/shutdown
+    // Check if midnight passed while system was offline/shutdown
     String lastResetDate = configRepo.getConfig().getLastStrikeResetDate();
     String todayDate = LocalDate.now().toString();
 
@@ -224,7 +223,7 @@ public class VipController {
       guestRepo.resetAllGuestStrikes(configRepo);
     }
 
-    // 2. Schedule recurring timer for the next midnight
+    // Schedule recurring timer for the next midnight
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay();
     long initialDelayMs = Math.max(1, Duration.between(now, nextMidnight).toMillis());
@@ -255,8 +254,7 @@ public class VipController {
 
     long now = System.currentTimeMillis();
 
-    // 1. Process any overdue expired allocations synchronously (where
-    // expirationTimestamp <= now)
+    // Process any overdue expired allocations
     var overdueList = allocationList.filter(e -> e != null && e.getExpirationTimestamp() <= now);
     if (!overdueList.isEmpty()) {
       for (AllocationEntry entry : overdueList) {
@@ -310,8 +308,7 @@ public class VipController {
       }
     }
 
-    // 2. Find the earliest FUTURE expiration target (where expirationTimestamp >
-    // now)
+    // Find the earliest FUTURE expiration target
     var futureList = allocationList.filter(e -> e != null && e.getExpirationTimestamp() > now);
     if (futureList.isEmpty()) return;
 

@@ -11,7 +11,6 @@ public class ReservationRepo {
   private final BinaryFileUtil<ListInterface<Reservation>> fileUtil;
   private ListInterface<Reservation> reservationList;
 
-  // Bounded LRU Cache (Capacity: 100 active reservation entries)
   private final MapInterface<String, Reservation> reservationLruCache =
       new DoublyLinkedHashMap<>(16, 0.75, 100, true);
 
@@ -55,13 +54,13 @@ public class ReservationRepo {
   public Reservation findById(String reservationId) {
     if (reservationId == null || reservationList == null) return null;
 
-    // 1. O(1) Fast LRU Cache Hit
+    // O(1) Fast LRU Cache Hit
     Reservation cached = reservationLruCache.get(reservationId.toLowerCase());
     if (cached != null) {
       return cached;
     }
 
-    // 2. Cache Miss: Scan list & populate LRU cache
+    // Cache Miss: Scan list & populate LRU cache
     Reservation res =
         reservationList.find(r -> reservationId.equalsIgnoreCase(r.getReservationId()));
     if (res != null) {

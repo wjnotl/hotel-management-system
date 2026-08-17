@@ -103,13 +103,11 @@ public class VipReportController {
                 ? "VIP Penalty & Eviction Audit Report"
                 : "Room Holding Bay & Grace Window Report";
 
-    // Step 1: Open Filter & Sort Options screen FIRST!
     boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
     if (!generateSelected) {
-      return; // User selected Back (Option 6) -> Return to Analytics Hub
+      return;
     }
 
-    // Step 2: User selected Option 1 (Generate Report) -> Enter Report Screen Loop!
     renderGeneratedReportLoop(reportType, reportTitle, state);
   }
 
@@ -162,23 +160,20 @@ public class VipReportController {
         }
 
         if (result == null) {
-          continue; // Re-render whole report cleanly on invalid command input
+          continue;
         }
 
         String capturedReportText = ConsoleUtil.getCapturedString();
 
         if ("Q".equalsIgnoreCase(result.input)) {
-          return; // Quit to Analytics Hub
+          return;
         } else if ("S".equalsIgnoreCase(result.input)) {
           boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
           if (!generateSelected) {
-            return; // Back from filter menu -> return to Analytics Hub
+            return;
           }
-          // generateSelected is true -> loop continues & re-renders report with new
-          // filters!
         } else if ("R".equalsIgnoreCase(result.input)) {
-          // Refresh -> loop continues & re-fetches live data & re-renders report screen
-          // directly!
+          // Refresh
         } else if ("E".equalsIgnoreCase(result.input)) {
           String filePrefix = "unknown_report";
           switch (reportType) {
@@ -224,15 +219,14 @@ public class VipReportController {
         int choice = action.getAsInt();
 
         if (choice == 1) {
-          return true; // 1. Generate Report
+          return true;
         } else if (choice == 2) {
-          handleEditFiltersSubmenu(state); // 2. Edit Filters
+          handleEditFiltersSubmenu(state);
         } else if (choice == 3) {
-          handleSortOptionsSubmenu(state); // 3. Sort Options
+          handleSortOptionsSubmenu(state);
         } else if (choice == 4) {
-          state.recordLimit = handleRecordLimitSubmenu(state.recordLimit); // 4. Max Display Records
+          state.recordLimit = handleRecordLimitSubmenu(state.recordLimit);
         } else if (choice == 5) {
-          // 5. Reset All Options
           state.searchQuery = null;
           state.tierFilter = null;
           state.roomTypeFilter = null;
@@ -244,7 +238,7 @@ public class VipReportController {
           state.sortDirection = "DESCENDING";
           state.recordLimit = 10;
         } else if (choice == 6) {
-          return false; // 6. Back to Analytics Hub
+          return false; // Back
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -336,7 +330,7 @@ public class VipReportController {
     LocalDate start = null;
     String startStr = "N/A";
 
-    // Step 1: Prompt Start Date (Immediate validation loop)
+    // Prompt Start Date
     while (true) {
       String input =
           reportView.promptCustomDateStep(
@@ -364,7 +358,7 @@ public class VipReportController {
       }
     }
 
-    // Step 2: Prompt End Date (Immediate validation loop)
+    // Prompt End Date
     while (true) {
       String input =
           reportView.promptCustomDateStep(
@@ -417,7 +411,7 @@ public class VipReportController {
     LocalDateTime start = null;
     String startStr = null;
 
-    // Step 1: Prompt Start Date-Time (Immediate validation loop)
+    // Prompt Start Date-Time
     while (true) {
       String input =
           reportView.promptCustomDateTimeStep(
@@ -442,7 +436,7 @@ public class VipReportController {
       }
     }
 
-    // Step 2: Prompt End Date-Time (Immediate validation loop)
+    // Prompt End Date-Time
     while (true) {
       String input =
           reportView.promptCustomDateTimeStep(
@@ -615,8 +609,8 @@ public class VipReportController {
             reservation -> {
               if (reservation == null) return false;
 
-              // Report 3 is Room Holding Bay & Grace Window Audit: strictly include holding
-              // bay records
+              // Report 3 is Room Holding Bay & Grace Window Audit
+              // only include those that have been entered into the holding bay
               if (reportType == 3) {
                 boolean enteredHoldingBay =
                     reservation.getAllocatedTime() != null
@@ -727,7 +721,6 @@ public class VipReportController {
             return r1.getReservationId().compareTo(r2.getReservationId());
           });
     } else {
-      // Default: PHYSICAL WAIT TIME
       filtered.sort(
           (r1, r2) -> {
             int cmp =
@@ -775,10 +768,6 @@ public class VipReportController {
 
     return sb.toString();
   }
-
-  // ==========================================
-  // VIEW MODEL BUILDERS & DATA CALCULATIONS
-  // ==========================================
 
   private VipReportView.SlaReportDTO buildSlaReportDTO(
       ListInterface<Reservation> filteredList, int recordLimit) {
@@ -891,7 +880,6 @@ public class VipReportController {
     int displayCount =
         (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
-    // Single-value reduction using ListInterface.reduce
     int totalStrikes =
         filteredList.reduce(
             0,

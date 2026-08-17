@@ -27,7 +27,6 @@ public class HotelManagementSystem {
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
   private static BillingRepo billingRepo = new BillingRepo();
 
-  // private static BillingRepo billingRepo = new BillingRepo();
   public static void main(String[] args) {
     // Database Seeder
     if (args.length > 0 && "--seed".equalsIgnoreCase(args[0])) {
@@ -35,15 +34,10 @@ public class HotelManagementSystem {
       return;
     }
 
-    // Process any holding allocations that expired while offline/shutdown & arm auto-expiration
-    // scheduler
     VipController.scheduleNextAutoExpirationTask(
         allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
-
-    // Process any boiling transitions that occurred while offline/shutdown & arm boiling scheduler
     VipController.scheduleNextBoilingTask(
         vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
-
     VipController.startMidnightStrikeResetScheduler(guestRepo, vipSystemConfigRepo);
 
     while (true) {

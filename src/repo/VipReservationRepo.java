@@ -52,7 +52,6 @@ public class VipReservationRepo {
             }
 
             // Tie-breaker: earlier arrival time gets dequeued first
-            // b.compareTo(a) returns positive when a's timestamp is earlier than b's
             return b.getQueueArrivalTime().compareTo(a.getQueueArrivalTime());
           }
         };
@@ -110,7 +109,6 @@ public class VipReservationRepo {
 
     Room.RoomType type = reservation.getRoomType();
 
-    // Determine grace minutes snapshot for this allocation session
     Guest guest = (guestRepo != null) ? guestRepo.findById(reservation.getGuestId()) : null;
     Member member =
         (guest != null && guest.getMemberId() != null && memberRepo != null)
@@ -139,26 +137,24 @@ public class VipReservationRepo {
     return reservationRepo.updateReservation(updatedRes);
   }
 
-  public boolean cancelReservation(Reservation reservation) {
-    if (reservation == null || reservation.getRoomType() == null) return false;
+  public void cancelReservation(Reservation reservation) {
+    if (reservation == null || reservation.getRoomType() == null) return;
 
     Room.RoomType type = reservation.getRoomType();
 
     // Remove from active queue & heap
-    boolean heapRemoved = getHeapByRoomType(type).remove(reservation);
-    boolean listRemoved = getListByRoomType(type).remove(reservation);
+    getHeapByRoomType(type).remove(reservation);
+    getListByRoomType(type).remove(reservation);
 
     // Mark status as CANCELLED in masterList
     reservation.setStatus(Reservation.Status.CANCELLED);
-    boolean updatedInMaster = updateReservation(reservation);
-
-    return heapRemoved || listRemoved || updatedInMaster;
+    updateReservation(reservation);
   }
 
   public int calculatePriorityScore(
       Reservation reservation, Guest guest, Member member, VipSystemConfig config) {
 
-    if (config == null) return 1000;
+    if (config == null) return 1;
 
     Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 

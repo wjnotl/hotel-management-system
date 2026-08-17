@@ -11,7 +11,6 @@ public class MemberRepo {
   private final BinaryFileUtil<ListInterface<Member>> fileUtil;
   private ListInterface<Member> memberList;
 
-  // Bounded LRU Cache (Capacity: 50 active member entries)
   private final MapInterface<String, Member> memberLruCache =
       new DoublyLinkedHashMap<>(16, 0.75, 50, true);
 
@@ -66,13 +65,13 @@ public class MemberRepo {
   public Member findById(String memberId) {
     if (memberId == null || memberList == null) return null;
 
-    // 1. O(1) Fast LRU Cache Hit
+    // O(1) Fast LRU Cache Hit
     Member cached = memberLruCache.get(memberId.toLowerCase());
     if (cached != null) {
       return cached;
     }
 
-    // 2. Cache Miss: Scan list & populate LRU cache
+    // Cache Miss: Scan list & populate LRU cache
     for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
       Member m = memberList.getEntry(i);
       if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) {
