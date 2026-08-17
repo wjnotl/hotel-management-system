@@ -37,7 +37,6 @@ public class BinaryFileUtil<T> {
   public T retrieveFromFile() {
     File file = new File(fileName);
 
-    // If file doesn't exist or is empty (0 bytes), return null quietly
     if (!file.exists() || file.length() == 0) {
       return null;
     }
@@ -50,8 +49,7 @@ public class BinaryFileUtil<T> {
     } catch (FileNotFoundException ex) {
       ConsoleUtil.printError("File " + fileName + " not found");
     } catch (EOFException ex) {
-      // Reached end of file cleanly / empty file format
-      return null;
+      return null; // Reached end of file cleanly / empty file format
     } catch (IOException ex) {
       ConsoleUtil.printError("Error reading from " + fileName + ": " + ex.getMessage());
     } catch (ClassNotFoundException ex) {

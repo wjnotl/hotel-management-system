@@ -5,7 +5,7 @@ import adt.ListInterface;
 
 public class TextUtil {
 
-  // Truncates text with an ellipsis if it exceeds the limit
+  // Truncates text to ... if exceed limit
   public static String truncate(String text, int limit) {
     if (text == null) return "";
 
@@ -19,13 +19,12 @@ public class TextUtil {
   public static ListInterface<String> wrapText(String text, int width) {
     ListInterface<String> linesList = new LinkedList<>();
 
-    // Safe check for null or empty strings
     if (text == null || text.isEmpty()) {
       linesList.add("");
       return linesList;
     }
 
-    // If it is a long word with no spaces, chop it into LinkedList nodes
+    // If it is a long word with no spaces, chop it
     if (!text.contains(" ") && text.length() > width) {
       return chopWord(text, width);
     }

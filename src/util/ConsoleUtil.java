@@ -28,13 +28,13 @@ public class ConsoleUtil {
   }
 
   public static void printTitleBox(String title) {
-    printTitleBox(title, 40); // default min width = 40
+    printTitleBox(title, 40);
   }
 
   public static void printTitleBox(String title, int minWidth) {
     if (title == null) title = "";
 
-    int contentWidth = title.length() + 8; // 2 spaces + "::" on both sides
+    int contentWidth = title.length() + 8;
     int boxWidth = Math.max(minWidth, contentWidth);
 
     // Keep box layout symmetric
@@ -216,14 +216,12 @@ public class ConsoleUtil {
               "Invalid input format! Number must not include leading zeros.");
         }
 
-        // If the number is out of bounds, throw an error
         if (choice < inputArgs.integerInputArgs.min || choice > inputArgs.integerInputArgs.max) {
           if (inputArgs.integerInputArgs.min == inputArgs.integerInputArgs.max) {
             throw new IllegalArgumentException(
                 "Invalid input! Number must be " + inputArgs.integerInputArgs.max + ".");
           }
 
-          // if max - min = 1, then just throw must be x or y
           if (inputArgs.integerInputArgs.max - inputArgs.integerInputArgs.min == 1) {
             throw new IllegalArgumentException(
                 "Invalid input! Number must be "
@@ -243,14 +241,13 @@ public class ConsoleUtil {
 
         return new GetMenuInputResult(rawInput, true);
       } catch (NumberFormatException e) {
-        // Not a number exception (throw directly if didn't expect character)
         if (inputArgs.charInputArgs == null) {
           throw new IllegalArgumentException("Invalid input! Please provide a valid number.");
         }
       }
     }
 
-    // Check character input if input is not a valid number
+    // Check character input
     if (rawInput.length() == 1) {
       char inputChar = Character.toUpperCase(rawInput.charAt(0));
 

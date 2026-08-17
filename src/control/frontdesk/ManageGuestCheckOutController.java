@@ -14,7 +14,6 @@ import repo.HousekeepingTaskRepo;
 import repo.RoomRepo;
 import repo.RoomStatusHistoryRepo;
 import util.ConsoleUtil;
-import util.NumberUtil;
 import view.frontdesk.ManageGuestCheckOutView;
 
 public class ManageGuestCheckOutController {
@@ -195,7 +194,7 @@ public class ManageGuestCheckOutController {
 
       HousekeepingTask turnoverTask =
           new HousekeepingTask(
-              NumberUtil.generateFormattedId("T-", 1000, 9999, 4),
+              housekeepingTaskRepo.generateTaskId(),
               room.getRoomNumber(),
               HousekeepingTask.TaskType.TURNOVER,
               HousekeepingTask.Status.PENDING,

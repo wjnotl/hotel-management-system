@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.function.Function;
+import util.ExpressionEvaluator;
 
 public class VipReservationRepo {
   private ReservationRepo reservationRepo;
@@ -190,8 +191,7 @@ public class VipReservationRepo {
           }
         };
 
-    double result =
-        util.ExpressionEvaluator.evaluateInfix(config.getActiveFormulaInfix(), resolver);
+    double result = ExpressionEvaluator.evaluateInfix(config.getActiveFormulaInfix(), resolver);
     return (int) Math.max(0, Math.round(result));
   }
 

@@ -417,11 +417,7 @@ public class VipSettingsController {
                   case "STRIKES":
                     return sVal;
                   default:
-                    try {
-                      return Double.parseDouble(var.trim());
-                    } catch (NumberFormatException e) {
-                      return 0.0;
-                    }
+                    return 0.0;
                 }
               };
 
