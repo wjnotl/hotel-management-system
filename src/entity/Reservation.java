@@ -22,14 +22,14 @@ public class Reservation implements Serializable {
   private Room.RoomType roomType; // LUXURY, SUITE, STANDARD
   private Status status;
   private boolean isBoiling;
-  private int priorityScore;
+  private int priorityScore; // For vip guests only
   private Integer stayDays;
-  private LocalDateTime reservationTime;
-  private LocalDateTime queueArrivalTime;
-  private LocalDateTime allocatedTime; // Useful for completed history & analytics
+  private LocalDateTime reservationTime; // Time when the reservation was created
+  private LocalDateTime queueArrivalTime; // Time when the reservation was placed in the waiting queue
+  private LocalDateTime allocatedTime; // Time when the reservation was allocated to a room
   private Integer allocatedGraceMins; // Snapshot of grace limit set during allocation
-  private LocalDateTime checkOutTime;
-  private boolean isVip;
+  private LocalDateTime checkOutTime; // Time when the reservation was checked out
+  private boolean isVip; // Check if the guest is a member
 
   public Reservation(
       String reservationId,
@@ -82,6 +82,10 @@ public class Reservation implements Serializable {
     return priorityScore;
   }
 
+  public Integer getStayDays() {
+    return stayDays;
+  }
+
   public LocalDateTime getReservationTime() {
     return reservationTime;
   }
@@ -98,16 +102,12 @@ public class Reservation implements Serializable {
     return allocatedGraceMins;
   }
 
-  public void setAllocatedGraceMins(Integer allocatedGraceMins) {
-    this.allocatedGraceMins = allocatedGraceMins;
-  }
-
-  public Integer getStayDays() {
-    return stayDays;
-  }
-
   public LocalDateTime getCheckOutTime() {
     return checkOutTime;
+  }
+
+  public boolean getIsVip() {
+    return isVip;
   }
 
   public void setReservationId(String reservationId) {
@@ -138,6 +138,10 @@ public class Reservation implements Serializable {
     this.priorityScore = priorityScore;
   }
 
+  public void setStayDays(Integer stayDays) {
+    this.stayDays = stayDays;
+  }
+
   public void setReservationTime(LocalDateTime reservationTime) {
     this.reservationTime = reservationTime;
   }
@@ -150,16 +154,12 @@ public class Reservation implements Serializable {
     this.allocatedTime = allocatedTime;
   }
 
-  public void setStayDays(Integer stayDays) {
-    this.stayDays = stayDays;
+  public void setAllocatedGraceMins(Integer allocatedGraceMins) {
+    this.allocatedGraceMins = allocatedGraceMins;
   }
 
   public void setCheckOutTime(LocalDateTime checkOutTime) {
     this.checkOutTime = checkOutTime;
-  }
-
-  public boolean getIsVip() {
-    return isVip;
   }
 
   public void setIsVip(boolean isVip) {

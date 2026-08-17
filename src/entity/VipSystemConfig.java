@@ -111,265 +111,264 @@ public class VipSystemConfig implements Serializable {
     this.lastStrikeResetDate = null;
   }
 
-  // Getters & Setters
   public String getActiveStrategyName() {
     return activeStrategyName;
-  }
-
-  public void setActiveStrategyName(String activeStrategyName) {
-    this.activeStrategyName = activeStrategyName;
   }
 
   public String getActiveFormulaInfix() {
     return activeFormulaInfix;
   }
 
-  public void setActiveFormulaInfix(String activeFormulaInfix) {
-    this.activeFormulaInfix = activeFormulaInfix;
-  }
-
   public int getDiamondPatienceLimitMins() {
     return diamondPatienceLimitMins;
-  }
-
-  public void setDiamondPatienceLimitMins(int val) {
-    this.diamondPatienceLimitMins = val;
   }
 
   public int getGoldPatienceLimitMins() {
     return goldPatienceLimitMins;
   }
 
-  public void setGoldPatienceLimitMins(int val) {
-    this.goldPatienceLimitMins = val;
-  }
-
   public int getSilverPatienceLimitMins() {
     return silverPatienceLimitMins;
-  }
-
-  public void setSilverPatienceLimitMins(int val) {
-    this.silverPatienceLimitMins = val;
   }
 
   public int getDiamondBoilingLimitMins() {
     return diamondBoilingLimitMins;
   }
 
-  public void setDiamondBoilingLimitMins(int val) {
-    this.diamondBoilingLimitMins = val;
-  }
-
   public int getGoldBoilingLimitMins() {
     return goldBoilingLimitMins;
-  }
-
-  public void setGoldBoilingLimitMins(int val) {
-    this.goldBoilingLimitMins = val;
   }
 
   public int getSilverBoilingLimitMins() {
     return silverBoilingLimitMins;
   }
 
-  public void setSilverBoilingLimitMins(int val) {
-    this.silverBoilingLimitMins = val;
-  }
-
   public int getDiamondGraceWindowMins() {
     return diamondGraceWindowMins;
-  }
-
-  public void setDiamondGraceWindowMins(int val) {
-    this.diamondGraceWindowMins = val;
   }
 
   public int getGoldGraceWindowMins() {
     return goldGraceWindowMins;
   }
 
-  public void setGoldGraceWindowMins(int val) {
-    this.goldGraceWindowMins = val;
-  }
-
   public int getSilverGraceWindowMins() {
     return silverGraceWindowMins;
-  }
-
-  public void setSilverGraceWindowMins(int val) {
-    this.silverGraceWindowMins = val;
   }
 
   public int getDiamondMaxStrikes() {
     return diamondMaxStrikes;
   }
 
-  public void setDiamondMaxStrikes(int val) {
-    this.diamondMaxStrikes = val;
-  }
-
   public int getGoldMaxStrikes() {
     return goldMaxStrikes;
-  }
-
-  public void setGoldMaxStrikes(int val) {
-    this.goldMaxStrikes = val;
   }
 
   public int getSilverMaxStrikes() {
     return silverMaxStrikes;
   }
 
-  public void setSilverMaxStrikes(int val) {
-    this.silverMaxStrikes = val;
-  }
-
   public int getDiamondBaseValue() {
     return diamondBaseValue;
-  }
-
-  public void setDiamondBaseValue(int val) {
-    this.diamondBaseValue = val;
   }
 
   public int getGoldBaseValue() {
     return goldBaseValue;
   }
 
-  public void setGoldBaseValue(int val) {
-    this.goldBaseValue = val;
-  }
-
   public int getSilverBaseValue() {
     return silverBaseValue;
-  }
-
-  public void setSilverBaseValue(int val) {
-    this.silverBaseValue = val;
   }
 
   public double getDiamondBoilingBoost() {
     return diamondBoilingBoost;
   }
 
-  public void setDiamondBoilingBoost(double val) {
-    this.diamondBoilingBoost = val;
-  }
-
   public double getGoldBoilingBoost() {
     return goldBoilingBoost;
-  }
-
-  public void setGoldBoilingBoost(double val) {
-    this.goldBoilingBoost = val;
   }
 
   public double getSilverBoilingBoost() {
     return silverBoilingBoost;
   }
 
-  public void setSilverBoilingBoost(double val) {
-    this.silverBoilingBoost = val;
-  }
-
   public double getDiamondStrikePenalty() {
     return diamondStrikePenalty;
-  }
-
-  public void setDiamondStrikePenalty(double val) {
-    this.diamondStrikePenalty = val;
   }
 
   public double getGoldStrikePenalty() {
     return goldStrikePenalty;
   }
 
-  public void setGoldStrikePenalty(double val) {
-    this.goldStrikePenalty = val;
-  }
-
   public double getSilverStrikePenalty() {
     return silverStrikePenalty;
-  }
-
-  public void setSilverStrikePenalty(double val) {
-    this.silverStrikePenalty = val;
   }
 
   public double getDiamondSlaTargetPct() {
     return diamondSlaTargetPct;
   }
 
-  public void setDiamondSlaTargetPct(double val) {
-    this.diamondSlaTargetPct = val;
-  }
-
   public double getGoldSlaTargetPct() {
     return goldSlaTargetPct;
-  }
-
-  public void setGoldSlaTargetPct(double val) {
-    this.goldSlaTargetPct = val;
   }
 
   public double getSilverSlaTargetPct() {
     return silverSlaTargetPct;
   }
 
-  public void setSilverSlaTargetPct(double val) {
-    this.silverSlaTargetPct = val;
-  }
-
   public double getDiamondEvictionRateTargetPct() {
     return diamondEvictionRateTargetPct;
-  }
-
-  public void setDiamondEvictionRateTargetPct(double val) {
-    this.diamondEvictionRateTargetPct = val;
   }
 
   public double getGoldEvictionRateTargetPct() {
     return goldEvictionRateTargetPct;
   }
 
-  public void setGoldEvictionRateTargetPct(double val) {
-    this.goldEvictionRateTargetPct = val;
-  }
-
   public double getSilverEvictionRateTargetPct() {
     return silverEvictionRateTargetPct;
-  }
-
-  public void setSilverEvictionRateTargetPct(double val) {
-    this.silverEvictionRateTargetPct = val;
   }
 
   public double getDiamondGraceUtilTargetPct() {
     return diamondGraceUtilTargetPct;
   }
 
-  public void setDiamondGraceUtilTargetPct(double val) {
-    this.diamondGraceUtilTargetPct = val;
-  }
-
   public double getGoldGraceUtilTargetPct() {
     return goldGraceUtilTargetPct;
-  }
-
-  public void setGoldGraceUtilTargetPct(double val) {
-    this.goldGraceUtilTargetPct = val;
   }
 
   public double getSilverGraceUtilTargetPct() {
     return silverGraceUtilTargetPct;
   }
 
-  public void setSilverGraceUtilTargetPct(double val) {
-    this.silverGraceUtilTargetPct = val;
-  }
-
   public String getLastStrikeResetDate() {
     return lastStrikeResetDate;
+  }
+
+  public void setActiveStrategyName(String activeStrategyName) {
+    this.activeStrategyName = activeStrategyName;
+  }
+
+  public void setActiveFormulaInfix(String activeFormulaInfix) {
+    this.activeFormulaInfix = activeFormulaInfix;
+  }
+
+  public void setDiamondPatienceLimitMins(int val) {
+    this.diamondPatienceLimitMins = val;
+  }
+
+  public void setGoldPatienceLimitMins(int val) {
+    this.goldPatienceLimitMins = val;
+  }
+
+  public void setSilverPatienceLimitMins(int val) {
+    this.silverPatienceLimitMins = val;
+  }
+
+  public void setDiamondBoilingLimitMins(int val) {
+    this.diamondBoilingLimitMins = val;
+  }
+
+  public void setGoldBoilingLimitMins(int val) {
+    this.goldBoilingLimitMins = val;
+  }
+
+  public void setSilverBoilingLimitMins(int val) {
+    this.silverBoilingLimitMins = val;
+  }
+
+  public void setDiamondGraceWindowMins(int val) {
+    this.diamondGraceWindowMins = val;
+  }
+
+  public void setGoldGraceWindowMins(int val) {
+    this.goldGraceWindowMins = val;
+  }
+
+  public void setSilverGraceWindowMins(int val) {
+    this.silverGraceWindowMins = val;
+  }
+
+  public void setDiamondMaxStrikes(int val) {
+    this.diamondMaxStrikes = val;
+  }
+
+  public void setGoldMaxStrikes(int val) {
+    this.goldMaxStrikes = val;
+  }
+
+  public void setSilverMaxStrikes(int val) {
+    this.silverMaxStrikes = val;
+  }
+
+  public void setDiamondBaseValue(int val) {
+    this.diamondBaseValue = val;
+  }
+
+  public void setGoldBaseValue(int val) {
+    this.goldBaseValue = val;
+  }
+
+  public void setSilverBaseValue(int val) {
+    this.silverBaseValue = val;
+  }
+
+  public void setDiamondBoilingBoost(double val) {
+    this.diamondBoilingBoost = val;
+  }
+
+  public void setGoldBoilingBoost(double val) {
+    this.goldBoilingBoost = val;
+  }
+
+  public void setSilverBoilingBoost(double val) {
+    this.silverBoilingBoost = val;
+  }
+
+  public void setDiamondStrikePenalty(double val) {
+    this.diamondStrikePenalty = val;
+  }
+
+  public void setGoldStrikePenalty(double val) {
+    this.goldStrikePenalty = val;
+  }
+
+  public void setSilverStrikePenalty(double val) {
+    this.silverStrikePenalty = val;
+  }
+
+  public void setDiamondSlaTargetPct(double val) {
+    this.diamondSlaTargetPct = val;
+  }
+
+  public void setGoldSlaTargetPct(double val) {
+    this.goldSlaTargetPct = val;
+  }
+
+  public void setSilverSlaTargetPct(double val) {
+    this.silverSlaTargetPct = val;
+  }
+
+  public void setDiamondEvictionRateTargetPct(double val) {
+    this.diamondEvictionRateTargetPct = val;
+  }
+
+  public void setGoldEvictionRateTargetPct(double val) {
+    this.goldEvictionRateTargetPct = val;
+  }
+
+  public void setSilverEvictionRateTargetPct(double val) {
+    this.silverEvictionRateTargetPct = val;
+  }
+
+  public void setDiamondGraceUtilTargetPct(double val) {
+    this.diamondGraceUtilTargetPct = val;
+  }
+
+  public void setGoldGraceUtilTargetPct(double val) {
+    this.goldGraceUtilTargetPct = val;
+  }
+
+  public void setSilverGraceUtilTargetPct(double val) {
+    this.silverGraceUtilTargetPct = val;
   }
 
   public void setLastStrikeResetDate(String lastStrikeResetDate) {

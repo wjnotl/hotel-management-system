@@ -11,7 +11,7 @@ public class Guest implements Serializable {
   private String passportNumber; // Passport Number
   private String email; // Email Address
   private String phoneNumber; // Phone Number
-  private String memberId; // Links to Member card (null if non-member)
+  private String memberId; // Links to Member (null if non-member)
   private int strikeCount; // Daily no-show counter
 
   public Guest(

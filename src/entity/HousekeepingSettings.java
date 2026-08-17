@@ -62,108 +62,108 @@ public class HousekeepingSettings implements Serializable {
     return cleanTimeStandardMinutes;
   }
 
-  public void setCleanTimeStandardMinutes(int cleanTimeStandardMinutes) {
-    this.cleanTimeStandardMinutes = cleanTimeStandardMinutes;
-  }
-
   public int getCleanTimeSuiteMinutes() {
     return cleanTimeSuiteMinutes;
-  }
-
-  public void setCleanTimeSuiteMinutes(int cleanTimeSuiteMinutes) {
-    this.cleanTimeSuiteMinutes = cleanTimeSuiteMinutes;
   }
 
   public int getCleanTimeLuxuryMinutes() {
     return cleanTimeLuxuryMinutes;
   }
 
-  public void setCleanTimeLuxuryMinutes(int cleanTimeLuxuryMinutes) {
-    this.cleanTimeLuxuryMinutes = cleanTimeLuxuryMinutes;
-  }
-
   public int getOverdueThresholdMinutes() {
     return overdueThresholdMinutes;
-  }
-
-  public void setOverdueThresholdMinutes(int overdueThresholdMinutes) {
-    this.overdueThresholdMinutes = overdueThresholdMinutes;
   }
 
   public boolean isQueueJumpStandardClean() {
     return queueJumpStandardClean;
   }
 
-  public void setQueueJumpStandardClean(boolean queueJumpStandardClean) {
-    this.queueJumpStandardClean = queueJumpStandardClean;
-  }
-
   public boolean isQueueJumpDeepClean() {
     return queueJumpDeepClean;
-  }
-
-  public void setQueueJumpDeepClean(boolean queueJumpDeepClean) {
-    this.queueJumpDeepClean = queueJumpDeepClean;
   }
 
   public boolean isQueueJumpTurnover() {
     return queueJumpTurnover;
   }
 
-  public void setQueueJumpTurnover(boolean queueJumpTurnover) {
-    this.queueJumpTurnover = queueJumpTurnover;
-  }
-
   public boolean isQueueJumpMaintenanceCheck() {
     return queueJumpMaintenanceCheck;
-  }
-
-  public void setQueueJumpMaintenanceCheck(boolean queueJumpMaintenanceCheck) {
-    this.queueJumpMaintenanceCheck = queueJumpMaintenanceCheck;
   }
 
   public String getMorningShiftSchedule() {
     return morningShiftSchedule;
   }
 
-  public void setMorningShiftSchedule(String morningShiftSchedule) {
-    this.morningShiftSchedule = morningShiftSchedule;
-  }
-
   public String getAfternoonShiftSchedule() {
     return afternoonShiftSchedule;
-  }
-
-  public void setAfternoonShiftSchedule(String afternoonShiftSchedule) {
-    this.afternoonShiftSchedule = afternoonShiftSchedule;
   }
 
   public String getNightShiftSchedule() {
     return nightShiftSchedule;
   }
 
-  public void setNightShiftSchedule(String nightShiftSchedule) {
-    this.nightShiftSchedule = nightShiftSchedule;
-  }
-
   public int getMaxRoomsMorning() {
     return maxRoomsMorning;
-  }
-
-  public void setMaxRoomsMorning(int maxRoomsMorning) {
-    this.maxRoomsMorning = maxRoomsMorning;
   }
 
   public int getMaxRoomsAfternoon() {
     return maxRoomsAfternoon;
   }
 
-  public void setMaxRoomsAfternoon(int maxRoomsAfternoon) {
-    this.maxRoomsAfternoon = maxRoomsAfternoon;
-  }
-
   public int getMaxRoomsNight() {
     return maxRoomsNight;
+  }
+
+  public void setCleanTimeStandardMinutes(int cleanTimeStandardMinutes) {
+    this.cleanTimeStandardMinutes = cleanTimeStandardMinutes;
+  }
+
+  public void setCleanTimeSuiteMinutes(int cleanTimeSuiteMinutes) {
+    this.cleanTimeSuiteMinutes = cleanTimeSuiteMinutes;
+  }
+
+  public void setCleanTimeLuxuryMinutes(int cleanTimeLuxuryMinutes) {
+    this.cleanTimeLuxuryMinutes = cleanTimeLuxuryMinutes;
+  }
+
+  public void setOverdueThresholdMinutes(int overdueThresholdMinutes) {
+    this.overdueThresholdMinutes = overdueThresholdMinutes;
+  }
+
+  public void setQueueJumpStandardClean(boolean queueJumpStandardClean) {
+    this.queueJumpStandardClean = queueJumpStandardClean;
+  }
+
+  public void setQueueJumpDeepClean(boolean queueJumpDeepClean) {
+    this.queueJumpDeepClean = queueJumpDeepClean;
+  }
+
+  public void setQueueJumpTurnover(boolean queueJumpTurnover) {
+    this.queueJumpTurnover = queueJumpTurnover;
+  }
+
+  public void setQueueJumpMaintenanceCheck(boolean queueJumpMaintenanceCheck) {
+    this.queueJumpMaintenanceCheck = queueJumpMaintenanceCheck;
+  }
+
+  public void setMorningShiftSchedule(String morningShiftSchedule) {
+    this.morningShiftSchedule = morningShiftSchedule;
+  }
+
+  public void setAfternoonShiftSchedule(String afternoonShiftSchedule) {
+    this.afternoonShiftSchedule = afternoonShiftSchedule;
+  }
+
+  public void setNightShiftSchedule(String nightShiftSchedule) {
+    this.nightShiftSchedule = nightShiftSchedule;
+  }
+
+  public void setMaxRoomsMorning(int maxRoomsMorning) {
+    this.maxRoomsMorning = maxRoomsMorning;
+  }
+
+  public void setMaxRoomsAfternoon(int maxRoomsAfternoon) {
+    this.maxRoomsAfternoon = maxRoomsAfternoon;
   }
 
   public void setMaxRoomsNight(int maxRoomsNight) {

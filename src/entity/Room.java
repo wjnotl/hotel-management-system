@@ -38,7 +38,6 @@ public class Room implements Serializable {
     this.price = price;
   }
 
-  // --- GETTERS ---
   public double getPrice() {
     return price;
   }
@@ -58,8 +57,6 @@ public class Room implements Serializable {
   public String getReservationConfirmationNumber() {
     return reservationConfirmationNumber;
   }
-
-  // --- SETTERS ---
 
   public void setRoomNumber(String roomNumber) {
     this.roomNumber = roomNumber;
@@ -83,10 +80,8 @@ public class Room implements Serializable {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj)
-      return true;
-    if (obj == null || getClass() != obj.getClass())
-      return false;
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
     Room other = (Room) obj;
     return roomNumber != null && roomNumber.equals(other.roomNumber);
   }
