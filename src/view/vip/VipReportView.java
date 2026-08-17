@@ -1149,29 +1149,26 @@ public class VipReportView {
     System.out.println("ALGORITHM SUMMARY METRICS (HOLDING BAY AUDIT):\n");
     System.out.printf(" - Total Holding Bay Entries : %d Rooms Held\n\n", summary.getTotalHeld());
     System.out.printf(
-        " DIAMOND GRACE UTIL (Limit: <= %d Mins) : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
-        summary.getDiamondLimitMins(),
+        " DIAMOND GRACE USAGE : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
         summary.getDiamondUtilPct(),
         summary.getDiamondTargetPct(),
         (summary.getDiamondUtilPct() <= summary.getDiamondTargetPct()
             ? "[OK]"
-            : "[!] HIGH GRACE UTILIZATION"));
+            : "[!] HIGH GRACE USAGE"));
     System.out.printf(
-        " GOLD GRACE UTIL    (Limit: <= %d Mins) : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
-        summary.getGoldLimitMins(),
+        " GOLD GRACE USAGE    : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
         summary.getGoldUtilPct(),
         summary.getGoldTargetPct(),
         (summary.getGoldUtilPct() <= summary.getGoldTargetPct()
             ? "[OK]"
-            : "[!] HIGH GRACE UTILIZATION"));
+            : "[!] HIGH GRACE USAGE"));
     System.out.printf(
-        " SILVER GRACE UTIL  (Limit: <= %d Mins) : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n\n",
-        summary.getSilverLimitMins(),
+        " SILVER GRACE USAGE  : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n\n",
         summary.getSilverUtilPct(),
         summary.getSilverTargetPct(),
         (summary.getSilverUtilPct() <= summary.getSilverTargetPct()
             ? "[OK]"
-            : "[!] HIGH GRACE UTILIZATION"));
+            : "[!] HIGH GRACE USAGE"));
     System.out.println(
         "--------------------------------------------------------------------------\n");
 
