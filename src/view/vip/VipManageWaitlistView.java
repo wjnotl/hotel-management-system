@@ -154,7 +154,6 @@ public class VipManageWaitlistView {
         },
         headerSettings);
 
-    // WHEN 0 MATCHES RETURNED:
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
@@ -171,17 +170,12 @@ public class VipManageWaitlistView {
 
       System.out.println("Page 0 / 0 (Total Matches: 0)\n");
 
-      // SCENARIO 1: Filters active -> Allow staff to clear/change search or refresh
       if (hasActiveFilters) {
         System.out.println("[A] Add Guest          [S] Search / Filter     [R] Refresh Table");
         System.out.println("[E] Exit to Queue Menu\n");
 
         return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'A', 'S', 'R', 'E'});
-      }
-
-      // SCENARIO 2: Queue is completely empty naturally -> Remove all
-      // search/sort/assign options
-      else {
+      } else {
         System.out.println(
             "[A] Add Guest          [R] Refresh Table       [E] Exit to Queue Menu\n");
 
@@ -189,7 +183,7 @@ public class VipManageWaitlistView {
       }
     }
 
-    // NORMAL TABLE DISPLAY (When matches > 0)
+    // Normal table display
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
     int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
@@ -283,7 +277,7 @@ public class VipManageWaitlistView {
     TableUtil.TableSettings fullSettings =
         new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
-    // Section 1: Guest Details
+    // Guest Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
@@ -308,7 +302,7 @@ public class VipManageWaitlistView {
 
     System.out.println();
 
-    // Section 2: Loyalty & Priority
+    // Loyalty & Priority
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"LOYALTY & PRIORITY"}, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
@@ -353,7 +347,7 @@ public class VipManageWaitlistView {
     TableUtil.TableSettings fullSettings =
         new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
-    // Section 1: Reservation & Booking Details
+    // Reservation & Booking Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"RESERVATION & BOOKING DETAILS"}, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
@@ -369,7 +363,7 @@ public class VipManageWaitlistView {
 
     System.out.println();
 
-    // Section 2: Guest & Loyalty Details
+    // Guest & Loyalty Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"GUEST & LOYALTY DETAILS"}, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
@@ -409,7 +403,7 @@ public class VipManageWaitlistView {
 
     System.out.println();
 
-    // Section 3: Room Allocation Hold
+    // Room Allocation Hold
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"ROOM ALLOCATION HOLD"}, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
@@ -451,7 +445,7 @@ public class VipManageWaitlistView {
     TableUtil.TableSettings fullSettings =
         new TableUtil.TableSettings(fullWidth).setHAlign(0, TableUtil.Align.CENTER);
 
-    // Section 1: Reservation Details
+    // Reservation Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"RESERVATION DETAILS"}, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
@@ -467,7 +461,7 @@ public class VipManageWaitlistView {
 
     System.out.println();
 
-    // Section 2: Guest Details
+    // Guest Details
     TableUtil.printTableBorder(fullSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, fullSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);

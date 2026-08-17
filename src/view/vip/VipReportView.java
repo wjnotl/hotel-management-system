@@ -215,10 +215,6 @@ public class VipReportView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3);
   }
 
-  // ==========================================
-  // VIEW MODEL DTO CLASSES (STATIC INNER)
-  // ==========================================
-
   public static class SlaReportRowDTO {
     private final String rank;
     private final String reservationId;
@@ -739,10 +735,6 @@ public class VipReportView {
       return totalMatches;
     }
   }
-
-  // ==========================================
-  // RENDER REPORT SCREENS
-  // ==========================================
 
   public GetMenuInputResult renderSlaReportScreen(
       SlaReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
