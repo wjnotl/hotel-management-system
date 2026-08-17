@@ -123,7 +123,8 @@ public class AdvanceBookingController {
           guest = guestRepo.findByName(term);
         }
 
-        // Someone booking for the first time has no guest file yet, so the desk opens one
+        // Someone booking for the first time has no guest file yet, so the desk opens
+        // one
         // rather than turning away a booking it is perfectly able to take.
         if (guest == null) {
           int choice = advanceBookingView.displayGuestNotFoundScreen(term);
@@ -158,7 +159,8 @@ public class AdvanceBookingController {
           continue;
         }
 
-        // RESERVED carries no queueArrivalTime: the guest has bought a room type, not a place
+        // RESERVED carries no queueArrivalTime: the guest has bought a room type, not a
+        // place
         // in the line, so nothing is enqueued until they physically turn up.
         Reservation booking =
             new Reservation(
@@ -223,8 +225,10 @@ public class AdvanceBookingController {
             ? memberRepo.findById(guest.getMemberId())
             : null;
 
-    // Marking arrival is the moment this booking becomes a person at the counter, which is
-    // exactly when a loyalty tier stops being decoration and starts deciding who waits.
+    // Marking arrival is the moment this booking becomes a person at the counter,
+    // which is
+    // exactly when a loyalty tier stops being decoration and starts deciding who
+    // waits.
     if (member != null && member.getTier() != null) {
       int vacantRooms = countVacantCleanRooms(booking.getRoomType());
       int vipWaiting = countVipWaiting(booking.getRoomType());
@@ -467,7 +471,8 @@ public class AdvanceBookingController {
     return null;
   }
 
-  // A guest id typed into the search box is not a name, so it must not be pre-filled as one.
+  // A guest id typed into the search box is not a name, so it must not be
+  // pre-filled as one.
   private String nameSuggestionFrom(String term) {
     if (term == null || term.toUpperCase().startsWith("G-")) {
       return null;
@@ -495,8 +500,9 @@ public class AdvanceBookingController {
       return;
     }
 
+    booking.setRoomNumber(room.getRoomNumber());
+    standardReservationRepo.updateReservation(booking);
     room.setStatus(Room.Status.OCCUPIED);
-    room.setReservationConfirmationNumber(booking.getConfirmationNumber());
     roomRepo.updateRoom(room);
 
     advanceBookingView.displayVipDirectAssignSuccessScreen(

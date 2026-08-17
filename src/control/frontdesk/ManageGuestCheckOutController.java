@@ -91,7 +91,8 @@ public class ManageGuestCheckOutController {
             currentPage = 1;
           }
         } else if ("R".equalsIgnoreCase(result.input)) {
-          // Table refreshes on loop - active stays are re-derived from room status each pass.
+          // Table refreshes on loop - active stays are re-derived from room status each
+          // pass.
         } else if ("N".equalsIgnoreCase(result.input)) {
           int totalMatches = filteredList.getNumberOfEntries();
           int totalPages = (int) Math.ceil((double) totalMatches / PAGE_SIZE);
@@ -188,7 +189,6 @@ public class ManageGuestCheckOutController {
     if (room != null) {
       Room.Status previousStatus = room.getStatus();
       room.setStatus(Room.Status.DIRTY);
-      room.setReservationConfirmationNumber(null);
       roomRepo.updateRoom(room);
       roomStatusHistoryRepo.recordStatusChange(
           room.getRoomNumber(), previousStatus, Room.Status.DIRTY);

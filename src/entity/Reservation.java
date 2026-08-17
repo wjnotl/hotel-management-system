@@ -19,13 +19,15 @@ public class Reservation implements Serializable {
   private String reservationId; // Unique internal ID (e.g. "RES-10001")
   private String guestId; // References Guest.guestId
   private String confirmationNumber; // References booking trip ID
+  private String roomNumber; // Assigned room designation (e.g., "801")
   private Room.RoomType roomType; // LUXURY, SUITE, STANDARD
   private Status status;
   private boolean isBoiling;
   private int priorityScore; // For vip guests only
   private Integer stayDays;
   private LocalDateTime reservationTime; // Time when the reservation was created
-  private LocalDateTime queueArrivalTime; // Time when the reservation was placed in the waiting queue
+  private LocalDateTime
+      queueArrivalTime; // Time when the reservation was placed in the waiting queue
   private LocalDateTime allocatedTime; // Time when the reservation was allocated to a room
   private Integer allocatedGraceMins; // Snapshot of grace limit set during allocation
   private LocalDateTime checkOutTime; // Time when the reservation was checked out
@@ -64,6 +66,10 @@ public class Reservation implements Serializable {
 
   public String getConfirmationNumber() {
     return confirmationNumber;
+  }
+
+  public String getRoomNumber() {
+    return roomNumber;
   }
 
   public Room.RoomType getRoomType() {
@@ -120,6 +126,10 @@ public class Reservation implements Serializable {
 
   public void setConfirmationNumber(String confirmationNumber) {
     this.confirmationNumber = confirmationNumber;
+  }
+
+  public void setRoomNumber(String roomNumber) {
+    this.roomNumber = roomNumber;
   }
 
   public void setRoomType(Room.RoomType roomType) {

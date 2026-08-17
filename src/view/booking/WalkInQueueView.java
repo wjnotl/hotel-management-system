@@ -105,7 +105,8 @@ public class WalkInQueueView {
 
     char[] commands = {'A', 'G', 'V', 'C', 'S', 'O', 'X', 'P', 'N', 'R', 'E'};
 
-    // With nothing on the page there is no valid row number, and an empty integer range
+    // With nothing on the page there is no valid row number, and an empty integer
+    // range
     // would be rejected by ConsoleUtil before the user ever sees the prompt.
     int rowsOnPage = countRowsOnPage(totalMatches, currentPage, pageSize);
     if (rowsOnPage <= 0) {
@@ -117,8 +118,10 @@ public class WalkInQueueView {
         "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
   }
 
-  // Rooms are held back one per waiting VIP rather than the whole type being frozen, so a line can
-  // legitimately be servable while VIPs are still waiting. Printing the leftover count says that
+  // Rooms are held back one per waiting VIP rather than the whole type being
+  // frozen, so a line can
+  // legitimately be servable while VIPs are still waiting. Printing the leftover
+  // count says that
   // out loud, otherwise the header reads as though the bypass was ignored.
   private String verdictFor(int vacantRooms, int vipWaiting) {
     if (vacantRooms == 0) {
@@ -207,7 +210,8 @@ public class WalkInQueueView {
       Member m =
           (g != null && g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
 
-      // Read straight off the queue so the true place in line shows even when the table is
+      // Read straight off the queue so the true place in line shows even when the
+      // table is
       // sorted by something else.
       int position = queue.getPosition(r);
 
@@ -278,14 +282,13 @@ public class WalkInQueueView {
       if (r == null) continue;
 
       Guest g = findGuest(guestList, r.getGuestId());
-      Room heldRoom = findRoomByConfirmation(roomList, r.getConfirmationNumber());
 
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(i),
             r.getReservationId(),
             (g != null) ? g.getName() : "N/A",
-            (heldRoom != null) ? heldRoom.getRoomNumber() : "UNLINKED",
+            (r.getRoomNumber() != null) ? r.getRoomNumber() : "UNLINKED",
             formatWait(r.getAllocatedTime()),
             formatRemaining(r.getAllocatedTime(), graceMinutes)
           },
@@ -327,8 +330,10 @@ public class WalkInQueueView {
     return ConsoleUtil.getStringInput("Enter Guest ID or Name: ");
   }
 
-  // A walk-in is by definition someone who did not book, so "not found" is the expected case
-  // for a first-time arrival rather than an error. The clerk is offered a guest file instead
+  // A walk-in is by definition someone who did not book, so "not found" is the
+  // expected case
+  // for a first-time arrival rather than an error. The clerk is offered a guest
+  // file instead
   // of being sent back to retype the same search.
   public int displayGuestNotFoundScreen(String searchedTerm) {
     ConsoleUtil.clearScreen();
@@ -347,8 +352,10 @@ public class WalkInQueueView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
-  // The tier used to be printed as one more row on the confirmation screen, which let a
-  // Diamond member be dropped into the ordinary line without anyone noticing. Priority is a
+  // The tier used to be printed as one more row on the confirmation screen, which
+  // let a
+  // Diamond member be dropped into the ordinary line without anyone noticing.
+  // Priority is a
   // decision, so it is raised as its own screen before the line is ever offered.
   public int displayVipArrivalScreen(
       Guest guest,
@@ -762,8 +769,10 @@ public class WalkInQueueView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK IN A HELD ROOM", SCREEN_WIDTH);
 
-    // Opening this screen clears the queue screen the holds were listed on, so the table is
-    // reprinted here. Asking for a number with nothing on screen to read is how the clerk ends up
+    // Opening this screen clears the queue screen the holds were listed on, so the
+    // table is
+    // reprinted here. Asking for a number with nothing on screen to read is how the
+    // clerk ends up
     // checking in the wrong guest.
     printHoldTable(holds, guestList, roomList, graceMinutes);
     System.out.println();
@@ -989,9 +998,12 @@ public class WalkInQueueView {
     System.out.println();
   }
 
-  // TableUtil wraps a cell at the full column width but only prints width - 2 characters and
-  // hard-truncates the rest, so long values are pre-wrapped to the printable width here and
-  // emitted one row at a time. Without this every wrapped line loses its last two characters.
+  // TableUtil wraps a cell at the full column width but only prints width - 2
+  // characters and
+  // hard-truncates the rest, so long values are pre-wrapped to the printable
+  // width here and
+  // emitted one row at a time. Without this every wrapped line loses its last two
+  // characters.
   private void printKeyValue(
       TableUtil.TableSettings settings, String key, String value, boolean moreRowsFollow) {
     ListInterface<String> lines = TextUtil.wrapText(value, KV_WIDTHS[1] - 2);
@@ -1044,17 +1056,6 @@ public class WalkInQueueView {
     for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
       Guest g = guestList.getEntry(i);
       if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) return g;
-    }
-    return null;
-  }
-
-  private Room findRoomByConfirmation(ListInterface<Room> roomList, String confirmationNumber) {
-    if (roomList == null || confirmationNumber == null) return null;
-    for (int i = 1; i <= roomList.getNumberOfEntries(); i++) {
-      Room room = roomList.getEntry(i);
-      if (room != null && confirmationNumber.equals(room.getReservationConfirmationNumber())) {
-        return room;
-      }
     }
     return null;
   }

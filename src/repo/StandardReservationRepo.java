@@ -17,13 +17,16 @@ public class StandardReservationRepo {
 
   private final ReservationRepo reservationRepo;
 
-  // Small enough that the array actually fills and doubles during a normal shift, which is
+  // Small enough that the array actually fills and doubles during a normal shift,
+  // which is
   // what makes the circular growth visible on screen instead of theoretical.
   private static final int INITIAL_QUEUE_CAPACITY = 8;
 
   // One waiting line per room type. Only WAITING reservations live here.
-  // Held as the concrete type because the repository is what chooses the implementation and
-  // reports its capacity. Every caller outside this class only ever sees QueueInterface.
+  // Held as the concrete type because the repository is what chooses the
+  // implementation and
+  // reports its capacity. Every caller outside this class only ever sees
+  // QueueInterface.
   private CircularArrayQueue<Reservation> luxuryQueue;
   private CircularArrayQueue<Reservation> suiteQueue;
   private CircularArrayQueue<Reservation> standardQueue;
@@ -47,7 +50,8 @@ public class StandardReservationRepo {
       }
     }
 
-    // A guest sent back to the rear keeps its original slot in masterList but gets a fresh
+    // A guest sent back to the rear keeps its original slot in masterList but gets
+    // a fresh
     // queueArrivalTime, so replaying masterList order would rebuild the line wrong.
     waiting.sort(
         (a, b) -> {
@@ -75,7 +79,8 @@ public class StandardReservationRepo {
     return queueFor(roomType);
   }
 
-  // Capacity belongs to the array implementation, not to the queue contract, so the interface
+  // Capacity belongs to the array implementation, not to the queue contract, so
+  // the interface
   // deliberately does not carry it and the repository reports it instead.
   public int getQueueCapacity(Room.RoomType roomType) {
     return queueFor(roomType).getCapacity();
@@ -85,7 +90,8 @@ public class StandardReservationRepo {
     return queueFor(roomType).canExpand();
   }
 
-  // Walks the queue front to back without disturbing it, so screens and reports can page
+  // Walks the queue front to back without disturbing it, so screens and reports
+  // can page
   // through the line while the queue itself stays a queue.
   public ListInterface<Reservation> snapshotQueue(Room.RoomType roomType) {
     ListInterface<Reservation> snapshot = new ArrayList<>();
@@ -160,16 +166,20 @@ public class StandardReservationRepo {
     return true;
   }
 
-  // A loyalty member standing at the desk is served without ever joining the line, so the
-  // record jumps straight to ALLOCATED. Routing this through joinQueue then allocateFront
+  // A loyalty member standing at the desk is served without ever joining the
+  // line, so the
+  // record jumps straight to ALLOCATED. Routing this through joinQueue then
+  // allocateFront
   // would be wrong: allocateFront serves whoever is at the front, not this guest.
   public boolean allocateDirect(Reservation reservation) {
     if (reservation == null || reservation.getRoomType() == null) return false;
 
     LocalDateTime now = LocalDateTime.now();
 
-    // An advance booking that was already marked as arrived is standing in the line, so it
-    // has to leave the queue before it can be held, or the same record would be served twice.
+    // An advance booking that was already marked as arrived is standing in the
+    // line, so it
+    // has to leave the queue before it can be held, or the same record would be
+    // served twice.
     getQueueByRoomType(reservation.getRoomType()).remove(reservation);
 
     if (reservation.getQueueArrivalTime() == null) {
@@ -232,8 +242,10 @@ public class StandardReservationRepo {
     return closed;
   }
 
-  // A console app has no event loop, so a lapsed hold is resolved the next time a screen
-  // asks for the data rather than by a background timer that dies with the process.
+  // A console app has no event loop, so a lapsed hold is resolved the next time a
+  // screen
+  // asks for the data rather than by a background timer that dies with the
+  // process.
   @SuppressWarnings("null")
   public int sweepLapsedHolds(RoomRepo roomRepo, GuestRepo guestRepo) {
     LocalDateTime now = LocalDateTime.now();
@@ -265,7 +277,8 @@ public class StandardReservationRepo {
       }
 
       if (guest == null || strikes >= MAX_STRIKES) {
-        // allocatedTime is kept so the reports can still measure how long this guest waited
+        // allocatedTime is kept so the reports can still measure how long this guest
+        // waited
         // before the room was called for them.
         r.setStatus(Reservation.Status.NO_SHOW);
       } else {
@@ -285,28 +298,18 @@ public class StandardReservationRepo {
   }
 
   public Room findHeldRoom(Reservation reservation, RoomRepo roomRepo) {
-    if (reservation == null || roomRepo == null || reservation.getConfirmationNumber() == null) {
+    if (reservation == null || roomRepo == null || reservation.getRoomNumber() == null) {
       return null;
     }
-
-    ListInterface<Room> rooms = roomRepo.getRoomList();
-    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
-      Room room = rooms.getEntry(i);
-      if (room != null
-          && reservation.getConfirmationNumber().equals(room.getReservationConfirmationNumber())) {
-        return room;
-      }
-    }
-    return null;
+    return roomRepo.findByRoomNumber(reservation.getRoomNumber());
   }
 
   private void releaseHeldRoom(Reservation reservation, RoomRepo roomRepo) {
     Room room = findHeldRoom(reservation, roomRepo);
-    if (room == null) return;
-
-    room.setStatus(Room.Status.VACANT_CLEAN);
-    room.setReservationConfirmationNumber(null);
-    roomRepo.updateRoom(room);
+    if (room != null) {
+      room.setStatus(Room.Status.VACANT_CLEAN);
+      roomRepo.updateRoom(room);
+    }
   }
 
   public String generateReservationId() {

@@ -1159,9 +1159,7 @@ public class VipReportView {
         " GOLD GRACE USAGE    : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
         summary.getGoldUtilPct(),
         summary.getGoldTargetPct(),
-        (summary.getGoldUtilPct() <= summary.getGoldTargetPct()
-            ? "[OK]"
-            : "[!] HIGH GRACE USAGE"));
+        (summary.getGoldUtilPct() <= summary.getGoldTargetPct() ? "[OK]" : "[!] HIGH GRACE USAGE"));
     System.out.printf(
         " SILVER GRACE USAGE  : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n\n",
         summary.getSilverUtilPct(),

@@ -101,12 +101,12 @@ public class VipReservationRepo {
     reservationRepo.save();
   }
 
-  public boolean allocateReservation(
+  public void allocateReservation(
       Reservation reservation,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
-    if (reservation == null || reservation.getRoomType() == null) return false;
+    if (reservation == null || reservation.getRoomType() == null) return;
 
     Room.RoomType type = reservation.getRoomType();
 
@@ -127,14 +127,12 @@ public class VipReservationRepo {
     reservation.setAllocatedGraceMins(graceMins);
 
     // Remove from active waitlist queue & heap
-    boolean heapRemoved = getHeapByRoomType(type).remove(reservation);
-    boolean listRemoved = getListByRoomType(type).remove(reservation);
+    getHeapByRoomType(type).remove(reservation);
+    getListByRoomType(type).remove(reservation);
 
     // Mark status as ALLOCATED in masterList
     reservation.setStatus(Reservation.Status.ALLOCATED);
-    boolean updatedInMaster = updateReservation(reservation);
-
-    return heapRemoved || listRemoved || updatedInMaster;
+    updateReservation(reservation);
   }
 
   public boolean updateReservation(Reservation updatedRes) {

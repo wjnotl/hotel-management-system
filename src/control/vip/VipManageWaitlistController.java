@@ -400,8 +400,8 @@ public class VipManageWaitlistController {
     VipController.scheduleNextAutoExpirationTask(
         allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
+    reservation.setRoomNumber(vacantRoom.getRoomNumber());
     vacantRoom.setStatus(Room.Status.OCCUPIED);
-    vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
     roomRepo.updateRoom(vacantRoom);
 
     vipReservationRepo.allocateReservation(reservation, guestRepo, memberRepo, vipSystemConfigRepo);

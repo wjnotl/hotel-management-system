@@ -109,12 +109,13 @@ public class ManageRoomStatusController {
 
     while (true) {
       try {
-        // Room may have been mutated by a previous loop iteration - re-fetch the latest copy.
+        // Room may have been mutated by a previous loop iteration - re-fetch the latest
+        // copy.
         Room current = roomRepo.findByRoomNumber(room.getRoomNumber());
         if (current == null) return;
         room = current;
 
-        Reservation linkedReservation = findReservationByConfirmationNumber(room);
+        Reservation linkedReservation = findReservationByRoomNumber(room);
         Guest linkedGuest =
             (linkedReservation != null) ? guestRepo.findById(linkedReservation.getGuestId()) : null;
 
@@ -137,7 +138,8 @@ public class ManageRoomStatusController {
 
   // --- ACTION 1: CHANGE ROOM ---
   private void handleChangeRoom(Room room) {
-    if (room.getReservationConfirmationNumber() == null) {
+    Reservation linkedReservation = findReservationByRoomNumber(room);
+    if (linkedReservation == null) {
       ConsoleUtil.printError(
           "This room has no active reservation to move - use Assign Room instead!");
       return;
@@ -186,7 +188,7 @@ public class ManageRoomStatusController {
     boolean confirmed =
         ConsoleUtil.showConfirmMessage(
             "Move reservation "
-                + room.getReservationConfirmationNumber()
+                + linkedReservation.getConfirmationNumber()
                 + " from Room "
                 + room.getRoomNumber()
                 + " to Room "
@@ -194,21 +196,22 @@ public class ManageRoomStatusController {
                 + "?");
     if (!confirmed) return;
 
-    String confNum = room.getReservationConfirmationNumber();
+    String confNum = linkedReservation.getConfirmationNumber();
 
     Room.Status oldRoomPreviousStatus = room.getStatus();
     room.setStatus(Room.Status.VACANT_CLEAN);
-    room.setReservationConfirmationNumber(null);
     roomRepo.updateRoom(room);
     roomStatusHistoryRepo.recordStatusChange(
         room.getRoomNumber(), oldRoomPreviousStatus, Room.Status.VACANT_CLEAN);
 
     Room.Status targetPreviousStatus = targetRoom.getStatus();
     targetRoom.setStatus(Room.Status.OCCUPIED);
-    targetRoom.setReservationConfirmationNumber(confNum);
     roomRepo.updateRoom(targetRoom);
     roomStatusHistoryRepo.recordStatusChange(
         targetRoom.getRoomNumber(), targetPreviousStatus, Room.Status.OCCUPIED);
+
+    linkedReservation.setRoomNumber(targetRoom.getRoomNumber());
+    reservationRepo.updateReservation(linkedReservation);
 
     ConsoleUtil.clearScreen();
     System.out.println(">> STATUS: ROOM CHANGED");
@@ -230,15 +233,18 @@ public class ManageRoomStatusController {
       return;
     }
 
-    if (room.getReservationConfirmationNumber() != null) {
+    Reservation linkedReservation = findReservationByRoomNumber(room);
+    if (linkedReservation != null) {
       boolean confirmOrphan =
           ConsoleUtil.showConfirmMessage(
               "Room "
                   + room.getRoomNumber()
                   + " still has confirmation "
-                  + room.getReservationConfirmationNumber()
+                  + linkedReservation.getConfirmationNumber()
                   + " attached. Marking it Available will detach the reservation. Continue?");
       if (!confirmOrphan) return;
+      linkedReservation.setRoomNumber(null);
+      reservationRepo.updateReservation(linkedReservation);
     } else {
       boolean confirmed =
           ConsoleUtil.showConfirmMessage("Mark Room " + room.getRoomNumber() + " as Available?");
@@ -247,7 +253,6 @@ public class ManageRoomStatusController {
 
     Room.Status previousStatus = room.getStatus();
     room.setStatus(Room.Status.VACANT_CLEAN);
-    room.setReservationConfirmationNumber(null);
     roomRepo.updateRoom(room);
     roomStatusHistoryRepo.recordStatusChange(
         room.getRoomNumber(), previousStatus, Room.Status.VACANT_CLEAN);
@@ -285,18 +290,12 @@ public class ManageRoomStatusController {
   }
 
   // --- RESERVATION LOOKUP HELPERS ---
-  // Room links to Reservation via confirmationNumber (not reservationId), so this is a manual scan.
-  private Reservation findReservationByConfirmationNumber(Room room) {
-    if (room == null || room.getReservationConfirmationNumber() == null) return null;
-    return findReservationByConfirmationNumberValue(room.getReservationConfirmationNumber());
-  }
-
-  private Reservation findReservationByConfirmationNumberValue(String confirmationNumber) {
-    if (confirmationNumber == null) return null;
+  private Reservation findReservationByRoomNumber(Room room) {
+    if (room == null || room.getRoomNumber() == null) return null;
     ListInterface<Reservation> all = reservationRepo.getAllReservations();
     for (int i = 1; i <= all.getNumberOfEntries(); i++) {
       Reservation r = all.getEntry(i);
-      if (r != null && confirmationNumber.equalsIgnoreCase(r.getConfirmationNumber())) {
+      if (r != null && room.getRoomNumber().equalsIgnoreCase(r.getRoomNumber())) {
         return r;
       }
     }
