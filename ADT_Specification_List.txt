@@ -1,0 +1,153 @@
+================================================================================
+ADT List
+================================================================================
+A list is a linear collection of entries of a type T which allows duplicate
+elements. An entry may be added at a specified position or at the end of the
+list. The list position starts from 1.
+
+--------------------------------------------------------------------------------
+
+add(T newEntry)
+  Description   : Adds newEntry to the end of the list.
+  Postcondition : newEntry has been added to the end of the list.
+
+--------------------------------------------------------------------------------
+
+add(int newPosition, T newEntry)
+  Description   : Adds newEntry at position newPosition within the list.
+                  Position 1 indicates the first entry in the list. Entries
+                  originally at newPosition and beyond are shifted up by one
+                  position.
+  Precondition  : newPosition must be between 1 and total entries + 1.
+  Postcondition : newEntry has been added to the indicated position of the list.
+  Returns       : true if newEntry was successfully added to the list;
+                  false otherwise.
+
+--------------------------------------------------------------------------------
+
+remove(T entry)
+  Description   : Removes the first occurrence of entry from the list.
+  Postcondition : The first matching entry has been removed from the list.
+                  Entries beyond that position are shifted down by one position.
+  Returns       : true if entry was found and removed; false otherwise.
+
+--------------------------------------------------------------------------------
+
+T removeAt(int givenPosition)
+  Description   : Removes and returns the entry at position givenPosition from
+                  the list.
+  Precondition  : givenPosition must be between 1 and total entries.
+  Postcondition : The entry at position givenPosition has been removed from the
+                  list. Entries beyond that position are shifted down by one
+                  position.
+  Returns       : The entry that was removed from the list, or null if
+                  givenPosition is out of range.
+
+--------------------------------------------------------------------------------
+
+clear()
+  Description   : Removes all entries from the list.
+  Postcondition : The list is now empty.
+
+--------------------------------------------------------------------------------
+
+replace(int givenPosition, T newEntry)
+  Description   : Replaces the entry at position givenPosition with newEntry.
+  Precondition  : givenPosition must be between 1 and total entries.
+  Postcondition : The entry at givenPosition has been replaced with newEntry.
+  Returns       : true if the entry at givenPosition was successfully replaced;
+                  false otherwise.
+
+--------------------------------------------------------------------------------
+
+T getEntry(int givenPosition)
+  Description   : Retrieves the entry at position givenPosition in the list.
+  Precondition  : givenPosition must be between 1 and total entries.
+  Postcondition : The list remains unchanged.
+  Returns       : The entry at position givenPosition.
+
+--------------------------------------------------------------------------------
+
+contains(T anEntry)
+  Description   : Determines whether the list contains anEntry.
+  Postcondition : The list remains unchanged.
+  Returns       : true if anEntry is in the list; false otherwise.
+
+--------------------------------------------------------------------------------
+
+int getNumberOfEntries()
+  Description   : Gets the number of entries currently in the list.
+  Postcondition : The list remains unchanged.
+  Returns       : The number of entries currently in the list.
+
+--------------------------------------------------------------------------------
+
+isEmpty()
+  Description   : Determines whether the list is empty.
+  Postcondition : The list remains unchanged.
+  Returns       : true if the list is empty; false otherwise.
+
+--------------------------------------------------------------------------------
+
+isFull()
+  Description   : Determines whether the list is full.
+  Postcondition : The list remains unchanged.
+  Returns       : true if the list is full; false otherwise.
+
+--------------------------------------------------------------------------------
+
+sort(Comparator<T> comparator)
+  Description   : Sorts all entries in the list according to the ordering
+                  defined by comparator.
+  Precondition  : comparator must not be null.
+  Postcondition : The entries in the list are rearranged in the order defined
+                  by comparator.
+
+--------------------------------------------------------------------------------
+
+List<T> filter(Predicate<T> predicate)
+  Description   : Returns a new list containing only the entries from this list
+                  that satisfy the given predicate.
+  Precondition  : predicate must not be null.
+  Postcondition : The original list remains unchanged.
+  Returns       : A new list of all entries for which predicate returns true.
+
+--------------------------------------------------------------------------------
+
+T find(Predicate<T> predicate)
+  Description   : Returns the first entry in the list that satisfies the given
+                  predicate.
+  Precondition  : predicate must not be null.
+  Postcondition : The list remains unchanged.
+  Returns       : The first entry for which predicate returns true, or null if
+                  no such entry exists.
+
+--------------------------------------------------------------------------------
+
+List<R> map(Function<T, R> mapper)
+  Description   : Transforms each entry of type T in the list to a new entry
+                  of type R using the given mapper function, and returns a new
+                  list of the transformed entries.
+  Precondition  : mapper must not be null.
+  Postcondition : The original list remains unchanged.
+  Returns       : A new list containing the mapped entries in the same order.
+
+--------------------------------------------------------------------------------
+
+<U> U reduce(U identity, BiFunction<U, T, U> accumulator)
+  Description   : Combines all entries in the list into a single accumulated
+                  value, starting from identity and applying accumulator to each
+                  entry in order.
+  Precondition  : accumulator must not be null.
+  Postcondition : The list remains unchanged.
+  Returns       : The final accumulated result after processing all entries.
+
+--------------------------------------------------------------------------------
+
+Iterator<T> getIterator()
+  Description   : Returns an iterator that traverses the entries of the list
+                  sequentially from position 1 to the last position.
+  Postcondition : The list remains unchanged.
+  Returns       : An Iterator object for this list.
+
+================================================================================
