@@ -285,6 +285,7 @@ public class StandardReservationRepo {
         r.setStatus(Reservation.Status.WAITING);
         r.setQueueArrivalTime(now);
         r.setAllocatedTime(null);
+        r.setRoomNumber(null);
         getQueueByRoomType(r.getRoomType()).enqueue(r);
       }
 
