@@ -30,17 +30,33 @@ public class HousekeepingReportView {
 
   // --- DATE RANGE SUBMENU ---
 
-  public int displayDateRangeSubmenu(String startLabel, String endLabel) {
+  public int displayDateRangeSubmenu(String startLabel, String endLabel, String presetLabel) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SET DATE RANGE");
+    System.out.println(" Preset     : [ " + presetLabel + " ]");
+    System.out.println(" Start Date : [ " + startLabel + " ]");
+    System.out.println(" End Date   : [ " + endLabel + " ]\n");
+    System.out.println(" 1. Today");
+    System.out.println(" 2. Yesterday");
+    System.out.println(" 3. Last 7 Days");
+    System.out.println(" 4. Last 30 Days");
+    System.out.println(" 5. Custom Date Range");
+    System.out.println(" 6. Clear Date Range (All Time)");
+    System.out.println(" 7. Back to Filter Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
+  }
+
+  public int displayCustomDateRangeSubmenu(String startLabel, String endLabel) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SET CUSTOM DATE RANGE");
     System.out.println(" Start Date : [ " + startLabel + " ]");
     System.out.println(" End Date   : [ " + endLabel + " ]\n");
     System.out.println(" 1. Set Start Date");
     System.out.println(" 2. Set End Date");
-    System.out.println(" 3. Clear Date Range");
-    System.out.println(" 4. Back to Filter Menu\n");
+    System.out.println(" 3. Back to Date Range Menu\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
   public String promptDateInput(String label) {
