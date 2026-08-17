@@ -3,7 +3,7 @@ package entity;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public class Reservation implements Serializable {
+public class Reservation implements Serializable, Comparable<Reservation> {
   private static final long serialVersionUID = 1L;
 
   public static enum Status {
@@ -26,8 +26,7 @@ public class Reservation implements Serializable {
   private int priorityScore; // For vip guests only
   private Integer stayDays;
   private LocalDateTime reservationTime; // Time when the reservation was created
-  private LocalDateTime
-      queueArrivalTime; // Time when the reservation was placed in the waiting queue
+  private LocalDateTime queueArrivalTime; // Time when the reservation was placed in the waiting queue
   private LocalDateTime allocatedTime; // Time when the reservation was allocated to a room
   private Integer allocatedGraceMins; // Snapshot of grace limit set during allocation
   private LocalDateTime checkOutTime; // Time when the reservation was checked out
@@ -178,8 +177,10 @@ public class Reservation implements Serializable {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj) return true;
-    if (obj == null || getClass() != obj.getClass()) return false;
+    if (this == obj)
+      return true;
+    if (obj == null || getClass() != obj.getClass())
+      return false;
     Reservation other = (Reservation) obj;
     return reservationId != null && reservationId.equalsIgnoreCase(other.reservationId);
   }
@@ -187,5 +188,40 @@ public class Reservation implements Serializable {
   @Override
   public int hashCode() {
     return reservationId != null ? reservationId.toLowerCase().hashCode() : 0;
+  }
+
+  @Override
+  public int compareTo(Reservation other) {
+    if (other == null)
+      return 1;
+
+    int priorityCompare = Integer.compare(other.priorityScore, this.priorityScore);
+    if (priorityCompare != 0)
+      return priorityCompare;
+
+    // tie breaker
+    if (this.queueArrivalTime == null && other.queueArrivalTime == null)
+      return 0;
+    if (this.queueArrivalTime == null)
+      return -1;
+    if (other.queueArrivalTime == null)
+      return 1;
+
+    return this.queueArrivalTime.compareTo(other.queueArrivalTime);
+  }
+
+  @Override
+  public String toString() {
+    return "Reservation{"
+        + "reservationId='" + reservationId + "'"
+        + ", guestId='" + guestId + "'"
+        + ", confirmationNumber='" + confirmationNumber + "'"
+        + ", roomNumber='" + roomNumber + "'"
+        + ", roomType=" + roomType
+        + ", status=" + status
+        + ", isVip=" + isVip
+        + ", isBoiling=" + isBoiling
+        + ", priorityScore=" + priorityScore
+        + "}";
   }
 }

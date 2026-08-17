@@ -148,4 +148,16 @@ public class HousekeepingTask implements Serializable {
   public int hashCode() {
     return taskId != null ? taskId.hashCode() : 0;
   }
+
+  @Override
+  public String toString() {
+    return "HousekeepingTask{"
+        + "taskId='" + taskId + "'"
+        + ", roomNumber='" + roomNumber + "'"
+        + ", taskType=" + taskType
+        + ", status=" + status
+        + ", assignedStaffId='" + assignedStaffId + "'"
+        + ", isUrgent=" + isUrgent
+        + "}";
+  }
 }

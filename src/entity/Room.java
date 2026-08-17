@@ -75,4 +75,14 @@ public class Room implements Serializable {
   public int hashCode() {
     return roomNumber != null ? roomNumber.hashCode() : 0;
   }
+
+  @Override
+  public String toString() {
+    return "Room{"
+        + "roomNumber='" + roomNumber + "'"
+        + ", roomType=" + roomType
+        + ", status=" + status
+        + ", price=" + price
+        + "}";
+  }
 }

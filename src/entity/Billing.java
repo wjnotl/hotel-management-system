@@ -166,4 +166,19 @@ public class Billing implements Serializable {
   public int hashCode() {
     return billingId != null ? billingId.toLowerCase().hashCode() : 0;
   }
+
+  @Override
+  public String toString() {
+    return "Billing{"
+        + "billingId='" + billingId + "'"
+        + ", guestId='" + guestId + "'"
+        + ", reservationId='" + reservationId + "'"
+        + ", roomNumber='" + roomNumber + "'"
+        + ", roomType=" + roomType
+        + ", checkInDate=" + checkInDate
+        + ", checkOutDate=" + checkOutDate
+        + ", ratePerNight=" + ratePerNight
+        + ", status=" + status
+        + "}";
+  }
 }

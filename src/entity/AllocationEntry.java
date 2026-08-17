@@ -57,4 +57,13 @@ public class AllocationEntry implements Serializable {
     result = 31 * result + (assignedRoomNumber != null ? assignedRoomNumber.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public String toString() {
+    return "AllocationEntry{"
+        + "reservationId='" + reservationId + "'"
+        + ", assignedRoomNumber='" + assignedRoomNumber + "'"
+        + ", expirationTimestamp=" + expirationTimestamp
+        + "}";
+  }
 }
