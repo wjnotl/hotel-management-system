@@ -61,9 +61,13 @@ public class Member implements Serializable {
   @Override
   public String toString() {
     return "Member{"
-        + "memberId='" + memberId + "'"
-        + ", tier=" + tier
-        + ", points=" + points
+        + "memberId='"
+        + memberId
+        + "'"
+        + ", tier="
+        + tier
+        + ", points="
+        + points
         + "}";
   }
 }

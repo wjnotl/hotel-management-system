@@ -48,11 +48,18 @@ public class RoomStatusLogEntry implements Serializable {
   @Override
   public String toString() {
     return "RoomStatusLogEntry{"
-        + "roomNumber='" + roomNumber + "'"
-        + ", fromStatus=" + fromStatus
-        + ", toStatus=" + toStatus
-        + ", note='" + note + "'"
-        + ", changedAt=" + changedAt
+        + "roomNumber='"
+        + roomNumber
+        + "'"
+        + ", fromStatus="
+        + fromStatus
+        + ", toStatus="
+        + toStatus
+        + ", note='"
+        + note
+        + "'"
+        + ", changedAt="
+        + changedAt
         + "}";
   }
 }

@@ -113,14 +113,29 @@ public class Guest implements Serializable {
   @Override
   public String toString() {
     return "Guest{"
-        + "guestId='" + guestId + "'"
-        + ", name='" + name + "'"
-        + ", icNumber='" + icNumber + "'"
-        + ", passportNumber='" + passportNumber + "'"
-        + ", email='" + email + "'"
-        + ", phoneNumber='" + phoneNumber + "'"
-        + ", memberId='" + memberId + "'"
-        + ", strikeCount=" + strikeCount
+        + "guestId='"
+        + guestId
+        + "'"
+        + ", name='"
+        + name
+        + "'"
+        + ", icNumber='"
+        + icNumber
+        + "'"
+        + ", passportNumber='"
+        + passportNumber
+        + "'"
+        + ", email='"
+        + email
+        + "'"
+        + ", phoneNumber='"
+        + phoneNumber
+        + "'"
+        + ", memberId='"
+        + memberId
+        + "'"
+        + ", strikeCount="
+        + strikeCount
         + "}";
   }
 }

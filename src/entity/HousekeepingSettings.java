@@ -173,20 +173,37 @@ public class HousekeepingSettings implements Serializable {
   @Override
   public String toString() {
     return "HousekeepingSettings{"
-        + "cleanTimeStandardMinutes=" + cleanTimeStandardMinutes
-        + ", cleanTimeSuiteMinutes=" + cleanTimeSuiteMinutes
-        + ", cleanTimeLuxuryMinutes=" + cleanTimeLuxuryMinutes
-        + ", overdueThresholdMinutes=" + overdueThresholdMinutes
-        + ", queueJumpStandardClean=" + queueJumpStandardClean
-        + ", queueJumpDeepClean=" + queueJumpDeepClean
-        + ", queueJumpTurnover=" + queueJumpTurnover
-        + ", queueJumpMaintenanceCheck=" + queueJumpMaintenanceCheck
-        + ", morningShiftSchedule='" + morningShiftSchedule + "'"
-        + ", afternoonShiftSchedule='" + afternoonShiftSchedule + "'"
-        + ", nightShiftSchedule='" + nightShiftSchedule + "'"
-        + ", maxRoomsMorning=" + maxRoomsMorning
-        + ", maxRoomsAfternoon=" + maxRoomsAfternoon
-        + ", maxRoomsNight=" + maxRoomsNight
+        + "cleanTimeStandardMinutes="
+        + cleanTimeStandardMinutes
+        + ", cleanTimeSuiteMinutes="
+        + cleanTimeSuiteMinutes
+        + ", cleanTimeLuxuryMinutes="
+        + cleanTimeLuxuryMinutes
+        + ", overdueThresholdMinutes="
+        + overdueThresholdMinutes
+        + ", queueJumpStandardClean="
+        + queueJumpStandardClean
+        + ", queueJumpDeepClean="
+        + queueJumpDeepClean
+        + ", queueJumpTurnover="
+        + queueJumpTurnover
+        + ", queueJumpMaintenanceCheck="
+        + queueJumpMaintenanceCheck
+        + ", morningShiftSchedule='"
+        + morningShiftSchedule
+        + "'"
+        + ", afternoonShiftSchedule='"
+        + afternoonShiftSchedule
+        + "'"
+        + ", nightShiftSchedule='"
+        + nightShiftSchedule
+        + "'"
+        + ", maxRoomsMorning="
+        + maxRoomsMorning
+        + ", maxRoomsAfternoon="
+        + maxRoomsAfternoon
+        + ", maxRoomsNight="
+        + maxRoomsNight
         + "}";
   }
 }

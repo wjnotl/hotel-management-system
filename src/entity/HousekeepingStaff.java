@@ -85,10 +85,16 @@ public class HousekeepingStaff implements Serializable {
   @Override
   public String toString() {
     return "HousekeepingStaff{"
-        + "staffId='" + staffId + "'"
-        + ", name='" + name + "'"
-        + ", shift=" + shift
-        + ", availability=" + availability
+        + "staffId='"
+        + staffId
+        + "'"
+        + ", name='"
+        + name
+        + "'"
+        + ", shift="
+        + shift
+        + ", availability="
+        + availability
         + "}";
   }
 }

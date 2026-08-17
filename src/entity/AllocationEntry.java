@@ -61,9 +61,14 @@ public class AllocationEntry implements Serializable {
   @Override
   public String toString() {
     return "AllocationEntry{"
-        + "reservationId='" + reservationId + "'"
-        + ", assignedRoomNumber='" + assignedRoomNumber + "'"
-        + ", expirationTimestamp=" + expirationTimestamp
+        + "reservationId='"
+        + reservationId
+        + "'"
+        + ", assignedRoomNumber='"
+        + assignedRoomNumber
+        + "'"
+        + ", expirationTimestamp="
+        + expirationTimestamp
         + "}";
   }
 }

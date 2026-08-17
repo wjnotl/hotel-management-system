@@ -170,15 +170,28 @@ public class Billing implements Serializable {
   @Override
   public String toString() {
     return "Billing{"
-        + "billingId='" + billingId + "'"
-        + ", guestId='" + guestId + "'"
-        + ", reservationId='" + reservationId + "'"
-        + ", roomNumber='" + roomNumber + "'"
-        + ", roomType=" + roomType
-        + ", checkInDate=" + checkInDate
-        + ", checkOutDate=" + checkOutDate
-        + ", ratePerNight=" + ratePerNight
-        + ", status=" + status
+        + "billingId='"
+        + billingId
+        + "'"
+        + ", guestId='"
+        + guestId
+        + "'"
+        + ", reservationId='"
+        + reservationId
+        + "'"
+        + ", roomNumber='"
+        + roomNumber
+        + "'"
+        + ", roomType="
+        + roomType
+        + ", checkInDate="
+        + checkInDate
+        + ", checkOutDate="
+        + checkOutDate
+        + ", ratePerNight="
+        + ratePerNight
+        + ", status="
+        + status
         + "}";
   }
 }

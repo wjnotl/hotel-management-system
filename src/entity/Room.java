@@ -79,10 +79,15 @@ public class Room implements Serializable {
   @Override
   public String toString() {
     return "Room{"
-        + "roomNumber='" + roomNumber + "'"
-        + ", roomType=" + roomType
-        + ", status=" + status
-        + ", price=" + price
+        + "roomNumber='"
+        + roomNumber
+        + "'"
+        + ", roomType="
+        + roomType
+        + ", status="
+        + status
+        + ", price="
+        + price
         + "}";
   }
 }

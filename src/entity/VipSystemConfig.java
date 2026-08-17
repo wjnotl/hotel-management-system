@@ -445,18 +445,33 @@ public class VipSystemConfig implements Serializable {
   @Override
   public String toString() {
     return "VipSystemConfig{"
-        + "activeStrategyName='" + activeStrategyName + "'"
-        + ", activeFormulaInfix='" + activeFormulaInfix + "'"
-        + ", diamondPatienceLimitMins=" + diamondPatienceLimitMins
-        + ", goldPatienceLimitMins=" + goldPatienceLimitMins
-        + ", silverPatienceLimitMins=" + silverPatienceLimitMins
-        + ", diamondBoilingLimitMins=" + diamondBoilingLimitMins
-        + ", goldBoilingLimitMins=" + goldBoilingLimitMins
-        + ", silverBoilingLimitMins=" + silverBoilingLimitMins
-        + ", diamondGraceWindowMins=" + diamondGraceWindowMins
-        + ", goldGraceWindowMins=" + goldGraceWindowMins
-        + ", silverGraceWindowMins=" + silverGraceWindowMins
-        + ", lastStrikeResetDate='" + lastStrikeResetDate + "'"
+        + "activeStrategyName='"
+        + activeStrategyName
+        + "'"
+        + ", activeFormulaInfix='"
+        + activeFormulaInfix
+        + "'"
+        + ", diamondPatienceLimitMins="
+        + diamondPatienceLimitMins
+        + ", goldPatienceLimitMins="
+        + goldPatienceLimitMins
+        + ", silverPatienceLimitMins="
+        + silverPatienceLimitMins
+        + ", diamondBoilingLimitMins="
+        + diamondBoilingLimitMins
+        + ", goldBoilingLimitMins="
+        + goldBoilingLimitMins
+        + ", silverBoilingLimitMins="
+        + silverBoilingLimitMins
+        + ", diamondGraceWindowMins="
+        + diamondGraceWindowMins
+        + ", goldGraceWindowMins="
+        + goldGraceWindowMins
+        + ", silverGraceWindowMins="
+        + silverGraceWindowMins
+        + ", lastStrikeResetDate='"
+        + lastStrikeResetDate
+        + "'"
         + "}";
   }
 }

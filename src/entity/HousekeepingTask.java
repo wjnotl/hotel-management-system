@@ -152,12 +152,21 @@ public class HousekeepingTask implements Serializable {
   @Override
   public String toString() {
     return "HousekeepingTask{"
-        + "taskId='" + taskId + "'"
-        + ", roomNumber='" + roomNumber + "'"
-        + ", taskType=" + taskType
-        + ", status=" + status
-        + ", assignedStaffId='" + assignedStaffId + "'"
-        + ", isUrgent=" + isUrgent
+        + "taskId='"
+        + taskId
+        + "'"
+        + ", roomNumber='"
+        + roomNumber
+        + "'"
+        + ", taskType="
+        + taskType
+        + ", status="
+        + status
+        + ", assignedStaffId='"
+        + assignedStaffId
+        + "'"
+        + ", isUrgent="
+        + isUrgent
         + "}";
   }
 }
