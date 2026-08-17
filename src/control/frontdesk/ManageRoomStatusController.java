@@ -296,7 +296,10 @@ public class ManageRoomStatusController {
     for (int i = 1; i <= all.getNumberOfEntries(); i++) {
       Reservation r = all.getEntry(i);
       if (r != null && room.getRoomNumber().equalsIgnoreCase(r.getRoomNumber())) {
-        return r;
+        if (r.getStatus() == Reservation.Status.CHECKED_IN
+            || r.getStatus() == Reservation.Status.ALLOCATED) {
+          return r;
+        }
       }
     }
     return null;
