@@ -109,4 +109,33 @@ public class Guest implements Serializable {
   public int hashCode() {
     return guestId != null ? guestId.hashCode() : 0;
   }
+
+  @Override
+  public String toString() {
+    return "Guest{"
+        + "guestId='"
+        + guestId
+        + "'"
+        + ", name='"
+        + name
+        + "'"
+        + ", icNumber='"
+        + icNumber
+        + "'"
+        + ", passportNumber='"
+        + passportNumber
+        + "'"
+        + ", email='"
+        + email
+        + "'"
+        + ", phoneNumber='"
+        + phoneNumber
+        + "'"
+        + ", memberId='"
+        + memberId
+        + "'"
+        + ", strikeCount="
+        + strikeCount
+        + "}";
+  }
 }

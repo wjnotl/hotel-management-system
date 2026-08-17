@@ -4,7 +4,8 @@ import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Iterator;
 
-public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Serializable {
+public class BinaryHeapPriorityQueue<T extends Comparable<T>>
+    implements PriorityQueueInterface<T>, Serializable {
   private static final long serialVersionUID = 1L;
 
   private static final int DEFAULT_CAPACITY = 16;
@@ -199,7 +200,6 @@ public class BinaryHeapPriorityQueue<T> implements PriorityQueueInterface<T>, Se
     return -1;
   }
 
-  @SuppressWarnings("unchecked")
   private boolean hasHigherPriority(PriorityEntry<T> a, PriorityEntry<T> b) {
     if (a == null) return false;
     if (b == null) return true;

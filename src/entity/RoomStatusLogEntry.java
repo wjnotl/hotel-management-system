@@ -44,4 +44,22 @@ public class RoomStatusLogEntry implements Serializable {
   public LocalDateTime getChangedAt() {
     return changedAt;
   }
+
+  @Override
+  public String toString() {
+    return "RoomStatusLogEntry{"
+        + "roomNumber='"
+        + roomNumber
+        + "'"
+        + ", fromStatus="
+        + fromStatus
+        + ", toStatus="
+        + toStatus
+        + ", note='"
+        + note
+        + "'"
+        + ", changedAt="
+        + changedAt
+        + "}";
+  }
 }

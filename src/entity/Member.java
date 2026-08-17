@@ -57,4 +57,17 @@ public class Member implements Serializable {
   public int hashCode() {
     return memberId != null ? memberId.hashCode() : 0;
   }
+
+  @Override
+  public String toString() {
+    return "Member{"
+        + "memberId='"
+        + memberId
+        + "'"
+        + ", tier="
+        + tier
+        + ", points="
+        + points
+        + "}";
+  }
 }

@@ -3,7 +3,7 @@ package entity;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public class Reservation implements Serializable {
+public class Reservation implements Serializable, Comparable<Reservation> {
   private static final long serialVersionUID = 1L;
 
   public static enum Status {
@@ -187,5 +187,48 @@ public class Reservation implements Serializable {
   @Override
   public int hashCode() {
     return reservationId != null ? reservationId.toLowerCase().hashCode() : 0;
+  }
+
+  @Override
+  public int compareTo(Reservation other) {
+    if (other == null) return 1;
+
+    int priorityCompare = Integer.compare(other.priorityScore, this.priorityScore);
+    if (priorityCompare != 0) return priorityCompare;
+
+    // tie breaker
+    if (this.queueArrivalTime == null && other.queueArrivalTime == null) return 0;
+    if (this.queueArrivalTime == null) return -1;
+    if (other.queueArrivalTime == null) return 1;
+
+    return this.queueArrivalTime.compareTo(other.queueArrivalTime);
+  }
+
+  @Override
+  public String toString() {
+    return "Reservation{"
+        + "reservationId='"
+        + reservationId
+        + "'"
+        + ", guestId='"
+        + guestId
+        + "'"
+        + ", confirmationNumber='"
+        + confirmationNumber
+        + "'"
+        + ", roomNumber='"
+        + roomNumber
+        + "'"
+        + ", roomType="
+        + roomType
+        + ", status="
+        + status
+        + ", isVip="
+        + isVip
+        + ", isBoiling="
+        + isBoiling
+        + ", priorityScore="
+        + priorityScore
+        + "}";
   }
 }

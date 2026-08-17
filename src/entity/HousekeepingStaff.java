@@ -81,4 +81,20 @@ public class HousekeepingStaff implements Serializable {
   public int hashCode() {
     return staffId != null ? staffId.hashCode() : 0;
   }
+
+  @Override
+  public String toString() {
+    return "HousekeepingStaff{"
+        + "staffId='"
+        + staffId
+        + "'"
+        + ", name='"
+        + name
+        + "'"
+        + ", shift="
+        + shift
+        + ", availability="
+        + availability
+        + "}";
+  }
 }
