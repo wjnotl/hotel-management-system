@@ -158,8 +158,10 @@ public class WalkInQueueController {
           guest = guestRepo.findByName(term);
         }
 
-        // A walk-in never booked, so a first-time arrival legitimately has no guest file yet.
-        // Refusing them here would mean the module can only serve people the seeder created.
+        // A walk-in never booked, so a first-time arrival legitimately has no guest
+        // file yet.
+        // Refusing them here would mean the module can only serve people the seeder
+        // created.
         if (guest == null) {
           int choice = walkInQueueView.displayGuestNotFoundScreen(term);
           if (choice == 2) {
@@ -187,7 +189,8 @@ public class WalkInQueueController {
         Member member =
             (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
 
-        // A tier holder does not belong at the back of a FIFO line, so the decision is put to
+        // A tier holder does not belong at the back of a FIFO line, so the decision is
+        // put to
         // the clerk before the line is offered at all.
         if (member != null && member.getTier() != null) {
           int decision = promptVipRouting(guest, member, roomType, queue.getNumberOfEntries());
@@ -258,7 +261,8 @@ public class WalkInQueueController {
       return;
     }
 
-    // High tier members bypass this line, so a free room only reaches the standard queue once
+    // High tier members bypass this line, so a free room only reaches the standard
+    // queue once
     // every waiting VIP for that room type could already have been given one.
     if (vacantRooms <= vipWaiting) {
       walkInQueueView.displayAllocationBlockedScreen(roomType, vacantRooms, vipWaiting);
@@ -341,8 +345,9 @@ public class WalkInQueueController {
       return;
     }
 
+    allocated.setRoomNumber(room.getRoomNumber());
+    standardReservationRepo.updateReservation(allocated);
     room.setStatus(Room.Status.OCCUPIED);
-    room.setReservationConfirmationNumber(allocated.getConfirmationNumber());
     roomRepo.updateRoom(room);
 
     walkInQueueView.displayAllocateSuccessScreen(
@@ -544,7 +549,8 @@ public class WalkInQueueController {
     } else if ("STRIKES (HIGHEST -> LOWEST)".equalsIgnoreCase(sort)) {
       filtered.sort((a, b) -> Integer.compare(strikesOf(b), strikesOf(a)));
     } else {
-      // FIFO: the snapshot already arrives front to back, so the queue itself defines the order.
+      // FIFO: the snapshot already arrives front to back, so the queue itself defines
+      // the order.
       filtered.sort((a, b) -> Integer.compare(queue.getPosition(a), queue.getPosition(b)));
     }
 
@@ -605,7 +611,8 @@ public class WalkInQueueController {
     return null;
   }
 
-  // A guest id typed into the search box is not a name, so it must not be pre-filled as one.
+  // A guest id typed into the search box is not a name, so it must not be
+  // pre-filled as one.
   private String nameSuggestionFrom(String term) {
     if (term == null || term.toUpperCase().startsWith("G-")) {
       return null;
@@ -613,9 +620,12 @@ public class WalkInQueueController {
     return term;
   }
 
-  // A free room may only be handed straight to this member while one is left over after every
-  // VIP already on the waitlist is covered. That is the same guard handleAllocateNext applies,
-  // so arriving late cannot buy a better place than the VIPs who have been waiting.
+  // A free room may only be handed straight to this member while one is left over
+  // after every
+  // VIP already on the waitlist is covered. That is the same guard
+  // handleAllocateNext applies,
+  // so arriving late cannot buy a better place than the VIPs who have been
+  // waiting.
   private int promptVipRouting(Guest guest, Member member, Room.RoomType roomType, int lineLength) {
     int vacantRooms = countVacantCleanRooms(roomType);
     int vipWaiting = countVipWaiting(roomType);
@@ -643,8 +653,10 @@ public class WalkInQueueController {
 
     LocalDateTime now = LocalDateTime.now();
 
-    // queueArrivalTime is stamped even though the guest never queues, so the wait-time report
-    // still counts this arrival and records it as the zero-wait case it actually was.
+    // queueArrivalTime is stamped even though the guest never queues, so the
+    // wait-time report
+    // still counts this arrival and records it as the zero-wait case it actually
+    // was.
     Reservation direct =
         new Reservation(
             standardReservationRepo.generateReservationId(),
@@ -663,8 +675,9 @@ public class WalkInQueueController {
       return false;
     }
 
+    direct.setRoomNumber(room.getRoomNumber());
+    standardReservationRepo.updateReservation(direct);
     room.setStatus(Room.Status.OCCUPIED);
-    room.setReservationConfirmationNumber(direct.getConfirmationNumber());
     roomRepo.updateRoom(room);
 
     walkInQueueView.displayVipDirectAssignSuccessScreen(

@@ -156,13 +156,12 @@ public class VipManageWaitlistController {
           while (true) {
             Guest guest = promptGuestDisambiguation(matches, searchId);
             if (guest == null) {
-              break; // User pressed 'C' on disambiguation screen -> back to search prompt
+              break;
             }
 
             if (processAddGuestSelection(guest, roomType, config)) {
               return;
             }
-            // Selecting 'N' or cancelling returns back to the disambiguation loop!
           }
         }
       } catch (Exception e) {
@@ -400,8 +399,8 @@ public class VipManageWaitlistController {
     VipController.scheduleNextAutoExpirationTask(
         allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
+    reservation.setRoomNumber(vacantRoom.getRoomNumber());
     vacantRoom.setStatus(Room.Status.OCCUPIED);
-    vacantRoom.setReservationConfirmationNumber(reservation.getConfirmationNumber());
     roomRepo.updateRoom(vacantRoom);
 
     vipReservationRepo.allocateReservation(reservation, guestRepo, memberRepo, vipSystemConfigRepo);

@@ -12,7 +12,6 @@ public class GuestRepo {
   private final BinaryFileUtil<ListInterface<Guest>> fileUtil;
   private ListInterface<Guest> guestList;
 
-  // Bounded LRU Cache (Capacity: 50 active guest entries)
   private final MapInterface<String, Guest> guestLruCache =
       new DoublyLinkedHashMap<>(16, 0.75, 50, true);
 
@@ -67,13 +66,13 @@ public class GuestRepo {
   public Guest findById(String guestId) {
     if (guestId == null || guestList == null) return null;
 
-    // 1. O(1) Fast LRU Cache Hit
+    // O(1) Fast LRU Cache Hit
     Guest cached = guestLruCache.get(guestId.toLowerCase());
     if (cached != null) {
       return cached;
     }
 
-    // 2. Cache Miss: Scan list & populate LRU cache
+    // Cache Miss: Scan list & populate LRU cache
     for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
       Guest g = guestList.getEntry(i);
       if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) {

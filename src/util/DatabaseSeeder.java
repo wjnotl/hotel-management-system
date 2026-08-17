@@ -129,18 +129,12 @@ public class DatabaseSeeder {
       // ==========================================
       // 3. SEED ROOMS (VACANT & CLEAN TARGETS)
       // ==========================================
-      Room roomL801 =
-          new Room("L-801", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, null, 850.00);
-      Room roomL802 =
-          new Room("L-802", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, null, 850.00);
-      Room roomS501 =
-          new Room("S-501", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, null, 550.00);
-      Room roomS502 =
-          new Room("S-502", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, null, 550.00);
-      Room roomST101 =
-          new Room("ST-101", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, null, 250.00);
-      Room roomST102 =
-          new Room("ST-102", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, null, 250.00);
+      Room roomL801 = new Room("L-801", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00);
+      Room roomL802 = new Room("L-802", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00);
+      Room roomS501 = new Room("S-501", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00);
+      Room roomS502 = new Room("S-502", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00);
+      Room roomST101 = new Room("ST-101", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00);
+      Room roomST102 = new Room("ST-102", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00);
 
       roomRepo.addRoom(roomL801);
       roomRepo.addRoom(roomL802);
@@ -711,24 +705,25 @@ public class DatabaseSeeder {
       // ==========================================
       // 7. TOP UP ROOM INVENTORY
       // ==========================================
-      // Six rooms cannot absorb the seeded demand, which leaves every queue permanently
+      // Six rooms cannot absorb the seeded demand, which leaves every queue
+      // permanently
       // starved. Ten more of each type gives both the VIP heap and the standard lines
       // something to actually allocate.
       for (int i = 3; i <= 12; i++) {
         String suffix = String.format("%02d", i);
         roomRepo.addRoom(
-            new Room("L-8" + suffix, Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, null, 850.00));
+            new Room("L-8" + suffix, Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00));
         roomRepo.addRoom(
-            new Room("S-5" + suffix, Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, null, 550.00));
+            new Room("S-5" + suffix, Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00));
         roomRepo.addRoom(
-            new Room(
-                "ST-1" + suffix, Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, null, 250.00));
+            new Room("ST-1" + suffix, Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00));
       }
 
       // ==========================================
       // 8. SEED WALK-IN GUESTS (NO LOYALTY CARD)
       // ==========================================
-      // Every guest above carries a member card, so the standard queue would otherwise have
+      // Every guest above carries a member card, so the standard queue would
+      // otherwise have
       // no NON-MEMBER rows for the booking reports to filter on.
       Guest g7 =
           new Guest(
@@ -870,7 +865,8 @@ public class DatabaseSeeder {
           standardRepo, vipRepo, "G-110", Room.RoomType.LUXURY, Reservation.Status.RESERVED, null);
 
       // --- LIVE HOLD, already past the 15 minute grace window ---
-      // Opening the walk-in screen sweeps this one: strike issued, guest returns to the rear.
+      // Opening the walk-in screen sweeps this one: strike issued, guest returns to
+      // the rear.
       Reservation lapsingHold =
           addStandardRes(
               standardRepo,
@@ -880,10 +876,10 @@ public class DatabaseSeeder {
               Reservation.Status.ALLOCATED,
               now.minusMinutes(53));
       lapsingHold.setAllocatedTime(now.minusMinutes(21));
+      lapsingHold.setRoomNumber("ST-101");
       standardRepo.updateReservation(lapsingHold);
 
       roomST101.setStatus(Room.Status.OCCUPIED);
-      roomST101.setReservationConfirmationNumber(lapsingHold.getConfirmationNumber());
       roomRepo.updateRoom(roomST101);
 
       // --- LIVE HOLD, still inside the grace window ---
@@ -896,10 +892,10 @@ public class DatabaseSeeder {
               Reservation.Status.ALLOCATED,
               now.minusMinutes(34));
       activeHold.setAllocatedTime(now.minusMinutes(4));
+      activeHold.setRoomNumber("L-802");
       standardRepo.updateReservation(activeHold);
 
       roomL802.setStatus(Room.Status.OCCUPIED);
-      roomL802.setReservationConfirmationNumber(activeHold.getConfirmationNumber());
       roomRepo.updateRoom(roomL802);
 
       // --- CLOSED HISTORY, so the reports have completed outcomes to aggregate ---
@@ -976,8 +972,10 @@ public class DatabaseSeeder {
     return r;
   }
 
-  // Standard bookings carry no priority score: position in the line is earned by arrival
-  // order alone. A null arrival time means an advance booking that has not walked in yet.
+  // Standard bookings carry no priority score: position in the line is earned by
+  // arrival
+  // order alone. A null arrival time means an advance booking that has not walked
+  // in yet.
   private static Reservation addStandardRes(
       StandardReservationRepo repo,
       VipReservationRepo vipRepo,

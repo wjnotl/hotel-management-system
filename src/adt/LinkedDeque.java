@@ -148,8 +148,6 @@ public class LinkedDeque<T> implements DequeInterface<T>, Serializable {
     return new LinkedDequeIterator();
   }
 
-  // INTERNAL HELPERS
-
   private void unlink(Node targetNode) {
     Node before = targetNode.prev;
     Node after = targetNode.next;
@@ -169,8 +167,6 @@ public class LinkedDeque<T> implements DequeInterface<T>, Serializable {
     numberOfEntries--;
   }
 
-  // NESTED STRUCTURAL LAYER
-
   private class Node implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -184,8 +180,6 @@ public class LinkedDeque<T> implements DequeInterface<T>, Serializable {
       this.next = null;
     }
   }
-
-  // ITERATOR IMPLEMENTATION (front -> back)
 
   private class LinkedDequeIterator implements Iterator<T> {
     private Node currentNode = headNode;

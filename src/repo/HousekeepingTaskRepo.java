@@ -153,6 +153,25 @@ public class HousekeepingTaskRepo {
     return true;
   }
 
+  public String generateTaskId() {
+    int maxId = 1000;
+    if (taskList != null) {
+      for (int i = 1; i <= taskList.getNumberOfEntries(); i++) {
+        HousekeepingTask t = taskList.getEntry(i);
+        if (t != null && t.getTaskId() != null && t.getTaskId().startsWith("T-")) {
+          try {
+            int num = Integer.parseInt(t.getTaskId().substring(2));
+            if (num > maxId) {
+              maxId = num;
+            }
+          } catch (NumberFormatException ignored) {
+          }
+        }
+      }
+    }
+    return "T-" + (maxId + 1);
+  }
+
   public ListInterface<HousekeepingTask> getTaskList() {
     return taskList;
   }

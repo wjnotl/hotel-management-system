@@ -417,11 +417,7 @@ public class VipSettingsController {
                   case "STRIKES":
                     return sVal;
                   default:
-                    try {
-                      return Double.parseDouble(var.trim());
-                    } catch (NumberFormatException e) {
-                      return 0.0;
-                    }
+                    return 0.0;
                 }
               };
 
@@ -1103,7 +1099,6 @@ public class VipSettingsController {
     while (true) {
       try {
         if (currentStep == 1) {
-          // STEP 1: STRIKE THRESHOLD EVICTION
           int choice =
               settingsView.promptWizardStep(
                   1,
@@ -1115,15 +1110,13 @@ public class VipSettingsController {
                   false);
 
           if (choice == 3) {
-            // Cancel wizard
-            return;
+            return; // Cancel wizard
           }
 
           evictOverStrikes = (choice == 1);
           currentStep = 2;
 
         } else if (currentStep == 2) {
-          // STEP 2: BOILING STATUS RE-EVALUATION
           int choice =
               settingsView.promptWizardStep(
                   2,
@@ -1136,19 +1129,16 @@ public class VipSettingsController {
                   true);
 
           if (choice == 3) {
-            // Previous Step (Go back to Step 1)
             currentStep = 1;
             continue;
           } else if (choice == 4) {
-            // Cancel wizard
-            return;
+            return; // Cancel wizard
           }
 
           forceBoilingCheck = (choice == 1);
           currentStep = 3;
 
         } else if (currentStep == 3) {
-          // STEP 3: ACTIVE ALLOCATION GRACE TIMERS
           int choice =
               settingsView.promptWizardStep(
                   3,
@@ -1160,30 +1150,26 @@ public class VipSettingsController {
                   true);
 
           if (choice == 3) {
-            // Previous Step (Go back to Step 2)
             currentStep = 2;
             continue;
           } else if (choice == 4) {
-            // Cancel wizard
-            return;
+            return; // Cancel wizard
           }
 
           updateActiveGraceTimers = (choice == 1);
           currentStep = 4;
 
         } else if (currentStep == 4) {
-          // STEP 4: SUMMARY REVIEW & CONFIRMATION
           boolean confirmExecution =
               settingsView.promptReconciliationConfirmation(
                   evictOverStrikes, forceBoilingCheck, updateActiveGraceTimers);
 
           if (!confirmExecution) {
-            // User chose 'N' -> Return to Step 3 so they can review / adjust choices!
             currentStep = 3;
             continue;
           }
 
-          // Execute reconciliation
+          // Execute
           int processedWaitlist =
               vipReservationRepo.applySettingsToQueue(
                   config, guestRepo, memberRepo, evictOverStrikes, forceBoilingCheck);

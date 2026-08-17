@@ -194,14 +194,12 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
     return new ArrayListIterator();
   }
 
-  // INTERNAL HELPERS
-
   private int getPosition(T entry) {
     if (entry == null || isEmpty()) return -1;
 
     for (int i = 0; i < numOfEntries; i++) {
       if (array[i] != null && array[i].equals(entry)) {
-        return i + 1; // 1-based indexing for 1-based public methods
+        return i + 1;
       }
     }
     return -1;
@@ -259,8 +257,6 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
     array[i] = array[j];
     array[j] = temp;
   }
-
-  // ITERATOR IMPLEMENTATION
 
   private class ArrayListIterator implements Iterator<T> {
     private int currentIndex = 0;

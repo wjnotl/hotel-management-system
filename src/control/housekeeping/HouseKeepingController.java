@@ -16,7 +16,6 @@ import repo.HousekeepingTaskRepo;
 import repo.RoomRepo;
 import repo.RoomStatusHistoryRepo;
 import util.ConsoleUtil;
-import util.NumberUtil;
 import view.housekeeping.HousekeepingView;
 
 public class HouseKeepingController {
@@ -212,7 +211,7 @@ public class HouseKeepingController {
 
         HousekeepingTask newTask =
             new HousekeepingTask(
-                NumberUtil.generateFormattedId("T-", 1000, 9999, 4),
+                taskRepo.generateTaskId(),
                 room.getRoomNumber(),
                 taskType,
                 HousekeepingTask.Status.PENDING,
@@ -646,14 +645,8 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
-  // NumberUtil.generateFormattedId() is random, not sequential, so collisions are technically
-  // possible (same pattern used for task IDs elsewhere) — re-roll until we land on a free ID.
   private String generateUniqueStaffId() {
-    String candidate;
-    do {
-      candidate = NumberUtil.generateFormattedId("HK-", 1000, 9999, 4);
-    } while (staffRepo.findById(candidate) != null);
-    return candidate;
+    return staffRepo.generateStaffId();
   }
 
   // --- ISOLATED STAFF ACTION SUBMENU LOOP ---
@@ -1032,7 +1025,7 @@ public class HouseKeepingController {
 
           HousekeepingTask maintenanceTask =
               new HousekeepingTask(
-                  NumberUtil.generateFormattedId("T-", 1000, 9999, 4),
+                  taskRepo.generateTaskId(),
                   selected.getRoomNumber(),
                   HousekeepingTask.TaskType.MAINTENANCE_CHECK,
                   HousekeepingTask.Status.PENDING,

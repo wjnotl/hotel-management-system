@@ -100,13 +100,9 @@ public class VipManageAllocationView {
         new String[] {"NO.", "RES ID", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"},
         headerSettings);
 
-    // WHEN 0 ALLOCATION MATCHES RETURNED:
     if (list == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-      // Width 95 matches total grid width (80 text + 12 padding + 5 internal walls -
-      // 2 empty
-      // padding = 95)
       TableUtil.TableSettings emptySettings =
           new TableUtil.TableSettings(new int[] {95}).setHAlign(0, TableUtil.Align.CENTER);
 
@@ -120,21 +116,16 @@ public class VipManageAllocationView {
 
       System.out.println("Page 0 / 0 (Total Allocated Matches: 0)\n");
 
-      // SCENARIO 1: Filters Active -> Allow staff to adjust/clear filters or refresh
       if (hasActiveFilters) {
         System.out.println("[S] Search / Filter    [R] Refresh Table       [E] Exit to VIP Menu\n");
         return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'E'});
-      }
-
-      // SCENARIO 2: Holding Bay is completely empty -> Remove search, filter, and
-      // sort options
-      else {
+      } else {
         System.out.println("[R] Refresh Table      [E] Exit to VIP Menu\n");
         return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'R', 'E'});
       }
     }
 
-    // NORMAL TABLE DISPLAY (When pending allocations > 0)
+    // Normal table display
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
     int totalPages = (int) Math.ceil((double) totalMatches / pageSize);

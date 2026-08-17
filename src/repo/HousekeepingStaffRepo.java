@@ -94,6 +94,25 @@ public class HousekeepingStaffRepo {
     return true;
   }
 
+  public String generateStaffId() {
+    int maxId = 1000;
+    if (staffList != null) {
+      for (int i = 1; i <= staffList.getNumberOfEntries(); i++) {
+        HousekeepingStaff s = staffList.getEntry(i);
+        if (s != null && s.getStaffId() != null && s.getStaffId().startsWith("HK-")) {
+          try {
+            int num = Integer.parseInt(s.getStaffId().substring(3));
+            if (num > maxId) {
+              maxId = num;
+            }
+          } catch (NumberFormatException ignored) {
+          }
+        }
+      }
+    }
+    return "HK-" + (maxId + 1);
+  }
+
   public ListInterface<HousekeepingStaff> getStaffList() {
     return staffList;
   }

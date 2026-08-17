@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 public class TaskSchedulerUtil {
 
-  // Schedule a task to run once after X milliseconds (or 0 for immediate execution)
+  // run once after X milliseconds
   public static ScheduledExecutorService scheduleOnce(long delayMs, Runnable task) {
     ScheduledExecutorService scheduler = createScheduler();
     long actualDelay = Math.max(0, delayMs);
@@ -23,7 +23,7 @@ public class TaskSchedulerUtil {
     return scheduler;
   }
 
-  // Schedule a recurring task to run every X milliseconds
+  // run every X milliseconds
   public static ScheduledExecutorService scheduleEvery(
       long initialDelayMs, long intervalMs, Runnable task) {
     ScheduledExecutorService scheduler = createScheduler();

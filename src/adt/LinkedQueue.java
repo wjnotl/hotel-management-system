@@ -138,8 +138,6 @@ public class LinkedQueue<T> implements QueueInterface<T>, Serializable {
     return new LinkedQueueIterator();
   }
 
-  // NESTED STRUCTURAL LAYER
-
   private class Node implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -151,8 +149,6 @@ public class LinkedQueue<T> implements QueueInterface<T>, Serializable {
       this.next = null;
     }
   }
-
-  // ITERATOR IMPLEMENTATION (front -> back)
 
   private class LinkedQueueIterator implements Iterator<T> {
     private Node currentNode = headNode;

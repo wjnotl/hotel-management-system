@@ -27,7 +27,7 @@ public class ExpressionEvaluator {
     return evaluatePostfix(postfix, variableResolver);
   }
 
-  public static ListInterface<String> parseTokens(String infix) {
+  private static ListInterface<String> parseTokens(String infix) {
     ListInterface<String> tokens = new ArrayList<>();
     if (infix == null || infix.trim().isEmpty()) return tokens;
 
@@ -54,7 +54,7 @@ public class ExpressionEvaluator {
           postfix.add(opStack.pop());
         }
         if (!opStack.isEmpty() && "(".equals(opStack.peek())) {
-          opStack.pop(); // Discard '('
+          opStack.pop(); // Remove '(' from stack
         }
       } else if (isOperator(token)) {
         while (!opStack.isEmpty()

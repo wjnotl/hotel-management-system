@@ -188,8 +188,8 @@ public class ManageRoomStatusView {
     TableUtil.printTableRow(
         new String[] {
           "Confirmation No.",
-          room != null && room.getReservationConfirmationNumber() != null
-              ? room.getReservationConfirmationNumber()
+          linkedReservation != null && linkedReservation.getConfirmationNumber() != null
+              ? linkedReservation.getConfirmationNumber()
               : "None"
         },
         kvSettings);

@@ -226,8 +226,6 @@ public class LinkedList<T> implements ListInterface<T>, Serializable {
     return output.toString();
   }
 
-  // INTERNAL HELPERS
-
   private int getPosition(T entry) {
     if (entry == null || isEmpty()) return -1;
 
@@ -285,8 +283,6 @@ public class LinkedList<T> implements ListInterface<T>, Serializable {
     return slow;
   }
 
-  // NESTED STRUCTURAL LAYER
-
   private class Node implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -298,8 +294,6 @@ public class LinkedList<T> implements ListInterface<T>, Serializable {
       this.next = null;
     }
   }
-
-  // ITERATOR IMPLEMENTATION
 
   private class LinkedListIterator implements Iterator<T> {
     private Node currentNode = firstNode;
