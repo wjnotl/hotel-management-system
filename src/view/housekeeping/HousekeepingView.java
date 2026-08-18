@@ -658,13 +658,11 @@ public class HousekeepingView {
         " Current Selected Status: [ " + (currentStatus == null ? "ALL" : currentStatus) + " ]\n");
     System.out.println(" 1. Show DIRTY Only");
     System.out.println(" 2. Show CLEANING Only");
-    System.out.println(" 3. Show INSPECTED Only");
-    System.out.println(" 4. Show VACANT_CLEAN Only");
-    System.out.println(" 5. Show OCCUPIED Only");
-    System.out.println(" 6. Clear Status Filter (Show All)");
-    System.out.println(" 7. Back to Filter Management\n");
+    System.out.println(" 3. Show VACANT_CLEAN Only");
+    System.out.println(" 4. Clear Status Filter (Show All)");
+    System.out.println(" 5. Back to Filter Management\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
   public int displayRoomActionSubmenu(Room room, boolean hasUndoHistory) {
@@ -688,11 +686,9 @@ public class HousekeepingView {
     ConsoleUtil.printTitleBox("SELECT NEW ROOM STATUS");
     System.out.println(" 1. Dirty");
     System.out.println(" 2. Cleaning");
-    System.out.println(" 3. Inspected");
-    System.out.println(" 4. Vacant / Clean");
-    System.out.println(" 5. Occupied\n");
+    System.out.println(" 3. Vacant / Clean\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
   public void renderRoomHistoryScreen(
