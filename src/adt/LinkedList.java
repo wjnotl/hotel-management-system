@@ -211,6 +211,28 @@ public class LinkedList<T> implements ListInterface<T>, Serializable {
   }
 
   @Override
+  public ListInterface<T> slice(int startPosition, int endPosition) {
+    ListInterface<T> slicedList = new LinkedList<>();
+    if (startPosition < 1 || startPosition > numberOfEntries || startPosition > endPosition) {
+      return slicedList;
+    }
+
+    int actualEnd = Math.min(endPosition, numberOfEntries);
+    Node currentNode = firstNode;
+    int currentPos = 1;
+
+    while (currentNode != null && currentPos <= actualEnd) {
+      if (currentPos >= startPosition) {
+        slicedList.add(currentNode.data);
+      }
+      currentNode = currentNode.next;
+      currentPos++;
+    }
+
+    return slicedList;
+  }
+
+  @Override
   public Iterator<T> getIterator() {
     return new LinkedListIterator();
   }

@@ -190,6 +190,20 @@ public class ArrayList<T> implements ListInterface<T>, Serializable {
   }
 
   @Override
+  public ListInterface<T> slice(int startPosition, int endPosition) {
+    ListInterface<T> slicedList = new ArrayList<>();
+    if (startPosition < 1 || startPosition > numOfEntries || startPosition > endPosition) {
+      return slicedList;
+    }
+
+    int actualEnd = Math.min(endPosition, numOfEntries);
+    for (int i = startPosition; i <= actualEnd; i++) {
+      slicedList.add(getEntry(i));
+    }
+    return slicedList;
+  }
+
+  @Override
   public Iterator<T> getIterator() {
     return new ArrayListIterator();
   }

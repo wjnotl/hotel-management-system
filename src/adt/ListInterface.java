@@ -55,6 +55,9 @@ public interface ListInterface<T> extends Iterable<T> {
   // Combines all elements into a single accumulated value.
   public <U> U reduce(U identity, BiFunction<U, T, U> accumulator);
 
+  // Extracts a sub-list starting at startPosition up to endPosition (1-based, inclusive).
+  public ListInterface<T> slice(int startPosition, int endPosition);
+
   // Gives back a standard iterator to cleanly traverse elements sequentially.
   public Iterator<T> getIterator();
 
