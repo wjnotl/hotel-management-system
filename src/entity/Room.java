@@ -48,7 +48,7 @@ public class Room implements Serializable {
     return status;
   }
 
-  public boolean isOccupied() {
+  public boolean getIsOccupied() {
     return isOccupied;
   }
 
