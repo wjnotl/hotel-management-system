@@ -3,11 +3,14 @@ package control.booking;
 import adt.ArrayList;
 import adt.ListInterface;
 import adt.QueueInterface;
+import entity.BookingSettings;
 import entity.Guest;
-import entity.Member;
 import entity.Reservation;
 import entity.Room;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
@@ -17,8 +20,15 @@ import util.ConsoleUtil;
 import view.booking.WalkInQueueView;
 
 public class WalkInQueueController {
-  private static final int PAGE_SIZE = 10;
-  private static final String DEFAULT_SORT = "QUEUE POSITION (FIFO)";
+  private static final String FIELD_NAME = "GUEST NAME";
+  private static final String FIELD_GUEST_ID = "GUEST ID";
+  private static final String FIELD_IC = "IC NUMBER";
+  private static final String FIELD_PASSPORT = "PASSPORT NO";
+  private static final String FIELD_PHONE = "PHONE NUMBER";
+  private static final String FIELD_EMAIL = "EMAIL ADDRESS";
+  private static final String FIELD_RES_ID = "RESERVATION ID";
+  private static final String FIELD_CODE = "CONFIRMATION CODE";
+  private static final String FIELD_ALL = "ALL FIELDS";
 
   private final WalkInQueueView walkInQueueView = new WalkInQueueView();
   private final StandardReservationRepo standardReservationRepo;
@@ -26,18 +36,25 @@ public class WalkInQueueController {
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
+  private final BookingSettingsRepo bookingSettingsRepo;
 
   public WalkInQueueController(
       StandardReservationRepo standardReservationRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
-      RoomRepo roomRepo) {
+      RoomRepo roomRepo,
+      BookingSettingsRepo bookingSettingsRepo) {
     this.standardReservationRepo = standardReservationRepo;
     this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
+    this.bookingSettingsRepo = bookingSettingsRepo;
+  }
+
+  private BookingSettings settings() {
+    return bookingSettingsRepo.getSettings();
   }
 
   public void startQueueManagement() {
@@ -57,15 +74,24 @@ public class WalkInQueueController {
 
   private void manageLine(Room.RoomType roomType) {
     int currentPage = 1;
-    String searchQuery = null;
-    String tierFilter = null;
-    String sortCriteria = DEFAULT_SORT;
+    String searchField = FIELD_NAME;
+    String searchTerm = null;
+    boolean exactMatch = false;
+    Integer minWaitMinutes = null;
+    String sortCriteria = settings().getDefaultQueueSort();
 
     while (true) {
       try {
+        // Read fresh each pass, so a page size or override rule changed under Settings takes
+        // effect the moment the clerk comes back to this screen.
+        BookingSettings config = settings();
+        int pageSize = config.getPageSize();
+        int graceMinutes = standardReservationRepo.getHoldGraceMinutes(roomType);
+
         int lapsed = standardReservationRepo.sweepLapsedHolds(roomRepo, guestRepo);
         if (lapsed > 0) {
-          walkInQueueView.displaySweepNotice(lapsed, StandardReservationRepo.GRACE_MINUTES);
+          walkInQueueView.displaySweepNotice(
+              lapsed, graceMinutes, config.getMaxStrikes(), config.isRequeueOnLapse());
         }
 
         QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
@@ -73,8 +99,10 @@ public class WalkInQueueController {
             filterAndSortLine(
                 standardReservationRepo.snapshotQueue(roomType),
                 queue,
-                searchQuery,
-                tierFilter,
+                searchField,
+                searchTerm,
+                exactMatch,
+                minWaitMinutes,
                 sortCriteria);
         ListInterface<Reservation> holds = standardReservationRepo.getHoldsByRoomType(roomType);
 
@@ -84,37 +112,41 @@ public class WalkInQueueController {
                 lineRows,
                 holds,
                 guestRepo.getGuestList(),
-                memberRepo.getMemberList(),
-                roomRepo.getRoomList(),
                 roomType,
                 standardReservationRepo.getQueueCapacity(roomType),
                 countVacantCleanRooms(roomType),
+                arrivingToday(roomType),
                 countVipWaiting(roomType),
-                StandardReservationRepo.GRACE_MINUTES,
-                searchQuery,
-                tierFilter,
+                graceMinutes,
+                searchField,
+                searchTerm,
+                exactMatch ? "EXACT" : "CONTAINS",
+                minWaitMinutes,
                 sortCriteria,
                 currentPage,
-                PAGE_SIZE);
+                pageSize,
+                config.isEnforceVipBypass());
 
-        if ("E".equalsIgnoreCase(result.input)) {
+        if (result.isBlank || "B".equalsIgnoreCase(result.input)) {
           return;
         } else if ("A".equalsIgnoreCase(result.input)) {
           handleAddWalkIn(roomType);
           currentPage = 1;
         } else if ("G".equalsIgnoreCase(result.input)) {
           handleAllocateNext(roomType);
-        } else if ("V".equalsIgnoreCase(result.input)) {
-          handleOverrideAllocate(roomType);
         } else if ("C".equalsIgnoreCase(result.input)) {
-          handleCheckInHold(holds, roomType);
+          handleCheckInHold(holds, roomType, pageSize);
         } else if ("X".equalsIgnoreCase(result.input)) {
           handleCloseQueue(roomType);
           currentPage = 1;
         } else if ("S".equalsIgnoreCase(result.input)) {
-          String[] filters = handleFilterMenu(searchQuery, tierFilter);
-          searchQuery = filters[0];
-          tierFilter = filters[1];
+          String[] filters =
+              handleFilterMenu(
+                  searchField, searchTerm, exactMatch ? "EXACT" : "CONTAINS", minWaitMinutes);
+          searchField = filters[0];
+          searchTerm = filters[1];
+          exactMatch = "EXACT".equals(filters[2]);
+          minWaitMinutes = (filters[3] == null) ? null : Integer.valueOf(filters[3]);
           currentPage = 1;
         } else if ("O".equalsIgnoreCase(result.input)) {
           String newSort = walkInQueueView.displaySortMenu();
@@ -123,20 +155,16 @@ public class WalkInQueueController {
             currentPage = 1;
           }
         } else if ("N".equalsIgnoreCase(result.input)) {
-          int totalPages = (int) Math.ceil((double) lineRows.getNumberOfEntries() / PAGE_SIZE);
+          int totalPages = (int) Math.ceil((double) lineRows.getNumberOfEntries() / pageSize);
           if (currentPage < totalPages) {
             currentPage++;
-          } else {
-            ConsoleUtil.printError("Already on the last page!");
           }
         } else if ("P".equalsIgnoreCase(result.input)) {
           if (currentPage > 1) {
             currentPage--;
-          } else {
-            ConsoleUtil.printError("Already on the first page!");
           }
         } else if (result.isNumber) {
-          handleRowAction(lineRows, result.getAsInt(), currentPage, roomType);
+          handleRowAction(lineRows, result.getAsInt(), currentPage, pageSize, roomType);
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -145,168 +173,79 @@ public class WalkInQueueController {
   }
 
   private void handleAddWalkIn(Room.RoomType roomType) {
-    while (true) {
-      try {
-        String input = walkInQueueView.promptAddWalkInInput();
-        if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-          return;
-        }
-
-        String term = input.trim();
-        Guest guest = guestRepo.findById(term);
-        if (guest == null) {
-          guest = guestRepo.findByName(term);
-        }
-
-        // A walk-in never booked, so a first-time arrival legitimately has no guest
-        // file yet.
-        // Refusing them here would mean the module can only serve people the seeder
-        // created.
-        if (guest == null) {
-          int choice = walkInQueueView.displayGuestNotFoundScreen(term);
-          if (choice == 2) {
-            continue;
-          } else if (choice != 1) {
-            return;
-          }
-
-          guest =
-              new GuestRegistrationController(guestRepo).registerNewGuest(nameSuggestionFrom(term));
-          if (guest == null) {
-            continue;
-          }
-        }
-
-        QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
-
-        Reservation alreadyQueued = findQueuedReservationForGuest(roomType, guest.getGuestId());
-        if (alreadyQueued != null) {
-          walkInQueueView.displayAlreadyInLineScreen(
-              guest, alreadyQueued, queue.getPosition(alreadyQueued));
-          return;
-        }
-
-        Member member =
-            (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
-
-        // A tier holder does not belong at the back of a FIFO line, so the decision is
-        // put to
-        // the clerk before the line is offered at all.
-        if (member != null && member.getTier() != null) {
-          int decision = promptVipRouting(guest, member, roomType, queue.getNumberOfEntries());
-          if (decision == 1) {
-            if (assignRoomDirectly(guest, member, roomType)) {
-              return;
-            }
-            continue;
-          } else if (decision == 3) {
-            return;
-          }
-        }
-
-        int waiting = queue.getNumberOfEntries();
-        boolean confirmed =
-            walkInQueueView.displayAddWalkInConfirmationScreen(
-                guest,
-                member,
-                roomType,
-                waiting + 1,
-                waiting,
-                standardReservationRepo.getQueueCapacity(roomType));
-        if (!confirmed) {
-          continue;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        Reservation walkIn =
-            new Reservation(
-                standardReservationRepo.generateReservationId(),
-                guest.getGuestId(),
-                standardReservationRepo.generateConfirmationNumber(),
-                roomType,
-                Reservation.Status.WAITING,
-                false,
-                0,
-                now,
-                now,
-                false);
-
-        standardReservationRepo.addReservation(walkIn);
-
-        walkInQueueView.displayAddWalkInSuccessScreen(
-            walkIn,
-            guest,
-            queue.getPosition(walkIn),
-            queue.getNumberOfEntries(),
-            standardReservationRepo.getQueueCapacity(roomType));
-        return;
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    new WalkInRegistrationController(
+            standardReservationRepo,
+            vipReservationRepo,
+            guestRepo,
+            memberRepo,
+            roomRepo,
+            bookingSettingsRepo)
+        .registerWalkIn(roomType);
   }
 
   private void handleAllocateNext(Room.RoomType roomType) {
-    QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
-    if (queue.isEmpty()) {
+    Reservation front = standardReservationRepo.getQueueByRoomType(roomType).peek();
+    if (front == null) {
       ConsoleUtil.printError("Nobody is standing in the " + roomType.name() + " line!");
       return;
     }
 
-    int vacantRooms = countVacantCleanRooms(roomType);
-    int vipWaiting = countVipWaiting(roomType);
+    allocateToGuest(front, roomType);
+  }
 
-    if (vacantRooms == 0) {
-      walkInQueueView.displayNoVacantRoomScreen(roomType, vipWaiting);
+  // One path for both [G] Allocate Next and the row submenu, so the front of the line and a
+  // deliberate skip cannot end up with different rules.
+  private void allocateToGuest(Reservation target, Room.RoomType roomType) {
+    QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
+
+    int position = queue.getPosition(target);
+    if (position == -1) {
+      ConsoleUtil.printError("That booking is no longer standing in the line!");
       return;
     }
 
-    // High tier members bypass this line, so a free room only reaches the standard
-    // queue once
+    BookingSettings config = settings();
+
+    int vacant = countVacantCleanRooms(roomType);
+    int arrivingTodayCount = arrivingToday(roomType);
+    int freeToCounter = Math.max(0, vacant - arrivingTodayCount);
+    int vipWaiting = countVipWaiting(roomType);
+
+    if (freeToCounter <= 0) {
+      walkInQueueView.displayNoVacantRoomScreen(roomType, arrivingTodayCount, vipWaiting);
+      return;
+    }
+
+    boolean fifoSkip = position > 1;
+    if (fifoSkip && !config.isAllowNonFrontAllocation()) {
+      walkInQueueView.displayNonFrontBlockedScreen(position);
+      return;
+    }
+
+    // High tier members bypass this line, so a free room only reaches the standard queue once
     // every waiting VIP for that room type could already have been given one.
-    if (vacantRooms <= vipWaiting) {
-      walkInQueueView.displayAllocationBlockedScreen(roomType, vacantRooms, vipWaiting);
+    boolean vipBypass = config.isEnforceVipBypass() && freeToCounter <= vipWaiting;
+    if (vipBypass && !config.isAllowBypassOverride()) {
+      walkInQueueView.displayBypassBlockedScreen(roomType, freeToCounter, vipWaiting);
       return;
     }
 
-    allocateFrontToRoom(roomType, vipWaiting, false);
-  }
-
-  private void handleOverrideAllocate(Room.RoomType roomType) {
-    QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
-    if (queue.isEmpty()) {
-      ConsoleUtil.printError("Nobody is standing in the " + roomType.name() + " line!");
+    boolean overridden = fifoSkip || vipBypass;
+    if (overridden
+        && !walkInQueueView.displayAllocationOverrideScreen(
+            roomType,
+            target,
+            guestRepo.findById(target.getGuestId()),
+            position,
+            queue.getNumberOfEntries(),
+            guestsAheadOf(roomType, position),
+            guestRepo.getGuestList(),
+            freeToCounter,
+            vipWaiting,
+            fifoSkip,
+            vipBypass)) {
       return;
     }
-
-    int vacantRooms = countVacantCleanRooms(roomType);
-    int vipWaiting = countVipWaiting(roomType);
-
-    if (vacantRooms == 0) {
-      walkInQueueView.displayNoVacantRoomScreen(roomType, vipWaiting);
-      return;
-    }
-
-    if (vacantRooms > vipWaiting) {
-      walkInQueueView.displayNothingToOverrideScreen(roomType, vacantRooms);
-      return;
-    }
-
-    Reservation front = queue.peek();
-    Guest guest = guestRepo.findById(front.getGuestId());
-
-    boolean authorised =
-        walkInQueueView.displayOverrideAuthorisationScreen(
-            roomType, front, guest, vacantRooms, vipWaiting);
-    if (!authorised) {
-      return;
-    }
-
-    allocateFrontToRoom(roomType, vipWaiting, true);
-  }
-
-  private void allocateFrontToRoom(Room.RoomType roomType, int vipWaiting, boolean overridden) {
-    QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
 
     Room room = roomRepo.findVacantCleanRoom(roomType);
     if (room == null) {
@@ -314,34 +253,21 @@ public class WalkInQueueController {
       return;
     }
 
-    Reservation front = queue.peek();
-    if (front == null) {
-      ConsoleUtil.printError("Nobody is standing in the " + roomType.name() + " line!");
+    Guest guest = guestRepo.findById(target.getGuestId());
+
+    if (!walkInQueueView.displayAllocateConfirmationScreen(
+        target,
+        guest,
+        room,
+        standardReservationRepo.getHoldGraceMinutes(roomType),
+        vipWaiting,
+        position)) {
       return;
     }
 
-    Guest guest = guestRepo.findById(front.getGuestId());
-    Member member =
-        (guest != null && guest.getMemberId() != null)
-            ? memberRepo.findById(guest.getMemberId())
-            : null;
-
-    boolean confirmed =
-        walkInQueueView.displayAllocateConfirmationScreen(
-            front,
-            guest,
-            member,
-            room,
-            StandardReservationRepo.GRACE_MINUTES,
-            vipWaiting,
-            overridden);
-    if (!confirmed) {
-      return;
-    }
-
-    Reservation allocated = standardReservationRepo.allocateFront(roomType);
+    Reservation allocated = standardReservationRepo.allocateQueued(target);
     if (allocated == null) {
-      ConsoleUtil.printError("The line emptied before the room could be assigned!");
+      ConsoleUtil.printError("The guest left the line before the room could be assigned!");
       return;
     }
 
@@ -354,7 +280,19 @@ public class WalkInQueueController {
         allocated, guest, room, queue.getNumberOfEntries(), overridden);
   }
 
-  private void handleCheckInHold(ListInterface<Reservation> holds, Room.RoomType roomType) {
+  private ListInterface<Reservation> guestsAheadOf(Room.RoomType roomType, int position) {
+    ListInterface<Reservation> ahead = new ArrayList<>();
+    ListInterface<Reservation> snapshot = standardReservationRepo.snapshotQueue(roomType);
+
+    for (int i = 1; i < position && i <= snapshot.getNumberOfEntries(); i++) {
+      Reservation r = snapshot.getEntry(i);
+      if (r != null) ahead.add(r);
+    }
+    return ahead;
+  }
+
+  private void handleCheckInHold(
+      ListInterface<Reservation> holds, Room.RoomType roomType, int pageSize) {
     if (holds == null || holds.isEmpty()) {
       ConsoleUtil.printError("No " + roomType.name() + " rooms are currently on hold!");
       return;
@@ -364,8 +302,8 @@ public class WalkInQueueController {
         walkInQueueView.promptHoldSelection(
             holds,
             guestRepo.getGuestList(),
-            roomRepo.getRoomList(),
-            StandardReservationRepo.GRACE_MINUTES);
+            standardReservationRepo.getHoldGraceMinutes(roomType),
+            pageSize);
     if (selection == null) {
       return;
     }
@@ -379,13 +317,25 @@ public class WalkInQueueController {
     Guest guest = guestRepo.findById(hold.getGuestId());
     Room room = standardReservationRepo.findHeldRoom(hold, roomRepo);
 
-    Integer stayDays = walkInQueueView.promptStayDays(hold, guest, room);
+    Integer stayDays =
+        walkInQueueView.promptStayDays(
+            hold, guest, room, settings().getMaxStayNights(), maxNightsFrom(roomType));
     if (stayDays == null) {
       return;
     }
 
     standardReservationRepo.checkIn(hold, stayDays);
     walkInQueueView.displayCheckInSuccessScreen(hold, guest, room, stayDays);
+  }
+
+  // The first night is always available because this guest is already holding the room. Only the
+  // nights after it have to be checked against what else the calendar has promised.
+  private int maxNightsFrom(Room.RoomType roomType) {
+    int cap = settings().getMaxStayNights();
+    int extra =
+        standardReservationRepo.findLongestBookableStay(
+            roomRepo, roomType, LocalDate.now().plusDays(1), cap - 1);
+    return Math.max(1, Math.min(cap, extra + 1));
   }
 
   private void handleCloseQueue(Room.RoomType roomType) {
@@ -395,9 +345,8 @@ public class WalkInQueueController {
       return;
     }
 
-    boolean confirmed =
-        walkInQueueView.displayCloseQueueConfirmationScreen(roomType, queue.getNumberOfEntries());
-    if (!confirmed) {
+    if (!walkInQueueView.displayCloseQueueConfirmationScreen(
+        roomType, queue.getNumberOfEntries())) {
       return;
     }
 
@@ -406,9 +355,13 @@ public class WalkInQueueController {
   }
 
   private void handleRowAction(
-      ListInterface<Reservation> lineRows, int indexOnPage, int page, Room.RoomType roomType) {
+      ListInterface<Reservation> lineRows,
+      int indexOnPage,
+      int page,
+      int pageSize,
+      Room.RoomType roomType) {
 
-    int actualIndex = (page - 1) * PAGE_SIZE + indexOnPage;
+    int actualIndex = (page - 1) * pageSize + indexOnPage;
     if (actualIndex < 1 || actualIndex > lineRows.getNumberOfEntries()) {
       ConsoleUtil.printError("Invalid row selection index!");
       return;
@@ -421,26 +374,25 @@ public class WalkInQueueController {
 
     while (true) {
       try {
-        int action = walkInQueueView.displayRowActionSubmenu(selected);
+        Guest guest = guestRepo.findById(selected.getGuestId());
+        int position = queue.getPosition(selected);
+
+        int action =
+            walkInQueueView.displayRowActionSubmenu(
+                selected, guest, position, queue.getNumberOfEntries());
 
         if (action == 1) {
-          Guest guest = guestRepo.findById(selected.getGuestId());
-          Member member =
-              (guest != null && guest.getMemberId() != null)
-                  ? memberRepo.findById(guest.getMemberId())
-                  : null;
           walkInQueueView.displayReservationDetailScreen(
-              selected, guest, member, queue.getPosition(selected), queue.getNumberOfEntries());
+              selected, guest, position, queue.getNumberOfEntries());
         } else if (action == 2) {
-          Guest guest = guestRepo.findById(selected.getGuestId());
-          boolean confirmed =
-              walkInQueueView.displayCancelConfirmationScreen(
-                  selected, guest, queue.getPosition(selected));
-          if (confirmed) {
+          allocateToGuest(selected, roomType);
+          return;
+        } else if (action == 3) {
+          if (walkInQueueView.displayCancelConfirmationScreen(selected, guest, position)) {
             standardReservationRepo.cancelReservation(selected);
             return;
           }
-        } else if (action == 3) {
+        } else {
           return;
         }
       } catch (Exception e) {
@@ -449,25 +401,45 @@ public class WalkInQueueController {
     }
   }
 
-  private String[] handleFilterMenu(String currentSearch, String currentTier) {
-    String search = currentSearch;
-    String tier = currentTier;
+  // Returns {field, term, matchMode, minWait}. minWait is carried as a string so the whole filter
+  // set travels as one array rather than four out-parameters.
+  private String[] handleFilterMenu(
+      String currentField, String currentTerm, String currentMode, Integer currentMinWait) {
+
+    String field = currentField;
+    String term = currentTerm;
+    String mode = currentMode;
+    Integer minWait = currentMinWait;
 
     while (true) {
       try {
-        int choice = walkInQueueView.displayFilterMainMenu(search, tier);
+        int choice = walkInQueueView.displayFilterMainMenu(field, term, mode, minWait);
 
         if (choice == 1) {
-          search = handleSearchSubmenu(search);
+          int picked = walkInQueueView.displaySearchFieldSubmenu(field);
+          if (picked > 0) field = fieldNameFor(picked);
         } else if (choice == 2) {
-          tier = handleTierSubmenu(tier);
+          term = walkInQueueView.promptSearchTerm(field, term);
         } else if (choice == 3) {
-          search = null;
-          tier = null;
+          mode = "EXACT".equals(mode) ? "CONTAINS" : "EXACT";
         } else if (choice == 4) {
-          return new String[] {search, tier};
+          minWait = walkInQueueView.promptMinimumWait(minWait);
         } else if (choice == 5) {
-          return new String[] {currentSearch, currentTier};
+          field = FIELD_NAME;
+          term = null;
+          mode = "CONTAINS";
+          minWait = null;
+        } else if (choice == 6) {
+          return new String[] {
+            field, term, mode, (minWait == null) ? null : String.valueOf(minWait)
+          };
+        } else {
+          return new String[] {
+            currentField,
+            currentTerm,
+            currentMode,
+            (currentMinWait == null) ? null : String.valueOf(currentMinWait)
+          };
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -475,48 +447,25 @@ public class WalkInQueueController {
     }
   }
 
-  private String handleSearchSubmenu(String currentSearch) {
-    while (true) {
-      try {
-        int option = walkInQueueView.displaySearchSubmenu(currentSearch);
-        if (option == 1) {
-          String input = walkInQueueView.promptSearchInput();
-          if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
-            return currentSearch;
-          }
-          return input.trim();
-        } else if (option == 2) {
-          return null;
-        } else if (option == 3) {
-          return currentSearch;
-        }
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  private String handleTierSubmenu(String currentTier) {
-    while (true) {
-      try {
-        int choice = walkInQueueView.displayTierSubmenu(currentTier);
-        if (choice == 1) return "DIAMOND";
-        if (choice == 2) return "GOLD";
-        if (choice == 3) return "SILVER";
-        if (choice == 4) return "NON-MEMBER";
-        if (choice == 5) return null;
-        if (choice == 6) return currentTier;
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+  private String fieldNameFor(int choice) {
+    if (choice == 1) return FIELD_NAME;
+    if (choice == 2) return FIELD_GUEST_ID;
+    if (choice == 3) return FIELD_IC;
+    if (choice == 4) return FIELD_PASSPORT;
+    if (choice == 5) return FIELD_PHONE;
+    if (choice == 6) return FIELD_EMAIL;
+    if (choice == 7) return FIELD_RES_ID;
+    if (choice == 8) return FIELD_CODE;
+    return FIELD_ALL;
   }
 
   private ListInterface<Reservation> filterAndSortLine(
       ListInterface<Reservation> source,
       QueueInterface<Reservation> queue,
-      String search,
-      String tier,
+      String field,
+      String term,
+      boolean exactMatch,
+      Integer minWaitMinutes,
       String sort) {
 
     ListInterface<Reservation> filtered = new ArrayList<>();
@@ -529,11 +478,9 @@ public class WalkInQueueController {
       if (r == null) continue;
 
       Guest g = guestRepo.findById(r.getGuestId());
-      Member m =
-          (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
-      if (!matchesSearch(r, g, search)) continue;
-      if (!matchesTier(m, tier)) continue;
+      if (!matchesSearch(r, g, field, term, exactMatch)) continue;
+      if (minWaitMinutes != null && waitMinutesOf(r) < minWaitMinutes) continue;
 
       filtered.add(r);
     }
@@ -549,36 +496,52 @@ public class WalkInQueueController {
     } else if ("STRIKES (HIGHEST -> LOWEST)".equalsIgnoreCase(sort)) {
       filtered.sort((a, b) -> Integer.compare(strikesOf(b), strikesOf(a)));
     } else {
-      // FIFO: the snapshot already arrives front to back, so the queue itself defines
-      // the order.
       filtered.sort((a, b) -> Integer.compare(queue.getPosition(a), queue.getPosition(b)));
     }
 
     return filtered;
   }
 
-  private boolean matchesSearch(Reservation r, Guest g, String search) {
-    if (search == null || search.trim().isEmpty()) return true;
+  private boolean matchesSearch(
+      Reservation r, Guest g, String field, String term, boolean exactMatch) {
+    if (term == null || term.trim().isEmpty()) return true;
 
-    String query = search.trim().toLowerCase();
-    boolean matchesId =
-        r.getReservationId() != null && r.getReservationId().toLowerCase().contains(query);
-    boolean matchesConfirmation =
-        r.getConfirmationNumber() != null
-            && r.getConfirmationNumber().toLowerCase().contains(query);
-    boolean matchesName =
-        g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
-    boolean matchesPhone =
-        g != null && g.getPhoneNumber() != null && g.getPhoneNumber().toLowerCase().contains(query);
+    String query = term.trim().toLowerCase();
 
-    return matchesId || matchesConfirmation || matchesName || matchesPhone;
+    if (FIELD_GUEST_ID.equals(field))
+      return hit(g == null ? null : g.getGuestId(), query, exactMatch);
+    if (FIELD_NAME.equals(field)) return hit(g == null ? null : g.getName(), query, exactMatch);
+    if (FIELD_IC.equals(field)) return hit(g == null ? null : g.getIcNumber(), query, exactMatch);
+    if (FIELD_PASSPORT.equals(field)) {
+      return hit(g == null ? null : g.getPassportNumber(), query, exactMatch);
+    }
+    if (FIELD_PHONE.equals(field)) {
+      return hit(g == null ? null : g.getPhoneNumber(), query, exactMatch);
+    }
+    if (FIELD_EMAIL.equals(field)) return hit(g == null ? null : g.getEmail(), query, exactMatch);
+    if (FIELD_RES_ID.equals(field)) return hit(r.getReservationId(), query, exactMatch);
+    if (FIELD_CODE.equals(field)) return hit(r.getConfirmationNumber(), query, exactMatch);
+
+    return hit(r.getReservationId(), query, exactMatch)
+        || hit(r.getConfirmationNumber(), query, exactMatch)
+        || (g != null
+            && (hit(g.getGuestId(), query, exactMatch)
+                || hit(g.getName(), query, exactMatch)
+                || hit(g.getIcNumber(), query, exactMatch)
+                || hit(g.getPassportNumber(), query, exactMatch)
+                || hit(g.getPhoneNumber(), query, exactMatch)
+                || hit(g.getEmail(), query, exactMatch)));
   }
 
-  private boolean matchesTier(Member m, String tier) {
-    if (tier == null) return true;
+  private boolean hit(String value, String query, boolean exactMatch) {
+    if (value == null) return false;
+    String candidate = value.toLowerCase();
+    return exactMatch ? candidate.equals(query) : candidate.contains(query);
+  }
 
-    String actual = (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER";
-    return tier.equalsIgnoreCase(actual);
+  private long waitMinutesOf(Reservation r) {
+    if (r.getQueueArrivalTime() == null) return 0;
+    return Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
   }
 
   private int compareArrival(Reservation a, Reservation b) {
@@ -600,89 +563,8 @@ public class WalkInQueueController {
     return (g != null) ? g.getStrikeCount() : 0;
   }
 
-  private Reservation findQueuedReservationForGuest(Room.RoomType roomType, String guestId) {
-    ListInterface<Reservation> snapshot = standardReservationRepo.snapshotQueue(roomType);
-    for (int i = 1; i <= snapshot.getNumberOfEntries(); i++) {
-      Reservation r = snapshot.getEntry(i);
-      if (r != null && guestId.equalsIgnoreCase(r.getGuestId())) {
-        return r;
-      }
-    }
-    return null;
-  }
-
-  // A guest id typed into the search box is not a name, so it must not be
-  // pre-filled as one.
-  private String nameSuggestionFrom(String term) {
-    if (term == null || term.toUpperCase().startsWith("G-")) {
-      return null;
-    }
-    return term;
-  }
-
-  // A free room may only be handed straight to this member while one is left over
-  // after every
-  // VIP already on the waitlist is covered. That is the same guard
-  // handleAllocateNext applies,
-  // so arriving late cannot buy a better place than the VIPs who have been
-  // waiting.
-  private int promptVipRouting(Guest guest, Member member, Room.RoomType roomType, int lineLength) {
-    int vacantRooms = countVacantCleanRooms(roomType);
-    int vipWaiting = countVipWaiting(roomType);
-
-    return walkInQueueView.displayVipArrivalScreen(
-        guest, member, roomType, vacantRooms, vipWaiting, lineLength, vacantRooms > vipWaiting);
-  }
-
-  private boolean assignRoomDirectly(Guest guest, Member member, Room.RoomType roomType) {
-    Room room = roomRepo.findVacantCleanRoom(roomType);
-    if (room == null) {
-      ConsoleUtil.printError("No VACANT & CLEAN " + roomType.name() + " room is available!");
-      return false;
-    }
-
-    int vacantRooms = countVacantCleanRooms(roomType);
-    int vipWaiting = countVipWaiting(roomType);
-
-    boolean confirmed =
-        walkInQueueView.displayVipDirectAssignConfirmationScreen(
-            guest, member, room, StandardReservationRepo.GRACE_MINUTES, vacantRooms, vipWaiting);
-    if (!confirmed) {
-      return false;
-    }
-
-    LocalDateTime now = LocalDateTime.now();
-
-    // queueArrivalTime is stamped even though the guest never queues, so the
-    // wait-time report
-    // still counts this arrival and records it as the zero-wait case it actually
-    // was.
-    Reservation direct =
-        new Reservation(
-            standardReservationRepo.generateReservationId(),
-            guest.getGuestId(),
-            standardReservationRepo.generateConfirmationNumber(),
-            roomType,
-            Reservation.Status.ALLOCATED,
-            false,
-            0,
-            now,
-            now,
-            false);
-
-    if (!standardReservationRepo.allocateDirect(direct)) {
-      ConsoleUtil.printError("The reservation could not be recorded!");
-      return false;
-    }
-
-    direct.setRoomNumber(room.getRoomNumber());
-    standardReservationRepo.updateReservation(direct);
-    room.setStatus(Room.Status.OCCUPIED);
-    roomRepo.updateRoom(room);
-
-    walkInQueueView.displayVipDirectAssignSuccessScreen(
-        direct, guest, member, room, StandardReservationRepo.GRACE_MINUTES);
-    return true;
+  private int arrivingToday(Room.RoomType roomType) {
+    return standardReservationRepo.countReservedArrivingOn(roomType, LocalDate.now());
   }
 
   private int countVacantCleanRooms(Room.RoomType roomType) {

@@ -2,16 +2,16 @@ package control.booking;
 
 import adt.ArrayList;
 import adt.ListInterface;
+import entity.BookingSettings;
 import entity.Guest;
-import entity.Member;
 import entity.Reservation;
 import entity.Room;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import repo.BookingSettingsRepo;
 import repo.GuestRepo;
-import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
 import util.ConsoleUtil;
@@ -20,134 +20,207 @@ import view.booking.BookingReportView;
 
 public class BookingReportController {
   private static final int ARRIVAL_REGISTER = 1;
+  private static final int QUEUE_PERFORMANCE = 2;
+  private static final int ROOM_UTILISATION = 3;
+
   private static final String REGISTER_TITLE = "DAILY ARRIVAL REGISTER";
   private static final String PERFORMANCE_TITLE = "QUEUE PERFORMANCE & NO-SHOW ANALYSIS";
+  private static final String UTILISATION_TITLE = "ROOM UTILISATION & FORECAST";
   private static final String NEW_LINE = System.lineSeparator();
+
+  private static final String FIELD_NAME = "GUEST NAME";
+  private static final String FIELD_GUEST_ID = "GUEST ID";
+  private static final String FIELD_IC = "IC NUMBER";
+  private static final String FIELD_PASSPORT = "PASSPORT NO";
+  private static final String FIELD_PHONE = "PHONE NUMBER";
+  private static final String FIELD_EMAIL = "EMAIL ADDRESS";
+  private static final String FIELD_RES_ID = "RESERVATION ID";
+  private static final String FIELD_CODE = "CONFIRMATION CODE";
+  private static final String FIELD_ALL = "ALL FIELDS";
+
+  private static final String[] COLUMN_NAMES = {
+    "Reservation ID",
+    "Confirmation Code",
+    "Guest ID",
+    "Guest Name",
+    "Phone Number",
+    "Room Type",
+    "Room No",
+    "Status",
+    "Source",
+    "Waited",
+    "Arrived",
+    "Nights",
+    "Strikes"
+  };
 
   private final BookingReportView reportView = new BookingReportView();
   private final StandardReservationRepo standardReservationRepo;
   private final GuestRepo guestRepo;
-  private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
+  private final BookingSettingsRepo bookingSettingsRepo;
 
   public BookingReportController(
       StandardReservationRepo standardReservationRepo,
       GuestRepo guestRepo,
-      MemberRepo memberRepo,
-      RoomRepo roomRepo) {
+      RoomRepo roomRepo,
+      BookingSettingsRepo bookingSettingsRepo) {
     this.standardReservationRepo = standardReservationRepo;
     this.guestRepo = guestRepo;
-    this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
+    this.bookingSettingsRepo = bookingSettingsRepo;
+  }
+
+  private BookingSettings settings() {
+    return bookingSettingsRepo.getSettings();
   }
 
   public void startReportManagement() {
     while (true) {
       try {
         int choice = reportView.displayReportHubMenu();
-        if (choice == 3) {
+        if (choice == 0) {
           return;
         }
 
-        runReportPipeline(choice);
+        if (choice == ROOM_UTILISATION) {
+          runUtilisationReport();
+        } else {
+          runReportPipeline(choice);
+        }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
+  // Everything the clerk can narrow, order or reshape before the file is written. Held in one
+  // object so a reset is a single assignment and the whole scope travels to the export in one
+  // piece rather than as a dozen parameters.
+  private static class ReportScope {
+    private String searchField = FIELD_NAME;
+    private String searchTerm;
+    private boolean exactMatch;
+    private String roomTypeFilter;
+    private String statusFilter;
+    private String sourceFilter;
+    private String periodFilter;
+    private LocalDate fromDate;
+    private LocalDate toDate;
+    private Integer minWaitMinutes;
+    private int minStrikes = -1;
+    private int maxStrikes = -1;
+    private String roomNumberFilter;
+    private String sortAttribute;
+    private String sortDirection = "DESCENDING";
+    private String groupBy = "NO GROUPING";
+    private int recordLimit;
+    private boolean[] columns;
+  }
+
+  private ReportScope defaultScope(boolean isRegister) {
+    ReportScope scope = new ReportScope();
+    BookingSettings config = settings();
+
+    scope.periodFilter = isRegister ? config.getDefaultReportPeriod() : "ALL TIME";
+    scope.sortAttribute = isRegister ? "ARRIVAL TIME" : "WAIT DURATION";
+    scope.recordLimit = config.getDefaultRecordLimit();
+    scope.columns = new boolean[COLUMN_NAMES.length];
+
+    int[] defaults = isRegister ? new int[] {0, 3, 5, 7, 9, 10} : new int[] {0, 3, 5, 7, 9, 12};
+    for (int index : defaults) {
+      scope.columns[index] = true;
+    }
+    return scope;
+  }
+
   private void runReportPipeline(int reportType) {
     boolean isRegister = (reportType == ARRIVAL_REGISTER);
+    ReportScope scope = defaultScope(isRegister);
 
-    String search = null;
-    String roomTypeFilter = null;
-    String statusFilter = null;
-    String tierFilter = null;
-    String periodFilter = isRegister ? "TODAY" : "ALL TIME";
-    Integer minWaitMinutes = null;
-    String sortAttribute = isRegister ? "ARRIVAL TIME" : "WAIT DURATION";
-    String sortDirection = "DESCENDING";
-    int recordLimit = 10;
-
-    String title = isRegister ? "DAILY ARRIVAL REGISTER - FILTERS" : "QUEUE PERFORMANCE - FILTERS";
+    String title = isRegister ? "DAILY ARRIVAL REGISTER - SCOPE" : "QUEUE PERFORMANCE - SCOPE";
 
     while (true) {
       try {
         standardReservationRepo.sweepLapsedHolds(roomRepo, guestRepo);
 
-        ListInterface<Reservation> matched =
-            filterReservations(
-                search, roomTypeFilter, statusFilter, tierFilter, periodFilter, minWaitMinutes);
+        ListInterface<Reservation> matched = filterReservations(scope);
 
-        int choice =
+        String command =
             reportView.displayFilterControlPanel(
                 title,
-                search,
-                roomTypeFilter,
-                statusFilter,
-                tierFilter,
-                periodFilter,
-                minWaitMinutes,
-                sortAttribute,
-                sortDirection,
-                recordLimit,
+                searchLabel(scope),
+                scope.roomTypeFilter,
+                scope.statusFilter,
+                scope.sourceFilter,
+                periodLabel(scope),
+                scope.minWaitMinutes,
+                strikeLabel(scope),
+                scope.roomNumberFilter,
+                scope.sortAttribute,
+                scope.sortDirection,
+                scope.groupBy,
+                columnsLabel(scope),
+                scope.recordLimit,
                 matched.getNumberOfEntries(),
-                isRegister,
-                !isRegister);
+                isRegister);
 
-        if (choice == 1) {
-          String input = reportView.promptSearchInput();
-          search = (input == null || input.trim().isEmpty()) ? null : input.trim();
-        } else if (choice == 2) {
-          roomTypeFilter = handleRoomTypeSubmenu(roomTypeFilter);
-        } else if (choice == 3) {
-          if (isRegister) {
-            statusFilter = handleStatusSubmenu(statusFilter);
-          } else {
-            Integer entered = reportView.promptMinimumWait(minWaitMinutes);
-            if (entered != null) {
-              minWaitMinutes = (entered == 0) ? null : entered;
-            }
-          }
-        } else if (choice == 4) {
-          tierFilter = handleTierSubmenu(tierFilter);
-        } else if (choice == 5) {
-          periodFilter = handlePeriodSubmenu(periodFilter);
-        } else if (choice == 6) {
-          sortAttribute = handleSortAttributeSubmenu(sortAttribute, isRegister);
-          sortDirection = handleSortDirectionSubmenu(sortDirection);
-        } else if (choice == 7) {
-          recordLimit = handleRecordLimitSubmenu(recordLimit);
-        } else if (choice == 8) {
-          search = null;
-          roomTypeFilter = null;
-          statusFilter = null;
-          tierFilter = null;
-          periodFilter = isRegister ? "TODAY" : "ALL TIME";
-          minWaitMinutes = null;
-          sortAttribute = isRegister ? "ARRIVAL TIME" : "WAIT DURATION";
-          sortDirection = "DESCENDING";
-          recordLimit = 10;
-        } else if (choice == 9) {
-          boolean exitToHub =
-              exportReport(
-                  reportType,
-                  matched,
-                  buildScopeLabel(
-                      search,
-                      roomTypeFilter,
-                      statusFilter,
-                      tierFilter,
-                      periodFilter,
-                      minWaitMinutes),
-                  sortAttribute,
-                  sortDirection,
-                  recordLimit);
-          if (exitToHub) {
+        if ("B".equals(command)) {
+          return;
+        } else if ("R".equals(command)) {
+          scope = defaultScope(isRegister);
+        } else if ("X".equals(command)) {
+          if (exportReport(reportType, matched, scope)) {
             return;
           }
-        } else if (choice == 10) {
-          return;
+        } else if ("1".equals(command)) {
+          handleSearchSubmenu(scope);
+        } else if ("2".equals(command)) {
+          int picked = reportView.displayRoomTypeSubmenu(scope.roomTypeFilter);
+          if (picked > 0) scope.roomTypeFilter = roomTypeNameFor(picked);
+        } else if ("3".equals(command)) {
+          if (isRegister) {
+            int picked = reportView.displayStatusSubmenu(scope.statusFilter);
+            if (picked > 0) scope.statusFilter = statusNameFor(picked);
+          } else {
+            scope.minWaitMinutes = reportView.promptMinimumWait(scope.minWaitMinutes);
+          }
+        } else if ("4".equals(command)) {
+          int picked = reportView.displaySourceSubmenu(scope.sourceFilter);
+          if (picked == 1) scope.sourceFilter = "WALK-IN";
+          else if (picked == 2) scope.sourceFilter = "ADVANCE";
+          else if (picked == 3) scope.sourceFilter = null;
+        } else if ("5".equals(command)) {
+          handlePeriodSubmenu(scope);
+        } else if ("6".equals(command)) {
+          int[] range = reportView.promptStrikeRange(scope.minStrikes, scope.maxStrikes);
+          scope.minStrikes = range[0];
+          scope.maxStrikes = range[1];
+        } else if ("7".equals(command)) {
+          scope.roomNumberFilter = reportView.promptRoomNumber(scope.roomNumberFilter);
+        } else if ("8".equals(command)) {
+          int attribute = reportView.displaySortAttributeSubmenu(scope.sortAttribute, isRegister);
+          if (attribute > 0) {
+            scope.sortAttribute = sortAttributeFor(attribute, isRegister);
+            int direction = reportView.displaySortDirectionSubmenu(scope.sortDirection);
+            if (direction == 1) scope.sortDirection = "DESCENDING";
+            else if (direction == 2) scope.sortDirection = "ASCENDING";
+          }
+        } else if ("9".equals(command)) {
+          int picked = reportView.displayGroupBySubmenu(scope.groupBy);
+          if (picked == 1) scope.groupBy = "NO GROUPING";
+          else if (picked == 2) scope.groupBy = "ROOM TYPE";
+          else if (picked == 3) scope.groupBy = "BOOKING STATUS";
+          else if (picked == 4) scope.groupBy = "ARRIVAL DAY";
+        } else if ("10".equals(command)) {
+          handleColumnSelection(scope);
+        } else if ("11".equals(command)) {
+          int picked = reportView.displayRecordLimitSubmenu(scope.recordLimit);
+          if (picked == 1) scope.recordLimit = 5;
+          else if (picked == 2) scope.recordLimit = 10;
+          else if (picked == 3) scope.recordLimit = 25;
+          else if (picked == 4) scope.recordLimit = 50;
+          else if (picked == 5) scope.recordLimit = 0;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -155,46 +228,102 @@ public class BookingReportController {
     }
   }
 
-  // The report body goes to a .txt file rather than to the screen, so the sort runs once here
-  // and the same ordered list backs both the file and the binary search offered afterwards.
-  // Returns true when the user wants to leave the whole report, false to go back to the filters.
+  private void handleSearchSubmenu(ReportScope scope) {
+    while (true) {
+      int choice =
+          reportView.displaySearchSubmenu(
+              scope.searchField, scope.searchTerm, scope.exactMatch ? "EXACT" : "CONTAINS");
+
+      if (choice == 0) return;
+
+      if (choice == 1) {
+        int picked = reportView.displaySearchFieldSubmenu(scope.searchField);
+        if (picked > 0) scope.searchField = fieldNameFor(picked);
+      } else if (choice == 2) {
+        scope.searchTerm = reportView.promptSearchTerm(scope.searchField, scope.searchTerm);
+      } else if (choice == 3) {
+        scope.exactMatch = !scope.exactMatch;
+      } else if (choice == 4) {
+        scope.searchTerm = null;
+        return;
+      }
+    }
+  }
+
+  private void handlePeriodSubmenu(ReportScope scope) {
+    int picked = reportView.displayPeriodSubmenu(periodLabel(scope));
+    if (picked == 0) return;
+
+    if (picked == 6) {
+      LocalDate[] range = reportView.promptDateRange(scope.fromDate, scope.toDate);
+      scope.fromDate = range[0];
+      scope.toDate = range[1];
+      scope.periodFilter = (range[0] == null && range[1] == null) ? "ALL TIME" : "CUSTOM";
+      return;
+    }
+
+    scope.fromDate = null;
+    scope.toDate = null;
+    if (picked == 1) scope.periodFilter = "TODAY";
+    else if (picked == 2) scope.periodFilter = "YESTERDAY";
+    else if (picked == 3) scope.periodFilter = "LAST 7 DAYS";
+    else if (picked == 4) scope.periodFilter = "LAST 30 DAYS";
+    else scope.periodFilter = "ALL TIME";
+  }
+
+  private void handleColumnSelection(ReportScope scope) {
+    while (true) {
+      int picked = reportView.displayColumnSelection(COLUMN_NAMES, scope.columns);
+      if (picked == 0) return;
+
+      if (picked == -1) {
+        for (int i = 0; i < scope.columns.length; i++) {
+          scope.columns[i] = true;
+        }
+        continue;
+      }
+
+      scope.columns[picked - 1] = !scope.columns[picked - 1];
+    }
+  }
+
+  // The report body goes to a .txt file, so the sort runs once here and the same ordered list
+  // backs both the file and the binary search offered afterwards. Returns true to leave the
+  // report, false to go back to the scope screen.
   private boolean exportReport(
-      int reportType,
-      ListInterface<Reservation> matched,
-      String scope,
-      String sortAttribute,
-      String sortDirection,
-      int recordLimit) {
+      int reportType, ListInterface<Reservation> matched, ReportScope scope) {
 
     boolean isRegister = (reportType == ARRIVAL_REGISTER);
     String title = isRegister ? REGISTER_TITLE : PERFORMANCE_TITLE;
-    String sortLabel = sortAttribute + " (" + sortDirection + ")";
-    ListInterface<Reservation> sorted = sortReservations(matched, sortAttribute, sortDirection);
+    String sortLabel = scope.sortAttribute + " (" + scope.sortDirection + ")";
+    String scopeLabel = buildScopeLabel(scope);
 
-    String path = writeReportFile(isRegister, sorted, title, scope, sortLabel, recordLimit);
+    ListInterface<Reservation> sorted = sortReservations(matched, scope);
+    String path = writeReportFile(isRegister, sorted, title, scopeLabel, sortLabel, scope);
 
     while (true) {
       try {
         ConsoleUtil.GetMenuInputResult result =
             reportView.showExportReceipt(
                 title,
-                scope,
+                scopeLabel,
                 sortLabel,
+                scope.groupBy,
                 sorted.getNumberOfEntries(),
-                exportedRowCount(sorted.getNumberOfEntries(), recordLimit),
+                exportedRowCount(sorted.getNumberOfEntries(), scope.recordLimit),
                 path,
                 isRegister,
-                "RESERVATION ID".equalsIgnoreCase(sortAttribute)
-                    && "ASCENDING".equalsIgnoreCase(sortDirection));
+                "RESERVATION ID".equalsIgnoreCase(scope.sortAttribute)
+                    && "ASCENDING".equalsIgnoreCase(scope.sortDirection));
 
-        if ("E".equalsIgnoreCase(result.input)) {
+        if ("B".equalsIgnoreCase(result.input)) {
           return true;
         } else if ("S".equalsIgnoreCase(result.input)) {
           return false;
         } else if ("R".equalsIgnoreCase(result.input)) {
-          path = writeReportFile(isRegister, sorted, title, scope, sortLabel, recordLimit);
+          path = writeReportFile(isRegister, sorted, title, scopeLabel, sortLabel, scope);
         } else if ("F".equalsIgnoreCase(result.input)) {
-          handleBinarySearch(sorted, sortAttribute, sortDirection);
+          handleBinarySearch(sorted, scope);
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -206,27 +335,24 @@ public class BookingReportController {
       boolean isRegister,
       ListInterface<Reservation> sorted,
       String title,
-      String scope,
+      String scopeLabel,
       String sortLabel,
-      int recordLimit) {
+      ReportScope scope) {
 
     String content =
         isRegister
-            ? buildArrivalRegisterTxt(sorted, title, scope, sortLabel, recordLimit)
-            : buildPerformanceReportTxt(sorted, title, scope, sortLabel, recordLimit);
+            ? buildArrivalRegisterTxt(sorted, title, scopeLabel, sortLabel, scope)
+            : buildPerformanceReportTxt(sorted, title, scopeLabel, sortLabel, scope);
 
     return TxtExportUtil.export(
         isRegister ? "booking/daily_arrival_register" : "booking/queue_performance_report",
         content);
   }
 
-  // Binary search is only valid on the key the list is actually ordered by, so the register
-  // has to be sorted ascending by reservation ID before this is offered.
-  private void handleBinarySearch(
-      ListInterface<Reservation> sorted, String sortAttribute, String sortDirection) {
-
-    if (!"RESERVATION ID".equalsIgnoreCase(sortAttribute)
-        || !"ASCENDING".equalsIgnoreCase(sortDirection)) {
+  // Binary search is only valid on the key the list is actually ordered by.
+  private void handleBinarySearch(ListInterface<Reservation> sorted, ReportScope scope) {
+    if (!"RESERVATION ID".equalsIgnoreCase(scope.sortAttribute)
+        || !"ASCENDING".equalsIgnoreCase(scope.sortDirection)) {
       ConsoleUtil.printError(
           "Binary search needs the register sorted by RESERVATION ID (ASCENDING). Change the"
               + " sort order first.");
@@ -234,7 +360,7 @@ public class BookingReportController {
     }
 
     String target = reportView.promptReservationIdSearch();
-    if (target == null || target.trim().isEmpty()) {
+    if (target == null || target.trim().isEmpty() || "B".equalsIgnoreCase(target.trim())) {
       return;
     }
 
@@ -249,8 +375,8 @@ public class BookingReportController {
       comparisons++;
 
       Reservation candidate = sorted.getEntry(mid);
-      // Every id is "STD-" plus a five digit number, so alphabetical order and numeric order
-      // are the same and a plain string comparison is safe here.
+      // Every id is "RES-" plus a five digit number, so alphabetical order and numeric order are
+      // the same and a plain string comparison is safe here.
       int comparison = candidate.getReservationId().compareToIgnoreCase(needle);
 
       if (comparison == 0) {
@@ -270,14 +396,7 @@ public class BookingReportController {
         needle, found, guest, foundAt, comparisons, sorted.getNumberOfEntries());
   }
 
-  private ListInterface<Reservation> filterReservations(
-      String search,
-      String roomTypeFilter,
-      String statusFilter,
-      String tierFilter,
-      String periodFilter,
-      Integer minWaitMinutes) {
-
+  private ListInterface<Reservation> filterReservations(ReportScope scope) {
     ListInterface<Reservation> all = standardReservationRepo.getAllReservations();
     ListInterface<Reservation> matched = new ArrayList<>();
 
@@ -286,17 +405,24 @@ public class BookingReportController {
       if (r == null || r.getRoomType() == null) continue;
 
       Guest g = guestRepo.findById(r.getGuestId());
-      Member m =
-          (g != null && g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
 
-      if (!matchesSearch(r, g, search)) continue;
-      if (roomTypeFilter != null && !roomTypeFilter.equalsIgnoreCase(r.getRoomType().name())) {
+      if (!matchesSearch(r, g, scope)) continue;
+      if (scope.roomTypeFilter != null
+          && !scope.roomTypeFilter.equalsIgnoreCase(r.getRoomType().name())) {
         continue;
       }
-      if (statusFilter != null && !statusFilter.equalsIgnoreCase(r.getStatus().name())) continue;
-      if (!matchesTier(m, tierFilter)) continue;
-      if (!matchesPeriod(r, periodFilter)) continue;
-      if (minWaitMinutes != null && waitMinutesOf(r) < minWaitMinutes) continue;
+      if (scope.statusFilter != null
+          && !scope.statusFilter.equalsIgnoreCase(r.getStatus().name())) {
+        continue;
+      }
+      if (scope.sourceFilter != null && !scope.sourceFilter.equalsIgnoreCase(sourceOf(r))) continue;
+      if (!matchesPeriod(r, scope)) continue;
+      if (scope.minWaitMinutes != null && waitMinutesOf(r) < scope.minWaitMinutes) continue;
+      if (!matchesStrikeRange(g, scope)) continue;
+      if (scope.roomNumberFilter != null
+          && !scope.roomNumberFilter.equalsIgnoreCase(r.getRoomNumber())) {
+        continue;
+      }
 
       matched.add(r);
     }
@@ -304,37 +430,56 @@ public class BookingReportController {
     return matched;
   }
 
+  private boolean matchesStrikeRange(Guest g, ReportScope scope) {
+    if (scope.minStrikes < 0 && scope.maxStrikes < 0) return true;
+
+    int strikes = (g != null) ? g.getStrikeCount() : 0;
+    if (scope.minStrikes >= 0 && strikes < scope.minStrikes) return false;
+    return scope.maxStrikes < 0 || strikes <= scope.maxStrikes;
+  }
+
+  private String sourceOf(Reservation r) {
+    return (r.getExpectedArrivalTime() != null) ? "ADVANCE" : "WALK-IN";
+  }
+
   private ListInterface<Reservation> sortReservations(
-      ListInterface<Reservation> source, String sortAttribute, String sortDirection) {
+      ListInterface<Reservation> source, ReportScope scope) {
 
     ListInterface<Reservation> sorted = new ArrayList<>();
     for (int i = 1; i <= source.getNumberOfEntries(); i++) {
       sorted.add(source.getEntry(i));
     }
 
-    boolean ascending = "ASCENDING".equalsIgnoreCase(sortDirection);
+    boolean ascending = "ASCENDING".equalsIgnoreCase(scope.sortDirection);
+    String attribute = scope.sortAttribute;
 
-    if ("RESERVATION ID".equalsIgnoreCase(sortAttribute)) {
+    if ("RESERVATION ID".equalsIgnoreCase(attribute)) {
       sorted.sort(
           (a, b) ->
               ascending
                   ? a.getReservationId().compareToIgnoreCase(b.getReservationId())
                   : b.getReservationId().compareToIgnoreCase(a.getReservationId()));
-    } else if ("ARRIVAL TIME".equalsIgnoreCase(sortAttribute)) {
+    } else if ("ARRIVAL TIME".equalsIgnoreCase(attribute)) {
       sorted.sort((a, b) -> ascending ? compareArrival(a, b) : compareArrival(b, a));
-    } else if ("GUEST NAME".equalsIgnoreCase(sortAttribute)) {
+    } else if ("GUEST NAME".equalsIgnoreCase(attribute)) {
       sorted.sort(
           (a, b) ->
               ascending
                   ? guestNameOf(a).compareToIgnoreCase(guestNameOf(b))
                   : guestNameOf(b).compareToIgnoreCase(guestNameOf(a)));
-    } else if ("ROOM TYPE".equalsIgnoreCase(sortAttribute)) {
+    } else if ("ROOM TYPE".equalsIgnoreCase(attribute)) {
       sorted.sort(
           (a, b) ->
               ascending
                   ? a.getRoomType().name().compareTo(b.getRoomType().name())
                   : b.getRoomType().name().compareTo(a.getRoomType().name()));
-    } else if ("STRIKE COUNT".equalsIgnoreCase(sortAttribute)) {
+    } else if ("BOOKING STATUS".equalsIgnoreCase(attribute)) {
+      sorted.sort(
+          (a, b) ->
+              ascending
+                  ? a.getStatus().name().compareTo(b.getStatus().name())
+                  : b.getStatus().name().compareTo(a.getStatus().name()));
+    } else if ("STRIKE COUNT".equalsIgnoreCase(attribute)) {
       sorted.sort(
           (a, b) ->
               ascending
@@ -349,6 +494,216 @@ public class BookingReportController {
     }
 
     return sorted;
+  }
+
+  // ================= TXT REPORT CONTENT =================
+
+  private String buildArrivalRegisterTxt(
+      ListInterface<Reservation> sorted,
+      String title,
+      String scopeLabel,
+      String sortLabel,
+      ReportScope scope) {
+
+    int matched = sorted.getNumberOfEntries();
+    int shown = exportedRowCount(matched, scope.recordLimit);
+
+    StringBuilder sb = new StringBuilder();
+    appendReportHeader(sb, title, scopeLabel, sortLabel, scope.groupBy, matched, shown);
+
+    if (shown == 0) {
+      appendSectionHeading(sb, "ARRIVALS");
+      sb.append("*** NO BOOKINGS MATCH THE CURRENT SCOPE ***").append(NEW_LINE);
+    } else {
+      appendGroupedRows(sb, sorted, shown, scope);
+      appendTruncationNote(sb, matched, scope.recordLimit);
+    }
+
+    sb.append(NEW_LINE);
+    appendSectionHeading(sb, "SUBTOTALS WITHIN SCOPE");
+    sb.append(
+        buildTxtTable(
+            new String[] {"Room Type", "In Scope", "In Line", "On Hold", "Checked In", "Closed"},
+            buildRoomTypeSubtotals(sorted)));
+
+    return sb.toString();
+  }
+
+  private String buildPerformanceReportTxt(
+      ListInterface<Reservation> sorted,
+      String title,
+      String scopeLabel,
+      String sortLabel,
+      ReportScope scope) {
+
+    int matched = sorted.getNumberOfEntries();
+    int shown = exportedRowCount(matched, scope.recordLimit);
+
+    StringBuilder sb = new StringBuilder();
+    appendReportHeader(sb, title, scopeLabel, sortLabel, scope.groupBy, matched, shown);
+
+    String[][] perType = buildPerformanceSummary(sorted);
+    String[][] summaryRows = new String[perType.length + 1][];
+    for (int i = 0; i < perType.length; i++) {
+      summaryRows[i] = perType[i];
+    }
+    summaryRows[perType.length] = buildOverallSummary(sorted);
+
+    appendSectionHeading(sb, "OPERATIONAL SUMMARY");
+    sb.append(
+        buildTxtTable(
+            new String[] {
+              "Room Type", "Arrivals", "Avg Wait", "Max Wait", "Served", "No-Shows", "No-Show Rate"
+            },
+            summaryRows));
+
+    sb.append(NEW_LINE);
+
+    if (shown == 0) {
+      appendSectionHeading(sb, "WORST WAITS IN SCOPE");
+      sb.append("*** NO BOOKINGS MATCH THE CURRENT SCOPE ***").append(NEW_LINE);
+      return sb.toString();
+    }
+
+    appendGroupedRows(sb, sorted, shown, scope);
+    appendTruncationNote(sb, matched, scope.recordLimit);
+
+    return sb.toString();
+  }
+
+  // Grouping splits the limited rows into one titled section per value, each with its own count.
+  private void appendGroupedRows(
+      StringBuilder sb, ListInterface<Reservation> sorted, int shown, ReportScope scope) {
+
+    String[] headers = selectedHeaders(scope);
+
+    if ("NO GROUPING".equalsIgnoreCase(scope.groupBy)) {
+      appendSectionHeading(sb, "BOOKINGS IN SCOPE");
+      sb.append(buildTxtTable(headers, buildRows(sorted, 1, shown, scope)));
+      return;
+    }
+
+    ListInterface<String> groups = distinctGroupKeys(sorted, shown, scope.groupBy);
+
+    for (int gi = 1; gi <= groups.getNumberOfEntries(); gi++) {
+      String key = groups.getEntry(gi);
+
+      ListInterface<Reservation> inGroup = new ArrayList<>();
+      for (int i = 1; i <= shown; i++) {
+        Reservation r = sorted.getEntry(i);
+        if (r != null && key.equals(groupKeyOf(r, scope.groupBy))) {
+          inGroup.add(r);
+        }
+      }
+
+      appendSectionHeading(
+          sb, scope.groupBy + ": " + key + "   (" + inGroup.getNumberOfEntries() + " row(s))");
+      sb.append(buildTxtTable(headers, buildRows(inGroup, 1, inGroup.getNumberOfEntries(), scope)));
+      sb.append(NEW_LINE);
+    }
+  }
+
+  private ListInterface<String> distinctGroupKeys(
+      ListInterface<Reservation> sorted, int shown, String groupBy) {
+
+    ListInterface<String> keys = new ArrayList<>();
+    for (int i = 1; i <= shown; i++) {
+      Reservation r = sorted.getEntry(i);
+      if (r == null) continue;
+
+      String key = groupKeyOf(r, groupBy);
+      if (!keys.contains(key)) {
+        keys.add(key);
+      }
+    }
+    return keys;
+  }
+
+  private String groupKeyOf(Reservation r, String groupBy) {
+    if ("ROOM TYPE".equalsIgnoreCase(groupBy)) return r.getRoomType().name();
+    if ("BOOKING STATUS".equalsIgnoreCase(groupBy)) return r.getStatus().name();
+
+    LocalDateTime stamp =
+        (r.getQueueArrivalTime() != null) ? r.getQueueArrivalTime() : r.getExpectedArrivalTime();
+    return (stamp == null)
+        ? "NO ARRIVAL DATE"
+        : stamp.toLocalDate().format(ConsoleUtil.DATE_FORMAT);
+  }
+
+  private String[] selectedHeaders(ReportScope scope) {
+    int count = 1;
+    for (boolean on : scope.columns) {
+      if (on) count++;
+    }
+
+    String[] headers = new String[count];
+    headers[0] = "No.";
+
+    int next = 1;
+    for (int i = 0; i < scope.columns.length; i++) {
+      if (scope.columns[i]) {
+        headers[next++] = COLUMN_NAMES[i];
+      }
+    }
+    return headers;
+  }
+
+  private String[][] buildRows(
+      ListInterface<Reservation> source, int from, int to, ReportScope scope) {
+
+    int count = Math.max(0, to - from + 1);
+    String[][] rows = new String[count][];
+
+    for (int i = from; i <= to; i++) {
+      Reservation r = source.getEntry(i);
+      Guest g = (r == null) ? null : guestRepo.findById(r.getGuestId());
+      rows[i - from] = buildRow(i - from + 1, r, g, scope);
+    }
+    return rows;
+  }
+
+  private String[] buildRow(int rowNumber, Reservation r, Guest g, ReportScope scope) {
+    String[] all = new String[COLUMN_NAMES.length];
+
+    if (r == null) {
+      for (int i = 0; i < all.length; i++) {
+        all[i] = "-";
+      }
+    } else {
+      all[0] = r.getReservationId();
+      all[1] = blankToDash(r.getConfirmationNumber());
+      all[2] = blankToDash(r.getGuestId());
+      all[3] = (g != null) ? g.getName() : "N/A";
+      all[4] = (g != null) ? blankToDash(g.getPhoneNumber()) : "-";
+      all[5] = r.getRoomType().name();
+      all[6] = blankToDash(r.getRoomNumber());
+      all[7] = r.getStatus().name();
+      all[8] = sourceOf(r);
+      all[9] = formatMinutes(waitMinutesOf(r));
+      all[10] = formatClock(arrivalStampOf(r));
+      all[11] = (r.getStayDays() != null) ? String.valueOf(r.getStayDays()) : "-";
+      all[12] = String.valueOf((g != null) ? g.getStrikeCount() : 0);
+    }
+
+    int count = 1;
+    for (boolean on : scope.columns) {
+      if (on) count++;
+    }
+
+    String[] row = new String[count];
+    row[0] = String.valueOf(rowNumber);
+
+    int next = 1;
+    for (int i = 0; i < scope.columns.length; i++) {
+      if (scope.columns[i]) {
+        row[next++] = all[i];
+      }
+    }
+    return row;
+  }
+
+  private LocalDateTime arrivalStampOf(Reservation r) {
+    return (r.getQueueArrivalTime() != null) ? r.getQueueArrivalTime() : r.getExpectedArrivalTime();
   }
 
   private String[][] buildRoomTypeSubtotals(ListInterface<Reservation> rows) {
@@ -447,138 +802,156 @@ public class BookingReportController {
     };
   }
 
-  // ================= TXT REPORT CONTENT (booking's own format) =================
-  // TxtExportUtil only writes the string it is handed, so the whole layout of the file is decided
-  // here. Both reports share the same shape: a scope header, then one or more titled sections,
-  // each section a column aligned table.
+  // ================= ROOM UTILISATION & FORECAST =================
 
-  private String buildArrivalRegisterTxt(
-      ListInterface<Reservation> sorted,
-      String title,
-      String scope,
-      String sortLabel,
-      int recordLimit) {
+  private void runUtilisationReport() {
+    LocalDate startDate = LocalDate.now();
+    int horizonDays = 14;
+    String roomTypeFilter = null;
 
-    int matched = sorted.getNumberOfEntries();
-    int shown = exportedRowCount(matched, recordLimit);
+    while (true) {
+      try {
+        standardReservationRepo.sweepLapsedHolds(roomRepo, guestRepo);
+
+        String command =
+            reportView.displayUtilisationPanel(
+                horizonDays, roomTypeFilter, startDate, countLiveBookings());
+
+        if ("B".equals(command)) {
+          return;
+        } else if ("R".equals(command)) {
+          startDate = LocalDate.now();
+          horizonDays = 14;
+          roomTypeFilter = null;
+        } else if ("X".equals(command)) {
+          String path =
+              TxtExportUtil.export(
+                  "booking/room_utilisation_forecast",
+                  buildUtilisationTxt(startDate, horizonDays, roomTypeFilter));
+
+          ConsoleUtil.GetMenuInputResult result =
+              reportView.showExportReceipt(
+                  UTILISATION_TITLE,
+                  startDate.format(ConsoleUtil.DATE_FORMAT)
+                      + " for "
+                      + horizonDays
+                      + " nights  |  "
+                      + ((roomTypeFilter == null) ? "All Room Types" : roomTypeFilter),
+                  "CALENDAR DATE (ASCENDING)",
+                  "NIGHT",
+                  horizonDays,
+                  horizonDays,
+                  path,
+                  false,
+                  false);
+
+          if ("B".equalsIgnoreCase(result.input)) return;
+        } else if ("1".equals(command)) {
+          startDate = reportView.promptStartDate(startDate);
+        } else if ("2".equals(command)) {
+          Integer picked = reportView.promptHorizon(horizonDays);
+          if (picked != null) horizonDays = picked;
+        } else if ("3".equals(command)) {
+          int picked = reportView.displayRoomTypeSubmenu(roomTypeFilter);
+          if (picked > 0) roomTypeFilter = roomTypeNameFor(picked);
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int countLiveBookings() {
+    ListInterface<Reservation> all = standardReservationRepo.getAllReservations();
+    int count = 0;
+    for (int i = 1; i <= all.getNumberOfEntries(); i++) {
+      Reservation r = all.getEntry(i);
+      if (r != null && r.getOccupancyStartDate() != null) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private String buildUtilisationTxt(LocalDate startDate, int horizonDays, String roomTypeFilter) {
+    Room.RoomType[] allTypes = Room.RoomType.values();
+
+    ListInterface<Room.RoomType> types = new ArrayList<>();
+    for (Room.RoomType type : allTypes) {
+      if (roomTypeFilter == null || roomTypeFilter.equalsIgnoreCase(type.name())) {
+        types.add(type);
+      }
+    }
 
     StringBuilder sb = new StringBuilder();
-    appendReportHeader(sb, title, scope, sortLabel, matched, shown);
-    appendSectionHeading(sb, "ARRIVALS BY ROOM TYPE");
+    sb.append(UTILISATION_TITLE).append(NEW_LINE);
+    appendRule(sb, '=', UTILISATION_TITLE.length());
+    sb.append("GENERATED : ").append(formatTimestamp(LocalDateTime.now())).append(NEW_LINE);
+    sb.append("FROM      : ").append(startDate.format(ConsoleUtil.DATE_FORMAT)).append(NEW_LINE);
+    sb.append("HORIZON   : ").append(horizonDays).append(" night(s)").append(NEW_LINE);
+    sb.append("ROOM TYPE : ")
+        .append((roomTypeFilter == null) ? "All room types" : roomTypeFilter)
+        .append(NEW_LINE)
+        .append(NEW_LINE);
 
-    if (shown == 0) {
-      sb.append("*** NO BOOKINGS MATCH THE CURRENT SCOPE ***").append(NEW_LINE);
-    } else {
-      String[] headers = {
-        "No.", "Res ID", "Guest Name", "Room Type", "Status", "Waited", "Arrived"
-      };
-      String[][] rows = new String[shown][];
+    for (int t = 1; t <= types.getNumberOfEntries(); t++) {
+      Room.RoomType type = types.getEntry(t);
+      int total = standardReservationRepo.getTotalRoomsOfType(roomRepo, type);
 
-      for (int i = 1; i <= shown; i++) {
-        Reservation r = sorted.getEntry(i);
-        Guest g = (r == null) ? null : guestRepo.findById(r.getGuestId());
+      appendSectionHeading(sb, type.name() + "   (" + total + " room(s) in the house)");
 
-        rows[i - 1] =
-            (r == null)
-                ? new String[] {String.valueOf(i), "-", "-", "-", "-", "-", "-"}
-                : new String[] {
-                  String.valueOf(i),
-                  r.getReservationId(),
-                  (g != null) ? g.getName() : "N/A",
-                  r.getRoomType().name(),
-                  r.getStatus().name(),
-                  formatMinutes(waitMinutesOf(r)),
-                  formatClock(r.getQueueArrivalTime())
-                };
+      String[][] rows = new String[horizonDays][];
+      for (int d = 0; d < horizonDays; d++) {
+        LocalDate date = startDate.plusDays(d);
+        int committed = standardReservationRepo.countCommittedOn(type, date);
+        int free = Math.max(0, total - committed);
+        String occupancy =
+            (total == 0) ? "-" : String.format("%.0f%%", (committed * 100.0) / total);
+
+        rows[d] =
+            new String[] {
+              date.format(ConsoleUtil.DATE_FORMAT),
+              date.getDayOfWeek().name().substring(0, 3),
+              String.valueOf(total),
+              String.valueOf(committed),
+              String.valueOf(free),
+              occupancy,
+              (free == 0) ? "FULLY BOOKED" : ""
+            };
       }
 
-      sb.append(buildTxtTable(headers, rows));
-      appendTruncationNote(sb, matched, recordLimit);
+      sb.append(
+          buildTxtTable(
+              new String[] {"Date", "Day", "Rooms", "Committed", "Free", "Occupancy", "Note"},
+              rows));
+      sb.append(NEW_LINE);
     }
 
-    sb.append(NEW_LINE);
-    appendSectionHeading(sb, "SUBTOTALS WITHIN SCOPE");
-    sb.append(
-        buildTxtTable(
-            new String[] {"Room Type", "In Scope", "In Line", "On Hold", "Checked In", "Closed"},
-            buildRoomTypeSubtotals(sorted)));
+    sb.append("Committed counts advance bookings, guests still in their rooms and rooms currently")
+        .append(NEW_LINE)
+        .append("on hold, across every module. Checkout day is a turnover day and is counted free.")
+        .append(NEW_LINE);
 
     return sb.toString();
   }
 
-  private String buildPerformanceReportTxt(
-      ListInterface<Reservation> sorted,
-      String title,
-      String scope,
-      String sortLabel,
-      int recordLimit) {
-
-    int matched = sorted.getNumberOfEntries();
-    int shown = exportedRowCount(matched, recordLimit);
-
-    StringBuilder sb = new StringBuilder();
-    appendReportHeader(sb, title, scope, sortLabel, matched, shown);
-
-    // The per type rows and the ALL TYPES row share one table, so the overall figures sit directly
-    // underneath the types they aggregate.
-    String[][] perType = buildPerformanceSummary(sorted);
-    String[][] summaryRows = new String[perType.length + 1][];
-    for (int i = 0; i < perType.length; i++) {
-      summaryRows[i] = perType[i];
-    }
-    summaryRows[perType.length] = buildOverallSummary(sorted);
-
-    appendSectionHeading(sb, "OPERATIONAL SUMMARY");
-    sb.append(
-        buildTxtTable(
-            new String[] {
-              "Room Type", "Arrivals", "Avg Wait", "Max Wait", "Served", "No-Shows", "No-Show Rate"
-            },
-            summaryRows));
-
-    sb.append(NEW_LINE);
-    appendSectionHeading(sb, "WORST WAITS IN SCOPE");
-
-    if (shown == 0) {
-      sb.append("*** NO BOOKINGS MATCH THE CURRENT SCOPE ***").append(NEW_LINE);
-      return sb.toString();
-    }
-
-    String[] headers = {"No.", "Res ID", "Guest Name", "Room Type", "Outcome", "Waited", "Strikes"};
-    String[][] rows = new String[shown][];
-
-    for (int i = 1; i <= shown; i++) {
-      Reservation r = sorted.getEntry(i);
-      Guest g = (r == null) ? null : guestRepo.findById(r.getGuestId());
-
-      rows[i - 1] =
-          (r == null)
-              ? new String[] {String.valueOf(i), "-", "-", "-", "-", "-", "-"}
-              : new String[] {
-                String.valueOf(i),
-                r.getReservationId(),
-                (g != null) ? g.getName() : "N/A",
-                r.getRoomType().name(),
-                r.getStatus().name(),
-                formatMinutes(waitMinutesOf(r)),
-                String.valueOf((g != null) ? g.getStrikeCount() : 0)
-              };
-    }
-
-    sb.append(buildTxtTable(headers, rows));
-    appendTruncationNote(sb, matched, recordLimit);
-
-    return sb.toString();
-  }
+  // ================= SHARED TXT LAYOUT =================
 
   private void appendReportHeader(
-      StringBuilder sb, String title, String scope, String sortLabel, int matched, int exported) {
+      StringBuilder sb,
+      String title,
+      String scopeLabel,
+      String sortLabel,
+      String groupLabel,
+      int matched,
+      int exported) {
 
     sb.append(title).append(NEW_LINE);
     appendRule(sb, '=', title.length());
     sb.append("GENERATED : ").append(formatTimestamp(LocalDateTime.now())).append(NEW_LINE);
-    sb.append("SCOPE     : ").append(scope).append(NEW_LINE);
+    sb.append("SCOPE     : ").append(scopeLabel).append(NEW_LINE);
     sb.append("SORTED BY : ").append(sortLabel).append(NEW_LINE);
+    sb.append("GROUPED BY: ").append(groupLabel).append(NEW_LINE);
     sb.append("RECORDS   : ")
         .append(matched)
         .append(" matching, ")
@@ -616,8 +989,7 @@ public class BookingReportController {
     return (recordLimit == 0) ? matched : Math.min(recordLimit, matched);
   }
 
-  // Pads every column to the widest value it holds so the file lines up in a plain text editor,
-  // with a dashed divider under the header row.
+  // Pads every column to the widest value it holds so the file lines up in a plain text editor.
   private String buildTxtTable(String[] headers, String[][] rows) {
     final String gap = "   ";
     int columnCount = (headers == null) ? 0 : headers.length;
@@ -674,78 +1046,165 @@ public class BookingReportController {
     return sb.toString();
   }
 
-  private String formatClock(LocalDateTime dateTime) {
-    if (dateTime == null) return "-";
-    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
+  // ================= LABELS, FILTERS AND HELPERS =================
+
+  private String searchLabel(ReportScope scope) {
+    if (scope.searchTerm == null) return "None";
+    return scope.searchField
+        + " "
+        + (scope.exactMatch ? "EXACT" : "CONTAINS")
+        + " \""
+        + scope.searchTerm
+        + "\"";
   }
 
-  private String formatTimestamp(LocalDateTime dateTime) {
-    if (dateTime == null) return "N/A";
-    return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
+  private String periodLabel(ReportScope scope) {
+    if (!"CUSTOM".equalsIgnoreCase(scope.periodFilter)) return scope.periodFilter;
+
+    String from =
+        (scope.fromDate == null) ? "open" : scope.fromDate.format(ConsoleUtil.DATE_FORMAT);
+    String to = (scope.toDate == null) ? "open" : scope.toDate.format(ConsoleUtil.DATE_FORMAT);
+    return from + " .. " + to;
   }
 
-  private String buildScopeLabel(
-      String search,
-      String roomTypeFilter,
-      String statusFilter,
-      String tierFilter,
-      String periodFilter,
-      Integer minWaitMinutes) {
+  private String strikeLabel(ReportScope scope) {
+    if (scope.minStrikes < 0 && scope.maxStrikes < 0) return "Any";
+    if (scope.minStrikes >= 0 && scope.maxStrikes >= 0) {
+      return scope.minStrikes + " to " + scope.maxStrikes;
+    }
+    return (scope.minStrikes >= 0) ? scope.minStrikes + " or more" : scope.maxStrikes + " or fewer";
+  }
 
+  private String columnsLabel(ReportScope scope) {
+    int chosen = 0;
+    for (boolean on : scope.columns) {
+      if (on) chosen++;
+    }
+    return chosen + " of " + COLUMN_NAMES.length + " shown";
+  }
+
+  private String buildScopeLabel(ReportScope scope) {
     StringBuilder label = new StringBuilder();
-    label.append(periodFilter);
-    label.append("  |  ").append(roomTypeFilter == null ? "All Room Types" : roomTypeFilter);
-    label.append("  |  ").append(tierFilter == null ? "All Tiers" : tierFilter);
+    label.append(periodLabel(scope));
+    label
+        .append("  |  ")
+        .append(scope.roomTypeFilter == null ? "All Room Types" : scope.roomTypeFilter);
 
-    if (statusFilter != null) {
-      label.append("  |  Status ").append(statusFilter);
+    if (scope.statusFilter != null) {
+      label.append("  |  Status ").append(scope.statusFilter);
     }
-    if (minWaitMinutes != null) {
-      label.append("  |  Waited >= ").append(minWaitMinutes).append("m");
+    if (scope.sourceFilter != null) {
+      label.append("  |  Source ").append(scope.sourceFilter);
     }
-    if (search != null) {
-      label.append("  |  Search \"").append(search).append("\"");
+    if (scope.minWaitMinutes != null) {
+      label.append("  |  Waited >= ").append(scope.minWaitMinutes).append("m");
+    }
+    if (scope.minStrikes >= 0 || scope.maxStrikes >= 0) {
+      label.append("  |  Strikes ").append(strikeLabel(scope));
+    }
+    if (scope.roomNumberFilter != null) {
+      label.append("  |  Room ").append(scope.roomNumberFilter);
+    }
+    if (scope.searchTerm != null) {
+      label.append("  |  ").append(searchLabel(scope));
     }
 
     return label.toString();
   }
 
-  private boolean matchesSearch(Reservation r, Guest g, String search) {
-    if (search == null || search.trim().isEmpty()) return true;
+  private boolean matchesSearch(Reservation r, Guest g, ReportScope scope) {
+    if (scope.searchTerm == null || scope.searchTerm.trim().isEmpty()) return true;
 
-    String query = search.trim().toLowerCase();
-    boolean matchesId =
-        r.getReservationId() != null && r.getReservationId().toLowerCase().contains(query);
-    boolean matchesConfirmation =
-        r.getConfirmationNumber() != null
-            && r.getConfirmationNumber().toLowerCase().contains(query);
-    boolean matchesName =
-        g != null && g.getName() != null && g.getName().toLowerCase().contains(query);
-    boolean matchesPhone =
-        g != null && g.getPhoneNumber() != null && g.getPhoneNumber().toLowerCase().contains(query);
+    String query = scope.searchTerm.trim().toLowerCase();
+    boolean exact = scope.exactMatch;
+    String field = scope.searchField;
 
-    return matchesId || matchesConfirmation || matchesName || matchesPhone;
+    if (FIELD_GUEST_ID.equals(field)) return hit(g == null ? null : g.getGuestId(), query, exact);
+    if (FIELD_NAME.equals(field)) return hit(g == null ? null : g.getName(), query, exact);
+    if (FIELD_IC.equals(field)) return hit(g == null ? null : g.getIcNumber(), query, exact);
+    if (FIELD_PASSPORT.equals(field)) {
+      return hit(g == null ? null : g.getPassportNumber(), query, exact);
+    }
+    if (FIELD_PHONE.equals(field)) return hit(g == null ? null : g.getPhoneNumber(), query, exact);
+    if (FIELD_EMAIL.equals(field)) return hit(g == null ? null : g.getEmail(), query, exact);
+    if (FIELD_RES_ID.equals(field)) return hit(r.getReservationId(), query, exact);
+    if (FIELD_CODE.equals(field)) return hit(r.getConfirmationNumber(), query, exact);
+
+    return hit(r.getReservationId(), query, exact)
+        || hit(r.getConfirmationNumber(), query, exact)
+        || (g != null
+            && (hit(g.getGuestId(), query, exact)
+                || hit(g.getName(), query, exact)
+                || hit(g.getIcNumber(), query, exact)
+                || hit(g.getPassportNumber(), query, exact)
+                || hit(g.getPhoneNumber(), query, exact)
+                || hit(g.getEmail(), query, exact)));
   }
 
-  private boolean matchesTier(Member m, String tierFilter) {
-    if (tierFilter == null) return true;
-
-    String actual = (m != null && m.getTier() != null) ? m.getTier().name() : "NON-MEMBER";
-    return tierFilter.equalsIgnoreCase(actual);
+  private boolean hit(String value, String query, boolean exactMatch) {
+    if (value == null) return false;
+    String candidate = value.toLowerCase();
+    return exactMatch ? candidate.equals(query) : candidate.contains(query);
   }
 
-  private boolean matchesPeriod(Reservation r, String periodFilter) {
-    if ("ALL TIME".equalsIgnoreCase(periodFilter)) return true;
+  private boolean matchesPeriod(Reservation r, ReportScope scope) {
+    String period = scope.periodFilter;
+    if ("ALL TIME".equalsIgnoreCase(period)) return true;
 
-    LocalDateTime stamp =
-        (r.getQueueArrivalTime() != null) ? r.getQueueArrivalTime() : r.getReservationTime();
+    LocalDateTime stamp = arrivalStampOf(r);
+    if (stamp == null) stamp = r.getReservationTime();
     if (stamp == null) return false;
 
+    LocalDate date = stamp.toLocalDate();
     LocalDate today = LocalDate.now();
-    if ("TODAY".equalsIgnoreCase(periodFilter)) {
-      return stamp.toLocalDate().isEqual(today);
+
+    if ("CUSTOM".equalsIgnoreCase(period)) {
+      if (scope.fromDate != null && date.isBefore(scope.fromDate)) return false;
+      return scope.toDate == null || !date.isAfter(scope.toDate);
     }
-    return !stamp.toLocalDate().isBefore(today.minusDays(6));
+    if ("TODAY".equalsIgnoreCase(period)) return date.isEqual(today);
+    if ("YESTERDAY".equalsIgnoreCase(period)) return date.isEqual(today.minusDays(1));
+    if ("LAST 30 DAYS".equalsIgnoreCase(period)) return !date.isBefore(today.minusDays(29));
+    return !date.isBefore(today.minusDays(6));
+  }
+
+  private String fieldNameFor(int choice) {
+    if (choice == 1) return FIELD_NAME;
+    if (choice == 2) return FIELD_GUEST_ID;
+    if (choice == 3) return FIELD_IC;
+    if (choice == 4) return FIELD_PASSPORT;
+    if (choice == 5) return FIELD_PHONE;
+    if (choice == 6) return FIELD_EMAIL;
+    if (choice == 7) return FIELD_RES_ID;
+    if (choice == 8) return FIELD_CODE;
+    return FIELD_ALL;
+  }
+
+  private String roomTypeNameFor(int choice) {
+    if (choice == 1) return "LUXURY";
+    if (choice == 2) return "SUITE";
+    if (choice == 3) return "STANDARD";
+    return null;
+  }
+
+  private String statusNameFor(int choice) {
+    if (choice == 1) return "RESERVED";
+    if (choice == 2) return "WAITING";
+    if (choice == 3) return "ALLOCATED";
+    if (choice == 4) return "CHECKED_IN";
+    if (choice == 5) return "CHECKED_OUT";
+    if (choice == 6) return "NO_SHOW";
+    if (choice == 7) return "CANCELLED";
+    return null;
+  }
+
+  private String sortAttributeFor(int choice, boolean isRegister) {
+    if (choice == 1) return "WAIT DURATION";
+    if (choice == 2) return "ARRIVAL TIME";
+    if (choice == 3) return "GUEST NAME";
+    if (choice == 4) return "ROOM TYPE";
+    if (choice == 5) return "BOOKING STATUS";
+    return isRegister ? "RESERVATION ID" : "STRIKE COUNT";
   }
 
   private long waitMinutesOf(Reservation r) {
@@ -756,8 +1215,8 @@ public class BookingReportController {
   }
 
   private int compareArrival(Reservation a, Reservation b) {
-    LocalDateTime first = a.getQueueArrivalTime();
-    LocalDateTime second = b.getQueueArrivalTime();
+    LocalDateTime first = arrivalStampOf(a);
+    LocalDateTime second = arrivalStampOf(b);
     if (first == null && second == null) return 0;
     if (first == null) return -1;
     if (second == null) return 1;
@@ -774,88 +1233,23 @@ public class BookingReportController {
     return (g != null) ? g.getStrikeCount() : 0;
   }
 
+  private String blankToDash(String value) {
+    return (value == null || value.isEmpty()) ? "-" : value;
+  }
+
   private String formatMinutes(long minutes) {
     if (minutes < 0) return "-";
     if (minutes < 60) return minutes + "m";
     return (minutes / 60) + "h " + String.format("%02dm", minutes % 60);
   }
 
-  private String handleRoomTypeSubmenu(String current) {
-    while (true) {
-      int choice = reportView.displayRoomTypeSubmenu(current);
-      if (choice == 1) return "LUXURY";
-      if (choice == 2) return "SUITE";
-      if (choice == 3) return "STANDARD";
-      if (choice == 4) return null;
-      if (choice == 5) return current;
-    }
+  private String formatClock(LocalDateTime dateTime) {
+    if (dateTime == null) return "-";
+    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
   }
 
-  private String handleStatusSubmenu(String current) {
-    while (true) {
-      int choice = reportView.displayStatusSubmenu(current);
-      if (choice == 1) return "RESERVED";
-      if (choice == 2) return "WAITING";
-      if (choice == 3) return "ALLOCATED";
-      if (choice == 4) return "CHECKED_IN";
-      if (choice == 5) return "NO_SHOW";
-      if (choice == 6) return "CANCELLED";
-      if (choice == 7) return null;
-      if (choice == 8) return current;
-    }
-  }
-
-  private String handleTierSubmenu(String current) {
-    while (true) {
-      int choice = reportView.displayTierSubmenu(current);
-      if (choice == 1) return "DIAMOND";
-      if (choice == 2) return "GOLD";
-      if (choice == 3) return "SILVER";
-      if (choice == 4) return "NON-MEMBER";
-      if (choice == 5) return null;
-      if (choice == 6) return current;
-    }
-  }
-
-  private String handlePeriodSubmenu(String current) {
-    while (true) {
-      int choice = reportView.displayPeriodSubmenu(current);
-      if (choice == 1) return "TODAY";
-      if (choice == 2) return "LAST 7 DAYS";
-      if (choice == 3) return "ALL TIME";
-      if (choice == 4) return current;
-    }
-  }
-
-  private String handleSortAttributeSubmenu(String current, boolean isRegister) {
-    while (true) {
-      int choice = reportView.displaySortAttributeSubmenu(current, isRegister);
-      if (choice == 1) return "WAIT DURATION";
-      if (choice == 2) return "ARRIVAL TIME";
-      if (choice == 3) return "GUEST NAME";
-      if (choice == 4) return "ROOM TYPE";
-      if (choice == 5) return isRegister ? "RESERVATION ID" : "STRIKE COUNT";
-      if (choice == 6) return current;
-    }
-  }
-
-  private String handleSortDirectionSubmenu(String current) {
-    while (true) {
-      int choice = reportView.displaySortDirectionSubmenu(current);
-      if (choice == 1) return "DESCENDING";
-      if (choice == 2) return "ASCENDING";
-      if (choice == 3) return current;
-    }
-  }
-
-  private int handleRecordLimitSubmenu(int current) {
-    while (true) {
-      int choice = reportView.displayRecordLimitSubmenu(current);
-      if (choice == 1) return 5;
-      if (choice == 2) return 10;
-      if (choice == 3) return 25;
-      if (choice == 4) return 0;
-      if (choice == 5) return current;
-    }
+  private String formatTimestamp(LocalDateTime dateTime) {
+    if (dateTime == null) return "N/A";
+    return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
   }
 }

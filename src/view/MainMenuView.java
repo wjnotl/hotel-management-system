@@ -41,7 +41,7 @@ public class MainMenuView {
     displayPrettyLogo();
     ConsoleUtil.printTitleBox("RESORT MANAGEMENT SYSTEM", 54);
 
-    System.out.println("1. Standard Booking & Walk-In");
+    System.out.println("1. Walk-In & Booking");
     System.out.println("2. VIP Priority Room Allocation");
     System.out.println("3. Housekeeping & Task Logging");
     System.out.println("4. Front-Desk Search & Services");

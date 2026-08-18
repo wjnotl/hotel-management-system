@@ -10,6 +10,7 @@ import entity.Room;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import repo.BillingRepo;
+import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.HousekeepingStaffRepo;
 import repo.MemberRepo;
@@ -33,7 +34,9 @@ public class DatabaseSeeder {
     BillingRepo billingRepo = new BillingRepo();
     HousekeepingStaffRepo staffRepo = new HousekeepingStaffRepo();
     VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
-    StandardReservationRepo standardRepo = new StandardReservationRepo(reservationRepo);
+    BookingSettingsRepo bookingSettingsRepo = new BookingSettingsRepo();
+    StandardReservationRepo standardRepo =
+        new StandardReservationRepo(reservationRepo, bookingSettingsRepo);
 
     if (guestRepo.getGuestList().isEmpty()) {
       System.out.println("Seeding expanded mock database...");
