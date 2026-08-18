@@ -244,10 +244,10 @@ public class ManageRoomStatusController {
 
     // Target room → OCCUPIED
     Room.Status targetPrev = targetRoom.getStatus();
-    targetRoom.setStatus(Room.Status.OCCUPIED);
+    targetRoom.setIsOccupied(true);
     roomRepo.updateRoom(targetRoom);
     roomStatusHistoryRepo.recordStatusChange(
-        targetRoom.getRoomNumber(), targetPrev, Room.Status.OCCUPIED);
+        targetRoom.getRoomNumber(), targetPrev, targetRoom.getStatus());
 
     linked.setRoomNumber(targetRoom.getRoomNumber());
     reservationRepo.updateReservation(linked);
@@ -334,7 +334,7 @@ public class ManageRoomStatusController {
   // =========================================================================
 
   private void handleMarkOccupied(Room room) {
-    if (room.getStatus() == Room.Status.OCCUPIED) {
+    if (room.getIsOccupied()) {
       ConsoleUtil.printError("Room is already OCCUPIED!");
       return;
     }
@@ -343,9 +343,9 @@ public class ManageRoomStatusController {
             "Mark Room " + room.getRoomNumber() + " as OCCUPIED (manual override)?");
     if (!confirm) return;
     Room.Status prev = room.getStatus();
-    room.setStatus(Room.Status.OCCUPIED);
+    room.setIsOccupied(true);
     roomRepo.updateRoom(room);
-    roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), prev, Room.Status.OCCUPIED);
+    roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), prev, room.getStatus());
     roomStatusView.displayStatusChangeSuccess(
         room.getRoomNumber(), room.getRoomType().name(), "OCCUPIED");
   }
