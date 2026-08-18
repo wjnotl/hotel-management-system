@@ -52,6 +52,18 @@ public class Room implements Serializable {
     return isOccupied;
   }
 
+  public void setOccupied(boolean isOccupied) {
+    this.isOccupied = isOccupied;
+  }
+
+  public LocalDateTime getDirtyTime() {
+    return dirtyTime;
+  }
+
+  public void setDirtyTime(LocalDateTime dirtyTime) {
+    this.dirtyTime = dirtyTime;
+  }
+
   public void setRoomNumber(String roomNumber) {
     this.roomNumber = roomNumber;
   }
@@ -84,15 +96,12 @@ public class Room implements Serializable {
   @Override
   public String toString() {
     return "Room{"
-        + "roomNumber='"
-        + roomNumber
-        + "'"
-        + ", roomType="
-        + roomType
-        + ", status="
-        + status
-        + ", price="
-        + price
+        + "roomNumber='" + roomNumber + "'"
+        + ", roomType=" + roomType
+        + ", status=" + status
+        + ", price=" + price
+        + ", isOccupied=" + isOccupied
+        + ", dirtyTime=" + dirtyTime
         + "}";
   }
 }
