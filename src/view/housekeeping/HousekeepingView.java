@@ -165,10 +165,9 @@ public class HousekeepingView {
     ConsoleUtil.printTitleBox("SELECT TASK TYPE");
     System.out.println(" 1. Standard Clean");
     System.out.println(" 2. Deep Clean");
-    System.out.println(" 3. Turnover");
-    System.out.println(" 4. Maintenance Check\n");
+    System.out.println(" 3. Maintenance Check\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
   // --- FILTER SUBMENUS WITH EXITS ---
@@ -220,12 +219,11 @@ public class HousekeepingView {
         " Current Selected Type: [ " + (currentType == null ? "ALL" : currentType) + " ]\n");
     System.out.println(" 1. Filter: Standard Clean");
     System.out.println(" 2. Filter: Deep Clean");
-    System.out.println(" 3. Filter: Turnover");
-    System.out.println(" 4. Filter: Maintenance Check");
-    System.out.println(" 5. Clear Task Type Filter (Show All)");
-    System.out.println(" 6. Back to Filter Management\n");
+    System.out.println(" 3. Filter: Maintenance Check");
+    System.out.println(" 4. Clear Task Type Filter (Show All)");
+    System.out.println(" 5. Back to Filter Management\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
   public int displayStatusSubmenu(String currentStatus) {
@@ -680,10 +678,9 @@ public class HousekeepingView {
     System.out.println(" 2. Undo Last Status Change");
     System.out.println(" 3. View Status History");
     System.out.println(" 4. Flag Room for Maintenance");
-    System.out.println(" 5. Request Supervisor Inspection");
-    System.out.println(" 6. Cancel Action and Return\n");
+    System.out.println(" 5. Cancel Action and Return\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
   public int promptNewStatusInput() {
@@ -757,8 +754,6 @@ public class HousekeepingView {
     System.out.println(
         "   DEEP_CLEAN        : " + (settings.isQueueJumpDeepClean() ? "Allowed" : "Not Allowed"));
     System.out.println(
-        "   TURNOVER          : " + (settings.isQueueJumpTurnover() ? "Allowed" : "Not Allowed"));
-    System.out.println(
         "   MAINTENANCE_CHECK : "
             + (settings.isQueueJumpMaintenanceCheck() ? "Allowed" : "Not Allowed"));
     System.out.println("------------------------------------------------------");
@@ -805,18 +800,13 @@ public class HousekeepingView {
             "Allow DEEP_CLEAN to jump the queue? (currently "
                 + (settings.isQueueJumpDeepClean() ? "Allowed" : "Not Allowed")
                 + ")");
-    boolean turnover =
-        ConsoleUtil.showConfirmMessage(
-            "Allow TURNOVER to jump the queue? (currently "
-                + (settings.isQueueJumpTurnover() ? "Allowed" : "Not Allowed")
-                + ")");
     boolean maintenanceCheck =
         ConsoleUtil.showConfirmMessage(
             "Allow MAINTENANCE_CHECK to jump the queue? (currently "
                 + (settings.isQueueJumpMaintenanceCheck() ? "Allowed" : "Not Allowed")
                 + ")");
 
-    return new boolean[] {standardClean, deepClean, turnover, maintenanceCheck};
+    return new boolean[] {standardClean, deepClean, maintenanceCheck};
   }
 
   public int displayStaffConfigMenu(HousekeepingSettings settings) {

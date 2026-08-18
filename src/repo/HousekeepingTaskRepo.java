@@ -172,6 +172,24 @@ public class HousekeepingTaskRepo {
     return "T-" + (maxId + 1);
   }
 
+  // True if this room already has a task sitting PENDING/ASSIGNED/IN_PROGRESS, regardless of
+  // type. Used to block duplicate task creation — both from the task board's "Add Task" and
+  // from any other module that flags a room dirty and needs to auto-queue a task for it.
+  public boolean hasActiveTask(String roomNumber) {
+    if (roomNumber == null || taskList == null) return false;
+    for (int i = 1; i <= taskList.getNumberOfEntries(); i++) {
+      HousekeepingTask t = taskList.getEntry(i);
+      if (t == null || !roomNumber.equalsIgnoreCase(t.getRoomNumber())) continue;
+
+      boolean isActive =
+          t.getStatus() == HousekeepingTask.Status.PENDING
+              || t.getStatus() == HousekeepingTask.Status.ASSIGNED
+              || t.getStatus() == HousekeepingTask.Status.IN_PROGRESS;
+      if (isActive) return true;
+    }
+    return false;
+  }
+
   public ListInterface<HousekeepingTask> getTaskList() {
     return taskList;
   }

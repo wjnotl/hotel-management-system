@@ -231,7 +231,7 @@ public class ManageReservationController {
         new HousekeepingTask(
             housekeepingTaskRepo.generateTaskId(),
             billing.getRoomNumber(),
-            HousekeepingTask.TaskType.TURNOVER,
+            HousekeepingTask.TaskType.DEEP_CLEAN,
             HousekeepingTask.Status.PENDING,
             null,
             false,

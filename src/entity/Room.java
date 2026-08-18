@@ -1,16 +1,14 @@
 package entity;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 public class Room implements Serializable {
   private static final long serialVersionUID = 1L;
 
   public static enum Status {
     DIRTY,
-    CLEANING,
-    INSPECTED,
     VACANT_CLEAN,
-    OCCUPIED
   }
 
   public static enum RoomType {
@@ -19,10 +17,13 @@ public class Room implements Serializable {
     STANDARD
   }
 
+  private boolean isOccupied;
+
   private String roomNumber; // Room designation (e.g., "801")
   private RoomType roomType; // Category: LUXURY, SUITE, STANDARD
   private Status status; // Operational cleaning/occupancy state
   private double price; // Room price per night (RM), stored on the room itself
+  private LocalDateTime dirtyTime;
 
   public Room(String roomNumber, RoomType roomType, Status status, double price) {
     this.roomNumber = roomNumber;
@@ -45,6 +46,10 @@ public class Room implements Serializable {
 
   public Status getStatus() {
     return status;
+  }
+
+  public boolean isOccupied() {
+    return isOccupied;
   }
 
   public void setRoomNumber(String roomNumber) {

@@ -6,9 +6,12 @@ import adt.LinkedList;
 import adt.LinkedStack;
 import adt.ListInterface;
 import entity.Guest;
+import entity.HousekeepingTask;
 import entity.Reservation;
 import entity.Room;
+import java.time.LocalDateTime;
 import repo.GuestRepo;
+import repo.HousekeepingTaskRepo;
 import repo.ReservationRepo;
 import repo.RoomRepo;
 import repo.RoomStatusHistoryRepo;
@@ -24,16 +27,35 @@ public class ManageRoomStatusController {
   private final RoomStatusHistoryRepo roomStatusHistoryRepo;
   private final ReservationRepo reservationRepo;
   private final GuestRepo guestRepo;
+  private final HousekeepingTaskRepo housekeepingTaskRepo;
 
   public ManageRoomStatusController(
       RoomRepo roomRepo,
       ReservationRepo reservationRepo,
       GuestRepo guestRepo,
-      RoomStatusHistoryRepo roomStatusHistoryRepo) {
+      RoomStatusHistoryRepo roomStatusHistoryRepo,
+      HousekeepingTaskRepo housekeepingTaskRepo) {
     this.roomRepo = roomRepo;
     this.reservationRepo = reservationRepo;
     this.guestRepo = guestRepo;
     this.roomStatusHistoryRepo = roomStatusHistoryRepo;
+    this.housekeepingTaskRepo = housekeepingTaskRepo;
+  }
+
+  // Queues a task for a room that just went DIRTY outside of Housekeeping's own Add Task flow —
+  // e.g. front desk manually marking a room dirty, or vacating a room during a room change.
+  // No-ops if the room already has an active task, so this can never create a duplicate.
+  private void autoQueueCleaningTask(String roomNumber, HousekeepingTask.TaskType taskType) {
+    if (housekeepingTaskRepo == null || housekeepingTaskRepo.hasActiveTask(roomNumber)) return;
+    housekeepingTaskRepo.enqueueTask(
+        new HousekeepingTask(
+            housekeepingTaskRepo.generateTaskId(),
+            roomNumber,
+            taskType,
+            HousekeepingTask.Status.PENDING,
+            null,
+            false,
+            LocalDateTime.now()));
   }
 
   // =========================================================================
@@ -218,6 +240,7 @@ public class ManageRoomStatusController {
     room.setStatus(Room.Status.DIRTY);
     roomRepo.updateRoom(room);
     roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), oldPrev, Room.Status.DIRTY);
+    autoQueueCleaningTask(room.getRoomNumber(), HousekeepingTask.TaskType.DEEP_CLEAN);
 
     // Target room → OCCUPIED
     Room.Status targetPrev = targetRoom.getStatus();
@@ -344,6 +367,7 @@ public class ManageRoomStatusController {
     room.setStatus(Room.Status.DIRTY);
     roomRepo.updateRoom(room);
     roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), prev, Room.Status.DIRTY);
+    autoQueueCleaningTask(room.getRoomNumber(), HousekeepingTask.TaskType.STANDARD_CLEAN);
     roomStatusView.displayStatusChangeSuccess(
         room.getRoomNumber(), room.getRoomType().name(), "DIRTY (Pending Housekeeping)");
   }

@@ -230,10 +230,9 @@ public class HousekeepingReportController {
             reportView.displayTaskTypeFilterSubmenu(current == null ? "ALL" : current.name());
         if (choice == 1) return HousekeepingTask.TaskType.STANDARD_CLEAN;
         if (choice == 2) return HousekeepingTask.TaskType.DEEP_CLEAN;
-        if (choice == 3) return HousekeepingTask.TaskType.TURNOVER;
-        if (choice == 4) return HousekeepingTask.TaskType.MAINTENANCE_CHECK;
-        if (choice == 5) return null;
-        if (choice == 6) return current;
+        if (choice == 3) return HousekeepingTask.TaskType.MAINTENANCE_CHECK;
+        if (choice == 4) return null;
+        if (choice == 5) return current;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -334,8 +333,7 @@ public class HousekeepingReportController {
       // --- Cleaning time (only cleaning-type tasks with a full start->complete pair) ---
       boolean isCleaningType =
           t.getTaskType() == HousekeepingTask.TaskType.STANDARD_CLEAN
-              || t.getTaskType() == HousekeepingTask.TaskType.DEEP_CLEAN
-              || t.getTaskType() == HousekeepingTask.TaskType.TURNOVER;
+              || t.getTaskType() == HousekeepingTask.TaskType.DEEP_CLEAN;
 
       if (isCleaningType && t.getStartedAt() != null && t.getCompletedAt() != null) {
         double minutes = Duration.between(t.getStartedAt(), t.getCompletedAt()).toMinutes();
