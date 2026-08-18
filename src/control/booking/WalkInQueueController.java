@@ -108,12 +108,13 @@ public class WalkInQueueController {
 
         ConsoleUtil.GetMenuInputResult result =
             walkInQueueView.renderQueueScreen(
-                queue,
-                lineRows,
-                holds,
-                guestRepo.getGuestList(),
+                buildLineRowDTO(lineRows, queue),
+                buildHoldRowDTO(holds, graceMinutes),
                 roomType,
+                describeNextUp(queue.peek()),
+                queue.getNumberOfEntries(),
                 standardReservationRepo.getQueueCapacity(roomType),
+                queue.isFull(),
                 countVacantCleanRooms(roomType),
                 arrivingToday(roomType),
                 countVipWaiting(roomType),
@@ -127,7 +128,7 @@ public class WalkInQueueController {
                 pageSize,
                 config.isEnforceVipBypass());
 
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) {
+        if ("E".equalsIgnoreCase(result.input)) {
           return;
         } else if ("A".equalsIgnoreCase(result.input)) {
           handleAddWalkIn(roomType);
@@ -135,7 +136,7 @@ public class WalkInQueueController {
         } else if ("G".equalsIgnoreCase(result.input)) {
           handleAllocateNext(roomType);
         } else if ("C".equalsIgnoreCase(result.input)) {
-          handleCheckInHold(holds, roomType, pageSize);
+          handleCheckInHold(holds, roomType, pageSize, graceMinutes);
         } else if ("X".equalsIgnoreCase(result.input)) {
           handleCloseQueue(roomType);
           currentPage = 1;
@@ -158,10 +159,14 @@ public class WalkInQueueController {
           int totalPages = (int) Math.ceil((double) lineRows.getNumberOfEntries() / pageSize);
           if (currentPage < totalPages) {
             currentPage++;
+          } else {
+            ConsoleUtil.printError("Already on the last page!");
           }
         } else if ("P".equalsIgnoreCase(result.input)) {
           if (currentPage > 1) {
             currentPage--;
+          } else {
+            ConsoleUtil.printError("Already on the first page!");
           }
         } else if (result.isNumber) {
           handleRowAction(lineRows, result.getAsInt(), currentPage, pageSize, roomType);
@@ -170,6 +175,65 @@ public class WalkInQueueController {
         ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  // The view is handed finished strings rather than entities and repositories, so it never has to
+  // look a guest up to draw a row.
+  private ListInterface<WalkInQueueView.LineRowDTO> buildLineRowDTO(
+      ListInterface<Reservation> lineRows, QueueInterface<Reservation> queue) {
+
+    ListInterface<WalkInQueueView.LineRowDTO> rows = new ArrayList<>();
+
+    for (int i = 1; i <= lineRows.getNumberOfEntries(); i++) {
+      Reservation r = lineRows.getEntry(i);
+      if (r == null) continue;
+
+      Guest g = guestRepo.findById(r.getGuestId());
+
+      // Read straight off the queue so the true place in line shows even when the table is
+      // sorted by something else.
+      int position = queue.getPosition(r);
+
+      rows.add(
+          new WalkInQueueView.LineRowDTO(
+              (position == -1) ? "-" : String.valueOf(position),
+              r.getReservationId(),
+              (g != null) ? g.getName() : "N/A",
+              (g != null) ? blankToNa(g.getPhoneNumber()) : "N/A",
+              formatWait(r.getQueueArrivalTime()),
+              (g != null) ? g.getStrikeCount() : 0));
+    }
+    return rows;
+  }
+
+  private ListInterface<WalkInQueueView.HoldRowDTO> buildHoldRowDTO(
+      ListInterface<Reservation> holds, int graceMinutes) {
+
+    ListInterface<WalkInQueueView.HoldRowDTO> rows = new ArrayList<>();
+    if (holds == null) return rows;
+
+    for (int i = 1; i <= holds.getNumberOfEntries(); i++) {
+      Reservation r = holds.getEntry(i);
+      if (r == null) continue;
+
+      Guest g = guestRepo.findById(r.getGuestId());
+
+      rows.add(
+          new WalkInQueueView.HoldRowDTO(
+              r.getReservationId(),
+              (g != null) ? g.getName() : "N/A",
+              (r.getRoomNumber() != null) ? r.getRoomNumber() : "UNLINKED",
+              formatWait(r.getAllocatedTime()),
+              formatRemaining(r.getAllocatedTime(), graceMinutes)));
+    }
+    return rows;
+  }
+
+  private String describeNextUp(Reservation next) {
+    if (next == null) return "Line is empty";
+
+    Guest g = guestRepo.findById(next.getGuestId());
+    return ((g != null) ? g.getName() : "Unknown") + "  (" + next.getReservationId() + ")";
   }
 
   private void handleAddWalkIn(Room.RoomType roomType) {
@@ -230,16 +294,18 @@ public class WalkInQueueController {
       return;
     }
 
+    Guest guest = guestRepo.findById(target.getGuestId());
     boolean overridden = fifoSkip || vipBypass;
+
     if (overridden
         && !walkInQueueView.displayAllocationOverrideScreen(
             roomType,
             target,
-            guestRepo.findById(target.getGuestId()),
+            guest,
             position,
             queue.getNumberOfEntries(),
-            guestsAheadOf(roomType, position),
-            guestRepo.getGuestList(),
+            position - 1,
+            namesAheadOf(roomType, position),
             freeToCounter,
             vipWaiting,
             fifoSkip,
@@ -252,8 +318,6 @@ public class WalkInQueueController {
       ConsoleUtil.printError("No VACANT & CLEAN " + roomType.name() + " room is available!");
       return;
     }
-
-    Guest guest = guestRepo.findById(target.getGuestId());
 
     if (!walkInQueueView.displayAllocateConfirmationScreen(
         target,
@@ -280,19 +344,29 @@ public class WalkInQueueController {
         allocated, guest, room, queue.getNumberOfEntries(), overridden);
   }
 
-  private ListInterface<Reservation> guestsAheadOf(Room.RoomType roomType, int position) {
-    ListInterface<Reservation> ahead = new ArrayList<>();
+  private String namesAheadOf(Room.RoomType roomType, int position) {
     ListInterface<Reservation> snapshot = standardReservationRepo.snapshotQueue(roomType);
+    int ahead = Math.min(position - 1, snapshot.getNumberOfEntries());
+    if (ahead <= 0) return "nobody";
 
-    for (int i = 1; i < position && i <= snapshot.getNumberOfEntries(); i++) {
+    StringBuilder names = new StringBuilder();
+    int shown = Math.min(ahead, 3);
+
+    for (int i = 1; i <= shown; i++) {
       Reservation r = snapshot.getEntry(i);
-      if (r != null) ahead.add(r);
+      Guest g = (r == null) ? null : guestRepo.findById(r.getGuestId());
+      if (names.length() > 0) names.append(", ");
+      names.append((g != null) ? g.getName() : (r != null ? r.getReservationId() : "N/A"));
     }
-    return ahead;
+
+    if (ahead > shown) {
+      names.append(" and ").append(ahead - shown).append(" other(s)");
+    }
+    return names.toString();
   }
 
   private void handleCheckInHold(
-      ListInterface<Reservation> holds, Room.RoomType roomType, int pageSize) {
+      ListInterface<Reservation> holds, Room.RoomType roomType, int pageSize, int graceMinutes) {
     if (holds == null || holds.isEmpty()) {
       ConsoleUtil.printError("No " + roomType.name() + " rooms are currently on hold!");
       return;
@@ -300,10 +374,7 @@ public class WalkInQueueController {
 
     Integer selection =
         walkInQueueView.promptHoldSelection(
-            holds,
-            guestRepo.getGuestList(),
-            standardReservationRepo.getHoldGraceMinutes(roomType),
-            pageSize);
+            buildHoldRowDTO(holds, graceMinutes), graceMinutes, pageSize);
     if (selection == null) {
       return;
     }
@@ -325,7 +396,8 @@ public class WalkInQueueController {
     }
 
     standardReservationRepo.checkIn(hold, stayDays);
-    walkInQueueView.displayCheckInSuccessScreen(hold, guest, room, stayDays);
+    walkInQueueView.displayCheckInSuccessScreen(
+        hold, guest, room, stayDays, hold.getOccupancyEndDate());
   }
 
   // The first night is always available because this guest is already holding the room. Only the
@@ -401,8 +473,8 @@ public class WalkInQueueController {
     }
   }
 
-  // Returns {field, term, matchMode, minWait}. minWait is carried as a string so the whole filter
-  // set travels as one array rather than four out-parameters.
+  // Returns {field, term, matchMode, minWait}. minWait travels as a string so the whole filter set
+  // moves as one array rather than four out-parameters.
   private String[] handleFilterMenu(
       String currentField, String currentTerm, String currentMode, Integer currentMinWait) {
 
@@ -419,11 +491,17 @@ public class WalkInQueueController {
           int picked = walkInQueueView.displaySearchFieldSubmenu(field);
           if (picked > 0) field = fieldNameFor(picked);
         } else if (choice == 2) {
-          term = walkInQueueView.promptSearchTerm(field, term);
+          String typed = walkInQueueView.promptSearchTerm(field, term);
+          if (typed != null && !typed.trim().isEmpty() && !"E".equalsIgnoreCase(typed.trim())) {
+            term = "-".equals(typed.trim()) ? null : typed.trim();
+          }
         } else if (choice == 3) {
           mode = "EXACT".equals(mode) ? "CONTAINS" : "EXACT";
         } else if (choice == 4) {
-          minWait = walkInQueueView.promptMinimumWait(minWait);
+          Integer entered = walkInQueueView.promptMinimumWait(minWait);
+          if (entered != null) {
+            minWait = (entered == 0) ? null : entered;
+          }
         } else if (choice == 5) {
           field = FIELD_NAME;
           term = null;
@@ -508,8 +586,9 @@ public class WalkInQueueController {
 
     String query = term.trim().toLowerCase();
 
-    if (FIELD_GUEST_ID.equals(field))
+    if (FIELD_GUEST_ID.equals(field)) {
       return hit(g == null ? null : g.getGuestId(), query, exactMatch);
+    }
     if (FIELD_NAME.equals(field)) return hit(g == null ? null : g.getName(), query, exactMatch);
     if (FIELD_IC.equals(field)) return hit(g == null ? null : g.getIcNumber(), query, exactMatch);
     if (FIELD_PASSPORT.equals(field)) {
@@ -544,6 +623,24 @@ public class WalkInQueueController {
     return Duration.between(r.getQueueArrivalTime(), LocalDateTime.now()).toMinutes();
   }
 
+  private String formatWait(LocalDateTime from) {
+    if (from == null) return "N/A";
+
+    long minutes = Duration.between(from, LocalDateTime.now()).toMinutes();
+    if (minutes < 0) return "0m";
+    if (minutes < 60) return minutes + "m";
+    return (minutes / 60) + "h " + String.format("%02dm", minutes % 60);
+  }
+
+  private String formatRemaining(LocalDateTime allocatedTime, int graceMinutes) {
+    if (allocatedTime == null) return "N/A";
+
+    long secondsLeft =
+        (graceMinutes * 60L) - Duration.between(allocatedTime, LocalDateTime.now()).toSeconds();
+    if (secondsLeft <= 0) return "LAPSED";
+    return (secondsLeft / 60) + "m " + String.format("%02ds", secondsLeft % 60);
+  }
+
   private int compareArrival(Reservation a, Reservation b) {
     LocalDateTime first = a.getQueueArrivalTime();
     LocalDateTime second = b.getQueueArrivalTime();
@@ -561,6 +658,10 @@ public class WalkInQueueController {
   private int strikesOf(Reservation r) {
     Guest g = guestRepo.findById(r.getGuestId());
     return (g != null) ? g.getStrikeCount() : 0;
+  }
+
+  private String blankToNa(String value) {
+    return (value == null || value.isEmpty()) ? "N/A" : value;
   }
 
   private int arrivingToday(Room.RoomType roomType) {

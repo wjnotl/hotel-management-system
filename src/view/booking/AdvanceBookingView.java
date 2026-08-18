@@ -7,7 +7,6 @@ import entity.Reservation;
 import entity.Room;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
@@ -22,10 +21,59 @@ public class AdvanceBookingView {
   private static final int[] SPAN_WIDTH = {89};
   private static final int[] KV_WIDTHS = {22, 64};
   private static final int SCREEN_WIDTH = 83;
+  private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+
+  public static class BookingRowDTO {
+    private final String reservationId;
+    private final String guestName;
+    private final String roomType;
+    private final String arrives;
+    private final String nights;
+    private final String bookedAt;
+
+    public BookingRowDTO(
+        String reservationId,
+        String guestName,
+        String roomType,
+        String arrives,
+        String nights,
+        String bookedAt) {
+      this.reservationId = reservationId;
+      this.guestName = guestName;
+      this.roomType = roomType;
+      this.arrives = arrives;
+      this.nights = nights;
+      this.bookedAt = bookedAt;
+    }
+
+    public String getReservationId() {
+      return reservationId;
+    }
+
+    public String getGuestName() {
+      return guestName;
+    }
+
+    public String getRoomType() {
+      return roomType;
+    }
+
+    public String getArrives() {
+      return arrives;
+    }
+
+    public String getNights() {
+      return nights;
+    }
+
+    public String getBookedAt() {
+      return bookedAt;
+    }
+  }
 
   public GetMenuInputResult renderAdvanceScreen(
-      ListInterface<Reservation> bookings,
-      ListInterface<Guest> guestList,
+      ListInterface<BookingRowDTO> bookings,
       int luxuryCount,
       int suiteCount,
       int standardCount,
@@ -40,77 +88,64 @@ public class AdvanceBookingView {
       int currentPage,
       int pageSize) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("ADVANCE RESERVATIONS", SCREEN_WIDTH);
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("ADVANCE RESERVATIONS", SCREEN_WIDTH);
+    System.out.println(
+        "AWAITING ARRIVAL  : "
+            + (luxuryCount + suiteCount + standardCount)
+            + " booking(s) not yet standing in any line");
+    System.out.println(
+        "BY ROOM TYPE      : LUXURY "
+            + luxuryCount
+            + "   |   SUITE "
+            + suiteCount
+            + "   |   STANDARD "
+            + standardCount);
+    System.out.println("DUE IN TODAY      : " + arrivingToday + " booking(s)");
+    System.out.println(
+        "SEARCH            : "
+            + (searchTerm == null
+                ? "[ None ]"
+                : "[ " + searchField + " " + matchMode + " \"" + searchTerm + "\" ]"));
+    System.out.println(
+        "ROOM TYPE FILTER  : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
+    System.out.println("ARRIVAL BETWEEN   : [ " + rangeLabel(fromDate, toDate) + " ]");
+    System.out.println("SORT CRITERIA     : [ " + sort + " ]\n");
 
-      System.out.println(
-          "AWAITING ARRIVAL  : "
-              + (luxuryCount + suiteCount + standardCount)
-              + " booking(s) not yet standing in any line");
-      System.out.println(
-          "BY ROOM TYPE      : LUXURY "
-              + luxuryCount
-              + "   |   SUITE "
-              + suiteCount
-              + "   |   STANDARD "
-              + standardCount);
-      System.out.println("DUE IN TODAY      : " + arrivingToday + " booking(s)");
-      System.out.println(
-          "SEARCH            : "
-              + (searchTerm == null
-                  ? "[ None ]"
-                  : "[ " + searchField + " " + matchMode + " \"" + searchTerm + "\" ]"));
-      System.out.println(
-          "ROOM TYPE FILTER  : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
-      System.out.println("ARRIVAL BETWEEN   : [ " + rangeLabel(fromDate, toDate) + " ]");
-      System.out.println("SORT CRITERIA     : [ " + sort + " ]\n");
+    printBookingTable(bookings, currentPage, pageSize);
 
-      printBookingTable(bookings, guestList, currentPage, pageSize);
+    int totalMatches = (bookings == null) ? 0 : bookings.getNumberOfEntries();
+    int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+    System.out.printf(
+        "%nPage %d / %d (Matches: %d)%n%n",
+        (totalPages == 0) ? 0 : currentPage, totalPages, totalMatches);
 
-      int totalMatches = (bookings == null) ? 0 : bookings.getNumberOfEntries();
-      int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
-      System.out.printf(
-          "%nPage %d / %d (Matches: %d)%n%n",
-          (totalPages == 0) ? 0 : currentPage, totalPages, totalMatches);
+    System.out.println("[A] New Advance Booking   [M] Mark Arrival (joins the line)");
+    System.out.println("[S] Search / Filter       [O] Change Sort Order   [R] Refresh");
+    System.out.println("[P] Prev Page             [N] Next Page");
+    System.out.println("[E] Exit to Walk-In & Booking Menu\n");
+    System.out.println("Pick a row number to view, mark arrival or cancel that booking.\n");
 
-      System.out.println("[A] New Advance Booking   [M] Mark Arrival (joins the line)");
-      System.out.println("[S] Search / Filter       [O] Change Sort Order   [R] Refresh");
-      System.out.println("[P] Prev Page             [N] Next Page");
-      System.out.println();
-      System.out.println("Pick a row number to view, mark arrival or cancel that booking.");
-      System.out.println("B - Back to Walk-In & Booking Menu");
-      System.out.println();
+    char[] commands = {'A', 'M', 'S', 'O', 'P', 'N', 'R', 'E'};
 
-      ConsoleUtil.printFieldError(error);
-
-      char[] commands = {'A', 'M', 'S', 'O', 'P', 'N', 'R', 'B'};
-
-      try {
-        int rowsOnPage = countRowsOnPage(totalMatches, currentPage, pageSize);
-
-        if (rowsOnPage <= 0) {
-          return ConsoleUtil.getNavInput("Enter a command: ", commands);
-        }
-
-        String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
-        return ConsoleUtil.getNavInput(
-            "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+    int rowsOnPage = countRowsOnPage(totalMatches, currentPage, pageSize);
+    if (rowsOnPage <= 0) {
+      return ConsoleUtil.getMenuInput("Enter a command: ", commands);
     }
+
+    String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
+    return ConsoleUtil.getMenuInput(
+        "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
   }
 
   private String rangeLabel(LocalDate from, LocalDate to) {
     if (from == null && to == null) return "Any date";
     if (from != null && to != null) {
-      return from.format(ConsoleUtil.DATE_FORMAT) + "  ..  " + to.format(ConsoleUtil.DATE_FORMAT);
+      return from.format(DATE_FORMAT) + "  ..  " + to.format(DATE_FORMAT);
     }
-    if (from != null) return "From " + from.format(ConsoleUtil.DATE_FORMAT);
-    return "Up to " + to.format(ConsoleUtil.DATE_FORMAT);
+    if (from != null) return "From " + from.format(DATE_FORMAT);
+    return "Up to " + to.format(DATE_FORMAT);
   }
 
   private int countRowsOnPage(int totalMatches, int currentPage, int pageSize) {
@@ -121,10 +156,7 @@ public class AdvanceBookingView {
   }
 
   private void printBookingTable(
-      ListInterface<Reservation> bookings,
-      ListInterface<Guest> guestList,
-      int currentPage,
-      int pageSize) {
+      ListInterface<BookingRowDTO> bookings, int currentPage, int pageSize) {
 
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(BOOKING_WIDTHS)
@@ -161,20 +193,18 @@ public class AdvanceBookingView {
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
     for (int i = startIndex; i <= endIndex; i++) {
-      Reservation r = bookings.getEntry(i);
-      if (r == null) continue;
-
-      Guest g = findGuest(guestList, r.getGuestId());
+      BookingRowDTO row = bookings.getEntry(i);
+      if (row == null) continue;
 
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(i - startIndex + 1),
-            r.getReservationId(),
-            (g != null) ? g.getName() : "N/A",
-            r.getRoomType().name(),
-            formatArrival(r.getExpectedArrivalTime()),
-            (r.getStayDays() != null) ? String.valueOf(r.getStayDays()) : "-",
-            formatShortDate(r.getReservationTime())
+            row.getReservationId(),
+            row.getGuestName(),
+            row.getRoomType(),
+            row.getArrives(),
+            row.getNights(),
+            row.getBookedAt()
           },
           settings);
     }
@@ -187,195 +217,119 @@ public class AdvanceBookingView {
   public Room.RoomType promptRoomType(
       Guest guest, LocalDate arrival, int[] totalByType, int[] freeByType) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - ROOM TYPE", SCREEN_WIDTH);
+    System.out.println("Guest   : " + guest.getName() + " (" + guest.getGuestId() + ")");
+    System.out.println("Arrives : " + arrival.format(DATE_FORMAT) + "\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - ROOM TYPE", SCREEN_WIDTH);
-      System.out.println("Guest   : " + guest.getName() + " (" + guest.getGuestId() + ")");
-      System.out.println("Arrives : " + arrival.format(ConsoleUtil.DATE_FORMAT) + "\n");
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(AVAIL_WIDTHS)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER);
 
-      TableUtil.TableSettings settings =
-          new TableUtil.TableSettings(AVAIL_WIDTHS)
-              .setHAlign(0, TableUtil.Align.CENTER)
-              .setHAlign(2, TableUtil.Align.CENTER)
-              .setHAlign(3, TableUtil.Align.CENTER)
-              .setHAlign(4, TableUtil.Align.CENTER);
+    TableUtil.TableSettings headerSettings = centeredHeader(AVAIL_WIDTHS);
 
-      TableUtil.TableSettings headerSettings = centeredHeader(AVAIL_WIDTHS);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"AVAILABILITY ON " + arrival.format(DATE_FORMAT)}, spanSettings());
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
+    TableUtil.printTableRow(
+        new String[] {"NO.", "ROOM TYPE", "ROOMS", "FREE", "TAKEN", "STATUS"}, headerSettings);
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
+    for (int i = 0; i < types.length; i++) {
       TableUtil.printTableRow(
-          new String[] {"AVAILABILITY ON " + arrival.format(ConsoleUtil.DATE_FORMAT)},
-          spanSettings());
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
-      TableUtil.printTableRow(
-          new String[] {"NO.", "ROOM TYPE", "ROOMS", "FREE", "TAKEN", "STATUS"}, headerSettings);
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-      Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
-      for (int i = 0; i < types.length; i++) {
-        TableUtil.printTableRow(
-            new String[] {
-              String.valueOf(i + 1),
-              types[i].name(),
-              String.valueOf(totalByType[i]),
-              String.valueOf(freeByType[i]),
-              String.valueOf(totalByType[i] - freeByType[i]),
-              (freeByType[i] > 0) ? "Bookable on this date" : "Fully booked on this date"
-            },
-            settings);
-      }
-
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
-
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println("C - Cancel");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose a room type: ", 1, 3, new char[] {'B', 'C'});
-
-        if (result.isBlank
-            || "B".equalsIgnoreCase(result.input)
-            || "C".equalsIgnoreCase(result.input)) {
-          return null;
-        }
-
-        int choice = result.getAsInt();
-        if (choice == 1) return Room.RoomType.LUXURY;
-        if (choice == 2) return Room.RoomType.SUITE;
-        return Room.RoomType.STANDARD;
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+          new String[] {
+            String.valueOf(i + 1),
+            types[i].name(),
+            String.valueOf(totalByType[i]),
+            String.valueOf(freeByType[i]),
+            String.valueOf(totalByType[i] - freeByType[i]),
+            (freeByType[i] > 0) ? "Bookable on this date" : "Fully booked on this date"
+          },
+          settings);
     }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+
+    System.out.println();
+    System.out.println("4. Back\n");
+
+    int choice = ConsoleUtil.getMenuInput("Choose a room type: ", 1, 4).getAsInt();
+    if (choice == 1) return Room.RoomType.LUXURY;
+    if (choice == 2) return Room.RoomType.SUITE;
+    if (choice == 3) return Room.RoomType.STANDARD;
+    return null;
   }
 
-  public LocalDate promptArrivalDate(
+  // The raw text comes back for the controller to parse, so the rule about what a date may be
+  // lives with the rest of the booking rules rather than in the screen.
+  public String promptArrivalDate(
       Guest guest, LocalDate earliest, LocalDate latest, LocalDate current) {
 
-    String error = null;
-
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - ARRIVAL DATE", SCREEN_WIDTH);
-      System.out.println("Guest: " + guest.getName() + " (" + guest.getGuestId() + ")\n");
-      System.out.println("Format: YYYY-MM-DD");
-      System.out.println(
-          "Bookable window: "
-              + earliest.format(ConsoleUtil.DATE_FORMAT)
-              + "  to  "
-              + latest.format(ConsoleUtil.DATE_FORMAT));
-      if (current != null) {
-        System.out.println("Current value: " + current.format(ConsoleUtil.DATE_FORMAT));
-      }
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        LocalDate entered = ConsoleUtil.getDateInput("Arrival date: ");
-        if (entered == null) return current;
-
-        if (entered.isBefore(earliest)) {
-          error =
-              "That date is before the bookable window opens on "
-                  + earliest.format(ConsoleUtil.DATE_FORMAT)
-                  + ".";
-          continue;
-        }
-        if (entered.isAfter(latest)) {
-          error =
-              "Bookings are only taken up to "
-                  + latest.format(ConsoleUtil.DATE_FORMAT)
-                  + " under the current lead time setting.";
-          continue;
-        }
-        return entered;
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - ARRIVAL DATE", SCREEN_WIDTH);
+    System.out.println("Guest: " + guest.getName() + " (" + guest.getGuestId() + ")\n");
+    System.out.println("Format: YYYY-MM-DD");
+    System.out.println(
+        "Bookable window: "
+            + earliest.format(DATE_FORMAT)
+            + "  to  "
+            + latest.format(DATE_FORMAT));
+    if (current != null) {
+      System.out.println("Current value: " + current.format(DATE_FORMAT));
     }
+    System.out.println("\nE - Exit back to the guest search\n");
+
+    return ConsoleUtil.getStringInput("Arrival date: ");
   }
 
-  public LocalTime promptArrivalTime(LocalDate arrival, LocalTime current) {
-    String error = null;
-
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - ARRIVAL TIME", SCREEN_WIDTH);
-      System.out.println("Arrives on: " + arrival.format(ConsoleUtil.DATE_FORMAT) + "\n");
-      System.out.println("Format: HH:MM on a 24 hour clock, for example 14:30.");
-      System.out.println("This is the time the desk expects the guest at the counter.");
-      if (current != null) {
-        System.out.println("Current value: " + current.format(ConsoleUtil.TIME_FORMAT));
-      }
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        LocalTime entered = ConsoleUtil.getTimeInput("Arrival time: ");
-        if (entered == null) return current;
-        return entered;
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+  public String promptArrivalTime(LocalDate arrival, java.time.LocalTime current) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - ARRIVAL TIME", SCREEN_WIDTH);
+    System.out.println("Arrives on: " + arrival.format(DATE_FORMAT) + "\n");
+    System.out.println("Format: HH:MM on a 24 hour clock, for example 14:30.");
+    System.out.println("This is the time the desk expects the guest at the counter.");
+    if (current != null) {
+      System.out.println("Current value: " + current.format(TIME_FORMAT));
     }
+    System.out.println("\nB - Back to the nights step\n");
+
+    return ConsoleUtil.getStringInput("Arrival time: ");
   }
 
   public Integer promptNights(
       Room.RoomType roomType, LocalDate arrival, int maxBookable, int houseMax, Integer current) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - NIGHTS", SCREEN_WIDTH);
+    System.out.println("Room type : " + roomType.name());
+    System.out.println("Arrives   : " + arrival.format(DATE_FORMAT) + "\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - NIGHTS", SCREEN_WIDTH);
-      System.out.println("Room type : " + roomType.name());
-      System.out.println("Arrives   : " + arrival.format(ConsoleUtil.DATE_FORMAT) + "\n");
-
-      if (maxBookable < houseMax) {
-        System.out.println(
-            "The calendar allows "
-                + maxBookable
-                + " night(s) from this date. Night "
-                + (maxBookable + 1)
-                + " is already fully booked for this room type.");
-      } else {
-        System.out.println("The house limit is " + houseMax + " nights in one booking.");
-      }
-
-      if (current != null) {
-        System.out.println("Current value: " + current + " night(s)");
-      }
-      System.out.println();
-      System.out.println("Checkout day is a turnover day, so a stay ending on the 5th does not");
-      System.out.println("block another guest arriving on the 5th.");
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        Integer entered =
-            ConsoleUtil.getIntegerInput("Nights [1 - " + maxBookable + "]: ", 1, maxBookable);
-        if (entered == null) return current;
-        return entered;
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+    if (maxBookable < houseMax) {
+      System.out.println(
+          "The calendar allows "
+              + maxBookable
+              + " night(s) from this date. Night "
+              + (maxBookable + 1)
+              + " is already fully booked for this room type.");
+    } else {
+      System.out.println("The house limit is " + houseMax + " nights in one booking.");
     }
+
+    if (current != null) {
+      System.out.println("Current value: " + current + " night(s)");
+    }
+
+    System.out.println();
+    System.out.println("Checkout day is a turnover day, so a stay ending on the 5th does not");
+    System.out.println("block another guest arriving on the 5th.");
+    System.out.println("\nPress Enter or 'C' to go back to the room type\n");
+
+    return ConsoleUtil.getIntegerInput("Nights [1 - " + maxBookable + "]: ", 1, maxBookable);
   }
 
   public void displayFullyBookedScreen(
@@ -385,7 +339,7 @@ public class AdvanceBookingView {
     printNoticeBox(
         "STATUS: [X] BOOKING REFUSED",
         "First Full Night",
-        (firstFullDate != null) ? firstFullDate.format(ConsoleUtil.DATE_FORMAT) : "N/A",
+        (firstFullDate != null) ? firstFullDate.format(DATE_FORMAT) : "N/A",
         "All "
             + totalRooms
             + " "
@@ -417,60 +371,43 @@ public class AdvanceBookingView {
       LocalDate departure,
       int freeAfterBooking) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM ADVANCE BOOKING", SCREEN_WIDTH);
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("CONFIRM ADVANCE BOOKING", SCREEN_WIDTH);
+    TableUtil.TableSettings kvSettings = kvSettings();
 
-      TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"BOOKING DETAILS"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest ID", g.getGuestId(), true);
+    printKeyValue(kvSettings, "Guest Name", g.getName(), true);
+    printKeyValue(kvSettings, "Phone Number", blankToNa(g.getPhoneNumber()), true);
+    printKeyValue(kvSettings, "Email Address", blankToNa(g.getEmail()), true);
+    printKeyValue(kvSettings, "Room Type Booked", roomType.name(), true);
+    printKeyValue(
+        kvSettings,
+        "Expected Arrival",
+        arrival.format(DATE_FORMAT) + " at " + arrival.format(TIME_FORMAT),
+        true);
+    printKeyValue(kvSettings, "Nights", String.valueOf(nights), true);
+    printKeyValue(kvSettings, "Due To Check Out", departure.format(DATE_FORMAT), true);
+    printKeyValue(
+        kvSettings,
+        "Rooms Left On Arrival",
+        freeAfterBooking + " of this type after this booking is taken",
+        true);
+    printKeyValue(
+        kvSettings,
+        "Queue Placement",
+        "None. The booking is held as RESERVED and only joins the line when the guest arrives"
+            + " and the desk marks them in.",
+        false);
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"BOOKING DETAILS"}, spanSettings());
-      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-      printKeyValue(kvSettings, "Guest ID", g.getGuestId(), true);
-      printKeyValue(kvSettings, "Guest Name", g.getName(), true);
-      printKeyValue(kvSettings, "Phone Number", blankToNa(g.getPhoneNumber()), true);
-      printKeyValue(kvSettings, "Email Address", blankToNa(g.getEmail()), true);
-      printKeyValue(kvSettings, "Room Type Booked", roomType.name(), true);
-      printKeyValue(
-          kvSettings,
-          "Expected Arrival",
-          arrival.format(ConsoleUtil.DATE_FORMAT)
-              + " at "
-              + arrival.format(ConsoleUtil.TIME_FORMAT),
-          true);
-      printKeyValue(kvSettings, "Nights", String.valueOf(nights), true);
-      printKeyValue(
-          kvSettings, "Due To Check Out", departure.format(ConsoleUtil.DATE_FORMAT), true);
-      printKeyValue(
-          kvSettings,
-          "Rooms Left On Arrival",
-          freeAfterBooking + " of this type after this booking is taken",
-          true);
-      printKeyValue(
-          kvSettings,
-          "Queue Placement",
-          "None. The booking is held as RESERVED and only joins the line when the guest arrives"
-              + " and the desk marks them in.",
-          false);
+    System.out.println();
+    System.out.println("1. Create This Advance Booking");
+    System.out.println("2. Do Not Create It\n");
 
-      System.out.println();
-      System.out.println("Y - Create this advance booking");
-      System.out.println("N - Do not create it");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", new char[] {'Y', 'N'});
-        if (result.isBlank) return false;
-        return "Y".equalsIgnoreCase(result.input);
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public void displayNewBookingSuccessScreen(Reservation r, Guest g) {
@@ -495,49 +432,33 @@ public class AdvanceBookingView {
   public boolean displayMarkArrivalConfirmationScreen(
       Reservation r, Guest g, int waiting, int capacity, String timingNote) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM ARRIVAL", SCREEN_WIDTH);
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("CONFIRM ARRIVAL", SCREEN_WIDTH);
+    TableUtil.TableSettings kvSettings = kvSettings();
 
-      TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"GUEST HAS ARRIVED"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
+    printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(kvSettings, "Room Type", r.getRoomType().name(), true);
+    printKeyValue(kvSettings, "Expected Arrival", formatArrival(r.getExpectedArrivalTime()), true);
+    printKeyValue(kvSettings, "Timing", timingNote, true);
+    printKeyValue(kvSettings, "Line Length Now", waiting + " / " + capacity + " slots used", true);
+    printKeyValue(
+        kvSettings,
+        "Position On Joining",
+        (waiting + 1)
+            + ". A booking buys a room type on a date, not a place in the line, so arrival"
+            + " time decides the order.",
+        false);
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"GUEST HAS ARRIVED"}, spanSettings());
-      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-      printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
-      printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
-      printKeyValue(kvSettings, "Room Type", r.getRoomType().name(), true);
-      printKeyValue(
-          kvSettings, "Expected Arrival", formatArrival(r.getExpectedArrivalTime()), true);
-      printKeyValue(kvSettings, "Timing", timingNote, true);
-      printKeyValue(
-          kvSettings, "Line Length Now", waiting + " / " + capacity + " slots used", true);
-      printKeyValue(
-          kvSettings,
-          "Position On Joining",
-          (waiting + 1)
-              + ". A booking buys a room type on a date, not a place in the line, so arrival"
-              + " time decides the order.",
-          false);
+    System.out.println();
+    System.out.println("1. Move This Booking Into The " + r.getRoomType().name() + " Line");
+    System.out.println("2. Leave It As An Advance Booking\n");
 
-      System.out.println();
-      System.out.println("Y - Move this booking into the " + r.getRoomType().name() + " line");
-      System.out.println("N - Leave it as an advance booking");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", new char[] {'Y', 'N'});
-        if (result.isBlank) return false;
-        return "Y".equalsIgnoreCase(result.input);
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public void displayMarkArrivalSuccessScreen(Reservation r, Guest g, int position, int waiting) {
@@ -557,34 +478,18 @@ public class AdvanceBookingView {
   }
 
   public int displayRowActionSubmenu(Reservation r, Guest g) {
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("BOOKING ACTION: " + r.getReservationId(), SCREEN_WIDTH);
+    System.out.println("Guest   : " + ((g != null) ? g.getName() : "N/A"));
+    System.out.println("Type    : " + r.getRoomType().name());
+    System.out.println("Arrives : " + formatArrival(r.getExpectedArrivalTime()) + "\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("BOOKING ACTION: " + r.getReservationId(), SCREEN_WIDTH);
-      System.out.println("Guest   : " + ((g != null) ? g.getName() : "N/A"));
-      System.out.println("Type    : " + r.getRoomType().name());
-      System.out.println("Arrives : " + formatArrival(r.getExpectedArrivalTime()) + "\n");
+    System.out.println("1. View Booking Details");
+    System.out.println("2. Mark Arrival (joins the line)");
+    System.out.println("3. Cancel Booking");
+    System.out.println("4. Back\n");
 
-      System.out.println("1. View Booking Details");
-      System.out.println("2. Mark Arrival (joins the line)");
-      System.out.println("3. Cancel Booking");
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 3, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return 4;
-        return result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   public void displayDetailScreen(Reservation r, Guest g) {
@@ -609,9 +514,7 @@ public class AdvanceBookingView {
     printKeyValue(
         kvSettings,
         "Due To Check Out",
-        (r.getOccupancyEndDate() != null)
-            ? r.getOccupancyEndDate().format(ConsoleUtil.DATE_FORMAT)
-            : "N/A",
+        (r.getOccupancyEndDate() != null) ? r.getOccupancyEndDate().format(DATE_FORMAT) : "N/A",
         true);
     printKeyValue(kvSettings, "Booked At", formatTime(r.getReservationTime()), false);
 
@@ -640,34 +543,20 @@ public class AdvanceBookingView {
   }
 
   public boolean displayCancelConfirmationScreen(Reservation r, Guest g) {
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM CANCELLATION", SCREEN_WIDTH);
+    printNoticeBox(
+        "STATUS: [!] CANCEL ADVANCE BOOKING",
+        "Target Booking",
+        r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
+        "The booking is closed as CANCELLED and the room it was holding on "
+            + formatArrival(r.getExpectedArrivalTime())
+            + " goes back on sale. It never entered a line, so nobody else moves position.");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("CONFIRM CANCELLATION", SCREEN_WIDTH);
-      printNoticeBox(
-          "STATUS: [!] CANCEL ADVANCE BOOKING",
-          "Target Booking",
-          r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-          "The booking is closed as CANCELLED and the room it was holding on "
-              + formatArrival(r.getExpectedArrivalTime())
-              + " goes back on sale. It never entered a line, so nobody else moves position.");
+    System.out.println("1. Cancel This Advance Booking");
+    System.out.println("2. Keep It\n");
 
-      System.out.println("Y - Cancel this advance booking");
-      System.out.println("N - Keep it");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", new char[] {'Y', 'N'});
-        if (result.isBlank) return false;
-        return "Y".equalsIgnoreCase(result.input);
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public void displayAlreadyInLineScreen(Guest guest, Reservation existing) {
@@ -693,225 +582,111 @@ public class AdvanceBookingView {
       LocalDate fromDate,
       LocalDate toDate) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH & BOOKING FILTERS", SCREEN_WIDTH);
+    System.out.println("Search Field   : [ " + searchField + " ]");
+    System.out.println("Search Term    : [ " + (searchTerm == null ? "None" : searchTerm) + " ]");
+    System.out.println("Match Mode     : [ " + matchMode + " ]");
+    System.out.println(
+        "Room Type      : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
+    System.out.println("Arrival Between: [ " + rangeLabel(fromDate, toDate) + " ]\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("SEARCH & BOOKING FILTERS", SCREEN_WIDTH);
-      System.out.println("Search Field   : [ " + searchField + " ]");
-      System.out.println("Search Term    : [ " + (searchTerm == null ? "None" : searchTerm) + " ]");
-      System.out.println("Match Mode     : [ " + matchMode + " ]");
-      System.out.println(
-          "Room Type      : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
-      System.out.println("Arrival Between: [ " + rangeLabel(fromDate, toDate) + " ]\n");
+    System.out.println("1. Change Search Field");
+    System.out.println("2. Change Search Term");
+    System.out.println(
+        "3. Switch Match Mode To " + ("EXACT".equals(matchMode) ? "CONTAINS" : "EXACT"));
+    System.out.println("4. Room Type Filter");
+    System.out.println("5. Arrival Date Range");
+    System.out.println("6. Reset All Filters");
+    System.out.println("7. Apply And Return");
+    System.out.println("8. Back (discard these changes)\n");
 
-      System.out.println("1. Change Search Field");
-      System.out.println("2. Change Search Term");
-      System.out.println(
-          "3. Switch Match Mode To " + ("EXACT".equals(matchMode) ? "CONTAINS" : "EXACT"));
-      System.out.println("4. Room Type Filter");
-      System.out.println("5. Arrival Date Range");
-      System.out.println("6. Reset All Filters");
-      System.out.println("7. Apply And Return");
-      System.out.println();
-      System.out.println("B - Back (discard these changes)");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 7, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return 8;
-        return result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 8).getAsInt();
   }
 
   public int displaySearchFieldSubmenu(String current) {
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH FIELD", SCREEN_WIDTH);
+    System.out.println("Current: [ " + current + " ]\n");
+    System.out.println(" 1. Guest Name");
+    System.out.println(" 2. Guest ID");
+    System.out.println(" 3. IC Number");
+    System.out.println(" 4. Passport Number");
+    System.out.println(" 5. Phone Number");
+    System.out.println(" 6. Email Address");
+    System.out.println(" 7. Reservation ID");
+    System.out.println(" 8. Confirmation Code");
+    System.out.println(" 9. All Of The Above");
+    System.out.println("10. Back\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("SEARCH FIELD", SCREEN_WIDTH);
-      System.out.println("Current: [ " + current + " ]\n");
-      System.out.println("1. Guest Name");
-      System.out.println("2. Guest ID");
-      System.out.println("3. IC Number");
-      System.out.println("4. Passport Number");
-      System.out.println("5. Phone Number");
-      System.out.println("6. Email Address");
-      System.out.println("7. Reservation ID");
-      System.out.println("8. Confirmation Code");
-      System.out.println("9. All Of The Above");
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 9, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return 0;
-        return result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 10).getAsInt();
+    return (choice == 10) ? 0 : choice;
   }
 
   public String promptSearchTerm(String fieldLabel, String current) {
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH TERM", SCREEN_WIDTH);
+    System.out.println("Field   : [ " + fieldLabel + " ]");
+    System.out.println("Current : [ " + (current == null ? "None" : current) + " ]\n");
+    System.out.println("Type '-' to clear the term.");
+    System.out.println("E - Exit and keep the current term\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("SEARCH TERM", SCREEN_WIDTH);
-      System.out.println("Field   : [ " + fieldLabel + " ]");
-      System.out.println("Current : [ " + (current == null ? "None" : current) + " ]\n");
-      System.out.println("Type '-' to clear the term.");
-      System.out.println();
-      System.out.println("B - Back (keep the current term)");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        String input = ConsoleUtil.getStringInput("Search term: ");
-        if (input == null || input.trim().isEmpty() || "B".equalsIgnoreCase(input.trim())) {
-          return current;
-        }
-        if ("-".equals(input.trim())) return null;
-        return input.trim();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getStringInput("Search term: ");
   }
 
   public int displayRoomTypeSubmenu(String currentRoomType) {
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("ROOM TYPE FILTER", SCREEN_WIDTH);
+    System.out.println(
+        "Current: [ " + (currentRoomType == null ? "ALL" : currentRoomType) + " ]\n");
+    System.out.println("1. LUXURY");
+    System.out.println("2. SUITE");
+    System.out.println("3. STANDARD");
+    System.out.println("4. Show All");
+    System.out.println("5. Back\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("ROOM TYPE FILTER", SCREEN_WIDTH);
-      System.out.println(
-          "Current: [ " + (currentRoomType == null ? "ALL" : currentRoomType) + " ]\n");
-      System.out.println("1. LUXURY");
-      System.out.println("2. SUITE");
-      System.out.println("3. STANDARD");
-      System.out.println("4. Show All");
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 4, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return 0;
-        return result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    return (choice == 5) ? 0 : choice;
   }
 
-  // Returns {from, to}. A null entry means that end of the range is open.
-  public LocalDate[] promptDateRange(LocalDate currentFrom, LocalDate currentTo) {
-    String error = null;
+  // Returns the two raw strings the clerk typed, for the controller to parse.
+  public String[] promptDateRange(LocalDate currentFrom, LocalDate currentTo) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("ARRIVAL DATE RANGE", SCREEN_WIDTH);
+    System.out.println("Current: [ " + rangeLabel(currentFrom, currentTo) + " ]\n");
+    System.out.println("Format: YYYY-MM-DD. Leave either end blank to leave it open.");
+    System.out.println("Type '-' at the first prompt to clear the whole range.");
+    System.out.println("E - Exit and keep the current range\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("ARRIVAL DATE RANGE", SCREEN_WIDTH);
-      System.out.println("Current: [ " + rangeLabel(currentFrom, currentTo) + " ]\n");
-      System.out.println("Format: YYYY-MM-DD. Leave either end blank to leave it open.");
-      System.out.println("Type '-' at the first prompt to clear the whole range.");
-      System.out.println();
-      System.out.println("B - Back (keep the current range)");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        String rawFrom = ConsoleUtil.getStringInput("From date: ");
-        if (rawFrom != null && "B".equalsIgnoreCase(rawFrom.trim())) {
-          return new LocalDate[] {currentFrom, currentTo};
-        }
-        if (rawFrom != null && "-".equals(rawFrom.trim())) {
-          return new LocalDate[] {null, null};
-        }
-
-        LocalDate from = parseOrNull(rawFrom);
-
-        String rawTo = ConsoleUtil.getStringInput("To date: ");
-        LocalDate to = parseOrNull(rawTo);
-
-        if (from != null && to != null && to.isBefore(from)) {
-          error = "The end of the range cannot fall before its start.";
-          continue;
-        }
-
-        return new LocalDate[] {from, to};
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+    String from = ConsoleUtil.getStringInput("From date: ");
+    if (from != null && ("E".equalsIgnoreCase(from.trim()) || "-".equals(from.trim()))) {
+      return new String[] {from.trim(), null};
     }
-  }
 
-  private LocalDate parseOrNull(String raw) {
-    if (raw == null || raw.trim().isEmpty()) return null;
-    try {
-      return LocalDate.parse(raw.trim(), ConsoleUtil.DATE_FORMAT);
-    } catch (java.time.format.DateTimeParseException e) {
-      throw new IllegalArgumentException(
-          "Invalid date! Type it as YYYY-MM-DD, for example 2026-08-21.");
-    }
+    return new String[] {from, ConsoleUtil.getStringInput("To date: ")};
   }
 
   public String displaySortMenu() {
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CHANGE SORT ORDER", SCREEN_WIDTH);
+    System.out.println("1. Arrival Date (Soonest -> Latest)");
+    System.out.println("2. Arrival Date (Latest -> Soonest)");
+    System.out.println("3. Booked At (Newest -> Oldest)");
+    System.out.println("4. Booked At (Oldest -> Newest)");
+    System.out.println("5. Guest Name (A -> Z)");
+    System.out.println("6. Guest Name (Z -> A)");
+    System.out.println("7. Room Type (A -> Z)");
+    System.out.println("8. Back\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("CHANGE SORT ORDER", SCREEN_WIDTH);
-      System.out.println("1. Arrival Date (Soonest -> Latest)");
-      System.out.println("2. Arrival Date (Latest -> Soonest)");
-      System.out.println("3. Booked At (Newest -> Oldest)");
-      System.out.println("4. Booked At (Oldest -> Newest)");
-      System.out.println("5. Guest Name (A -> Z)");
-      System.out.println("6. Guest Name (Z -> A)");
-      System.out.println("7. Room Type (A -> Z)");
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 7, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return null;
-
-        int choice = result.getAsInt();
-        if (choice == 1) return "ARRIVAL DATE (SOONEST -> LATEST)";
-        if (choice == 2) return "ARRIVAL DATE (LATEST -> SOONEST)";
-        if (choice == 3) return "BOOKED AT (NEWEST -> OLDEST)";
-        if (choice == 4) return "BOOKED AT (OLDEST -> NEWEST)";
-        if (choice == 5) return "GUEST NAME (A -> Z)";
-        if (choice == 6) return "GUEST NAME (Z -> A)";
-        return "ROOM TYPE (A -> Z)";
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 8).getAsInt();
+    if (choice == 1) return "ARRIVAL DATE (SOONEST -> LATEST)";
+    if (choice == 2) return "ARRIVAL DATE (LATEST -> SOONEST)";
+    if (choice == 3) return "BOOKED AT (NEWEST -> OLDEST)";
+    if (choice == 4) return "BOOKED AT (OLDEST -> NEWEST)";
+    if (choice == 5) return "GUEST NAME (A -> Z)";
+    if (choice == 6) return "GUEST NAME (Z -> A)";
+    if (choice == 7) return "ROOM TYPE (A -> Z)";
+    return null;
   }
 
   private String blankToNa(String value) {
@@ -967,19 +742,5 @@ public class AdvanceBookingView {
   private String formatArrival(LocalDateTime dateTime) {
     if (dateTime == null) return "Not set";
     return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
-  }
-
-  private String formatShortDate(LocalDateTime dateTime) {
-    if (dateTime == null) return "-";
-    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yy"));
-  }
-
-  private Guest findGuest(ListInterface<Guest> guestList, String guestId) {
-    if (guestList == null || guestId == null) return null;
-    for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
-      Guest g = guestList.getEntry(i);
-      if (g != null && guestId.equalsIgnoreCase(g.getGuestId())) return g;
-    }
-    return null;
   }
 }

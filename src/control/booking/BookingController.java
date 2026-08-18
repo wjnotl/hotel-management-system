@@ -36,15 +36,15 @@ public class BookingController {
   public void start() {
     while (true) {
       try {
-        int choice = bookingView.displayMenu();
+        String choice = bookingView.displayMenu();
 
-        if (choice == 0) {
+        if ("6".equals(choice)) {
           return;
-        } else if (choice == 1) {
+        } else if ("1".equals(choice)) {
           // A walk-in is the one thing the desk does under time pressure, so it sits at the top
           // of the module instead of three screens inside queue management.
           newWalkInRegistrationController().registerWalkIn();
-        } else if (choice == 2) {
+        } else if ("2".equals(choice)) {
           new WalkInQueueController(
                   standardReservationRepo,
                   vipReservationRepo,
@@ -53,7 +53,7 @@ public class BookingController {
                   roomRepo,
                   bookingSettingsRepo)
               .startQueueManagement();
-        } else if (choice == 3) {
+        } else if ("3".equals(choice)) {
           new AdvanceBookingController(
                   standardReservationRepo,
                   vipReservationRepo,
@@ -62,11 +62,11 @@ public class BookingController {
                   roomRepo,
                   bookingSettingsRepo)
               .startAdvanceBookingManagement();
-        } else if (choice == 4) {
+        } else if ("4".equals(choice)) {
           new BookingReportController(
                   standardReservationRepo, guestRepo, roomRepo, bookingSettingsRepo)
               .startReportManagement();
-        } else if (choice == 5) {
+        } else if ("5".equals(choice)) {
           new BookingSettingsController(bookingSettingsRepo, standardReservationRepo)
               .startSettingsManagement();
         }
