@@ -27,6 +27,7 @@ public class BookingReportController {
   private static final String PERFORMANCE_TITLE = "QUEUE PERFORMANCE & NO-SHOW ANALYSIS";
   private static final String UTILISATION_TITLE = "ROOM UTILISATION & FORECAST";
   private static final String NEW_LINE = System.lineSeparator();
+  private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   private static final String FIELD_NAME = "GUEST NAME";
   private static final String FIELD_GUEST_ID = "GUEST ID";
@@ -165,7 +166,7 @@ public class BookingReportController {
                 matched.getNumberOfEntries(),
                 isRegister);
 
-        if ("B".equals(command)) {
+        if ("E".equals(command)) {
           return;
         } else if ("R".equals(command)) {
           scope = defaultScope(isRegister);
@@ -197,7 +198,12 @@ public class BookingReportController {
           scope.minStrikes = range[0];
           scope.maxStrikes = range[1];
         } else if ("7".equals(command)) {
-          scope.roomNumberFilter = reportView.promptRoomNumber(scope.roomNumberFilter);
+          String typedRoom = reportView.promptRoomNumber(scope.roomNumberFilter);
+          if (typedRoom != null
+              && !typedRoom.trim().isEmpty()
+              && !"E".equalsIgnoreCase(typedRoom.trim())) {
+            scope.roomNumberFilter = "-".equals(typedRoom.trim()) ? null : typedRoom.trim();
+          }
         } else if ("8".equals(command)) {
           int attribute = reportView.displaySortAttributeSubmenu(scope.sortAttribute, isRegister);
           if (attribute > 0) {
@@ -240,7 +246,10 @@ public class BookingReportController {
         int picked = reportView.displaySearchFieldSubmenu(scope.searchField);
         if (picked > 0) scope.searchField = fieldNameFor(picked);
       } else if (choice == 2) {
-        scope.searchTerm = reportView.promptSearchTerm(scope.searchField, scope.searchTerm);
+        String typed = reportView.promptSearchTerm(scope.searchField, scope.searchTerm);
+        if (typed != null && !typed.trim().isEmpty() && !"E".equalsIgnoreCase(typed.trim())) {
+          scope.searchTerm = "-".equals(typed.trim()) ? null : typed.trim();
+        }
       } else if (choice == 3) {
         scope.exactMatch = !scope.exactMatch;
       } else if (choice == 4) {
@@ -255,10 +264,20 @@ public class BookingReportController {
     if (picked == 0) return;
 
     if (picked == 6) {
-      LocalDate[] range = reportView.promptDateRange(scope.fromDate, scope.toDate);
-      scope.fromDate = range[0];
-      scope.toDate = range[1];
-      scope.periodFilter = (range[0] == null && range[1] == null) ? "ALL TIME" : "CUSTOM";
+      String[] typed = reportView.promptDateRange(periodLabel(scope));
+      String rawFrom = (typed[0] == null) ? "" : typed[0].trim();
+      if ("E".equalsIgnoreCase(rawFrom)) return;
+
+      LocalDate parsedFrom = parseOrNull(rawFrom);
+      LocalDate parsedTo = parseOrNull(typed[1]);
+
+      if (parsedFrom != null && parsedTo != null && parsedTo.isBefore(parsedFrom)) {
+        throw new IllegalArgumentException("The end of the range cannot fall before its start!");
+      }
+
+      scope.fromDate = parsedFrom;
+      scope.toDate = parsedTo;
+      scope.periodFilter = (parsedFrom == null && parsedTo == null) ? "ALL TIME" : "CUSTOM";
       return;
     }
 
@@ -316,7 +335,7 @@ public class BookingReportController {
                 "RESERVATION ID".equalsIgnoreCase(scope.sortAttribute)
                     && "ASCENDING".equalsIgnoreCase(scope.sortDirection));
 
-        if ("B".equalsIgnoreCase(result.input)) {
+        if ("E".equalsIgnoreCase(result.input)) {
           return true;
         } else if ("S".equalsIgnoreCase(result.input)) {
           return false;
@@ -393,7 +412,15 @@ public class BookingReportController {
     Guest guest = (found != null) ? guestRepo.findById(found.getGuestId()) : null;
 
     reportView.displayBinarySearchResult(
-        needle, found, guest, foundAt, comparisons, sorted.getNumberOfEntries());
+        needle,
+        found != null,
+        (guest != null) ? guest.getName() : "N/A",
+        (found != null) ? found.getRoomType().name() : "-",
+        (found != null) ? found.getStatus().name() : "-",
+        (found != null) ? formatMinutes(waitMinutesOf(found)) : "-",
+        foundAt,
+        comparisons,
+        sorted.getNumberOfEntries());
   }
 
   private ListInterface<Reservation> filterReservations(ReportScope scope) {
@@ -625,9 +652,7 @@ public class BookingReportController {
 
     LocalDateTime stamp =
         (r.getQueueArrivalTime() != null) ? r.getQueueArrivalTime() : r.getExpectedArrivalTime();
-    return (stamp == null)
-        ? "NO ARRIVAL DATE"
-        : stamp.toLocalDate().format(ConsoleUtil.DATE_FORMAT);
+    return (stamp == null) ? "NO ARRIVAL DATE" : stamp.toLocalDate().format(DATE_FORMAT);
   }
 
   private String[] selectedHeaders(ReportScope scope) {
@@ -815,9 +840,9 @@ public class BookingReportController {
 
         String command =
             reportView.displayUtilisationPanel(
-                horizonDays, roomTypeFilter, startDate, countLiveBookings());
+                horizonDays, roomTypeFilter, startDate.format(DATE_FORMAT), countLiveBookings());
 
-        if ("B".equals(command)) {
+        if ("E".equals(command)) {
           return;
         } else if ("R".equals(command)) {
           startDate = LocalDate.now();
@@ -832,7 +857,7 @@ public class BookingReportController {
           ConsoleUtil.GetMenuInputResult result =
               reportView.showExportReceipt(
                   UTILISATION_TITLE,
-                  startDate.format(ConsoleUtil.DATE_FORMAT)
+                  startDate.format(DATE_FORMAT)
                       + " for "
                       + horizonDays
                       + " nights  |  "
@@ -847,7 +872,12 @@ public class BookingReportController {
 
           if ("B".equalsIgnoreCase(result.input)) return;
         } else if ("1".equals(command)) {
-          startDate = reportView.promptStartDate(startDate);
+          String typedStart = reportView.promptStartDate(startDate.format(DATE_FORMAT));
+          if (typedStart != null
+              && !typedStart.trim().isEmpty()
+              && !"E".equalsIgnoreCase(typedStart.trim())) {
+            startDate = parseDate(typedStart.trim());
+          }
         } else if ("2".equals(command)) {
           Integer picked = reportView.promptHorizon(horizonDays);
           if (picked != null) horizonDays = picked;
@@ -887,7 +917,7 @@ public class BookingReportController {
     sb.append(UTILISATION_TITLE).append(NEW_LINE);
     appendRule(sb, '=', UTILISATION_TITLE.length());
     sb.append("GENERATED : ").append(formatTimestamp(LocalDateTime.now())).append(NEW_LINE);
-    sb.append("FROM      : ").append(startDate.format(ConsoleUtil.DATE_FORMAT)).append(NEW_LINE);
+    sb.append("FROM      : ").append(startDate.format(DATE_FORMAT)).append(NEW_LINE);
     sb.append("HORIZON   : ").append(horizonDays).append(" night(s)").append(NEW_LINE);
     sb.append("ROOM TYPE : ")
         .append((roomTypeFilter == null) ? "All room types" : roomTypeFilter)
@@ -910,7 +940,7 @@ public class BookingReportController {
 
         rows[d] =
             new String[] {
-              date.format(ConsoleUtil.DATE_FORMAT),
+              date.format(DATE_FORMAT),
               date.getDayOfWeek().name().substring(0, 3),
               String.valueOf(total),
               String.valueOf(committed),
@@ -983,6 +1013,20 @@ public class BookingReportController {
         .append(matched)
         .append(" matching records. Raise the record limit to export the rest.")
         .append(NEW_LINE);
+  }
+
+  private LocalDate parseDate(String raw) {
+    try {
+      return LocalDate.parse(raw, DATE_FORMAT);
+    } catch (java.time.format.DateTimeParseException e) {
+      throw new IllegalArgumentException(
+          "Invalid date! Type it as YYYY-MM-DD, for example 2026-08-21.");
+    }
+  }
+
+  private LocalDate parseOrNull(String raw) {
+    if (raw == null || raw.trim().isEmpty()) return null;
+    return parseDate(raw.trim());
   }
 
   private int exportedRowCount(int matched, int recordLimit) {
@@ -1061,9 +1105,8 @@ public class BookingReportController {
   private String periodLabel(ReportScope scope) {
     if (!"CUSTOM".equalsIgnoreCase(scope.periodFilter)) return scope.periodFilter;
 
-    String from =
-        (scope.fromDate == null) ? "open" : scope.fromDate.format(ConsoleUtil.DATE_FORMAT);
-    String to = (scope.toDate == null) ? "open" : scope.toDate.format(ConsoleUtil.DATE_FORMAT);
+    String from = (scope.fromDate == null) ? "open" : scope.fromDate.format(DATE_FORMAT);
+    String to = (scope.toDate == null) ? "open" : scope.toDate.format(DATE_FORMAT);
     return from + " .. " + to;
   }
 

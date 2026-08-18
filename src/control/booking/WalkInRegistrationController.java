@@ -395,7 +395,7 @@ public class WalkInRegistrationController {
       if (room != null
           && room.getRoomType() == roomType
           && room.getStatus() == Room.Status.VACANT_CLEAN
-          && !room.isOccupied()) {
+          && !room.getIsOccupied()) {
         count++;
       }
     }
