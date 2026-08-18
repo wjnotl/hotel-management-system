@@ -132,11 +132,13 @@ public class VipManageAllocationView {
     int startIndex = (currentPage - 1) * pageSize + 1;
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
-    for (int i = startIndex; i <= endIndex; i++) {
-      AllocationRowDTO item = list.getEntry(i);
+    ListInterface<AllocationRowDTO> pageSlice = list.slice(startIndex, endIndex);
+
+    for (int i = 1; i <= pageSlice.getNumberOfEntries(); i++) {
+      AllocationRowDTO item = pageSlice.getEntry(i);
       if (item == null) continue;
 
-      int displayNum = i - startIndex + 1;
+      int displayNum = i;
       String graceTimer = formatTimerCountdown(item.getExpirationTimestamp());
 
       TableUtil.printTableRow(

@@ -190,11 +190,13 @@ public class VipManageWaitlistView {
     int startIndex = (currentPage - 1) * pageSize + 1;
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
-    for (int i = startIndex; i <= endIndex; i++) {
-      WaitlistRowDTO item = list.getEntry(i);
+    ListInterface<WaitlistRowDTO> pageSlice = list.slice(startIndex, endIndex);
+
+    for (int i = 1; i <= pageSlice.getNumberOfEntries(); i++) {
+      WaitlistRowDTO item = pageSlice.getEntry(i);
       if (item == null) continue;
 
-      int displayNum = i - startIndex + 1;
+      int displayNum = i;
       String boilingStr = item.getIsBoiling() ? "[!]" : "[ ]";
 
       TableUtil.printTableRow(
