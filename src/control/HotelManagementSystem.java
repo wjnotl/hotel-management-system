@@ -73,7 +73,8 @@ public class HotelManagementSystem {
                   reservationRepo,
                   roomStatusHistoryRepo,
                   houseKeepingTaskRepo,
-                  roomRepo)
+                  roomRepo,
+                  memberRepo)
               .start();
         } else if ("5".equals(choice)) {
           if (ConsoleUtil.showConfirmMessage("Are you sure you want to exit?")) {
