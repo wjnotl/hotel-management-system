@@ -52,16 +52,8 @@ public class Room implements Serializable {
     return isOccupied;
   }
 
-  public void setOccupied(boolean isOccupied) {
-    this.isOccupied = isOccupied;
-  }
-
   public LocalDateTime getDirtyTime() {
     return dirtyTime;
-  }
-
-  public void setDirtyTime(LocalDateTime dirtyTime) {
-    this.dirtyTime = dirtyTime;
   }
 
   public void setRoomNumber(String roomNumber) {
@@ -80,6 +72,14 @@ public class Room implements Serializable {
     this.price = price;
   }
 
+  public void setIsOccupied(boolean isOccupied) {
+    this.isOccupied = isOccupied;
+  }
+
+  public void setDirtyTime(LocalDateTime dirtyTime) {
+    this.dirtyTime = dirtyTime;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
@@ -96,12 +96,19 @@ public class Room implements Serializable {
   @Override
   public String toString() {
     return "Room{"
-        + "roomNumber='" + roomNumber + "'"
-        + ", roomType=" + roomType
-        + ", status=" + status
-        + ", price=" + price
-        + ", isOccupied=" + isOccupied
-        + ", dirtyTime=" + dirtyTime
+        + "roomNumber='"
+        + roomNumber
+        + "'"
+        + ", roomType="
+        + roomType
+        + ", status="
+        + status
+        + ", price="
+        + price
+        + ", isOccupied="
+        + isOccupied
+        + ", dirtyTime="
+        + dirtyTime
         + "}";
   }
 }

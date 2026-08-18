@@ -402,7 +402,7 @@ public class VipManageWaitlistController {
         allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
 
     reservation.setRoomNumber(vacantRoom.getRoomNumber());
-    vacantRoom.setStatus(Room.Status.OCCUPIED);
+    vacantRoom.setIsOccupied(true);
     roomRepo.updateRoom(vacantRoom);
 
     vipReservationRepo.allocateReservation(reservation, guestRepo, memberRepo, vipSystemConfigRepo);

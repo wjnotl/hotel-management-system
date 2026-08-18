@@ -1106,13 +1106,7 @@ public class HouseKeepingController {
   private Room.Status mapRoomStatus(int choice) {
     switch (choice) {
       case 2:
-        return Room.Status.CLEANING;
-      case 3:
-        return Room.Status.INSPECTED;
-      case 4:
         return Room.Status.VACANT_CLEAN;
-      case 5:
-        return Room.Status.OCCUPIED;
       default:
         return Room.Status.DIRTY;
     }

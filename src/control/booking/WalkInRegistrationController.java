@@ -240,7 +240,7 @@ public class WalkInRegistrationController {
 
     direct.setRoomNumber(room.getRoomNumber());
     standardReservationRepo.updateReservation(direct);
-    room.setStatus(Room.Status.OCCUPIED);
+    room.setIsOccupied(true);
     roomRepo.updateRoom(room);
 
     registrationView.displayAssignSuccessScreen(direct, guest, room, graceMinutes);
@@ -377,7 +377,7 @@ public class WalkInRegistrationController {
 
     booking.setRoomNumber(room.getRoomNumber());
     standardReservationRepo.updateReservation(booking);
-    room.setStatus(Room.Status.OCCUPIED);
+    room.setIsOccupied(true);
     roomRepo.updateRoom(room);
 
     registrationView.displayAssignSuccessScreen(booking, guest, room, graceMinutes);
@@ -394,7 +394,8 @@ public class WalkInRegistrationController {
       Room room = rooms.getEntry(i);
       if (room != null
           && room.getRoomType() == roomType
-          && room.getStatus() == Room.Status.VACANT_CLEAN) {
+          && room.getStatus() == Room.Status.VACANT_CLEAN
+          && !room.isOccupied()) {
         count++;
       }
     }

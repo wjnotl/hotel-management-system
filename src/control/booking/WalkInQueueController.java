@@ -273,7 +273,7 @@ public class WalkInQueueController {
 
     allocated.setRoomNumber(room.getRoomNumber());
     standardReservationRepo.updateReservation(allocated);
-    room.setStatus(Room.Status.OCCUPIED);
+    room.setIsOccupied(true);
     roomRepo.updateRoom(room);
 
     walkInQueueView.displayAllocateSuccessScreen(
