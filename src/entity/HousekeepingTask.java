@@ -9,7 +9,6 @@ public class HousekeepingTask implements Serializable {
   public static enum TaskType {
     STANDARD_CLEAN,
     DEEP_CLEAN,
-    TURNOVER,
     MAINTENANCE_CHECK
   }
 

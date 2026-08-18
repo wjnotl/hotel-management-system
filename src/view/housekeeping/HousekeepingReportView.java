@@ -97,12 +97,11 @@ public class HousekeepingReportView {
     System.out.println(" Current Task Type Filter: [ " + currentLabel + " ]\n");
     System.out.println(" 1. STANDARD_CLEAN");
     System.out.println(" 2. DEEP_CLEAN");
-    System.out.println(" 3. TURNOVER");
-    System.out.println(" 4. MAINTENANCE_CHECK");
-    System.out.println(" 5. Clear Filter (Show All)");
-    System.out.println(" 6. Back to Filter Menu\n");
+    System.out.println(" 3. MAINTENANCE_CHECK");
+    System.out.println(" 4. Clear Filter (Show All)");
+    System.out.println(" 5. Back to Filter Menu\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
   // --- REPORT OUTPUT ---

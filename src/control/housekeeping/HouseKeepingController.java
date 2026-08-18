@@ -177,6 +177,17 @@ public class HouseKeepingController {
           continue; // Re-prompt instead of creating a task for a room that doesn't exist
         }
 
+        // Hard block: a room with any active task (any type) can't take another one until
+        // that task is resolved via the Task Board.
+        if (taskRepo.hasActiveTask(room.getRoomNumber())) {
+          ConsoleUtil.printError(
+              "Room "
+                  + room.getRoomNumber()
+                  + " already has a pending task on the board. Resolve it before adding a new"
+                  + " one.");
+          continue; // Re-prompt instead of hard-cancelling
+        }
+
         int typeChoice = houseKeepingView.promptTaskTypeInput();
         HousekeepingTask.TaskType taskType = mapTaskType(typeChoice);
 
@@ -202,23 +213,6 @@ public class HouseKeepingController {
                   + (jumpAllowed ? "YES" : "NO"));
         }
         ConsoleUtil.printContinueMessage();
-
-        // Warn (don't hard-block) on a likely duplicate: same room, same task type, already
-        // active. Different types (e.g. Maintenance Check alongside a queued Standard Clean)
-        // or an ad-hoc urgent add on top of an existing queued task are legitimate, so this
-        // only fires — and only asks — when it's the exact same type of work twice.
-        if (hasActiveTaskOfSameType(room.getRoomNumber(), taskType)) {
-          boolean proceedAnyway =
-              ConsoleUtil.showConfirmMessage(
-                  "Room "
-                      + room.getRoomNumber()
-                      + " already has an active "
-                      + taskType.name()
-                      + " task. Add another one anyway?");
-          if (!proceedAnyway) {
-            continue; // Back to the top of Add Task, not a hard cancel
-          }
-        }
 
         HousekeepingTask newTask =
             new HousekeepingTask(
@@ -288,35 +282,14 @@ public class HouseKeepingController {
         return settings.isQueueJumpStandardClean();
       case DEEP_CLEAN:
         return settings.isQueueJumpDeepClean();
-      case TURNOVER:
-        return settings.isQueueJumpTurnover();
       default:
         return settings.isQueueJumpMaintenanceCheck();
     }
   }
 
-  // True if this room already has a task of the same type sitting PENDING/ASSIGNED/
-  // IN_PROGRESS — used to warn against (not block) an accidental duplicate task creation.
-  private boolean hasActiveTaskOfSameType(String roomNumber, HousekeepingTask.TaskType taskType) {
-    ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
-    for (int i = 1; i <= fullList.getNumberOfEntries(); i++) {
-      HousekeepingTask t = fullList.getEntry(i);
-      if (t == null || !roomNumber.equalsIgnoreCase(t.getRoomNumber())) continue;
-      if (t.getTaskType() != taskType) continue;
-
-      boolean isActive =
-          t.getStatus() == HousekeepingTask.Status.PENDING
-              || t.getStatus() == HousekeepingTask.Status.ASSIGNED
-              || t.getStatus() == HousekeepingTask.Status.IN_PROGRESS;
-      if (isActive) return true;
-    }
-    return false;
-  }
-
   private boolean isCleaningTaskType(HousekeepingTask.TaskType taskType) {
     return taskType == HousekeepingTask.TaskType.STANDARD_CLEAN
-        || taskType == HousekeepingTask.TaskType.DEEP_CLEAN
-        || taskType == HousekeepingTask.TaskType.TURNOVER;
+        || taskType == HousekeepingTask.TaskType.DEEP_CLEAN;
   }
 
   // --- DEQUEUE NEXT TASK (NEXT STAFF PULLS FROM FRONT) ---
@@ -339,6 +312,16 @@ public class HouseKeepingController {
       HousekeepingStaff staff = staffRepo.findById(staffId.trim());
       if (staff == null) {
         ConsoleUtil.printError("No staff found with ID: " + staffId.trim());
+        taskRepo.getTaskDeque().addFirst(top); // put it back, don't drop it
+        return;
+      }
+
+      if (isAtShiftCapacity(staff)) {
+        ConsoleUtil.printError(
+            staff.getName()
+                + " is already at the max room count for their "
+                + staff.getShift().name()
+                + " shift. Pick another staff member.");
         taskRepo.getTaskDeque().addFirst(top); // put it back, don't drop it
         return;
       }
@@ -410,6 +393,29 @@ public class HouseKeepingController {
       finishTask(staleTasks.getEntry(i), HousekeepingTask.Status.COMPLETED);
     }
     return true;
+  }
+
+  // Shift now actually gates assignment: Settings defines a max-rooms cap per shift, so this
+  // checks the staff's current room load against their own shift's cap before any assignment.
+  private int getMaxRoomsForShift(HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
+    switch (shift) {
+      case MORNING:
+        return settings.getMaxRoomsMorning();
+      case AFTERNOON:
+        return settings.getMaxRoomsAfternoon();
+      default:
+        return settings.getMaxRoomsNight();
+    }
+  }
+
+  private boolean isAtShiftCapacity(HousekeepingStaff staff) {
+    HousekeepingSettings settings = settingsRepo.getSettings();
+    int max = getMaxRoomsForShift(staff.getShift(), settings);
+    int current =
+        staff.getAssignedRoomNumbers() == null
+            ? 0
+            : staff.getAssignedRoomNumbers().getNumberOfEntries();
+    return current >= max;
   }
 
   // Assigns a task to a staff member and keeps the roster in sync: the room lands on the
@@ -741,6 +747,16 @@ public class HouseKeepingController {
       return;
     }
 
+    if (isAtShiftCapacity(staff)) {
+      ConsoleUtil.printError(
+          "Staff "
+              + staff.getName()
+              + " is already at the max room count for their "
+              + staff.getShift().name()
+              + " shift. Reassign one of their rooms first.");
+      return;
+    }
+
     HousekeepingTask next = taskRepo.dequeueNextTask();
     if (next == null) {
       ConsoleUtil.printError("Task queue is currently empty — nothing to assign!");
@@ -793,6 +809,15 @@ public class HouseKeepingController {
     }
     if (toStaff.getStaffId().equals(fromStaff.getStaffId())) {
       ConsoleUtil.printError("Pick a different staff member to reassign to!");
+      return;
+    }
+
+    if (isAtShiftCapacity(toStaff)) {
+      ConsoleUtil.printError(
+          toStaff.getName()
+              + " is already at the max room count for their "
+              + toStaff.getShift().name()
+              + " shift. Pick another staff member.");
       return;
     }
 
@@ -1019,17 +1044,13 @@ public class HouseKeepingController {
               roomStatusHistoryRepo.getRecentHistory(selected.getRoomNumber(), 10);
           houseKeepingView.renderRoomHistoryScreen(selected.getRoomNumber(), history);
         } else if (action == 4) {
-          if (hasActiveTaskOfSameType(
-              selected.getRoomNumber(), HousekeepingTask.TaskType.MAINTENANCE_CHECK)) {
-            boolean proceedAnyway =
-                ConsoleUtil.showConfirmMessage(
-                    "Room "
-                        + selected.getRoomNumber()
-                        + " already has an active Maintenance Check task. Flag another one"
-                        + " anyway?");
-            if (!proceedAnyway) {
-              return; // Cancelled, back to Room Status Sync screen
-            }
+          if (taskRepo.hasActiveTask(selected.getRoomNumber())) {
+            ConsoleUtil.printError(
+                "Room "
+                    + selected.getRoomNumber()
+                    + " already has a pending task on the board. Resolve it before flagging"
+                    + " another one.");
+            return; // Blocked, back to Room Status Sync screen
           }
 
           roomStatusHistoryRepo.recordNote(selected.getRoomNumber(), "Flagged for maintenance");
@@ -1044,9 +1065,6 @@ public class HouseKeepingController {
                   false,
                   LocalDateTime.now());
           taskRepo.enqueueTask(maintenanceTask);
-        } else if (action == 5) {
-          roomStatusHistoryRepo.recordNote(
-              selected.getRoomNumber(), "Supervisor inspection requested");
         }
 
         if (action != 3) return; // Return to Room Status Sync screen (history has its own pause)
@@ -1160,10 +1178,9 @@ public class HouseKeepingController {
         int choice = houseKeepingView.displayTaskTypeSubmenu(currentType);
         if (choice == 1) return "STANDARD_CLEAN";
         if (choice == 2) return "DEEP_CLEAN";
-        if (choice == 3) return "TURNOVER";
-        if (choice == 4) return "MAINTENANCE_CHECK";
-        if (choice == 5) return null;
-        if (choice == 6) return currentType;
+        if (choice == 3) return "MAINTENANCE_CHECK";
+        if (choice == 4) return null;
+        if (choice == 5) return currentType;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -1386,8 +1403,6 @@ public class HouseKeepingController {
       case 2:
         return HousekeepingTask.TaskType.DEEP_CLEAN;
       case 3:
-        return HousekeepingTask.TaskType.TURNOVER;
-      case 4:
         return HousekeepingTask.TaskType.MAINTENANCE_CHECK;
       default:
         return HousekeepingTask.TaskType.STANDARD_CLEAN;
@@ -1496,7 +1511,7 @@ public class HouseKeepingController {
 
   private void handleEditQueueJumpTypes(HousekeepingSettings settings) {
     boolean[] result = houseKeepingView.promptQueueJumpTypes(settings);
-    settingsRepo.updateQueueJumpTypes(result[0], result[1], result[2], result[3]);
+    settingsRepo.updateQueueJumpTypes(result[0], result[1], result[2]);
 
     ConsoleUtil.clearScreen();
     System.out.println(" >> STATUS: [\u2713] SUCCESS");

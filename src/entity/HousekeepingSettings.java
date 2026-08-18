@@ -23,7 +23,6 @@ public class HousekeepingSettings implements Serializable {
   // Task) ---
   private boolean queueJumpStandardClean;
   private boolean queueJumpDeepClean;
-  private boolean queueJumpTurnover;
   private boolean queueJumpMaintenanceCheck;
 
   // --- Staff Configuration: shift schedules (free-text, e.g. "07:00 - 15:00")
@@ -46,7 +45,6 @@ public class HousekeepingSettings implements Serializable {
 
     this.queueJumpStandardClean = true;
     this.queueJumpDeepClean = true;
-    this.queueJumpTurnover = true;
     this.queueJumpMaintenanceCheck = true;
 
     this.morningShiftSchedule = "07:00 - 15:00";
@@ -80,10 +78,6 @@ public class HousekeepingSettings implements Serializable {
 
   public boolean isQueueJumpDeepClean() {
     return queueJumpDeepClean;
-  }
-
-  public boolean isQueueJumpTurnover() {
-    return queueJumpTurnover;
   }
 
   public boolean isQueueJumpMaintenanceCheck() {
@@ -138,10 +132,6 @@ public class HousekeepingSettings implements Serializable {
     this.queueJumpDeepClean = queueJumpDeepClean;
   }
 
-  public void setQueueJumpTurnover(boolean queueJumpTurnover) {
-    this.queueJumpTurnover = queueJumpTurnover;
-  }
-
   public void setQueueJumpMaintenanceCheck(boolean queueJumpMaintenanceCheck) {
     this.queueJumpMaintenanceCheck = queueJumpMaintenanceCheck;
   }
@@ -185,8 +175,6 @@ public class HousekeepingSettings implements Serializable {
         + queueJumpStandardClean
         + ", queueJumpDeepClean="
         + queueJumpDeepClean
-        + ", queueJumpTurnover="
-        + queueJumpTurnover
         + ", queueJumpMaintenanceCheck="
         + queueJumpMaintenanceCheck
         + ", morningShiftSchedule='"

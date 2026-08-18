@@ -41,10 +41,9 @@ public class HousekeepingSettingsRepo {
   }
 
   public void updateQueueJumpTypes(
-      boolean standardClean, boolean deepClean, boolean turnover, boolean maintenanceCheck) {
+      boolean standardClean, boolean deepClean, boolean maintenanceCheck) {
     settings.setQueueJumpStandardClean(standardClean);
     settings.setQueueJumpDeepClean(deepClean);
-    settings.setQueueJumpTurnover(turnover);
     settings.setQueueJumpMaintenanceCheck(maintenanceCheck);
     save();
   }
