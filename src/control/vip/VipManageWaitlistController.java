@@ -2,6 +2,7 @@ package control.vip;
 
 import adt.ArrayList;
 import adt.ListInterface;
+import adt.PriorityQueueInterface;
 import entity.AllocationEntry;
 import entity.Guest;
 import entity.Member;
@@ -279,13 +280,14 @@ public class VipManageWaitlistController {
 
   private void handleQuickAssignTop(Room.RoomType roomType) {
     try {
-      ListInterface<Reservation> queueList = vipReservationRepo.getListByRoomType(roomType);
-      if (queueList == null || queueList.isEmpty()) {
+      PriorityQueueInterface<Reservation> queueHeap =
+          vipReservationRepo.getHeapByRoomType(roomType);
+      if (queueHeap == null || queueHeap.isEmpty()) {
         ConsoleUtil.printError("This room queue is currently empty!");
         return;
       }
 
-      Reservation top = queueList.getEntry(1);
+      Reservation top = queueHeap.peek();
       if (top == null) {
         ConsoleUtil.printError("This room queue is currently empty!");
         return;
