@@ -4,7 +4,6 @@ import adt.ListInterface;
 import entity.BookingSettings;
 import entity.Room;
 import util.ConsoleUtil;
-import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 import util.TextUtil;
 
@@ -16,9 +15,7 @@ public class BookingSettingsView {
   private static final int SCREEN_WIDTH = 83;
 
   public int displayMasterSettingsMenu(BookingSettings config) {
-    String error = null;
-
-    while (true) {
+    {
       ConsoleUtil.clearScreen();
       ConsoleUtil.printTitleBox("WALK-IN & BOOKING SETTINGS", SCREEN_WIDTH);
 
@@ -78,21 +75,10 @@ public class BookingSettingsView {
       System.out.println("5. Per-Room-Type Overrides");
       System.out.println("6. Rebuild Live Lines From Current Capacity");
       System.out.println("7. Reset To Factory Defaults");
-      System.out.println();
-      System.out.println("B - Back to Walk-In & Booking Menu");
-      System.out.println();
+      System.out.println("8. Back to Walk-In & Booking Menu\n");
 
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 7, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return 0;
-        return result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 8).getAsInt();
+      return (choice == 8) ? 0 : choice;
     }
   }
 
@@ -187,9 +173,7 @@ public class BookingSettingsView {
 
   // Shows what each line is actually running on, so an override is never edited blind.
   public int displayPerTypeMenu(BookingSettings config) {
-    String error = null;
-
-    while (true) {
+    {
       ConsoleUtil.clearScreen();
       ConsoleUtil.printTitleBox("PER-ROOM-TYPE OVERRIDES", SCREEN_WIDTH);
       System.out.println("A line with no override of its own runs on the house wide value.");
@@ -239,21 +223,10 @@ public class BookingSettingsView {
       System.out.println("2. Edit SUITE");
       System.out.println("3. Edit STANDARD");
       System.out.println("4. Clear Every Override");
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
+      System.out.println("5. Back\n");
 
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 4, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return 0;
-        return result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+      return (choice == 5) ? 0 : choice;
     }
   }
 
@@ -298,9 +271,7 @@ public class BookingSettingsView {
       String unit,
       String warning) {
 
-    String error = null;
-
-    while (true) {
+    {
       ConsoleUtil.clearScreen();
       ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
 
@@ -318,16 +289,9 @@ public class BookingSettingsView {
       }
 
       System.out.println();
-      System.out.println("B - Back (keep the current value)");
-      System.out.println();
+      System.out.println("Press Enter or 'C' to keep the current value\n");
 
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        return ConsoleUtil.getIntegerInput("New value: ", min, max);
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+      return ConsoleUtil.getIntegerInput("New value: ", min, max);
     }
   }
 
@@ -339,9 +303,7 @@ public class BookingSettingsView {
       String offLabel,
       String warning) {
 
-    String error = null;
-
-    while (true) {
+    {
       ConsoleUtil.clearScreen();
       ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
 
@@ -360,28 +322,16 @@ public class BookingSettingsView {
       System.out.println();
       System.out.println("1. " + onLabel);
       System.out.println("2. " + offLabel);
-      System.out.println();
-      System.out.println("B - Back (keep the current value)");
-      System.out.println();
+      System.out.println("3. Back (keep the current value)\n");
 
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 2, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return null;
-        return (result.getAsInt() == 1) ? Boolean.TRUE : Boolean.FALSE;
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+      if (choice == 3) return null;
+      return (choice == 1) ? Boolean.TRUE : Boolean.FALSE;
     }
   }
 
   public String promptSortSetting(String title, String current, ListInterface<String> options) {
-    String error = null;
-
-    while (true) {
+    {
       ConsoleUtil.clearScreen();
       ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
       System.out.println("Current default: [ " + current + " ]\n");
@@ -392,21 +342,11 @@ public class BookingSettingsView {
       for (int i = 1; i <= total; i++) {
         System.out.println(i + ". " + options.getEntry(i));
       }
-      System.out.println();
-      System.out.println("B - Back (keep the current default)");
-      System.out.println();
+      System.out.println((total + 1) + ". Back (keep the current default)\n");
 
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, total, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return null;
-        return options.getEntry(result.getAsInt());
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, total + 1).getAsInt();
+      if (choice == total + 1) return null;
+      return options.getEntry(choice);
     }
   }
 
@@ -451,9 +391,7 @@ public class BookingSettingsView {
   }
 
   public boolean promptResetConfirmation() {
-    String error = null;
-
-    while (true) {
+    {
       ConsoleUtil.clearScreen();
       ConsoleUtil.printTitleBox("RESET BOOKING SETTINGS", SCREEN_WIDTH);
       printNoticeBox(
@@ -465,20 +403,10 @@ public class BookingSettingsView {
               + " are not touched, and the live lines are rebuilt afterwards so the restored"
               + " capacity takes effect straight away.");
 
-      System.out.println("Y - Reset every booking setting to its default");
-      System.out.println("N - Leave the settings alone");
-      System.out.println();
+      System.out.println("1. Reset Every Booking Setting To Its Default");
+      System.out.println("2. Leave The Settings Alone\n");
 
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", new char[] {'Y', 'N'});
-        if (result.isBlank) return false;
-        return "Y".equalsIgnoreCase(result.input);
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+      return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
     }
   }
 
@@ -507,9 +435,7 @@ public class BookingSettingsView {
   }
 
   private int numberedMenu(String title, String[] contextLines, String[] options) {
-    String error = null;
-
-    while (true) {
+    {
       ConsoleUtil.clearScreen();
       ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
 
@@ -521,21 +447,11 @@ public class BookingSettingsView {
       for (int i = 0; i < options.length; i++) {
         System.out.println((i + 1) + ". " + options[i]);
       }
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println();
+      int backOption = options.length + 1;
+      System.out.println(backOption + ". Back\n");
 
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, options.length, new char[] {'B'});
-
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return 0;
-        return result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, backOption).getAsInt();
+      return (choice == backOption) ? 0 : choice;
     }
   }
 

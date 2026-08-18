@@ -275,10 +275,7 @@ public class AdvanceBookingView {
     System.out.println("Guest: " + guest.getName() + " (" + guest.getGuestId() + ")\n");
     System.out.println("Format: YYYY-MM-DD");
     System.out.println(
-        "Bookable window: "
-            + earliest.format(DATE_FORMAT)
-            + "  to  "
-            + latest.format(DATE_FORMAT));
+        "Bookable window: " + earliest.format(DATE_FORMAT) + "  to  " + latest.format(DATE_FORMAT));
     if (current != null) {
       System.out.println("Current value: " + current.format(DATE_FORMAT));
     }

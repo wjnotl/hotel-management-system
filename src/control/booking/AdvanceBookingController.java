@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
@@ -37,6 +38,9 @@ public class AdvanceBookingController {
   private static final String FIELD_RES_ID = "RESERVATION ID";
   private static final String FIELD_CODE = "CONFIRMATION CODE";
   private static final String FIELD_ALL = "ALL FIELDS";
+
+  private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
   private final AdvanceBookingView advanceBookingView = new AdvanceBookingView();
   private final StandardReservationRepo standardReservationRepo;
@@ -194,107 +198,137 @@ public class AdvanceBookingController {
     int step = STEP_DATE;
 
     while (true) {
-      if (step == STEP_DATE) {
-        LocalDate picked =
-            advanceBookingView.promptArrivalDate(
-                guest, earliestArrival(config), latestArrival(config), arrivalDate);
-        if (picked == null) return false;
+      try {
+        if (step == STEP_DATE) {
+          LocalDate earliest = earliestArrival(config);
+          LocalDate latest = latestArrival(config);
 
-        arrivalDate = picked;
-        step = STEP_TYPE;
+          String typed = advanceBookingView.promptArrivalDate(guest, earliest, latest, arrivalDate);
+          if (typed == null || "E".equalsIgnoreCase(typed.trim())) return false;
 
-      } else if (step == STEP_TYPE) {
-        Room.RoomType picked = promptRoomType(guest, arrivalDate);
-        if (picked == null) {
-          step = STEP_DATE;
-          continue;
-        }
+          // A blank line keeps whatever was already captured, so walking back into this step and
+          // pressing Enter does not wipe the date the clerk already agreed with the guest.
+          if (typed.trim().isEmpty()) {
+            if (arrivalDate == null) {
+              throw new IllegalArgumentException("Arrival date cannot be empty!");
+            }
+            step = STEP_TYPE;
+            continue;
+          }
 
-        roomType = picked;
-        step = STEP_NIGHTS;
+          LocalDate picked = parseDate(typed.trim());
+          if (picked.isBefore(earliest)) {
+            throw new IllegalArgumentException(
+                "That date is before the bookable window opens on " + format(earliest) + ".");
+          }
+          if (picked.isAfter(latest)) {
+            throw new IllegalArgumentException(
+                "Bookings are only taken up to "
+                    + format(latest)
+                    + " under the current lead time setting.");
+          }
 
-      } else if (step == STEP_NIGHTS) {
-        int maxBookable =
-            standardReservationRepo.findLongestBookableStay(
-                roomRepo, roomType, arrivalDate, config.getMaxStayNights());
-
-        if (config.isBlockOverbooking() && maxBookable <= 0) {
-          advanceBookingView.displayFullyBookedScreen(
-              roomType,
-              arrivalDate,
-              arrivalDate,
-              standardReservationRepo.getTotalRoomsOfType(roomRepo, roomType));
+          arrivalDate = picked;
           step = STEP_TYPE;
-          continue;
-        }
 
-        int allowed = config.isBlockOverbooking() ? maxBookable : config.getMaxStayNights();
+        } else if (step == STEP_TYPE) {
+          Room.RoomType picked = promptRoomType(guest, arrivalDate);
+          if (picked == null) {
+            step = STEP_DATE;
+            continue;
+          }
 
-        Integer picked =
-            advanceBookingView.promptNights(
-                roomType, arrivalDate, allowed, config.getMaxStayNights(), nights);
-        if (picked == null) {
-          step = STEP_TYPE;
-          continue;
-        }
-
-        nights = picked;
-        step = STEP_TIME;
-
-      } else if (step == STEP_TIME) {
-        LocalTime picked = advanceBookingView.promptArrivalTime(arrivalDate, arrivalTime);
-        if (picked == null) {
+          roomType = picked;
           step = STEP_NIGHTS;
-          continue;
-        }
 
-        arrivalTime = picked;
-        step = STEP_CONFIRM;
+        } else if (step == STEP_NIGHTS) {
+          int maxBookable =
+              standardReservationRepo.findLongestBookableStay(
+                  roomRepo, roomType, arrivalDate, config.getMaxStayNights());
 
-      } else {
-        // Re-checked at the last moment, because another booking may have taken the last room of
-        // this type while this one was being typed in.
-        LocalDate firstFull =
-            standardReservationRepo.findFirstFullDate(roomRepo, roomType, arrivalDate, nights);
-        if (config.isBlockOverbooking() && firstFull != null) {
-          advanceBookingView.displayFullyBookedScreen(
-              roomType,
-              arrivalDate,
-              firstFull,
-              standardReservationRepo.getTotalRoomsOfType(roomRepo, roomType));
-          step = STEP_NIGHTS;
-          continue;
-        }
-
-        LocalDateTime arrival = LocalDateTime.of(arrivalDate, arrivalTime);
-        int freeAcross =
-            standardReservationRepo.countAvailableAcross(roomRepo, roomType, arrivalDate, nights);
-
-        if (!advanceBookingView.displayNewBookingConfirmationScreen(
-            guest, roomType, arrival, nights, arrivalDate.plusDays(nights), freeAcross - 1)) {
-          step = STEP_TIME;
-          continue;
-        }
-
-        Reservation booking =
-            new Reservation(
-                standardReservationRepo.generateReservationId(),
-                guest.getGuestId(),
-                standardReservationRepo.generateConfirmationNumber(),
+          if (config.isBlockOverbooking() && maxBookable <= 0) {
+            advanceBookingView.displayFullyBookedScreen(
                 roomType,
-                Reservation.Status.RESERVED,
-                false,
-                0,
-                LocalDateTime.now(),
-                null,
-                false);
+                arrivalDate,
+                arrivalDate,
+                standardReservationRepo.getTotalRoomsOfType(roomRepo, roomType));
+            step = STEP_TYPE;
+            continue;
+          }
 
-        booking.setExpectedArrivalTime(arrival);
-        booking.setStayDays(nights);
+          int allowed = config.isBlockOverbooking() ? maxBookable : config.getMaxStayNights();
 
-        standardReservationRepo.addReservation(booking);
-        advanceBookingView.displayNewBookingSuccessScreen(booking, guest);
-        return true;
+          Integer picked =
+              advanceBookingView.promptNights(
+                  roomType, arrivalDate, allowed, config.getMaxStayNights(), nights);
+          if (picked == null) {
+            step = STEP_TYPE;
+            continue;
+          }
+
+          nights = picked;
+          step = STEP_TIME;
+
+        } else if (step == STEP_TIME) {
+          String typed = advanceBookingView.promptArrivalTime(arrivalDate, arrivalTime);
+
+          if (typed == null || typed.trim().isEmpty() || "B".equalsIgnoreCase(typed.trim())) {
+            step = STEP_NIGHTS;
+            continue;
+          }
+
+          arrivalTime = parseTime(typed.trim());
+          step = STEP_CONFIRM;
+
+        } else {
+          // Re-checked at the last moment, because another booking may have taken the last room of
+          // this type while this one was being typed in.
+          LocalDate firstFull =
+              standardReservationRepo.findFirstFullDate(roomRepo, roomType, arrivalDate, nights);
+          if (config.isBlockOverbooking() && firstFull != null) {
+            advanceBookingView.displayFullyBookedScreen(
+                roomType,
+                arrivalDate,
+                firstFull,
+                standardReservationRepo.getTotalRoomsOfType(roomRepo, roomType));
+            step = STEP_NIGHTS;
+            continue;
+          }
+
+          LocalDateTime arrival = LocalDateTime.of(arrivalDate, arrivalTime);
+          int freeAcross =
+              standardReservationRepo.countAvailableAcross(roomRepo, roomType, arrivalDate, nights);
+
+          if (!advanceBookingView.displayNewBookingConfirmationScreen(
+              guest, roomType, arrival, nights, arrivalDate.plusDays(nights), freeAcross - 1)) {
+            step = STEP_TIME;
+            continue;
+          }
+
+          Reservation booking =
+              new Reservation(
+                  standardReservationRepo.generateReservationId(),
+                  guest.getGuestId(),
+                  standardReservationRepo.generateConfirmationNumber(),
+                  roomType,
+                  Reservation.Status.RESERVED,
+                  false,
+                  0,
+                  LocalDateTime.now(),
+                  null,
+                  false);
+
+          booking.setExpectedArrivalTime(arrival);
+          booking.setStayDays(nights);
+
+          standardReservationRepo.addReservation(booking);
+          advanceBookingView.displayNewBookingSuccessScreen(booking, guest);
+          return true;
+        }
+      } catch (Exception e) {
+        // Reported against the step that raised it, so a mistyped date is retyped on the date
+        // screen instead of throwing away the guest and the whole booking.
+        ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -488,7 +522,10 @@ public class AdvanceBookingController {
           int picked = advanceBookingView.displaySearchFieldSubmenu(field);
           if (picked > 0) field = fieldNameFor(picked);
         } else if (choice == 2) {
-          term = advanceBookingView.promptSearchTerm(field, term);
+          String typed = advanceBookingView.promptSearchTerm(field, term);
+          if (typed != null && !typed.trim().isEmpty() && !"E".equalsIgnoreCase(typed.trim())) {
+            term = "-".equals(typed.trim()) ? null : typed.trim();
+          }
         } else if (choice == 3) {
           mode = "EXACT".equals(mode) ? "CONTAINS" : "EXACT";
         } else if (choice == 4) {
@@ -498,9 +535,25 @@ public class AdvanceBookingController {
           else if (picked == 3) roomType = "STANDARD";
           else if (picked == 4) roomType = null;
         } else if (choice == 5) {
-          LocalDate[] range = advanceBookingView.promptDateRange(from, to);
-          from = range[0];
-          to = range[1];
+          String[] typed = advanceBookingView.promptDateRange(from, to);
+          String rawFrom = (typed[0] == null) ? "" : typed[0].trim();
+
+          if (!"E".equalsIgnoreCase(rawFrom)) {
+            if ("-".equals(rawFrom)) {
+              from = null;
+              to = null;
+            } else {
+              LocalDate parsedFrom = parseOrNull(rawFrom);
+              LocalDate parsedTo = parseOrNull(typed[1]);
+
+              if (parsedFrom != null && parsedTo != null && parsedTo.isBefore(parsedFrom)) {
+                throw new IllegalArgumentException(
+                    "The end of the range cannot fall before its start!");
+              }
+              from = parsedFrom;
+              to = parsedTo;
+            }
+          }
         } else if (choice == 6) {
           field = FIELD_NAME;
           term = null;
@@ -531,6 +584,67 @@ public class AdvanceBookingController {
     if (choice == 7) return FIELD_RES_ID;
     if (choice == 8) return FIELD_CODE;
     return FIELD_ALL;
+  }
+
+  // The view is handed finished strings, so it never has to look a guest up to draw a row.
+  private ListInterface<AdvanceBookingView.BookingRowDTO> buildBookingRowDTO(
+      ListInterface<Reservation> bookings) {
+
+    ListInterface<AdvanceBookingView.BookingRowDTO> rows = new ArrayList<>();
+
+    for (int i = 1; i <= bookings.getNumberOfEntries(); i++) {
+      Reservation r = bookings.getEntry(i);
+      if (r == null) continue;
+
+      Guest g = guestRepo.findById(r.getGuestId());
+
+      rows.add(
+          new AdvanceBookingView.BookingRowDTO(
+              r.getReservationId(),
+              (g != null) ? g.getName() : "N/A",
+              r.getRoomType().name(),
+              formatArrival(r.getExpectedArrivalTime()),
+              (r.getStayDays() != null) ? String.valueOf(r.getStayDays()) : "-",
+              formatShortDate(r.getReservationTime())));
+    }
+    return rows;
+  }
+
+  private LocalDate parseDate(String raw) {
+    try {
+      return LocalDate.parse(raw, DATE_FORMAT);
+    } catch (java.time.format.DateTimeParseException e) {
+      throw new IllegalArgumentException(
+          "Invalid date! Type it as YYYY-MM-DD, for example 2026-08-21.");
+    }
+  }
+
+  private LocalDate parseOrNull(String raw) {
+    if (raw == null || raw.trim().isEmpty()) return null;
+    return parseDate(raw.trim());
+  }
+
+  private LocalTime parseTime(String raw) {
+    try {
+      return LocalTime.parse(raw, TIME_FORMAT);
+    } catch (java.time.format.DateTimeParseException e) {
+      throw new IllegalArgumentException(
+          "Invalid time! Type it as HH:MM on a 24 hour clock, for example 14:30.");
+    }
+  }
+
+  private String format(LocalDate date) {
+    return (date == null) ? "N/A" : date.format(DATE_FORMAT);
+  }
+
+  private String formatArrival(LocalDateTime dateTime) {
+    if (dateTime == null) return "Not set";
+    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
+  }
+
+  private String formatShortDate(LocalDateTime dateTime) {
+    if (dateTime == null) return "-";
+    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yy"));
   }
 
   private ListInterface<Reservation> collectReserved() {
