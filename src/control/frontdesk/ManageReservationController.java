@@ -1,10 +1,8 @@
 package control.frontdesk;
 
 import adt.ArrayList;
-import adt.DoublyLinkedHashMap;
-import adt.LinkedList;
-import adt.LinkedStack;
 import adt.ListInterface;
+import adt.LinkedList;
 import entity.Billing;
 import entity.Guest;
 import entity.HousekeepingTask;
@@ -54,17 +52,18 @@ public class ManageReservationController {
 
   public void start() {
     int currentPage = 1;
-    String searchQuery = null;
-    String roomTypeFilter = null;
+    String searchQuery      = null;
+    String roomTypeFilter   = null;
     String paymentStatusFilter = null;
-    String sortCriteria = "GUEST NAME (A -> Z)";
+    String stayStatusFilter = null;
+    String sortCriteria     = "GUEST NAME (A -> Z)";
 
     while (true) {
       try {
-        ArrayList<ManageReservationView.ReservationRowDTO> allDtos = buildActiveStayDTOs();
+        ArrayList<ManageReservationView.ReservationRowDTO> allDtos = buildAllReservationDTOs();
         ArrayList<ManageReservationView.ReservationRowDTO> filtered =
-            filterAndSortDTOs(
-                allDtos, searchQuery, roomTypeFilter, paymentStatusFilter, sortCriteria);
+            filterAndSortDTOs(allDtos, searchQuery, roomTypeFilter,
+                paymentStatusFilter, stayStatusFilter, sortCriteria);
 
         int total = filtered.getNumberOfEntries();
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
@@ -72,20 +71,14 @@ public class ManageReservationController {
 
         ConsoleUtil.GetMenuInputResult result =
             view.renderReservationScreen(
-                filtered,
-                searchQuery,
-                roomTypeFilter,
-                paymentStatusFilter,
-                sortCriteria,
-                currentPage,
-                PAGE_SIZE);
+                filtered, searchQuery, roomTypeFilter, paymentStatusFilter,
+                stayStatusFilter, sortCriteria, currentPage, PAGE_SIZE);
 
         String raw = result.input.trim();
 
         if ("E".equalsIgnoreCase(raw)) {
           return;
         } else if ("R".equalsIgnoreCase(raw)) {
-          // Re-fetched at top of loop
         } else if ("N".equalsIgnoreCase(raw)) {
           if (currentPage < totalPages) currentPage++;
           else ConsoleUtil.printError("Already on the last page!");
@@ -93,17 +86,16 @@ public class ManageReservationController {
           if (currentPage > 1) currentPage--;
           else ConsoleUtil.printError("Already on the first page!");
         } else if ("S".equalsIgnoreCase(raw)) {
-          String[] filters = handleFilterMenu(searchQuery, roomTypeFilter, paymentStatusFilter);
-          searchQuery = filters[0];
-          roomTypeFilter = filters[1];
+          String[] filters = handleFilterMenu(searchQuery, roomTypeFilter,
+              paymentStatusFilter, stayStatusFilter);
+          searchQuery         = filters[0];
+          roomTypeFilter      = filters[1];
           paymentStatusFilter = filters[2];
+          stayStatusFilter    = filters[3];
           currentPage = 1;
         } else if ("O".equalsIgnoreCase(raw)) {
           String newSort = handleSortMenu(sortCriteria);
-          if (newSort != null) {
-            sortCriteria = newSort;
-            currentPage = 1;
-          }
+          if (newSort != null) { sortCriteria = newSort; currentPage = 1; }
         } else if (result.isNumber) {
           int actualIndex = (currentPage - 1) * PAGE_SIZE + result.getAsInt();
           if (actualIndex < 1 || actualIndex > total) {
@@ -111,7 +103,7 @@ public class ManageReservationController {
             continue;
           }
           ManageReservationView.ReservationRowDTO dto = filtered.getEntry(actualIndex);
-          if (dto != null) handleGuestActions(dto.billingId);
+          if (dto != null) handleGuestActions(dto);
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -123,17 +115,37 @@ public class ManageReservationController {
   // GUEST ACTIONS SUBMENU
   // =========================================================================
 
-  private void handleGuestActions(String billingId) {
+  private void handleGuestActions(ManageReservationView.ReservationRowDTO dto) {
     while (true) {
       try {
-        // Re-fetch fresh each loop iteration
-        Billing billing = findBillingById(billingId);
+        // Always find the billing fresh — after creation dto.billingId may be stale
+        Billing billing = findBillingById(dto.billingId);
+
+        // If not found by ID, try finding by room number (covers post-creation case)
         if (billing == null) {
-          ConsoleUtil.printError("Billing record not found.");
+          billing = findActiveBillingByRoom(dto.roomNumber);
+        }
+
+        Guest guest = guestRepo.findById(dto.guestId);
+
+        // No billing record — offer to create one
+        if (billing == null) {
+          int choice = view.displayNoBillingNotice(dto);
+          if (choice == 1) {
+            Billing created = handleCreateBilling(dto);
+            if (created != null) {
+              // Update billingId in dto so next loop finds it directly
+              dto = new ManageReservationView.ReservationRowDTO(
+                  created.getBillingId(), dto.guestId, dto.guestName,
+                  dto.roomNumber, dto.roomType, dto.reservationId,
+                  dto.confirmationNumber, dto.checkInDate, dto.checkOutDate,
+                  created.getStatus().name(), dto.stayStatus);
+              continue;
+            }
+          }
           return;
         }
 
-        Guest guest = guestRepo.findById(billing.getGuestId());
         int action = view.displayGuestActionsSubmenu(guest, billing);
 
         if (action == 1) {
@@ -190,10 +202,21 @@ public class ManageReservationController {
   // =========================================================================
 
   private void handleStayExtension(Billing billing, Guest guest) {
+    if (billing.getStatus() == Billing.Status.PAID) {
+      boolean confirm = ConsoleUtil.showConfirmMessage(
+          "This stay has already been marked as PAID. Extending will reset payment to UNPAID"
+              + " as the total amount has changed. Continue?");
+      if (!confirm) return;
+    }
+
     Integer extraDays = view.promptStayExtension(guest, billing);
     if (extraDays == null) return;
 
     billing.setCheckOutDate(billing.getCheckOutDate().plusDays(extraDays));
+
+    // Reset to UNPAID — the new total is higher and must be re-settled
+    billing.setStatus(Billing.Status.UNPAID);
+
     billingRepo.updateBilling(billing);
     view.displayStayExtensionSuccess(guest, billing, extraDays);
   }
@@ -208,13 +231,10 @@ public class ManageReservationController {
       return false;
     }
 
-    boolean confirmed =
-        ConsoleUtil.showConfirmMessage(
-            "Confirm check-out for "
-                + (guest != null ? guest.getName() : "guest")
-                + " in room "
-                + billing.getRoomNumber()
-                + "?");
+    boolean confirmed = ConsoleUtil.showConfirmMessage(
+        "Confirm check-out for "
+            + (guest != null ? guest.getName() : "guest")
+            + " in room " + billing.getRoomNumber() + "?");
     if (!confirmed) return false;
 
     // 1. Free the room → DIRTY
@@ -251,17 +271,79 @@ public class ManageReservationController {
   }
 
   // =========================================================================
+  // CREATE BILLING — for guests with no billing record
+  // =========================================================================
+
+  private Billing handleCreateBilling(ManageReservationView.ReservationRowDTO dto) {
+    Room room = roomRepo.findByRoomNumber(dto.roomNumber);
+    double rate = (room != null) ? room.getPrice() : 0.0;
+
+    ListInterface<Reservation> allRes = reservationRepo.getAllReservations();
+    Reservation res = findReservationById(allRes, dto.reservationId);
+
+    LocalDate defaultCheckIn  = LocalDate.now();
+    LocalDate defaultCheckOut = LocalDate.now().plusDays(1);
+    if (res != null && res.getAllocatedTime() != null) {
+      defaultCheckIn = res.getAllocatedTime().toLocalDate();
+      if (res.getStayDays() != null) {
+        defaultCheckOut = defaultCheckIn.plusDays(res.getStayDays());
+      }
+    }
+
+    ManageReservationView.CreateBillingInputDTO input =
+        view.promptCreateBilling(dto, defaultCheckIn, defaultCheckOut, rate);
+    if (input == null) return null;
+
+    String billingId = generateBillingId();
+    Billing billing = new Billing(
+        billingId,
+        dto.guestId,
+        "N/A".equals(dto.reservationId) ? null : dto.reservationId,
+        dto.roomNumber,
+        room != null ? room.getRoomType() : null,
+        input.checkInDate,
+        input.checkOutDate,
+        rate,
+        Billing.Status.UNPAID,
+        LocalDateTime.now());
+
+    billingRepo.addBilling(billing);
+    view.displayBillingCreated(billing);
+    return billing;
+  }
+
+  /** Generates the next BILL-XXXX id by scanning existing billings. */
+  private String generateBillingId() {
+    ListInterface<Billing> all = billingRepo.getBillingList();
+    int max = 1000;
+    for (int i = 1; i <= all.getNumberOfEntries(); i++) {
+      Billing b = all.getEntry(i);
+      if (b == null || b.getBillingId() == null) continue;
+      String id = b.getBillingId().toUpperCase();
+      if (id.startsWith("BILL-")) {
+        try {
+          int num = Integer.parseInt(id.substring(5));
+          if (num >= max) max = num + 1;
+        } catch (NumberFormatException ignored) {}
+      }
+    }
+    return "BILL-" + max;
+  }
+
+  // =========================================================================
   // FILTER MENU
   // =========================================================================
 
-  private String[] handleFilterMenu(String search, String roomType, String paymentStatus) {
-    String s = search;
+  private String[] handleFilterMenu(String search, String roomType,
+      String paymentStatus, String stayStatus) {
+    String s  = search;
     String rt = roomType;
     String ps = paymentStatus;
+    String ss = stayStatus;
 
     while (true) {
       try {
-        int choice = view.displayFilterMenu(s, rt, ps);
+        int choice = view.displayFilterMenu(s, rt, ps, ss);
         if (choice == 1) {
           String input = view.promptSearchInput(s);
           s = (input == null || input.trim().isEmpty()) ? null : input.trim();
@@ -270,10 +352,26 @@ public class ManageReservationController {
         } else if (choice == 3) {
           ps = handlePaymentStatusSubmenu(ps);
         } else if (choice == 4) {
-          return new String[] {null, null, null};
+          ss = handleStayStatusSubmenu(ss);
         } else if (choice == 5) {
-          return new String[] {s, rt, ps};
+          return new String[]{null, null, null, null};
+        } else if (choice == 6) {
+          return new String[]{s, rt, ps, ss};
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String handleStayStatusSubmenu(String current) {
+    while (true) {
+      try {
+        int choice = view.displayStayStatusSubmenu(current);
+        if (choice == 1) return "CHECKED_IN";
+        if (choice == 2) return "CHECKED_OUT";
+        if (choice == 3) return "PENDING";
+        if (choice == 4) return null;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -319,131 +417,174 @@ public class ManageReservationController {
   }
 
   // =========================================================================
-  // DATA PROCESSING
-  //
-  // ADT usage:
-  //   DoublyLinkedHashMap  — O(1) billing/reservation lookup by ID
-  //   LinkedStack          — collect billings oldest→push, pop = newest-first order
-  //   LinkedList           — cheap sequential build of DTO list before final sort
-  //   ArrayList            — final paged DTO list passed to the view (index access)
+  // DATA PROCESSING — builds ALL reservation/billing records (active + history)
   // =========================================================================
 
-  private ArrayList<ManageReservationView.ReservationRowDTO> buildActiveStayDTOs() {
+  private ArrayList<ManageReservationView.ReservationRowDTO> buildAllReservationDTOs() {
 
-    // --- Build O(1) lookup maps from repos ---
-    // billingId  → Billing
-    DoublyLinkedHashMap<String, Billing> billingMap = new DoublyLinkedHashMap<>();
-    ListInterface<Billing> allBillings = billingRepo.getBillingList();
-    for (int i = 1; i <= allBillings.getNumberOfEntries(); i++) {
-      Billing b = allBillings.getEntry(i);
-      if (b != null && b.getBillingId() != null) {
-        billingMap.put(b.getBillingId().toLowerCase(), b);
-      }
-    }
-
-    // reservationId → Reservation
-    DoublyLinkedHashMap<String, Reservation> reservationMap = new DoublyLinkedHashMap<>();
+    ListInterface<Room>        allRooms        = roomRepo.getRoomList();
+    ListInterface<Billing>     allBillings     = billingRepo.getBillingList();
     ListInterface<Reservation> allReservations = reservationRepo.getAllReservations();
-    for (int i = 1; i <= allReservations.getNumberOfEntries(); i++) {
-      Reservation r = allReservations.getEntry(i);
-      if (r != null && r.getReservationId() != null) {
-        reservationMap.put(r.getReservationId().toLowerCase(), r);
-      }
-    }
+    java.time.LocalDate today = java.time.LocalDate.now();
 
-    // LinkedList to accumulate DTOs during iteration (no index access needed yet)
     LinkedList<ManageReservationView.ReservationRowDTO> dtoBuffer = new LinkedList<>();
 
-    ListInterface<Room> allRooms = roomRepo.getRoomList();
+    // Track billing IDs already added to avoid duplicates
+    LinkedList<String> addedBillingIds = new LinkedList<>();
+
+    // PRIMARY: OCCUPIED rooms (active stays)
     for (int i = 1; i <= allRooms.getNumberOfEntries(); i++) {
       Room room = allRooms.getEntry(i);
       if (room == null || room.getStatus() != Room.Status.OCCUPIED) continue;
 
-      // Collect only active (not-yet-checked-out) billings for this room,
-      // then use a LinkedStack to surface the latest one.
-      java.time.LocalDate today = java.time.LocalDate.now();
-      LinkedList<Billing> candidates = new LinkedList<>();
+      Billing best = null;
       for (int j = 1; j <= allBillings.getNumberOfEntries(); j++) {
         Billing b = allBillings.getEntry(j);
         if (b == null || !room.getRoomNumber().equalsIgnoreCase(b.getRoomNumber())) continue;
-        // Only consider billings whose stay is current (checkOut >= today)
-        if (b.getCheckOutDate() == null || b.getCheckOutDate().isBefore(today)) continue;
-        candidates.add(b);
-      }
-      // Sort candidates oldest → newest so the latest ends up on top of the stack
-      candidates.sort(
-          (a, b) -> {
-            if (a.getCreatedAt() == null) return -1;
-            if (b.getCreatedAt() == null) return 1;
-            return a.getCreatedAt().compareTo(b.getCreatedAt());
-          });
-
-      LinkedStack<Billing> billingStack = new LinkedStack<>();
-      for (int j = 1; j <= candidates.getNumberOfEntries(); j++) {
-        billingStack.push(candidates.getEntry(j));
+        if (best == null) { best = b; continue; }
+        boolean bActive    = b.getCheckOutDate()    != null && !b.getCheckOutDate().isBefore(today);
+        boolean bestActive = best.getCheckOutDate() != null && !best.getCheckOutDate().isBefore(today);
+        if (bActive && !bestActive) { best = b; }
+        else if (bActive == bestActive && b.getCreatedAt() != null
+            && best.getCreatedAt() != null && b.getCreatedAt().isAfter(best.getCreatedAt())) {
+          best = b;
+        }
       }
 
-      if (billingStack.isEmpty()) continue;
-      Billing latestBilling = billingStack.peek(); // top = newest
+      Reservation res = (best != null)
+          ? findReservationById(allReservations, best.getReservationId())
+          : findActiveReservationForRoom(allReservations, room.getRoomNumber());
 
-      Guest guest = guestRepo.findById(latestBilling.getGuestId());
+      String guestId = (best != null && best.getGuestId() != null)
+          ? best.getGuestId() : (res != null ? res.getGuestId() : null);
+      Guest guest = guestRepo.findById(guestId);
 
-      // O(1) reservation lookup via map
-      Reservation res =
-          (latestBilling.getReservationId() != null)
-              ? reservationMap.get(latestBilling.getReservationId().toLowerCase())
-              : null;
+      String stayStatus = deriveStayStatus(res, room);
+      String billingId  = (best != null) ? best.getBillingId() : room.getRoomNumber();
 
-      String guestName = (guest != null) ? guest.getName() : "N/A";
-      String roomType =
-          (latestBilling.getRoomType() != null) ? latestBilling.getRoomType().name() : "N/A";
-      // resId: use reservation ID if found, else fall back to billing ID so the row
-      // is still identifiable (happens when .dat files pre-date the reservation link)
-      String resId =
-          (res != null)
-              ? res.getReservationId()
-              : (latestBilling.getReservationId() != null
-                  ? latestBilling.getReservationId()
-                  : latestBilling.getBillingId());
-      String checkIn =
-          (latestBilling.getCheckInDate() != null)
-              ? latestBilling.getCheckInDate().toString()
-              : "N/A";
-      String checkOut =
-          (latestBilling.getCheckOutDate() != null)
-              ? latestBilling.getCheckOutDate().toString()
-              : "N/A";
-      String payment = latestBilling.getStatus().name();
+      dtoBuffer.add(buildDTO(billingId, guestId, guest, room.getRoomNumber(),
+          best != null ? best.getRoomType() : room.getRoomType(),
+          res, best, stayStatus));
 
-      dtoBuffer.add(
-          new ManageReservationView.ReservationRowDTO(
-              latestBilling.getBillingId(),
-              latestBilling.getGuestId(),
-              guestName,
-              latestBilling.getRoomNumber(),
-              roomType,
-              resId,
-              checkIn,
-              checkOut,
-              payment));
+      if (best != null) addedBillingIds.add(best.getBillingId());
     }
 
-    // Transfer LinkedList → ArrayList for index-based paging in view
+    // SECONDARY: all billings not yet added — includes history (CHECKED_OUT) and
+    // active billings whose room is not flagged OCCUPIED
+    for (int i = 1; i <= allBillings.getNumberOfEntries(); i++) {
+      Billing b = allBillings.getEntry(i);
+      if (b == null || b.getRoomNumber() == null || b.getBillingId() == null) continue;
+
+      // Skip if already added from PRIMARY pass
+      boolean alreadyAdded = false;
+      for (int k = 1; k <= addedBillingIds.getNumberOfEntries(); k++) {
+        if (b.getBillingId().equalsIgnoreCase(addedBillingIds.getEntry(k))) {
+          alreadyAdded = true;
+          break;
+        }
+      }
+      if (alreadyAdded) continue;
+
+      Reservation res = findReservationById(allReservations, b.getReservationId());
+      Guest guest     = guestRepo.findById(b.getGuestId());
+      String stayStatus = deriveStayStatusFromBillingRes(b, res, today);
+
+      dtoBuffer.add(buildDTO(b.getBillingId(), b.getGuestId(), guest,
+          b.getRoomNumber(), b.getRoomType(), res, b, stayStatus));
+    }
+
     ArrayList<ManageReservationView.ReservationRowDTO> result = new ArrayList<>();
-    for (int i = 1; i <= dtoBuffer.getNumberOfEntries(); i++) {
-      result.add(dtoBuffer.getEntry(i));
-    }
+    for (int i = 1; i <= dtoBuffer.getNumberOfEntries(); i++) result.add(dtoBuffer.getEntry(i));
     return result;
+  }
+
+  /** Derive stay status from room + reservation for OCCUPIED room entries. */
+  private String deriveStayStatus(Reservation res, Room room) {
+    if (res != null) {
+      if (res.getStatus() == Reservation.Status.CHECKED_OUT) return "CHECKED_OUT";
+      if (res.getStatus() == Reservation.Status.CHECKED_IN)  return "CHECKED_IN";
+      if (res.getStatus() == Reservation.Status.ALLOCATED)   return "CHECKED_IN";
+    }
+    return room != null && room.getStatus() == Room.Status.OCCUPIED ? "CHECKED_IN" : "PENDING";
+  }
+
+  /** Derive stay status from billing + reservation for historical entries. */
+  private String deriveStayStatusFromBillingRes(
+      Billing b, Reservation res, java.time.LocalDate today) {
+    if (res != null && res.getStatus() == Reservation.Status.CHECKED_OUT) return "CHECKED_OUT";
+    if (b.getCheckOutDate() != null && b.getCheckOutDate().isBefore(today)) return "CHECKED_OUT";
+    if (res != null && (res.getStatus() == Reservation.Status.CHECKED_IN
+        || res.getStatus() == Reservation.Status.ALLOCATED)) return "CHECKED_IN";
+    return "PENDING";
+  }
+
+  /** Build a DTO row from raw data. */
+  private ManageReservationView.ReservationRowDTO buildDTO(
+      String billingId, String guestId, Guest guest, String roomNumber,
+      Room.RoomType roomTypeEnum, Reservation res, Billing billing, String stayStatus) {
+
+    String guestName = (guest != null) ? guest.getName() : "N/A";
+    String roomType  = (roomTypeEnum != null) ? roomTypeEnum.name() : "N/A";
+    String resId     = (res != null) ? res.getReservationId()
+                       : (billing != null && billing.getReservationId() != null
+                           ? billing.getReservationId() : "N/A");
+    String confNum   = (res != null) ? res.getConfirmationNumber() : "N/A";
+    String checkIn   = "N/A", checkOut = "N/A";
+    if (billing != null && billing.getCheckInDate() != null) {
+      checkIn = billing.getCheckInDate().toString();
+    } else if (res != null && res.getAllocatedTime() != null) {
+      checkIn = res.getAllocatedTime().toLocalDate().toString();
+    }
+    if (billing != null && billing.getCheckOutDate() != null) {
+      checkOut = billing.getCheckOutDate().toString();
+    } else if (res != null && res.getAllocatedTime() != null && res.getStayDays() != null) {
+      checkOut = res.getAllocatedTime().toLocalDate().plusDays(res.getStayDays()).toString();
+    }
+
+    String payment;
+    if (billing != null) {
+      payment = billing.getStatus().name();
+    } else if (res != null) {
+      payment = "PENDING";
+    } else {
+      payment = "PENDING";
+    }
+
+    return new ManageReservationView.ReservationRowDTO(
+        billingId,
+        guestId != null ? guestId : "N/A",
+        guestName, roomNumber, roomType, resId, confNum,
+        checkIn, checkOut, payment, stayStatus);
+  }
+
+  /** Finds a CHECKED_IN or ALLOCATED reservation for a given room number. */
+  private Reservation findActiveReservationForRoom(
+      ListInterface<Reservation> all, String roomNumber) {
+    if (roomNumber == null || all == null) return null;
+    for (int i = 1; i <= all.getNumberOfEntries(); i++) {
+      Reservation r = all.getEntry(i);
+      if (r == null || !roomNumber.equalsIgnoreCase(r.getRoomNumber())) continue;
+      if (r.getStatus() == Reservation.Status.CHECKED_IN
+          || r.getStatus() == Reservation.Status.ALLOCATED) return r;
+    }
+    return null;
+  }
+
+  private Reservation findReservationById(
+      ListInterface<Reservation> all, String reservationId) {
+    if (reservationId == null || all == null) return null;
+    for (int i = 1; i <= all.getNumberOfEntries(); i++) {
+      Reservation r = all.getEntry(i);
+      if (r != null && reservationId.equalsIgnoreCase(r.getReservationId())) return r;
+    }
+    return null;
   }
 
   private ArrayList<ManageReservationView.ReservationRowDTO> filterAndSortDTOs(
       ArrayList<ManageReservationView.ReservationRowDTO> source,
-      String search,
-      String roomType,
-      String paymentStatus,
-      String sort) {
+      String search, String roomType, String paymentStatus,
+      String stayStatus, String sort) {
 
-    // LinkedList for filter build (sequential add, no random access needed)
     LinkedList<ManageReservationView.ReservationRowDTO> filteredBuffer = new LinkedList<>();
 
     if (source != null) {
@@ -451,19 +592,18 @@ public class ManageReservationController {
         ManageReservationView.ReservationRowDTO dto = source.getEntry(i);
         if (dto == null) continue;
 
-        boolean matchesSearch =
-            search == null
-                || search.trim().isEmpty()
-                || containsIgnoreCase(dto.guestId, search)
-                || containsIgnoreCase(dto.guestName, search)
-                || containsIgnoreCase(dto.roomNumber, search)
-                || containsIgnoreCase(dto.reservationId, search);
+        boolean matchesSearch = search == null || search.trim().isEmpty()
+            || containsIgnoreCase(dto.guestId,            search)
+            || containsIgnoreCase(dto.guestName,          search)
+            || containsIgnoreCase(dto.roomNumber,         search)
+            || containsIgnoreCase(dto.reservationId,      search)
+            || containsIgnoreCase(dto.confirmationNumber, search);
 
-        boolean matchesRoomType = roomType == null || roomType.equalsIgnoreCase(dto.roomType);
-        boolean matchesPayment =
-            paymentStatus == null || paymentStatus.equalsIgnoreCase(dto.paymentStatus);
+        boolean matchesRoomType   = roomType == null || roomType.equalsIgnoreCase(dto.roomType);
+        boolean matchesPayment    = paymentStatus == null || paymentStatus.equalsIgnoreCase(dto.paymentStatus);
+        boolean matchesStayStatus = stayStatus == null || stayStatus.equalsIgnoreCase(dto.stayStatus);
 
-        if (matchesSearch && matchesRoomType && matchesPayment) {
+        if (matchesSearch && matchesRoomType && matchesPayment && matchesStayStatus) {
           filteredBuffer.add(dto);
         }
       }
@@ -497,6 +637,20 @@ public class ManageReservationController {
   // =========================================================================
   // LOOKUP HELPERS
   // =========================================================================
+
+  private Billing findActiveBillingByRoom(String roomNumber) {
+    if (roomNumber == null) return null;
+    LocalDate today = LocalDate.now();
+    ListInterface<Billing> all = billingRepo.getBillingList();
+    Billing best = null;
+    for (int i = 1; i <= all.getNumberOfEntries(); i++) {
+      Billing b = all.getEntry(i);
+      if (b == null || !roomNumber.equalsIgnoreCase(b.getRoomNumber())) continue;
+      if (b.getCheckOutDate() == null || b.getCheckOutDate().isBefore(today)) continue;
+      if (best == null || b.getCreatedAt().isAfter(best.getCreatedAt())) best = b;
+    }
+    return best;
+  }
 
   private Billing findBillingById(String billingId) {
     if (billingId == null) return null;
