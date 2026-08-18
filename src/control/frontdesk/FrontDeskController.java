@@ -46,8 +46,12 @@ public class FrontDeskController {
           new ManageGuestController(reservationRepo, guestRepo, billingRepo, memberRepo).start();
         } else if ("2".equals(choice)) {
           new ManageReservationController(
-                  guestRepo, billingRepo, reservationRepo, roomRepo,
-                  roomStatusHistoryRepo, housekeepingTaskRepo)
+                  guestRepo,
+                  billingRepo,
+                  reservationRepo,
+                  roomRepo,
+                  roomStatusHistoryRepo,
+                  housekeepingTaskRepo)
               .start();
         } else if ("3".equals(choice)) {
           new ManageRoomStatusController(

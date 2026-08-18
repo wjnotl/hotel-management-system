@@ -1,8 +1,8 @@
 package control.frontdesk;
 
 import adt.ArrayList;
-import adt.ListInterface;
 import adt.LinkedList;
+import adt.ListInterface;
 import entity.Billing;
 import entity.Guest;
 import entity.HousekeepingTask;
@@ -52,18 +52,23 @@ public class ManageReservationController {
 
   public void start() {
     int currentPage = 1;
-    String searchQuery      = null;
-    String roomTypeFilter   = null;
+    String searchQuery = null;
+    String roomTypeFilter = null;
     String paymentStatusFilter = null;
     String stayStatusFilter = null;
-    String sortCriteria     = "GUEST NAME (A -> Z)";
+    String sortCriteria = "GUEST NAME (A -> Z)";
 
     while (true) {
       try {
         ArrayList<ManageReservationView.ReservationRowDTO> allDtos = buildAllReservationDTOs();
         ArrayList<ManageReservationView.ReservationRowDTO> filtered =
-            filterAndSortDTOs(allDtos, searchQuery, roomTypeFilter,
-                paymentStatusFilter, stayStatusFilter, sortCriteria);
+            filterAndSortDTOs(
+                allDtos,
+                searchQuery,
+                roomTypeFilter,
+                paymentStatusFilter,
+                stayStatusFilter,
+                sortCriteria);
 
         int total = filtered.getNumberOfEntries();
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
@@ -71,8 +76,14 @@ public class ManageReservationController {
 
         ConsoleUtil.GetMenuInputResult result =
             view.renderReservationScreen(
-                filtered, searchQuery, roomTypeFilter, paymentStatusFilter,
-                stayStatusFilter, sortCriteria, currentPage, PAGE_SIZE);
+                filtered,
+                searchQuery,
+                roomTypeFilter,
+                paymentStatusFilter,
+                stayStatusFilter,
+                sortCriteria,
+                currentPage,
+                PAGE_SIZE);
 
         String raw = result.input.trim();
 
@@ -86,16 +97,19 @@ public class ManageReservationController {
           if (currentPage > 1) currentPage--;
           else ConsoleUtil.printError("Already on the first page!");
         } else if ("S".equalsIgnoreCase(raw)) {
-          String[] filters = handleFilterMenu(searchQuery, roomTypeFilter,
-              paymentStatusFilter, stayStatusFilter);
-          searchQuery         = filters[0];
-          roomTypeFilter      = filters[1];
+          String[] filters =
+              handleFilterMenu(searchQuery, roomTypeFilter, paymentStatusFilter, stayStatusFilter);
+          searchQuery = filters[0];
+          roomTypeFilter = filters[1];
           paymentStatusFilter = filters[2];
-          stayStatusFilter    = filters[3];
+          stayStatusFilter = filters[3];
           currentPage = 1;
         } else if ("O".equalsIgnoreCase(raw)) {
           String newSort = handleSortMenu(sortCriteria);
-          if (newSort != null) { sortCriteria = newSort; currentPage = 1; }
+          if (newSort != null) {
+            sortCriteria = newSort;
+            currentPage = 1;
+          }
         } else if (result.isNumber) {
           int actualIndex = (currentPage - 1) * PAGE_SIZE + result.getAsInt();
           if (actualIndex < 1 || actualIndex > total) {
@@ -135,11 +149,19 @@ public class ManageReservationController {
             Billing created = handleCreateBilling(dto);
             if (created != null) {
               // Update billingId in dto so next loop finds it directly
-              dto = new ManageReservationView.ReservationRowDTO(
-                  created.getBillingId(), dto.guestId, dto.guestName,
-                  dto.roomNumber, dto.roomType, dto.reservationId,
-                  dto.confirmationNumber, dto.checkInDate, dto.checkOutDate,
-                  created.getStatus().name(), dto.stayStatus);
+              dto =
+                  new ManageReservationView.ReservationRowDTO(
+                      created.getBillingId(),
+                      dto.guestId,
+                      dto.guestName,
+                      dto.roomNumber,
+                      dto.roomType,
+                      dto.reservationId,
+                      dto.confirmationNumber,
+                      dto.checkInDate,
+                      dto.checkOutDate,
+                      created.getStatus().name(),
+                      dto.stayStatus);
               continue;
             }
           }
@@ -203,9 +225,10 @@ public class ManageReservationController {
 
   private void handleStayExtension(Billing billing, Guest guest) {
     if (billing.getStatus() == Billing.Status.PAID) {
-      boolean confirm = ConsoleUtil.showConfirmMessage(
-          "This stay has already been marked as PAID. Extending will reset payment to UNPAID"
-              + " as the total amount has changed. Continue?");
+      boolean confirm =
+          ConsoleUtil.showConfirmMessage(
+              "This stay has already been marked as PAID. Extending will reset payment to UNPAID"
+                  + " as the total amount has changed. Continue?");
       if (!confirm) return;
     }
 
@@ -231,10 +254,13 @@ public class ManageReservationController {
       return false;
     }
 
-    boolean confirmed = ConsoleUtil.showConfirmMessage(
-        "Confirm check-out for "
-            + (guest != null ? guest.getName() : "guest")
-            + " in room " + billing.getRoomNumber() + "?");
+    boolean confirmed =
+        ConsoleUtil.showConfirmMessage(
+            "Confirm check-out for "
+                + (guest != null ? guest.getName() : "guest")
+                + " in room "
+                + billing.getRoomNumber()
+                + "?");
     if (!confirmed) return false;
 
     // 1. Free the room → DIRTY
@@ -281,7 +307,7 @@ public class ManageReservationController {
     ListInterface<Reservation> allRes = reservationRepo.getAllReservations();
     Reservation res = findReservationById(allRes, dto.reservationId);
 
-    LocalDate defaultCheckIn  = LocalDate.now();
+    LocalDate defaultCheckIn = LocalDate.now();
     LocalDate defaultCheckOut = LocalDate.now().plusDays(1);
     if (res != null && res.getAllocatedTime() != null) {
       defaultCheckIn = res.getAllocatedTime().toLocalDate();
@@ -295,17 +321,18 @@ public class ManageReservationController {
     if (input == null) return null;
 
     String billingId = generateBillingId();
-    Billing billing = new Billing(
-        billingId,
-        dto.guestId,
-        "N/A".equals(dto.reservationId) ? null : dto.reservationId,
-        dto.roomNumber,
-        room != null ? room.getRoomType() : null,
-        input.checkInDate,
-        input.checkOutDate,
-        rate,
-        Billing.Status.UNPAID,
-        LocalDateTime.now());
+    Billing billing =
+        new Billing(
+            billingId,
+            dto.guestId,
+            "N/A".equals(dto.reservationId) ? null : dto.reservationId,
+            dto.roomNumber,
+            room != null ? room.getRoomType() : null,
+            input.checkInDate,
+            input.checkOutDate,
+            rate,
+            Billing.Status.UNPAID,
+            LocalDateTime.now());
 
     billingRepo.addBilling(billing);
     view.displayBillingCreated(billing);
@@ -324,7 +351,8 @@ public class ManageReservationController {
         try {
           int num = Integer.parseInt(id.substring(5));
           if (num >= max) max = num + 1;
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ignored) {
+        }
       }
     }
     return "BILL-" + max;
@@ -334,9 +362,9 @@ public class ManageReservationController {
   // FILTER MENU
   // =========================================================================
 
-  private String[] handleFilterMenu(String search, String roomType,
-      String paymentStatus, String stayStatus) {
-    String s  = search;
+  private String[] handleFilterMenu(
+      String search, String roomType, String paymentStatus, String stayStatus) {
+    String s = search;
     String rt = roomType;
     String ps = paymentStatus;
     String ss = stayStatus;
@@ -354,9 +382,9 @@ public class ManageReservationController {
         } else if (choice == 4) {
           ss = handleStayStatusSubmenu(ss);
         } else if (choice == 5) {
-          return new String[]{null, null, null, null};
+          return new String[] {null, null, null, null};
         } else if (choice == 6) {
-          return new String[]{s, rt, ps, ss};
+          return new String[] {s, rt, ps, ss};
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -422,8 +450,8 @@ public class ManageReservationController {
 
   private ArrayList<ManageReservationView.ReservationRowDTO> buildAllReservationDTOs() {
 
-    ListInterface<Room>        allRooms        = roomRepo.getRoomList();
-    ListInterface<Billing>     allBillings     = billingRepo.getBillingList();
+    ListInterface<Room> allRooms = roomRepo.getRoomList();
+    ListInterface<Billing> allBillings = billingRepo.getBillingList();
     ListInterface<Reservation> allReservations = reservationRepo.getAllReservations();
     java.time.LocalDate today = java.time.LocalDate.now();
 
@@ -441,30 +469,47 @@ public class ManageReservationController {
       for (int j = 1; j <= allBillings.getNumberOfEntries(); j++) {
         Billing b = allBillings.getEntry(j);
         if (b == null || !room.getRoomNumber().equalsIgnoreCase(b.getRoomNumber())) continue;
-        if (best == null) { best = b; continue; }
-        boolean bActive    = b.getCheckOutDate()    != null && !b.getCheckOutDate().isBefore(today);
-        boolean bestActive = best.getCheckOutDate() != null && !best.getCheckOutDate().isBefore(today);
-        if (bActive && !bestActive) { best = b; }
-        else if (bActive == bestActive && b.getCreatedAt() != null
-            && best.getCreatedAt() != null && b.getCreatedAt().isAfter(best.getCreatedAt())) {
+        if (best == null) {
+          best = b;
+          continue;
+        }
+        boolean bActive = b.getCheckOutDate() != null && !b.getCheckOutDate().isBefore(today);
+        boolean bestActive =
+            best.getCheckOutDate() != null && !best.getCheckOutDate().isBefore(today);
+        if (bActive && !bestActive) {
+          best = b;
+        } else if (bActive == bestActive
+            && b.getCreatedAt() != null
+            && best.getCreatedAt() != null
+            && b.getCreatedAt().isAfter(best.getCreatedAt())) {
           best = b;
         }
       }
 
-      Reservation res = (best != null)
-          ? findReservationById(allReservations, best.getReservationId())
-          : findActiveReservationForRoom(allReservations, room.getRoomNumber());
+      Reservation res =
+          (best != null)
+              ? findReservationById(allReservations, best.getReservationId())
+              : findActiveReservationForRoom(allReservations, room.getRoomNumber());
 
-      String guestId = (best != null && best.getGuestId() != null)
-          ? best.getGuestId() : (res != null ? res.getGuestId() : null);
+      String guestId =
+          (best != null && best.getGuestId() != null)
+              ? best.getGuestId()
+              : (res != null ? res.getGuestId() : null);
       Guest guest = guestRepo.findById(guestId);
 
       String stayStatus = deriveStayStatus(res, room);
-      String billingId  = (best != null) ? best.getBillingId() : room.getRoomNumber();
+      String billingId = (best != null) ? best.getBillingId() : room.getRoomNumber();
 
-      dtoBuffer.add(buildDTO(billingId, guestId, guest, room.getRoomNumber(),
-          best != null ? best.getRoomType() : room.getRoomType(),
-          res, best, stayStatus));
+      dtoBuffer.add(
+          buildDTO(
+              billingId,
+              guestId,
+              guest,
+              room.getRoomNumber(),
+              best != null ? best.getRoomType() : room.getRoomType(),
+              res,
+              best,
+              stayStatus));
 
       if (best != null) addedBillingIds.add(best.getBillingId());
     }
@@ -486,11 +531,19 @@ public class ManageReservationController {
       if (alreadyAdded) continue;
 
       Reservation res = findReservationById(allReservations, b.getReservationId());
-      Guest guest     = guestRepo.findById(b.getGuestId());
+      Guest guest = guestRepo.findById(b.getGuestId());
       String stayStatus = deriveStayStatusFromBillingRes(b, res, today);
 
-      dtoBuffer.add(buildDTO(b.getBillingId(), b.getGuestId(), guest,
-          b.getRoomNumber(), b.getRoomType(), res, b, stayStatus));
+      dtoBuffer.add(
+          buildDTO(
+              b.getBillingId(),
+              b.getGuestId(),
+              guest,
+              b.getRoomNumber(),
+              b.getRoomType(),
+              res,
+              b,
+              stayStatus));
     }
 
     ArrayList<ManageReservationView.ReservationRowDTO> result = new ArrayList<>();
@@ -502,8 +555,8 @@ public class ManageReservationController {
   private String deriveStayStatus(Reservation res, Room room) {
     if (res != null) {
       if (res.getStatus() == Reservation.Status.CHECKED_OUT) return "CHECKED_OUT";
-      if (res.getStatus() == Reservation.Status.CHECKED_IN)  return "CHECKED_IN";
-      if (res.getStatus() == Reservation.Status.ALLOCATED)   return "CHECKED_IN";
+      if (res.getStatus() == Reservation.Status.CHECKED_IN) return "CHECKED_IN";
+      if (res.getStatus() == Reservation.Status.ALLOCATED) return "CHECKED_IN";
     }
     return room != null && room.getIsOccupied() ? "CHECKED_IN" : "PENDING";
   }
@@ -513,23 +566,33 @@ public class ManageReservationController {
       Billing b, Reservation res, java.time.LocalDate today) {
     if (res != null && res.getStatus() == Reservation.Status.CHECKED_OUT) return "CHECKED_OUT";
     if (b.getCheckOutDate() != null && b.getCheckOutDate().isBefore(today)) return "CHECKED_OUT";
-    if (res != null && (res.getStatus() == Reservation.Status.CHECKED_IN
-        || res.getStatus() == Reservation.Status.ALLOCATED)) return "CHECKED_IN";
+    if (res != null
+        && (res.getStatus() == Reservation.Status.CHECKED_IN
+            || res.getStatus() == Reservation.Status.ALLOCATED)) return "CHECKED_IN";
     return "PENDING";
   }
 
   /** Build a DTO row from raw data. */
   private ManageReservationView.ReservationRowDTO buildDTO(
-      String billingId, String guestId, Guest guest, String roomNumber,
-      Room.RoomType roomTypeEnum, Reservation res, Billing billing, String stayStatus) {
+      String billingId,
+      String guestId,
+      Guest guest,
+      String roomNumber,
+      Room.RoomType roomTypeEnum,
+      Reservation res,
+      Billing billing,
+      String stayStatus) {
 
     String guestName = (guest != null) ? guest.getName() : "N/A";
-    String roomType  = (roomTypeEnum != null) ? roomTypeEnum.name() : "N/A";
-    String resId     = (res != null) ? res.getReservationId()
-                       : (billing != null && billing.getReservationId() != null
-                           ? billing.getReservationId() : "N/A");
-    String confNum   = (res != null) ? res.getConfirmationNumber() : "N/A";
-    String checkIn   = "N/A", checkOut = "N/A";
+    String roomType = (roomTypeEnum != null) ? roomTypeEnum.name() : "N/A";
+    String resId =
+        (res != null)
+            ? res.getReservationId()
+            : (billing != null && billing.getReservationId() != null
+                ? billing.getReservationId()
+                : "N/A");
+    String confNum = (res != null) ? res.getConfirmationNumber() : "N/A";
+    String checkIn = "N/A", checkOut = "N/A";
     if (billing != null && billing.getCheckInDate() != null) {
       checkIn = billing.getCheckInDate().toString();
     } else if (res != null && res.getAllocatedTime() != null) {
@@ -553,8 +616,15 @@ public class ManageReservationController {
     return new ManageReservationView.ReservationRowDTO(
         billingId,
         guestId != null ? guestId : "N/A",
-        guestName, roomNumber, roomType, resId, confNum,
-        checkIn, checkOut, payment, stayStatus);
+        guestName,
+        roomNumber,
+        roomType,
+        resId,
+        confNum,
+        checkIn,
+        checkOut,
+        payment,
+        stayStatus);
   }
 
   /** Finds a CHECKED_IN or ALLOCATED reservation for a given room number. */
@@ -570,8 +640,7 @@ public class ManageReservationController {
     return null;
   }
 
-  private Reservation findReservationById(
-      ListInterface<Reservation> all, String reservationId) {
+  private Reservation findReservationById(ListInterface<Reservation> all, String reservationId) {
     if (reservationId == null || all == null) return null;
     for (int i = 1; i <= all.getNumberOfEntries(); i++) {
       Reservation r = all.getEntry(i);
@@ -582,8 +651,11 @@ public class ManageReservationController {
 
   private ArrayList<ManageReservationView.ReservationRowDTO> filterAndSortDTOs(
       ArrayList<ManageReservationView.ReservationRowDTO> source,
-      String search, String roomType, String paymentStatus,
-      String stayStatus, String sort) {
+      String search,
+      String roomType,
+      String paymentStatus,
+      String stayStatus,
+      String sort) {
 
     LinkedList<ManageReservationView.ReservationRowDTO> filteredBuffer = new LinkedList<>();
 
@@ -592,16 +664,20 @@ public class ManageReservationController {
         ManageReservationView.ReservationRowDTO dto = source.getEntry(i);
         if (dto == null) continue;
 
-        boolean matchesSearch = search == null || search.trim().isEmpty()
-            || containsIgnoreCase(dto.guestId,            search)
-            || containsIgnoreCase(dto.guestName,          search)
-            || containsIgnoreCase(dto.roomNumber,         search)
-            || containsIgnoreCase(dto.reservationId,      search)
-            || containsIgnoreCase(dto.confirmationNumber, search);
+        boolean matchesSearch =
+            search == null
+                || search.trim().isEmpty()
+                || containsIgnoreCase(dto.guestId, search)
+                || containsIgnoreCase(dto.guestName, search)
+                || containsIgnoreCase(dto.roomNumber, search)
+                || containsIgnoreCase(dto.reservationId, search)
+                || containsIgnoreCase(dto.confirmationNumber, search);
 
-        boolean matchesRoomType   = roomType == null || roomType.equalsIgnoreCase(dto.roomType);
-        boolean matchesPayment    = paymentStatus == null || paymentStatus.equalsIgnoreCase(dto.paymentStatus);
-        boolean matchesStayStatus = stayStatus == null || stayStatus.equalsIgnoreCase(dto.stayStatus);
+        boolean matchesRoomType = roomType == null || roomType.equalsIgnoreCase(dto.roomType);
+        boolean matchesPayment =
+            paymentStatus == null || paymentStatus.equalsIgnoreCase(dto.paymentStatus);
+        boolean matchesStayStatus =
+            stayStatus == null || stayStatus.equalsIgnoreCase(dto.stayStatus);
 
         if (matchesSearch && matchesRoomType && matchesPayment && matchesStayStatus) {
           filteredBuffer.add(dto);
