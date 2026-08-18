@@ -647,8 +647,8 @@ public class DatabaseSeeder {
         if (b.getCheckOutDate().isBefore(today)) continue; // already checked out - historical
 
         Room activeRoom = roomRepo.findByRoomNumber(b.getRoomNumber());
-        if (activeRoom != null && activeRoom.getStatus() != Room.Status.OCCUPIED) {
-          activeRoom.setStatus(Room.Status.OCCUPIED);
+        if (activeRoom != null && !activeRoom.getIsOccupied()) {
+          activeRoom.setIsOccupied(true);
           roomRepo.updateRoom(activeRoom);
         }
       }
@@ -882,7 +882,7 @@ public class DatabaseSeeder {
       lapsingHold.setRoomNumber("ST-101");
       standardRepo.updateReservation(lapsingHold);
 
-      roomST101.setStatus(Room.Status.OCCUPIED);
+      roomST101.setIsOccupied(true);
       roomRepo.updateRoom(roomST101);
 
       // --- LIVE HOLD, still inside the grace window ---
@@ -898,7 +898,7 @@ public class DatabaseSeeder {
       activeHold.setRoomNumber("L-802");
       standardRepo.updateReservation(activeHold);
 
-      roomL802.setStatus(Room.Status.OCCUPIED);
+      roomL802.setIsOccupied(true);
       roomRepo.updateRoom(roomL802);
 
       // --- CLOSED HISTORY, so the reports have completed outcomes to aggregate ---

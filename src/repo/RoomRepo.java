@@ -78,13 +78,13 @@ public class RoomRepo {
 
   public Room findVacantCleanRoom(Room.RoomType roomType) {
     if (roomType == null || roomList == null) return null;
-    for (int i = 1; i <= roomList.getNumberOfEntries(); i++) {
-      Room r = roomList.getEntry(i);
-      if (r != null && r.getRoomType() == roomType && r.getStatus() == Room.Status.VACANT_CLEAN) {
-        return r;
-      }
-    }
-    return null;
+
+    return roomList.find(
+        r ->
+            r != null
+                && r.getRoomType() == roomType
+                && r.getStatus() == Room.Status.VACANT_CLEAN
+                && !r.getIsOccupied());
   }
 
   public ListInterface<Room> getRoomList() {
