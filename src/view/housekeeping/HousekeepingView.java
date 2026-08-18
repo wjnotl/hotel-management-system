@@ -11,6 +11,19 @@ import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 
 public class HousekeepingView {
+
+  // Row already carries its resolved staff label — the controller builds this so the view
+  // never has to look anything up (e.g. resolve a staff ID to a name) on its own.
+  public static class TaskBoardRowDTO {
+    public final HousekeepingTask task;
+    public final String staffLabel;
+
+    public TaskBoardRowDTO(HousekeepingTask task, String staffLabel) {
+      this.task = task;
+      this.staffLabel = staffLabel;
+    }
+  }
+
   public String displayMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("Housekeeping & Task Log");
@@ -27,8 +40,7 @@ public class HousekeepingView {
   // --- SCREEN 1: MANAGE CLEANING TASK BOARD ---
 
   public GetMenuInputResult renderTaskBoardScreen(
-      ListInterface<HousekeepingTask> list,
-      ListInterface<HousekeepingStaff> staffList,
+      ListInterface<TaskBoardRowDTO> list,
       String search,
       String taskTypeFilter,
       String statusFilter,
@@ -102,13 +114,12 @@ public class HousekeepingView {
     int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
 
     for (int i = startIndex; i <= endIndex; i++) {
-      HousekeepingTask t = list.getEntry(i);
-      if (t == null) continue;
-
-      HousekeepingStaff staff = findStaff(staffList, t.getAssignedStaffId());
+      TaskBoardRowDTO row = list.getEntry(i);
+      if (row == null || row.task == null) continue;
+      HousekeepingTask t = row.task;
 
       int displayNum = i - startIndex + 1;
-      String staffLabel = (staff != null) ? staff.getName() : "Unassigned";
+      String staffLabel = (row.staffLabel != null) ? row.staffLabel : "Unassigned";
       String urgentStr = t.getIsUrgent() ? "[!]" : "[ ]";
 
       TableUtil.printTableRow(
@@ -842,16 +853,5 @@ public class HousekeepingView {
     System.out.println(
         " Current values shown in brackets. Leave blank or type 'C' to keep a value"
             + " unchanged.\n");
-  }
-
-  // --- INTERNAL LOOKUP HELPERS ---
-
-  private HousekeepingStaff findStaff(ListInterface<HousekeepingStaff> staffList, String staffId) {
-    if (staffList == null || staffId == null) return null;
-    for (int i = 1; i <= staffList.getNumberOfEntries(); i++) {
-      HousekeepingStaff s = staffList.getEntry(i);
-      if (s != null && staffId.equals(s.getStaffId())) return s;
-    }
-    return null;
   }
 }

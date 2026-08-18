@@ -87,11 +87,22 @@ public class HouseKeepingController {
         // result set out from under the page we were sitting on.
         currentPage = clampPage(currentPage, filteredList.getNumberOfEntries(), pageSize);
 
-        // 3. Render Task Board Screen
+        // 3. Resolve each task's staff name up front so the view only prints (no lookups)
+        ListInterface<HousekeepingView.TaskBoardRowDTO> rows =
+            filteredList.map(
+                t -> {
+                  HousekeepingStaff staff =
+                      (t == null || t.getAssignedStaffId() == null)
+                          ? null
+                          : staffRepo.findById(t.getAssignedStaffId());
+                  return new HousekeepingView.TaskBoardRowDTO(
+                      t, staff != null ? staff.getName() : null);
+                });
+
+        // 4. Render Task Board Screen
         ConsoleUtil.GetMenuInputResult result =
             houseKeepingView.renderTaskBoardScreen(
-                filteredList,
-                staffRepo.getStaffList(),
+                rows,
                 searchQuery,
                 taskTypeFilter,
                 statusFilter,

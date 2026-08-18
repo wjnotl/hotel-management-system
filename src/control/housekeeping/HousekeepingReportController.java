@@ -1,6 +1,5 @@
 package control.housekeeping;
 
-import adt.ArrayList;
 import adt.ListInterface;
 import entity.HousekeepingSettings;
 import entity.HousekeepingStaff;
@@ -42,6 +41,7 @@ public class HousekeepingReportController {
   public void start() {
     LocalDate startDate = null;
     LocalDate endDate = null;
+    String datePresetLabel = "ALL TIME";
     String staffId = null;
     Room.RoomType roomTypeFilter = null;
     HousekeepingTask.TaskType taskTypeFilter = null;
@@ -56,9 +56,10 @@ public class HousekeepingReportController {
                 taskTypeFilter == null ? "ALL" : taskTypeFilter.name());
 
         if (choice == 1) {
-          LocalDate[] range = handleDateRangeSubmenu(startDate, endDate);
-          startDate = range[0] == null ? null : range[0];
-          endDate = range[1] == null ? null : range[1];
+          Object[] range = handleDateRangeSubmenu(startDate, endDate, datePresetLabel);
+          startDate = (LocalDate) range[0];
+          endDate = (LocalDate) range[1];
+          datePresetLabel = (String) range[2];
         } else if (choice == 2) {
           staffId = handleStaffFilterSubmenu(staffId);
         } else if (choice == 3) {
@@ -68,6 +69,7 @@ public class HousekeepingReportController {
         } else if (choice == 5) {
           startDate = null;
           endDate = null;
+          datePresetLabel = "ALL TIME";
           staffId = null;
           roomTypeFilter = null;
           taskTypeFilter = null;
@@ -96,14 +98,65 @@ public class HousekeepingReportController {
   }
 
   // --- DATE RANGE SUBMENU ---
-  private LocalDate[] handleDateRangeSubmenu(LocalDate currentStart, LocalDate currentEnd) {
+  // Returns {LocalDate start, LocalDate end, String datePresetLabel}.
+  private Object[] handleDateRangeSubmenu(
+      LocalDate currentStart, LocalDate currentEnd, String currentPresetLabel) {
+    LocalDate start = currentStart;
+    LocalDate end = currentEnd;
+    String presetLabel = currentPresetLabel;
+
+    while (true) {
+      try {
+        int choice =
+            reportView.displayDateRangeSubmenu(
+                start == null ? "Not Set" : start.toString(),
+                end == null ? "Not Set" : end.toString(),
+                presetLabel);
+
+        if (choice == 1) {
+          start = LocalDate.now();
+          end = LocalDate.now();
+          presetLabel = "TODAY";
+        } else if (choice == 2) {
+          LocalDate yesterday = LocalDate.now().minusDays(1);
+          start = yesterday;
+          end = yesterday;
+          presetLabel = "YESTERDAY";
+        } else if (choice == 3) {
+          start = LocalDate.now().minusDays(6);
+          end = LocalDate.now();
+          presetLabel = "LAST 7 DAYS";
+        } else if (choice == 4) {
+          start = LocalDate.now().minusDays(29);
+          end = LocalDate.now();
+          presetLabel = "LAST 30 DAYS";
+        } else if (choice == 5) {
+          LocalDate[] custom = handleCustomDateRangeSubmenu(start, end);
+          start = custom[0];
+          end = custom[1];
+          presetLabel = "CUSTOM";
+        } else if (choice == 6) {
+          start = null;
+          end = null;
+          presetLabel = "ALL TIME";
+        } else if (choice == 7) {
+          return new Object[] {start, end, presetLabel};
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // --- CUSTOM DATE RANGE SUBMENU ---
+  private LocalDate[] handleCustomDateRangeSubmenu(LocalDate currentStart, LocalDate currentEnd) {
     LocalDate start = currentStart;
     LocalDate end = currentEnd;
 
     while (true) {
       try {
         int choice =
-            reportView.displayDateRangeSubmenu(
+            reportView.displayCustomDateRangeSubmenu(
                 start == null ? "Not Set" : start.toString(),
                 end == null ? "Not Set" : end.toString());
 
@@ -112,9 +165,6 @@ public class HousekeepingReportController {
         } else if (choice == 2) {
           end = promptForDate("End Date", end);
         } else if (choice == 3) {
-          start = null;
-          end = null;
-        } else if (choice == 4) {
           return new LocalDate[] {start, end};
         }
       } catch (Exception e) {
@@ -230,29 +280,26 @@ public class HousekeepingReportController {
       HousekeepingTask.TaskType taskTypeFilter) {
 
     ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
-    ListInterface<HousekeepingTask> matched = new ArrayList<>();
 
-    for (int i = 1; i <= fullList.getNumberOfEntries(); i++) {
-      HousekeepingTask t = fullList.getEntry(i);
-      if (t == null || t.getCreatedAt() == null) continue;
+    return fullList.filter(
+        t -> {
+          if (t == null || t.getCreatedAt() == null) return false;
 
-      LocalDate createdDate = t.getCreatedAt().toLocalDate();
-      if (startDate != null && createdDate.isBefore(startDate)) continue;
-      if (endDate != null && createdDate.isAfter(endDate)) continue;
+          LocalDate createdDate = t.getCreatedAt().toLocalDate();
+          if (startDate != null && createdDate.isBefore(startDate)) return false;
+          if (endDate != null && createdDate.isAfter(endDate)) return false;
 
-      if (staffId != null && !staffId.equals(t.getAssignedStaffId())) continue;
+          if (staffId != null && !staffId.equals(t.getAssignedStaffId())) return false;
 
-      if (taskTypeFilter != null && t.getTaskType() != taskTypeFilter) continue;
+          if (taskTypeFilter != null && t.getTaskType() != taskTypeFilter) return false;
 
-      if (roomTypeFilter != null) {
-        Room room = roomRepo.findByRoomNumber(t.getRoomNumber());
-        if (room == null || room.getRoomType() != roomTypeFilter) continue;
-      }
+          if (roomTypeFilter != null) {
+            Room room = roomRepo.findByRoomNumber(t.getRoomNumber());
+            if (room == null || room.getRoomType() != roomTypeFilter) return false;
+          }
 
-      matched.add(t);
-    }
-
-    return matched;
+          return true;
+        });
   }
 
   private ReportResult calculateReport(ListInterface<HousekeepingTask> matched) {

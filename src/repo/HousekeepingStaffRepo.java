@@ -24,7 +24,9 @@ public class HousekeepingStaffRepo {
     }
 
     // Rebuild the lookup map from the stored list.
-    this.staffById = new DoublyLinkedHashMap<>();
+    DoublyLinkedHashMap<String, HousekeepingStaff> lruMap = new DoublyLinkedHashMap<>();
+    lruMap.setLruEnabled(true);
+    this.staffById = lruMap;
     for (int i = 1; i <= staffList.getNumberOfEntries(); i++) {
       HousekeepingStaff s = staffList.getEntry(i);
       if (s != null) {
