@@ -536,22 +536,19 @@ public class ReportsController {
         continue;
 
       int t = r.getRoomType().ordinal();
-      switch (r.getStatus()) {
-        case DIRTY:
-          dirty[t]++;
-          break;
-        case CLEANING:
-          cleaning[t]++;
-          break;
-        case INSPECTED:
-          inspected[t]++;
-          break;
-        case VACANT_CLEAN:
-          vacantClean[t]++;
-          break;
-        case OCCUPIED:
-          occupied[t]++;
-          break;
+      if (r.getIsOccupied()) {
+        occupied[t]++;
+      } else {
+        switch (r.getStatus()) {
+          case DIRTY:
+            dirty[t]++;
+            break;
+          case VACANT_CLEAN:
+            vacantClean[t]++;
+            break;
+          default:
+            break;
+        }
       }
     }
 

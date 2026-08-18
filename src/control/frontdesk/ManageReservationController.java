@@ -435,7 +435,7 @@ public class ManageReservationController {
     // PRIMARY: OCCUPIED rooms (active stays)
     for (int i = 1; i <= allRooms.getNumberOfEntries(); i++) {
       Room room = allRooms.getEntry(i);
-      if (room == null || room.getStatus() != Room.Status.OCCUPIED) continue;
+      if (room == null || !room.getIsOccupied()) continue;
 
       Billing best = null;
       for (int j = 1; j <= allBillings.getNumberOfEntries(); j++) {
@@ -505,7 +505,7 @@ public class ManageReservationController {
       if (res.getStatus() == Reservation.Status.CHECKED_IN)  return "CHECKED_IN";
       if (res.getStatus() == Reservation.Status.ALLOCATED)   return "CHECKED_IN";
     }
-    return room != null && room.getStatus() == Room.Status.OCCUPIED ? "CHECKED_IN" : "PENDING";
+    return room != null && room.getIsOccupied() ? "CHECKED_IN" : "PENDING";
   }
 
   /** Derive stay status from billing + reservation for historical entries. */
