@@ -95,8 +95,7 @@ public class AdvanceBookingController {
 
         ConsoleUtil.GetMenuInputResult result =
             advanceBookingView.renderAdvanceScreen(
-                rows,
-                guestRepo.getGuestList(),
+                buildBookingRowDTO(rows),
                 countByRoomType(reserved, Room.RoomType.LUXURY),
                 countByRoomType(reserved, Room.RoomType.SUITE),
                 countByRoomType(reserved, Room.RoomType.STANDARD),
@@ -111,7 +110,7 @@ public class AdvanceBookingController {
                 currentPage,
                 pageSize);
 
-        if (result.isBlank || "B".equalsIgnoreCase(result.input)) {
+        if ("E".equalsIgnoreCase(result.input)) {
           return;
         } else if ("A".equalsIgnoreCase(result.input)) {
           handleNewBooking();

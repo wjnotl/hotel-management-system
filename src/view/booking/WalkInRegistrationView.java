@@ -8,7 +8,6 @@ import entity.Room;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import util.ConsoleUtil;
-import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 import util.TextUtil;
 
@@ -29,84 +28,66 @@ public class WalkInRegistrationView {
       boolean enforceVipBypass,
       boolean autoAssignWhenRoomFree) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("REGISTER WALK-IN - ROOM TYPE", SCREEN_WIDTH);
+    System.out.println("Guest: " + guest.getName() + " (" + guest.getGuestId() + ")\n");
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("REGISTER WALK-IN - ROOM TYPE", SCREEN_WIDTH);
-      System.out.println("Guest: " + guest.getName() + " (" + guest.getGuestId() + ")\n");
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(TYPE_WIDTHS)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER);
 
-      TableUtil.TableSettings settings =
-          new TableUtil.TableSettings(TYPE_WIDTHS)
-              .setHAlign(0, TableUtil.Align.CENTER)
-              .setHAlign(2, TableUtil.Align.CENTER)
-              .setHAlign(3, TableUtil.Align.CENTER)
-              .setHAlign(4, TableUtil.Align.CENTER)
-              .setHAlign(5, TableUtil.Align.CENTER);
+    TableUtil.TableSettings headerSettings = centeredHeader(TYPE_WIDTHS);
 
-      TableUtil.TableSettings headerSettings = centeredHeader(TYPE_WIDTHS);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"AVAILABILITY RIGHT NOW"}, spanSettings());
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
+    TableUtil.printTableRow(
+        new String[] {"NO.", "ROOM TYPE", "VACANT", "ADV HELD", "VIP WAIT", "IN LINE", "OUTCOME"},
+        headerSettings);
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"AVAILABILITY RIGHT NOW"}, spanSettings());
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
+    Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
+    for (int i = 0; i < types.length; i++) {
       TableUtil.printTableRow(
-          new String[] {"NO.", "ROOM TYPE", "VACANT", "ADV HELD", "VIP WAIT", "IN LINE", "OUTCOME"},
-          headerSettings);
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-      Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
-      for (int i = 0; i < types.length; i++) {
-        TableUtil.printTableRow(
-            new String[] {
-              String.valueOf(i + 1),
-              types[i].name(),
-              String.valueOf(vacantByType[i]),
-              String.valueOf(arrivingTodayByType[i]),
-              String.valueOf(vipWaitingByType[i]),
-              String.valueOf(lineLengthByType[i]),
-              outcomeFor(
-                  vacantByType[i],
-                  arrivingTodayByType[i],
-                  vipWaitingByType[i],
-                  lineLengthByType[i],
-                  enforceVipBypass,
-                  autoAssignWhenRoomFree)
-            },
-            settings);
-      }
-
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
-
-      System.out.println();
-      System.out.println("ADV HELD counts rooms already promised to advance bookings arriving");
-      System.out.println("today, so they are not handed to the counter by mistake.");
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println("C - Cancel");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose a room type: ", 1, 3, new char[] {'B', 'C'});
-
-        if (result.isBlank
-            || "B".equalsIgnoreCase(result.input)
-            || "C".equalsIgnoreCase(result.input)) {
-          return null;
-        }
-
-        int choice = result.getAsInt();
-        if (choice == 1) return Room.RoomType.LUXURY;
-        if (choice == 2) return Room.RoomType.SUITE;
-        return Room.RoomType.STANDARD;
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
+          new String[] {
+            String.valueOf(i + 1),
+            types[i].name(),
+            String.valueOf(vacantByType[i]),
+            String.valueOf(arrivingTodayByType[i]),
+            String.valueOf(vipWaitingByType[i]),
+            String.valueOf(lineLengthByType[i]),
+            outcomeFor(
+                vacantByType[i],
+                arrivingTodayByType[i],
+                vipWaitingByType[i],
+                lineLengthByType[i],
+                enforceVipBypass,
+                autoAssignWhenRoomFree)
+          },
+          settings);
     }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+
+    System.out.println();
+    System.out.println("ADV HELD counts rooms already promised to advance bookings arriving");
+    System.out.println("today, so they are not handed to the counter by mistake.");
+    System.out.println();
+    System.out.println("4. Back\n");
+
+    int choice = ConsoleUtil.getMenuInput("Choose a room type: ", 1, 4).getAsInt();
+    if (choice == 1) return Room.RoomType.LUXURY;
+    if (choice == 2) return Room.RoomType.SUITE;
+    if (choice == 3) return Room.RoomType.STANDARD;
+    return null;
   }
 
+  // Mirrors the decision the controller is about to make, in the same order, so the column never
+  // promises an immediate room the placement rule would not actually hand over.
   private String outcomeFor(
       int vacant,
       int arrivingToday,
@@ -201,61 +182,40 @@ public class WalkInRegistrationView {
   }
 
   public int displayHasAdvanceBookingScreen(Guest guest, Reservation booking) {
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("GUEST BOOKED AHEAD", SCREEN_WIDTH);
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("GUEST BOOKED AHEAD", SCREEN_WIDTH);
+    TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"STATUS: [!] AN ADVANCE BOOKING ALREADY EXISTS"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
+    printKeyValue(kvSettings, "Reservation ID", booking.getReservationId(), true);
+    printKeyValue(kvSettings, "Confirmation Code", booking.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Room Type Booked", booking.getRoomType().name(), true);
+    printKeyValue(
+        kvSettings, "Expected Arrival", formatTime(booking.getExpectedArrivalTime()), true);
+    printKeyValue(
+        kvSettings,
+        "Nights Booked",
+        (booking.getStayDays() != null) ? booking.getStayDays() + " night(s)" : "Not stated",
+        true);
+    printKeyValue(kvSettings, "Booked At", formatTime(booking.getReservationTime()), true);
+    printKeyValue(
+        kvSettings,
+        "System Notice",
+        "This guest reserved a room in advance and has now arrived. Using that booking keeps"
+            + " one record for the stay. Opening a separate walk-in leaves the original booking"
+            + " unclaimed.",
+        false);
 
-      TableUtil.TableSettings kvSettings = kvSettings();
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(
-          new String[] {"STATUS: [!] AN ADVANCE BOOKING ALREADY EXISTS"}, spanSettings());
-      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-      printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
-      printKeyValue(kvSettings, "Reservation ID", booking.getReservationId(), true);
-      printKeyValue(kvSettings, "Confirmation Code", booking.getConfirmationNumber(), true);
-      printKeyValue(kvSettings, "Room Type Booked", booking.getRoomType().name(), true);
-      printKeyValue(
-          kvSettings, "Expected Arrival", formatTime(booking.getExpectedArrivalTime()), true);
-      printKeyValue(
-          kvSettings,
-          "Nights Booked",
-          (booking.getStayDays() != null) ? booking.getStayDays() + " night(s)" : "Not stated",
-          true);
-      printKeyValue(kvSettings, "Booked At", formatTime(booking.getReservationTime()), true);
-      printKeyValue(
-          kvSettings,
-          "System Notice",
-          "This guest reserved a room in advance and has now arrived. Using that booking keeps"
-              + " one record for the stay. Opening a separate walk-in leaves the original booking"
-              + " unclaimed.",
-          false);
+    System.out.println();
+    System.out.println("1. Use The Advance Booking (recommended)");
+    System.out.println("2. Register A Separate Walk-In Anyway");
+    System.out.println("3. Back\n");
 
-      System.out.println();
-      System.out.println("1. Use The Advance Booking (recommended)");
-      System.out.println("2. Register A Separate Walk-In Anyway");
-      System.out.println();
-      System.out.println("B - Back");
-      System.out.println("C - Cancel");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", 1, 2, new char[] {'B', 'C'});
-
-        if (result.isBlank
-            || "B".equalsIgnoreCase(result.input)
-            || "C".equalsIgnoreCase(result.input)) {
-          return 3;
-        }
-        return result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
   public boolean displayAssignConfirmationScreen(
@@ -266,50 +226,35 @@ public class WalkInRegistrationView {
       int arrivingToday,
       int vipWaiting) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM IMMEDIATE ROOM ASSIGNMENT", SCREEN_WIDTH);
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("CONFIRM IMMEDIATE ROOM ASSIGNMENT", SCREEN_WIDTH);
+    TableUtil.TableSettings kvSettings = kvSettings();
 
-      TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"ROOM HAND-OVER"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
+    printKeyValue(kvSettings, "Room Number", room.getRoomNumber(), true);
+    printKeyValue(kvSettings, "Room Type", room.getRoomType().name(), true);
+    printKeyValue(kvSettings, "Rate Per Night", String.format("RM %.2f", room.getPrice()), true);
+    printKeyValue(kvSettings, "Rooms Left After", String.valueOf(vacantRooms - 1), true);
+    printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
+    printKeyValue(kvSettings, "VIP Still Waiting", String.valueOf(vipWaiting), true);
+    printKeyValue(
+        kvSettings,
+        "Hold Window",
+        graceMinutes + " minutes before the room is released and a strike is recorded",
+        false);
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"ROOM HAND-OVER"}, spanSettings());
-      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-      printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
-      printKeyValue(kvSettings, "Room Number", room.getRoomNumber(), true);
-      printKeyValue(kvSettings, "Room Type", room.getRoomType().name(), true);
-      printKeyValue(kvSettings, "Rate Per Night", String.format("RM %.2f", room.getPrice()), true);
-      printKeyValue(kvSettings, "Rooms Left After", String.valueOf(vacantRooms - 1), true);
-      printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
-      printKeyValue(kvSettings, "VIP Still Waiting", String.valueOf(vipWaiting), true);
-      printKeyValue(
-          kvSettings,
-          "Hold Window",
-          graceMinutes + " minutes before the room is released and a strike is recorded",
-          false);
+    System.out.println();
+    System.out.println("A room of this type is free and nobody is entitled to it ahead of this");
+    System.out.println("guest, so they are served straight away rather than queuing for nothing.");
+    System.out.println();
+    System.out.println("1. Hand Room " + room.getRoomNumber() + " Over Now");
+    System.out.println("2. Do Not Assign\n");
 
-      System.out.println();
-      System.out.println("A room of this type is free and nobody is entitled to it ahead of this");
-      System.out.println(
-          "guest, so they are served straight away rather than queuing for nothing.");
-      System.out.println();
-      System.out.println("Y - Hand room " + room.getRoomNumber() + " over now");
-      System.out.println("N - Do not assign");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", new char[] {'Y', 'N'});
-        if (result.isBlank) return false;
-        return "Y".equalsIgnoreCase(result.input);
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public boolean displayEnqueueConfirmationScreen(
@@ -323,61 +268,44 @@ public class WalkInRegistrationView {
       int vipWaiting,
       String reasonForWaiting) {
 
-    String error = null;
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM WALK-IN REGISTRATION", SCREEN_WIDTH);
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("CONFIRM WALK-IN REGISTRATION", SCREEN_WIDTH);
+    TableUtil.TableSettings kvSettings = kvSettings();
 
-      TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest ID", guest.getGuestId(), true);
+    printKeyValue(kvSettings, "Guest Name", guest.getName(), true);
+    printKeyValue(
+        kvSettings,
+        "IC / Passport No",
+        (guest.getIcNumber() != null) ? guest.getIcNumber() : blankToNa(guest.getPassportNumber()),
+        true);
+    printKeyValue(kvSettings, "Phone Number", blankToNa(guest.getPhoneNumber()), true);
+    printKeyValue(kvSettings, "Email Address", blankToNa(guest.getEmail()), true);
+    printKeyValue(kvSettings, "Strike Count", String.valueOf(guest.getStrikeCount()), false);
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, spanSettings());
-      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-      printKeyValue(kvSettings, "Guest ID", guest.getGuestId(), true);
-      printKeyValue(kvSettings, "Guest Name", guest.getName(), true);
-      printKeyValue(
-          kvSettings,
-          "IC / Passport No",
-          (guest.getIcNumber() != null)
-              ? guest.getIcNumber()
-              : blankToNa(guest.getPassportNumber()),
-          true);
-      printKeyValue(kvSettings, "Phone Number", blankToNa(guest.getPhoneNumber()), true);
-      printKeyValue(kvSettings, "Email Address", blankToNa(guest.getEmail()), true);
-      printKeyValue(kvSettings, "Strike Count", String.valueOf(guest.getStrikeCount()), false);
+    System.out.println();
 
-      System.out.println();
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"QUEUE PLACEMENT"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Target Line", roomType.name(), true);
+    printKeyValue(kvSettings, "Vacant Clean Rooms", String.valueOf(vacantRooms), true);
+    printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
+    printKeyValue(kvSettings, "VIP Already Waiting", String.valueOf(vipWaiting), true);
+    printKeyValue(kvSettings, "Currently Waiting", String.valueOf(waiting), true);
+    printKeyValue(kvSettings, "Array Capacity", waiting + " / " + capacity + " slots used", true);
+    printKeyValue(kvSettings, "Position On Joining", projectedPosition + " (joins the back)", true);
+    printKeyValue(kvSettings, "Why They Wait", reasonForWaiting, false);
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"QUEUE PLACEMENT"}, spanSettings());
-      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-      printKeyValue(kvSettings, "Target Line", roomType.name(), true);
-      printKeyValue(kvSettings, "Vacant Clean Rooms", String.valueOf(vacantRooms), true);
-      printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
-      printKeyValue(kvSettings, "VIP Already Waiting", String.valueOf(vipWaiting), true);
-      printKeyValue(kvSettings, "Currently Waiting", String.valueOf(waiting), true);
-      printKeyValue(kvSettings, "Array Capacity", waiting + " / " + capacity + " slots used", true);
-      printKeyValue(
-          kvSettings, "Position On Joining", projectedPosition + " (joins the back)", true);
-      printKeyValue(kvSettings, "Why They Wait", reasonForWaiting, false);
+    System.out.println();
+    System.out.println("1. Register This Walk-In Into The " + roomType.name() + " Line");
+    System.out.println("2. Do Not Register\n");
 
-      System.out.println();
-      System.out.println("Y - Register this walk-in into the " + roomType.name() + " line");
-      System.out.println("N - Do not register");
-      System.out.println();
-
-      ConsoleUtil.printFieldError(error);
-
-      try {
-        GetMenuInputResult result =
-            ConsoleUtil.getNavInput("Choose an option: ", new char[] {'Y', 'N'});
-        if (result.isBlank) return false;
-        return "Y".equalsIgnoreCase(result.input);
-      } catch (IllegalArgumentException e) {
-        error = e.getMessage();
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public void displayLineFullScreen(Room.RoomType roomType, int waiting, int maxQueueLength) {

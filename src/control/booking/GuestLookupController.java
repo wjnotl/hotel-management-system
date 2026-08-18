@@ -10,14 +10,13 @@ import util.ConsoleUtil;
 import view.booking.GuestLookupView;
 
 // Putting a name to the person at the counter is the first thing every booking flow does, so it is
-// written once here rather than three times with three sets of rules. Backing out of any step lands
-// on the step before it, never on the module menu.
+// written once here rather than three times with three sets of rules.
 public class GuestLookupController {
+  private static final int MATCH_PAGE_SIZE = 10;
+
   private final GuestLookupView lookupView = new GuestLookupView();
   private final GuestRepo guestRepo;
   private final StandardReservationRepo standardReservationRepo;
-
-  private static final int MATCH_PAGE_SIZE = 10;
 
   public GuestLookupController(
       GuestRepo guestRepo, StandardReservationRepo standardReservationRepo) {
@@ -28,19 +27,19 @@ public class GuestLookupController {
   /**
    * Runs the whole find-or-create loop.
    *
-   * @param title heading for the field menu, so the screen says which flow it belongs to
    * @param offerRegistration whether opening a brand new guest file is allowed from here
    * @return the chosen or newly created guest, or null when the clerk backed out
    */
   public Guest findGuest(String title, boolean offerRegistration) {
     boolean exactMatch = false;
+    int backOption = offerRegistration ? 11 : 10;
 
     while (true) {
       try {
         String matchMode = exactMatch ? "EXACT" : "CONTAINS";
         int choice = lookupView.displayFieldMenu(title, matchMode, offerRegistration);
 
-        if (choice == GuestLookupView.BACK) {
+        if (choice == backOption) {
           return null;
         }
 
@@ -49,7 +48,7 @@ public class GuestLookupController {
           continue;
         }
 
-        if (choice == GuestLookupView.REGISTER_NEW_GUEST) {
+        if (offerRegistration && choice == GuestLookupView.REGISTER_NEW_GUEST) {
           Guest created = new GuestRegistrationController(guestRepo).registerNewGuest(null);
           if (created != null) return created;
           continue;
@@ -70,15 +69,20 @@ public class GuestLookupController {
 
     while (true) {
       String term = lookupView.promptSearchTerm(fieldLabel, matchMode);
-      if (term.isEmpty()) {
+
+      if (term == null || term.trim().isEmpty()) {
+        throw new IllegalArgumentException("Search term cannot be empty!");
+      }
+      if ("E".equalsIgnoreCase(term.trim())) {
         return null;
       }
 
+      term = term.trim();
       ListInterface<Guest> matches = search(field, term, exactMatch);
 
       if (matches.isEmpty()) {
         int choice = lookupView.displayNotFoundScreen(fieldLabel, term, offerRegistration);
-        if (choice == GuestLookupView.BACK) return null;
+        if (choice == 3) return null;
 
         if (offerRegistration && choice == 1) {
           Guest created =
@@ -101,40 +105,69 @@ public class GuestLookupController {
 
   private Guest pickFromMatches(
       String fieldLabel, String term, String matchMode, ListInterface<Guest> matches) {
+
+    ListInterface<GuestLookupView.GuestRowDTO> rows = buildGuestRowDTO(matches);
     int page = 1;
 
     while (true) {
-      ConsoleUtil.GetMenuInputResult result =
-          lookupView.displayMatches(fieldLabel, term, matchMode, matches, page, MATCH_PAGE_SIZE);
+      try {
+        ConsoleUtil.GetMenuInputResult result =
+            lookupView.displayMatches(fieldLabel, term, matchMode, rows, page, MATCH_PAGE_SIZE);
 
-      if (result == null) {
-        return null;
-      }
+        if ("E".equalsIgnoreCase(result.input) || "S".equalsIgnoreCase(result.input)) {
+          return null;
+        }
 
-      if ("S".equalsIgnoreCase(result.input)) {
-        return null;
-      }
+        int totalPages = (int) Math.ceil((double) matches.getNumberOfEntries() / MATCH_PAGE_SIZE);
 
-      int totalPages = (int) Math.ceil((double) matches.getNumberOfEntries() / MATCH_PAGE_SIZE);
+        if ("N".equalsIgnoreCase(result.input)) {
+          if (page < totalPages) {
+            page++;
+          } else {
+            ConsoleUtil.printError("Already on the last page!");
+          }
+          continue;
+        }
 
-      if ("N".equalsIgnoreCase(result.input)) {
-        if (page < totalPages) page++;
-        continue;
-      }
+        if ("P".equalsIgnoreCase(result.input)) {
+          if (page > 1) {
+            page--;
+          } else {
+            ConsoleUtil.printError("Already on the first page!");
+          }
+          continue;
+        }
 
-      if ("P".equalsIgnoreCase(result.input)) {
-        if (page > 1) page--;
-        continue;
-      }
-
-      if (result.isNumber) {
-        // The table renumbers from 1 on every page, so the row read off the screen is an offset
-        // into the page and the page origin has to be added back before indexing the match list.
-        int index = (page - 1) * MATCH_PAGE_SIZE + result.getAsInt();
-        Guest picked = matches.getEntry(index);
-        if (picked != null) return picked;
+        if (result.isNumber) {
+          // The table renumbers from 1 on every page, so the row read off the screen is an offset
+          // into the page and the page origin has to be added back.
+          int index = (page - 1) * MATCH_PAGE_SIZE + result.getAsInt();
+          Guest picked = matches.getEntry(index);
+          if (picked != null) return picked;
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  private ListInterface<GuestLookupView.GuestRowDTO> buildGuestRowDTO(
+      ListInterface<Guest> matches) {
+    ListInterface<GuestLookupView.GuestRowDTO> rows = new ArrayList<>();
+
+    for (int i = 1; i <= matches.getNumberOfEntries(); i++) {
+      Guest g = matches.getEntry(i);
+      if (g == null) continue;
+
+      rows.add(
+          new GuestLookupView.GuestRowDTO(
+              g.getGuestId(),
+              g.getName(),
+              (g.getIcNumber() != null) ? g.getIcNumber() : blankToNa(g.getPassportNumber()),
+              blankToNa(g.getPhoneNumber()),
+              blankToNa(g.getEmail())));
+    }
+    return rows;
   }
 
   private ListInterface<Guest> search(int field, String term, boolean exactMatch) {
@@ -201,5 +234,9 @@ public class GuestLookupController {
   private String nameSuggestionFrom(int field, String term) {
     if (field != GuestLookupView.FIELD_NAME) return null;
     return term;
+  }
+
+  private String blankToNa(String value) {
+    return (value == null || value.isEmpty()) ? "N/A" : value;
   }
 }

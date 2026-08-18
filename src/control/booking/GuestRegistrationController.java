@@ -154,7 +154,7 @@ public class GuestRegistrationController {
     while (true) {
       try {
         String input = registrationView.promptName(STEP_NAME, current);
-        if (isCancel(input)) return StepResult.cancel();
+        if (isExit(input)) return StepResult.cancel();
         if (isBack(input)) return StepResult.back();
 
         String name = input.trim();
@@ -201,7 +201,7 @@ public class GuestRegistrationController {
     while (true) {
       try {
         String input = registrationView.promptIcNumber(STEP_IC, name, current);
-        if (isCancel(input)) return StepResult.cancel();
+        if (isExit(input)) return StepResult.cancel();
         if (isBack(input)) return StepResult.back();
 
         String typed = input.trim();
@@ -240,7 +240,7 @@ public class GuestRegistrationController {
     while (true) {
       try {
         String input = registrationView.promptPassportNumber(STEP_PASSPORT, name, current);
-        if (isCancel(input)) return StepResult.cancel();
+        if (isExit(input)) return StepResult.cancel();
         if (isBack(input)) return StepResult.back();
 
         String passportNumber = input.trim();
@@ -278,7 +278,7 @@ public class GuestRegistrationController {
     while (true) {
       try {
         String input = registrationView.promptPhoneNumber(STEP_PHONE, name, current);
-        if (isCancel(input)) return StepResult.cancel();
+        if (isExit(input)) return StepResult.cancel();
         if (isBack(input)) return StepResult.back();
 
         String phoneNumber = input.trim();
@@ -313,7 +313,7 @@ public class GuestRegistrationController {
     while (true) {
       try {
         String input = registrationView.promptEmail(STEP_EMAIL, name, current);
-        if (isCancel(input)) return StepResult.cancel();
+        if (isExit(input)) return StepResult.cancel();
         if (isBack(input)) return StepResult.back();
 
         String email = input.trim();
@@ -336,8 +336,8 @@ public class GuestRegistrationController {
     }
   }
 
-  private boolean isCancel(String input) {
-    return input == null || "C".equalsIgnoreCase(input.trim());
+  private boolean isExit(String input) {
+    return input != null && "E".equalsIgnoreCase(input.trim());
   }
 
   private boolean isBack(String input) {
