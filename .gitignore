@@ -20,3 +20,9 @@ lib/
 *.dat
 
 exports/
+
+test
+CLAUDE.md
+.claude
+Assignment_Instruction&Information
+test.bat

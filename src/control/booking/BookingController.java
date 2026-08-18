@@ -1,5 +1,6 @@
 package control.booking;
 
+import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
@@ -15,42 +16,73 @@ public class BookingController {
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
+  private final BookingSettingsRepo bookingSettingsRepo;
 
   public BookingController(
       StandardReservationRepo standardReservationRepo,
       VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
-      RoomRepo roomRepo) {
+      RoomRepo roomRepo,
+      BookingSettingsRepo bookingSettingsRepo) {
     this.standardReservationRepo = standardReservationRepo;
     this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
+    this.bookingSettingsRepo = bookingSettingsRepo;
   }
 
   public void start() {
     while (true) {
       try {
-        String choice = bookingView.displayMenu();
+        int choice = bookingView.displayMenu();
 
-        if ("1".equals(choice)) {
-          new WalkInQueueController(
-                  standardReservationRepo, vipReservationRepo, guestRepo, memberRepo, roomRepo)
-              .startQueueManagement();
-        } else if ("2".equals(choice)) {
-          new AdvanceBookingController(
-                  standardReservationRepo, vipReservationRepo, guestRepo, memberRepo, roomRepo)
-              .startAdvanceBookingManagement();
-        } else if ("3".equals(choice)) {
-          new BookingReportController(standardReservationRepo, guestRepo, memberRepo, roomRepo)
-              .startReportManagement();
-        } else if ("4".equals(choice)) {
+        if (choice == 0) {
           return;
+        } else if (choice == 1) {
+          // A walk-in is the one thing the desk does under time pressure, so it sits at the top
+          // of the module instead of three screens inside queue management.
+          newWalkInRegistrationController().registerWalkIn();
+        } else if (choice == 2) {
+          new WalkInQueueController(
+                  standardReservationRepo,
+                  vipReservationRepo,
+                  guestRepo,
+                  memberRepo,
+                  roomRepo,
+                  bookingSettingsRepo)
+              .startQueueManagement();
+        } else if (choice == 3) {
+          new AdvanceBookingController(
+                  standardReservationRepo,
+                  vipReservationRepo,
+                  guestRepo,
+                  memberRepo,
+                  roomRepo,
+                  bookingSettingsRepo)
+              .startAdvanceBookingManagement();
+        } else if (choice == 4) {
+          new BookingReportController(
+                  standardReservationRepo, guestRepo, roomRepo, bookingSettingsRepo)
+              .startReportManagement();
+        } else if (choice == 5) {
+          new BookingSettingsController(bookingSettingsRepo, standardReservationRepo)
+              .startSettingsManagement();
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  private WalkInRegistrationController newWalkInRegistrationController() {
+    return new WalkInRegistrationController(
+        standardReservationRepo,
+        vipReservationRepo,
+        guestRepo,
+        memberRepo,
+        roomRepo,
+        bookingSettingsRepo);
   }
 }

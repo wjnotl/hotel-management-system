@@ -3,6 +3,7 @@ package view.booking;
 import adt.ListInterface;
 import entity.Guest;
 import util.ConsoleUtil;
+import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 import util.TextUtil;
 
@@ -76,28 +77,47 @@ public class GuestRegistrationView {
             + " ("
             + existing.getGuestId()
             + "). Opening a second file would split this guest's history across two records."
-            + " Cancel and search for "
+            + " Go back and search for "
             + existing.getGuestId()
             + " instead, or capture a different value.");
     ConsoleUtil.printContinueMessage("Press Enter to try again...");
   }
 
   public boolean displaySameNameWarningScreen(String name, Guest existing) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("NAME ALREADY IN USE", SCREEN_WIDTH);
-    printNoticeBox(
-        "STATUS: [!] ANOTHER GUEST SHARES THIS NAME",
-        "Existing Record",
-        existing.getName() + " (" + existing.getGuestId() + ")",
-        "A guest with this exact name is already on record. Searching by name will always"
-            + " return the older record, so this new guest will only be reachable by guest ID."
-            + " Continue only if these are genuinely two different people.");
-    return promptConfirm("Register this as a separate guest anyway? (Y/N): ");
+    String error = null;
+
+    while (true) {
+      ConsoleUtil.clearScreen();
+      ConsoleUtil.printTitleBox("NAME ALREADY IN USE", SCREEN_WIDTH);
+      printNoticeBox(
+          "STATUS: [!] ANOTHER GUEST SHARES THIS NAME",
+          "Existing Record",
+          existing.getName() + " (" + existing.getGuestId() + ")",
+          "A guest with this exact name is already on record. Searching by name will always"
+              + " return the older record, so this new guest will only be reachable by guest ID."
+              + " Continue only if these are genuinely two different people.");
+
+      System.out.println("Y - Register this as a separate guest anyway");
+      System.out.println("N - Go back and change the name");
+      System.out.println();
+
+      ConsoleUtil.printFieldError(error);
+
+      try {
+        GetMenuInputResult result =
+            ConsoleUtil.getNavInput("Choose an option: ", new char[] {'Y', 'N'});
+        if (result.isBlank) return false;
+        return "Y".equalsIgnoreCase(result.input);
+      } catch (IllegalArgumentException e) {
+        error = e.getMessage();
+      }
+    }
   }
 
   // Returns 1 to save, 2 to walk back into the form, 3 to discard. The summary is the first
   // point where the clerk sees every field together, so it is also the most likely place for
-  // a mistake to be spotted.
+  // a mistake to be spotted. A bare Enter walks back into the form rather than throwing the
+  // whole file away, because losing five fields to one stray keystroke is never what was meant.
   public int displayConfirmationScreen(
       String guestId,
       String name,
@@ -106,33 +126,51 @@ public class GuestRegistrationView {
       String phoneNumber,
       String email) {
 
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CONFIRM NEW GUEST FILE", SCREEN_WIDTH);
+    String error = null;
 
-    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
-    TableUtil.TableSettings spanSettings =
-        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
+    while (true) {
+      ConsoleUtil.clearScreen();
+      ConsoleUtil.printTitleBox("CONFIRM NEW GUEST FILE", SCREEN_WIDTH);
 
-    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, spanSettings);
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-    printKeyValue(kvSettings, "Guest ID (assigned)", guestId, true);
-    printKeyValue(kvSettings, "Full Name", name, true);
-    printKeyValue(kvSettings, "IC Number", blankToNa(icNumber), true);
-    printKeyValue(kvSettings, "Passport Number", blankToNa(passportNumber), true);
-    printKeyValue(kvSettings, "Phone Number", phoneNumber, true);
-    printKeyValue(kvSettings, "Email Address", blankToNa(email), true);
-    // Stated rather than asked. A person with no guest file has never stayed here, so there is
-    // no card to find and none is issued at the desk.
-    printKeyValue(kvSettings, "Loyalty Status", "NON-MEMBER (new guest file)", true);
-    printKeyValue(kvSettings, "Strike Count", "0 (new file)", false);
+      TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
+      TableUtil.TableSettings spanSettings =
+          new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
 
-    System.out.println();
-    System.out.println("1. Save This Guest To The Register");
-    System.out.println("2. Go Back And Edit The Details");
-    System.out.println("3. Discard And Cancel\n");
+      TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
+      TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, spanSettings);
+      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+      printKeyValue(kvSettings, "Guest ID (assigned)", guestId, true);
+      printKeyValue(kvSettings, "Full Name", name, true);
+      printKeyValue(kvSettings, "IC Number", blankToNa(icNumber), true);
+      printKeyValue(kvSettings, "Passport Number", blankToNa(passportNumber), true);
+      printKeyValue(kvSettings, "Phone Number", phoneNumber, true);
+      printKeyValue(kvSettings, "Email Address", blankToNa(email), true);
+      // Stated rather than asked. A person with no guest file has never stayed here, so there is
+      // no card to find and none is issued at the desk.
+      printKeyValue(kvSettings, "Loyalty Status", "NON-MEMBER (new guest file)", true);
+      printKeyValue(kvSettings, "Strike Count", "0 (new file)", false);
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+      System.out.println();
+      System.out.println("1. Save This Guest To The Register");
+      System.out.println("2. Go Back And Edit The Details");
+      System.out.println();
+      System.out.println("B - Back (edit the details)");
+      System.out.println("C - Cancel (discard this guest file)");
+      System.out.println();
+
+      ConsoleUtil.printFieldError(error);
+
+      try {
+        GetMenuInputResult result =
+            ConsoleUtil.getNavInput("Choose an option: ", 1, 2, new char[] {'B', 'C'});
+
+        if (result.isBlank || "B".equalsIgnoreCase(result.input)) return 2;
+        if ("C".equalsIgnoreCase(result.input)) return 3;
+        return result.getAsInt();
+      } catch (IllegalArgumentException e) {
+        error = e.getMessage();
+      }
+    }
   }
 
   public void displaySuccessScreen(Guest guest) {
@@ -164,7 +202,10 @@ public class GuestRegistrationView {
     if (name != null && !name.isEmpty()) {
       System.out.println("Guest: " + name);
     }
-    System.out.println("[Enter 'B' to Go Back a Step, 'C' to Cancel]\n");
+    System.out.println();
+    System.out.println("B - Back");
+    System.out.println("C - Cancel");
+    System.out.println();
   }
 
   // A field the clerk is walking back to already holds a value, so it is shown rather than
@@ -211,16 +252,5 @@ public class GuestRegistrationView {
     TableUtil.printTableBorder(
         settings,
         moreRowsFollow ? TableUtil.BorderPosition.MIDDLE : TableUtil.BorderPosition.BOTTOM);
-  }
-
-  private boolean promptConfirm(String prompt) {
-    while (true) {
-      String choice = ConsoleUtil.getStringInput(prompt);
-      if (choice != null) {
-        if ("Y".equalsIgnoreCase(choice.trim())) return true;
-        if ("N".equalsIgnoreCase(choice.trim())) return false;
-      }
-      System.out.println("Invalid input. Please enter 'Y' or 'N'.");
-    }
   }
 }

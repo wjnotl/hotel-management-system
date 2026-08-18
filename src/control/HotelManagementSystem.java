@@ -21,8 +21,9 @@ public class HotelManagementSystem {
   private static RoomRepo roomRepo = new RoomRepo();
   private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
   private static ReservationRepo reservationRepo = new ReservationRepo();
+  private static BookingSettingsRepo bookingSettingsRepo = new BookingSettingsRepo();
   private static StandardReservationRepo standardReservationRepo =
-      new StandardReservationRepo(reservationRepo);
+      new StandardReservationRepo(reservationRepo, bookingSettingsRepo);
   private static VipReservationRepo vipReservationRepo = new VipReservationRepo(reservationRepo);
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
   private static BillingRepo billingRepo = new BillingRepo();
@@ -43,11 +44,15 @@ public class HotelManagementSystem {
     while (true) {
       try {
         String choice = mainMenuView.displayMainMenu();
-        System.out.println(choice);
 
         if ("1".equals(choice)) {
           new BookingController(
-                  standardReservationRepo, vipReservationRepo, guestRepo, memberRepo, roomRepo)
+                  standardReservationRepo,
+                  vipReservationRepo,
+                  guestRepo,
+                  memberRepo,
+                  roomRepo,
+                  bookingSettingsRepo)
               .start();
         } else if ("2".equals(choice)) {
           new VipController(

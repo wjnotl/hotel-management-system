@@ -9,6 +9,13 @@ import java.util.Scanner;
 public class ConsoleUtil {
   private static final Scanner scanner = new Scanner(System.in);
 
+  // One spelling of a date and one of a time for the whole system, so what a screen prints back
+  // is always something the same screen would accept if it were typed in again.
+  public static final java.time.format.DateTimeFormatter DATE_FORMAT =
+      java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  public static final java.time.format.DateTimeFormatter TIME_FORMAT =
+      java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+
   private static PrintStream originalOut;
   private static final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
@@ -55,6 +62,22 @@ public class ConsoleUtil {
     System.out.println(border + "\n");
   }
 
+  // Every prompt in the system reads through here. Reading past the end of stdin throws, and the
+  // catch blocks that surround the menus route the failure into printError, which reads again and
+  // throws again: a closed input stream used to spin the whole application forever. There is
+  // nothing left to read at that point, so the process stops instead.
+  private static String readLine() {
+    try {
+      return scanner.nextLine();
+    } catch (java.util.NoSuchElementException e) {
+      System.out.println();
+      System.out.println("Input stream closed. Exiting.");
+      System.out.flush();
+      System.exit(0);
+      return "";
+    }
+  }
+
   public static void printError(String message) {
     if (message == null) {
       message = "An unknown error occurred!";
@@ -71,7 +94,7 @@ public class ConsoleUtil {
 
   public static void printContinueMessage(String message) {
     System.out.print(message);
-    scanner.nextLine();
+    readLine();
   }
 
   public static boolean showConfirmMessage(String message) {
@@ -169,9 +192,19 @@ public class ConsoleUtil {
     public final String input;
     public final boolean isNumber;
 
+    // A bare Enter is an answer in its own right on the navigation-aware screens: it means "go
+    // back to where I just came from". The plain getMenuInput family still rejects it, so the
+    // modules that were written against that contract keep behaving exactly as before.
+    public final boolean isBlank;
+
     public GetMenuInputResult(String input, boolean isNumber) {
+      this(input, isNumber, false);
+    }
+
+    public GetMenuInputResult(String input, boolean isNumber, boolean isBlank) {
       this.input = input;
       this.isNumber = isNumber;
+      this.isBlank = isBlank;
     }
 
     public int getAsInt() {
@@ -198,11 +231,51 @@ public class ConsoleUtil {
             new GetMenuInputArgs.CharInputArgs(validChars)));
   }
 
+  // The navigation-aware family. Identical validation, except an empty line comes back as a
+  // blank result instead of an exception, so a screen can treat Enter as "back one step" rather
+  // than reporting a typo the user did not make.
+  public static GetMenuInputResult getNavInput(String prompt, int min, int max) {
+    return getMenuInput(
+        new GetMenuInputArgs(prompt, new GetMenuInputArgs.IntegerInputArgs(min, max)), true);
+  }
+
+  public static GetMenuInputResult getNavInput(String prompt, char[] validChars) {
+    return getMenuInput(
+        new GetMenuInputArgs(prompt, null, new GetMenuInputArgs.CharInputArgs(validChars)), true);
+  }
+
+  public static GetMenuInputResult getNavInput(String prompt, int min, int max, char[] validChars) {
+    return getMenuInput(
+        new GetMenuInputArgs(
+            prompt,
+            new GetMenuInputArgs.IntegerInputArgs(min, max),
+            new GetMenuInputArgs.CharInputArgs(validChars)),
+        true);
+  }
+
+  // Prints a rejection as one line inside the screen that is being redrawn around it. The old
+  // habit of printing the message straight after the prompt and looping is what turned a single
+  // stray Enter into a growing wall of "prompt, error, prompt, error" with the table scrolled
+  // off the top, so nothing in the booking module reports a bad keystroke that way any more.
+  public static void printFieldError(String message) {
+    if (message == null || message.isEmpty()) return;
+    System.out.println("  [!] " + message);
+    System.out.println();
+  }
+
   private static GetMenuInputResult getMenuInput(GetMenuInputArgs inputArgs) {
+    return getMenuInput(inputArgs, false);
+  }
+
+  private static GetMenuInputResult getMenuInput(
+      GetMenuInputArgs inputArgs, boolean treatBlankAsAnswer) {
     System.out.print(inputArgs.prompt);
-    String rawInput = scanner.nextLine().trim();
+    String rawInput = readLine().trim();
 
     if (rawInput.isEmpty()) {
+      if (treatBlankAsAnswer) {
+        return new GetMenuInputResult("", false, true);
+      }
       throw new IllegalArgumentException("Input cannot be empty!");
     }
 
@@ -264,7 +337,7 @@ public class ConsoleUtil {
 
   public static String getStringInput(String prompt) {
     System.out.print(prompt);
-    String input = scanner.nextLine().trim();
+    String input = readLine().trim();
     if (input.matches("^[\\x20-\\x7E]*$")) {
       return input;
     }
@@ -275,7 +348,7 @@ public class ConsoleUtil {
 
   public static Integer getIntegerInput(String prompt, int min, int max) {
     System.out.print(prompt);
-    String rawInput = scanner.nextLine().trim();
+    String rawInput = readLine().trim();
 
     if (rawInput.isEmpty() || "C".equalsIgnoreCase(rawInput)) {
       return null; // Signals keep current value / cancel
@@ -302,7 +375,7 @@ public class ConsoleUtil {
 
   public static Double getDoubleInput(String prompt, double min, double max) {
     System.out.print(prompt);
-    String rawInput = scanner.nextLine().trim();
+    String rawInput = readLine().trim();
 
     if (rawInput.isEmpty() || "C".equalsIgnoreCase(rawInput)) {
       return null;
@@ -319,6 +392,40 @@ public class ConsoleUtil {
       return choice;
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Invalid input! Please provide a valid decimal number.");
+    }
+  }
+
+  // Returns null for a blank line or 'C', which every caller reads as "keep what you had and go
+  // back", so a date field behaves like the rest of the navigation-aware prompts.
+  public static java.time.LocalDate getDateInput(String prompt) {
+    System.out.print(prompt);
+    String rawInput = readLine().trim();
+
+    if (rawInput.isEmpty() || "C".equalsIgnoreCase(rawInput)) {
+      return null;
+    }
+
+    try {
+      return java.time.LocalDate.parse(rawInput, DATE_FORMAT);
+    } catch (java.time.format.DateTimeParseException e) {
+      throw new IllegalArgumentException(
+          "Invalid date! Type it as YYYY-MM-DD, for example 2026-08-21.");
+    }
+  }
+
+  public static java.time.LocalTime getTimeInput(String prompt) {
+    System.out.print(prompt);
+    String rawInput = readLine().trim();
+
+    if (rawInput.isEmpty() || "C".equalsIgnoreCase(rawInput)) {
+      return null;
+    }
+
+    try {
+      return java.time.LocalTime.parse(rawInput, TIME_FORMAT);
+    } catch (java.time.format.DateTimeParseException e) {
+      throw new IllegalArgumentException(
+          "Invalid time! Type it as HH:MM on a 24 hour clock, for example 14:30.");
     }
   }
 

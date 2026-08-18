@@ -140,33 +140,63 @@ public class GuestRepo {
     return "G-" + (maxId + 1);
   }
 
+  // The field names the desk screens offer. Searching one field at a time is what stops a partial
+  // phone number from also dragging in every guest whose IC happens to contain the same digits,
+  // which is the collision that made the old combined search unreadable.
+  public static final String FIELD_ALL = "ALL FIELDS";
+  public static final String FIELD_GUEST_ID = "GUEST ID";
+  public static final String FIELD_NAME = "NAME";
+  public static final String FIELD_IC = "IC NUMBER";
+  public static final String FIELD_PASSPORT = "PASSPORT NO";
+  public static final String FIELD_PHONE = "PHONE NUMBER";
+  public static final String FIELD_EMAIL = "EMAIL ADDRESS";
+
   public ListInterface<Guest> searchGuests(String query) {
+    return searchGuests(query, FIELD_ALL, false);
+  }
+
+  public ListInterface<Guest> searchGuests(String query, String field, boolean exactMatch) {
     ListInterface<Guest> matches = new ArrayList<>();
     if (query == null || query.trim().isEmpty() || guestList == null) {
       return matches;
     }
 
     String q = query.trim().toLowerCase();
+    String target = (field == null) ? FIELD_ALL : field;
 
     for (int i = 1; i <= guestList.getNumberOfEntries(); i++) {
       Guest g = guestList.getEntry(i);
       if (g == null) continue;
 
-      boolean matchId = g.getGuestId() != null && g.getGuestId().toLowerCase().contains(q);
-      boolean matchName = g.getName() != null && g.getName().toLowerCase().contains(q);
-      boolean matchIc = g.getIcNumber() != null && g.getIcNumber().toLowerCase().contains(q);
-      boolean matchPassport =
-          g.getPassportNumber() != null && g.getPassportNumber().toLowerCase().contains(q);
-      boolean matchPhone =
-          g.getPhoneNumber() != null && g.getPhoneNumber().toLowerCase().contains(q);
-      boolean matchMember = g.getMemberId() != null && g.getMemberId().toLowerCase().contains(q);
-
-      if (matchId || matchName || matchIc || matchPassport || matchPhone || matchMember) {
+      if (matchesField(g, target, q, exactMatch)) {
         matches.add(g);
       }
     }
 
     return matches;
+  }
+
+  private boolean matchesField(Guest g, String field, String query, boolean exactMatch) {
+    if (FIELD_GUEST_ID.equals(field)) return hit(g.getGuestId(), query, exactMatch);
+    if (FIELD_NAME.equals(field)) return hit(g.getName(), query, exactMatch);
+    if (FIELD_IC.equals(field)) return hit(g.getIcNumber(), query, exactMatch);
+    if (FIELD_PASSPORT.equals(field)) return hit(g.getPassportNumber(), query, exactMatch);
+    if (FIELD_PHONE.equals(field)) return hit(g.getPhoneNumber(), query, exactMatch);
+    if (FIELD_EMAIL.equals(field)) return hit(g.getEmail(), query, exactMatch);
+
+    return hit(g.getGuestId(), query, exactMatch)
+        || hit(g.getName(), query, exactMatch)
+        || hit(g.getIcNumber(), query, exactMatch)
+        || hit(g.getPassportNumber(), query, exactMatch)
+        || hit(g.getPhoneNumber(), query, exactMatch)
+        || hit(g.getEmail(), query, exactMatch)
+        || hit(g.getMemberId(), query, exactMatch);
+  }
+
+  private boolean hit(String value, String query, boolean exactMatch) {
+    if (value == null) return false;
+    String candidate = value.toLowerCase();
+    return exactMatch ? candidate.equals(query) : candidate.contains(query);
   }
 
   public ListInterface<Guest> getGuestList() {
