@@ -345,7 +345,7 @@ public class HouseKeepingController {
   }
 
   // Staff has actually started work on the room: DIRTY -> CLEANING. Only fires from DIRTY —
-  // a room already further along (or OCCUPIED) is left alone so this can't regress real state.
+  // a room already further along is left alone so this can't regress real state.
   private void advanceRoomToCleaning(String roomNumber) {
     Room room = roomRepo.findByRoomNumber(roomNumber);
     if (room == null || room.getStatus() != Room.Status.DIRTY) return;
@@ -384,7 +384,7 @@ public class HouseKeepingController {
                 + roomNumber
                 + " has "
                 + staleTasks.getNumberOfEntries()
-                + " task(s) still PENDING/ASSIGNED/IN_PROGRESS. Mark them Completed and proceed"
+                + " task(s) still PENDING/ASSIGNED/CLEANING. Mark them Completed and proceed"
                 + " with the status change?");
 
     if (!shouldComplete) return false; // caller must not change the room's status
@@ -974,10 +974,8 @@ public class HouseKeepingController {
           int statusChoice = houseKeepingView.displayRoomStatusFilterSubmenu(status);
           if (statusChoice == 1) status = "DIRTY";
           else if (statusChoice == 2) status = "CLEANING";
-          else if (statusChoice == 3) status = "INSPECTED";
-          else if (statusChoice == 4) status = "VACANT_CLEAN";
-          else if (statusChoice == 5) status = "OCCUPIED";
-          else if (statusChoice == 6) status = null;
+          else if (statusChoice == 3) status = "VACANT_CLEAN";
+          else if (statusChoice == 4) status = null;
         } else if (choice == 3) {
           search = null;
           status = null;
@@ -1017,7 +1015,7 @@ public class HouseKeepingController {
           if (newStatus != oldStatus) {
             boolean okToProceed = true;
 
-            if (newStatus == Room.Status.VACANT_CLEAN || newStatus == Room.Status.INSPECTED) {
+            if (newStatus == Room.Status.VACANT_CLEAN) {
               okToProceed = resolveStaleTasksBeforeStatusChange(selected.getRoomNumber());
             }
 
@@ -1106,6 +1104,8 @@ public class HouseKeepingController {
   private Room.Status mapRoomStatus(int choice) {
     switch (choice) {
       case 2:
+        return Room.Status.CLEANING;
+      case 3:
         return Room.Status.VACANT_CLEAN;
       default:
         return Room.Status.DIRTY;

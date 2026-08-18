@@ -8,6 +8,7 @@ public class Room implements Serializable {
 
   public static enum Status {
     DIRTY,
+    CLEANING,
     VACANT_CLEAN,
   }
 
