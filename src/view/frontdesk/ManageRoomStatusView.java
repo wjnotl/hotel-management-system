@@ -18,6 +18,7 @@ public class ManageRoomStatusView {
     public final String pricePerNight;
     public final String guestName;
     public final String confirmationNumber;
+    public final String reservationId;
 
     public RoomRowDTO(
         String roomNumber,
@@ -26,12 +27,24 @@ public class ManageRoomStatusView {
         String pricePerNight,
         String guestName,
         String confirmationNumber) {
+      this(roomNumber, roomType, status, pricePerNight, guestName, confirmationNumber, null);
+    }
+
+    public RoomRowDTO(
+        String roomNumber,
+        String roomType,
+        String status,
+        String pricePerNight,
+        String guestName,
+        String confirmationNumber,
+        String reservationId) {
       this.roomNumber = orNA(roomNumber);
       this.roomType = orNA(roomType);
       this.status = orNA(status);
       this.pricePerNight = orNA(pricePerNight);
       this.guestName = orNA(guestName);
       this.confirmationNumber = orNA(confirmationNumber);
+      this.reservationId = orNA(reservationId);
     }
 
     private static String orNA(String s) {
@@ -84,7 +97,7 @@ public class ManageRoomStatusView {
       int pageSize) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("MANAGE ROOM STATUS", 100);
+    ConsoleUtil.printTitleBox("MANAGE ROOM STATUS", 121);
 
     System.out.println(
         "SEARCH FILTER   : [ "
@@ -100,7 +113,7 @@ public class ManageRoomStatusView {
     int total = (rooms == null) ? 0 : rooms.getNumberOfEntries();
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
-    int[] colWidths = {4, 10, 10, 14, 14, 20, 14};
+    int[] colWidths = {4, 10, 10, 14, 14, 12, 20, 14};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(colWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
@@ -108,21 +121,22 @@ public class ManageRoomStatusView {
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.RIGHT)
-            .setHAlign(5, TableUtil.Align.LEFT)
-            .setHAlign(6, TableUtil.Align.CENTER)
-            .setTruncate(5);
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.LEFT)
+            .setHAlign(7, TableUtil.Align.CENTER)
+            .setTruncate(6);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {
-          "NO.", "ROOM NO.", "ROOM TYPE", "STATUS", "PRICE/NIGHT", "GUEST NAME", "CONFIRM NO."
+          "NO.", "ROOM NO.", "ROOM TYPE", "STATUS", "PRICE/NIGHT", "RES. ID", "GUEST NAME", "CONFIRM NO."
         },
         settings);
 
     if (total == 0 || rooms == null) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {99}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {119}).setHAlign(0, TableUtil.Align.CENTER);
       boolean hasFilters =
           searchQuery != null || roomTypeFilter != null || roomStatusFilter != null;
       String msg =
@@ -150,6 +164,7 @@ public class ManageRoomStatusView {
             dto.roomType,
             dto.status,
             dto.pricePerNight,
+            dto.reservationId,
             dto.guestName,
             dto.confirmationNumber
           },
@@ -170,10 +185,7 @@ public class ManageRoomStatusView {
         new char[] {'S', 'O', 'R', 'N', 'P', 'E'});
   }
 
-  // =========================================================================
-  // AVAILABLE ROOMS TABLE (Change Room selection)
-  // =========================================================================
-
+  // showing available room table
   public GetMenuInputResult renderAvailableRoomsTable(
       ArrayList<RoomRowDTO> rooms, RoomDetailDTO currentRoom, int currentPage, int pageSize) {
 
@@ -244,10 +256,7 @@ public class ManageRoomStatusView {
         new char[] {'N', 'P', 'C'});
   }
 
-  // =========================================================================
-  // FILTER MENU
-  // =========================================================================
-
+  // filter menu
   public int displayFilterMenu(String search, String roomType, String roomStatus) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH & FILTER ROOMS", 68);
@@ -257,7 +266,7 @@ public class ManageRoomStatusView {
             + " ]");
     System.out.println("Room Type      : [ " + (roomType == null ? "ALL" : roomType) + " ]");
     System.out.println("Room Status    : [ " + (roomStatus == null ? "ALL" : roomStatus) + " ]\n");
-    System.out.println("1. Set Search Query  (Room No. / Guest Name / Confirm No.)");
+    System.out.println("1.Search");
     System.out.println("2. Filter by Room Type");
     System.out.println("3. Filter by Room Status");
     System.out.println("4. Clear All Filters");
@@ -273,8 +282,8 @@ public class ManageRoomStatusView {
             + (current == null || current.isEmpty() ? "None" : "\"" + current + "\"")
             + " ]");
     System.out.println();
-    System.out.println("Search by: Room Number, Guest Name, or Confirmation Number");
-    System.out.println("Leave blank to clear. Enter C to cancel.\n");
+    System.out.println("Can Search by Room Number, Guest Name, or Confirmation Number");
+    System.out.println("Press Enter to clear/ C to cancel.\n");
     String input = ConsoleUtil.getStringInput("Search: ");
     if (input == null || "C".equalsIgnoreCase(input.trim())) return current;
     return input.trim().isEmpty() ? null : input.trim();
@@ -304,11 +313,7 @@ public class ManageRoomStatusView {
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 6).getAsInt();
   }
 
-  // =========================================================================
-  // SORT MENU
-  // =========================================================================
-
-  /** Returns selected sort string, or null if cancelled. */
+  // sorting menu
   public String displaySortMenu(String currentSort) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SORT ORDER", 60);
@@ -346,10 +351,7 @@ public class ManageRoomStatusView {
     }
   }
 
-  // =========================================================================
-  // ROOM ACTION SUBMENU
-  // =========================================================================
-
+  // Room action submenu
   public int displayRoomActionSubmenu(RoomDetailDTO dto) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("MANAGE ROOM: " + dto.roomNumber, 80);

@@ -35,11 +35,7 @@ public class ManageGuestView {
       this.memberLevel = memberLevel != null ? memberLevel : "NON-MEMBER";
     }
   }
-
-  // =========================================================================
-  // GUEST TABLE
-  // =========================================================================
-
+//Guest Table
   public ConsoleUtil.GetMenuInputResult renderGuestTable(
       ListInterface<GuestRowDTO> guests,
       String searchQuery,
@@ -82,7 +78,7 @@ public class ManageGuestView {
     if (total == 0 || guests == null) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {91}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {99}).setHAlign(0, TableUtil.Align.CENTER);
       boolean hasFilters =
           (searchQuery != null && !searchQuery.isEmpty()) || memberLevelFilter != null;
       String msg =
@@ -124,10 +120,7 @@ public class ManageGuestView {
         new char[] {'S', 'O', 'R', 'N', 'P', 'E'});
   }
 
-  // =========================================================================
-  // FILTER MENU — consistent with ManageReservation style
-  // =========================================================================
-
+  //Filter Menu
   public int displayFilterMenu(String search, String memberLevel) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH & FILTER GUESTS", 68);
@@ -143,7 +136,7 @@ public class ManageGuestView {
     System.out.println("4. Apply & Back\n");
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 4).getAsInt();
   }
-
+// search
   public String promptSearchQuery(String currentQuery) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH GUESTS", 68);
@@ -158,7 +151,7 @@ public class ManageGuestView {
     if (input == null || "C".equalsIgnoreCase(input.trim())) return currentQuery;
     return input.trim().isEmpty() ? null : input.trim();
   }
-
+// filter by member level
   public int displayMemberLevelSubmenu(String current) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("FILTER BY MEMBER LEVEL", 50);
@@ -170,12 +163,7 @@ public class ManageGuestView {
     System.out.println("5. Show All\n");
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 5).getAsInt();
   }
-
-  // =========================================================================
-  // SORT MENU
-  // =========================================================================
-
-  /** Returns the selected sort string, or null if the user cancelled. */
+//Sorting Menu
   public String displaySortMenu(String currentSort) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SORT GUESTS", 60);
@@ -201,10 +189,7 @@ public class ManageGuestView {
     }
   }
 
-  // =========================================================================
-  // GUEST ACTION SUBMENU
-  // =========================================================================
-
+ //Guest Action Submenu
   public int displayGuestActionSubmenu(Guest guest) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
@@ -216,10 +201,7 @@ public class ManageGuestView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
-  // =========================================================================
-  // ACTION 1 — GUEST DETAILS (two-row format; includes member info)
-  // =========================================================================
-
+  // Action 1 — GUEST DETAILS
   public void displayGuestDetails(
       Guest guest,
       Member member,
@@ -229,11 +211,9 @@ public class ManageGuestView {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST DETAILS", 104);
-
-    // --- GUEST PROFILE SECTION ---
+    // Guest Profile
     System.out.println(" GUEST PROFILE\n");
 
-    // Row 1: Guest ID | Name | IC | Passport | Email | Phone
     int[] profileWidths = {12, 20, 18, 18, 22, 12};
     TableUtil.TableSettings profileSettings =
         new TableUtil.TableSettings(profileWidths)
@@ -263,7 +243,7 @@ public class ManageGuestView {
 
     System.out.println();
 
-    // --- MEMBER INFO SECTION ---
+    // Member Information
     System.out.println(" MEMBER INFORMATION\n");
 
     String memberId = orNA(guest.getMemberId());
@@ -289,7 +269,7 @@ public class ManageGuestView {
 
     System.out.println();
 
-    // --- LATEST BOOKING SECTION ---
+    // lastest booking
     System.out.println(" LATEST BOOKING  (Total Bookings: " + totalBookings + ")\n");
 
     String bookingId = (latestReservation != null) ? latestReservation.getReservationId() : "N/A";
@@ -340,10 +320,7 @@ public class ManageGuestView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  // =========================================================================
-  // ACTION 2 — BILLING HISTORY
-  // =========================================================================
-
+  // billing history
   public ConsoleUtil.GetMenuInputResult displayBillingHistory(
       Guest guest,
       ListInterface<Billing> historyNewToOld,
@@ -354,7 +331,7 @@ public class ManageGuestView {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
-        "BILLING HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 98);
+        "BILLING HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 110);
 
     System.out.println(
         "DATE FILTER (CHECK-IN)  : FROM [ "
@@ -392,7 +369,7 @@ public class ManageGuestView {
     if (total == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {94}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {108}).setHAlign(0, TableUtil.Align.CENTER);
       String msg =
           (fromDate != null || toDate != null)
               ? "*** NO BILLING RECORDS MATCH DATE FILTER ***"
@@ -470,10 +447,7 @@ public class ManageGuestView {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // RECEIPT
-  // -------------------------------------------------------------------------
-
+ // receipt
   public void displayReceipt(Guest guest, Billing billing) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("RECEIPT: " + billing.getBillingId(), 68);
@@ -484,7 +458,6 @@ public class ManageGuestView {
             .setHAlign(0, TableUtil.Align.LEFT)
             .setHAlign(1, TableUtil.Align.LEFT);
 
-    // Open table once, then alternate MIDDLE + row, close at the end.
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"Guest Name", guest.getName()}, kvSettings);
     printKvRow("Guest ID", guest.getGuestId(), kvSettings);
@@ -512,16 +485,13 @@ public class ManageGuestView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  // =========================================================================
-  // ACTION 3 — RESERVATION HISTORY (click row → room detail)
-  // =========================================================================
-
+ // reservation history
   public ConsoleUtil.GetMenuInputResult displayReservationHistory(
       Guest guest, ListInterface<Reservation> historyNewToOld, int currentPage, int pageSize) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
-        "RESERVATION HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 80);
+        "RESERVATION HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 93);
 
     ListInterface<Reservation> history =
         (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
@@ -546,7 +516,7 @@ public class ManageGuestView {
     if (total == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {83}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {91}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(new String[] {"*** NO RESERVATION HISTORY FOUND ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
       System.out.println("\nPage 0 / 0 (Total: 0)\n");
