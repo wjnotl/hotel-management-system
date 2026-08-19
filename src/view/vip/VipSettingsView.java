@@ -55,33 +55,25 @@ public class VipSettingsView {
 
   public boolean promptReconciliationConfirmation(
       boolean evictOverStrikes, boolean forceBoilingCheck, boolean updateActiveGraceTimers) {
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("QUEUE RECONCILIATION SUMMARY REVIEW");
-      System.out.println(
-          " Review the selected reconciliation parameters below before execution:\n");
-      System.out.println(
-          " 1. Strike Threshold Eviction  : "
-              + (evictOverStrikes ? "[ ENABLED ]" : "[ DISABLED ]"));
-      System.out.println(
-          " 2. Boiling Status Re-eval     : "
-              + (forceBoilingCheck ? "[ ENABLED ]" : "[ DISABLED ]"));
-      System.out.println(
-          " 3. Active Grace Timer Reset   : "
-              + (updateActiveGraceTimers ? "[ ENABLED ]" : "[ DISABLED ]"));
-      System.out.println(
-          "\n"
-              + "----------------------------------------------------------------------------------------");
-      try {
-        return ConsoleUtil.getMenuInput(
-                "Confirm execution of selected queue reconciliation rules? (Y/N): ",
-                new char[] {'Y', 'N'})
-            .input
-            .equalsIgnoreCase("Y");
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("QUEUE RECONCILIATION SUMMARY REVIEW");
+    System.out.println(" Review the selected reconciliation parameters below before execution:\n");
+    System.out.println(
+        " 1. Strike Threshold Eviction  : " + (evictOverStrikes ? "[ ENABLED ]" : "[ DISABLED ]"));
+    System.out.println(
+        " 2. Boiling Status Re-eval     : " + (forceBoilingCheck ? "[ ENABLED ]" : "[ DISABLED ]"));
+    System.out.println(
+        " 3. Active Grace Timer Reset   : "
+            + (updateActiveGraceTimers ? "[ ENABLED ]" : "[ DISABLED ]"));
+    System.out.println(
+        "\n"
+            + "----------------------------------------------------------------------------------------");
+    ;
+    return ConsoleUtil.getMenuInput(
+            "Confirm execution of selected queue reconciliation rules? (Y/N): ",
+            new char[] {'Y', 'N'})
+        .input
+        .equalsIgnoreCase("Y");
   }
 
   public void displayApplySuccessScreen(int processedCount) {
