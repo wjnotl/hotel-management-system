@@ -68,7 +68,7 @@ public class VipSettingsView {
     System.out.println(
         "\n"
             + "----------------------------------------------------------------------------------------");
-    ;
+
     return ConsoleUtil.getMenuInput(
             "Confirm execution of selected queue reconciliation rules? (Y/N): ",
             new char[] {'Y', 'N'})
