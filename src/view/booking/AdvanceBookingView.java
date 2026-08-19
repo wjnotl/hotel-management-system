@@ -147,12 +147,11 @@ public class AdvanceBookingView {
   }
 
   private String rangeLabel(LocalDate from, LocalDate to) {
-    if (from == null && to == null) return "Any date";
-    if (from != null && to != null) {
-      return from.format(DATE_FORMAT) + "  ..  " + to.format(DATE_FORMAT);
+    if (from == null) {
+      return (to == null) ? "Any date" : "Up to " + to.format(DATE_FORMAT);
     }
-    if (from != null) return "From " + from.format(DATE_FORMAT);
-    return "Up to " + to.format(DATE_FORMAT);
+    if (to == null) return "From " + from.format(DATE_FORMAT);
+    return from.format(DATE_FORMAT) + "  ..  " + to.format(DATE_FORMAT);
   }
 
   private int countRowsOnPage(int totalMatches, int currentPage, int pageSize) {
@@ -185,8 +184,7 @@ public class AdvanceBookingView {
         new String[] {"NO.", "RES ID", "GUEST NAME", "TYPE", "ARRIVES", "NIGHTS", "BOOKED AT"},
         headerSettings);
 
-    int totalMatches = (bookings == null) ? 0 : bookings.getNumberOfEntries();
-    if (totalMatches == 0) {
+    if (bookings == null || bookings.getNumberOfEntries() == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.printTableRow(
           new String[] {"*** NO ADVANCE BOOKINGS MATCH THE CURRENT FILTERS ***"}, spanSettings);
@@ -194,6 +192,7 @@ public class AdvanceBookingView {
       return;
     }
 
+    int totalMatches = bookings.getNumberOfEntries();
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
     int startIndex = (currentPage - 1) * pageSize + 1;
@@ -725,9 +724,9 @@ public class AdvanceBookingView {
         System.out.println("Type '-' to clear the term.");
         System.out.println("E - Exit and keep the current term\n");
 
-        return requireText(
-            "Search term: ",
-            "Search term cannot be empty! Type '-' to clear it or 'E' to go back.");
+        String typed = ConsoleUtil.getStringInput("Search term: ");
+        if (typed.trim().isEmpty()) continue;
+        return typed;
       } catch (IllegalArgumentException e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -766,16 +765,14 @@ public class AdvanceBookingView {
         System.out.println("Type '-' at either prompt to leave that end open.");
         System.out.println("E - Exit and keep the current range\n");
 
-        String from =
-            requireText(
-                "From date: ",
-                "Date cannot be empty! Type '-' to leave the start open, or 'E' to go back.");
+        String from = ConsoleUtil.getStringInput("From date: ");
+        if (from.trim().isEmpty()) continue;
         if ("E".equalsIgnoreCase(from.trim())) {
           return new String[] {"E", null};
         }
 
-        String to =
-            requireText("To date: ", "Date cannot be empty! Type '-' to leave the end open.");
+        String to = ConsoleUtil.getStringInput("To date: ");
+        if (to.trim().isEmpty()) continue;
         return new String[] {from, to};
       } catch (IllegalArgumentException e) {
         ConsoleUtil.printError(e.getMessage());

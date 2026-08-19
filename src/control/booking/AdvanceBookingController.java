@@ -18,7 +18,6 @@ import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
-import repo.VipReservationRepo;
 import util.ConsoleUtil;
 import view.booking.AdvanceBookingView;
 
@@ -47,7 +46,6 @@ public class AdvanceBookingController {
 
   private final AdvanceBookingView advanceBookingView = new AdvanceBookingView();
   private final StandardReservationRepo standardReservationRepo;
-  private final VipReservationRepo vipReservationRepo;
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
@@ -55,13 +53,11 @@ public class AdvanceBookingController {
 
   public AdvanceBookingController(
       StandardReservationRepo standardReservationRepo,
-      VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       RoomRepo roomRepo,
       BookingSettingsRepo bookingSettingsRepo) {
     this.standardReservationRepo = standardReservationRepo;
-    this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
@@ -301,6 +297,13 @@ public class AdvanceBookingController {
           step = STEP_CONFIRM;
 
         } else {
+          // STEP_CONFIRM is only ever reached by walking the three steps above, so this cannot
+          // fire. It restarts the form rather than leaving the earlier steps merely implied.
+          if (arrivalDate == null || roomType == null || nights == null) {
+            step = STEP_DATE;
+            continue;
+          }
+
           // Re-checked at the last moment, because another booking may have taken the last room of
           // this type while this one was being typed in.
           LocalDate firstFull =
@@ -545,10 +548,6 @@ public class AdvanceBookingController {
           if (picked > 0) field = fieldNameFor(picked);
         } else if (choice == 2) {
           String typed = advanceBookingView.promptSearchTerm(field, term);
-          if (typed == null || typed.trim().isEmpty()) {
-            throw new IllegalArgumentException(
-                "Search term cannot be empty! Type '-' to clear it or 'E' to go back.");
-          }
           if (!"E".equalsIgnoreCase(typed.trim())) {
             term = "-".equals(typed.trim()) ? null : typed.trim();
           }

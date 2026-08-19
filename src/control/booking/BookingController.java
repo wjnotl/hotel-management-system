@@ -56,7 +56,6 @@ public class BookingController {
         } else if ("3".equals(choice)) {
           new AdvanceBookingController(
                   standardReservationRepo,
-                  vipReservationRepo,
                   guestRepo,
                   memberRepo,
                   roomRepo,

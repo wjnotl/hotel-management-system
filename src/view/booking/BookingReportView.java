@@ -13,6 +13,7 @@ public class BookingReportView {
   private static final int[] SPAN_WIDTH = {90};
   private static final int[] KV_WIDTHS = {23, 64};
   private static final int SCREEN_WIDTH = 90;
+  private static final String BLANK_INPUT = "Input cannot be empty!";
 
   public int displayReportHubMenu() {
     while (true) {
@@ -266,9 +267,9 @@ public class BookingReportView {
         System.out.println("Type '-' to clear the term.");
         System.out.println("E - Exit and keep the current term\n");
 
-        return requireText(
-            "Search term: ",
-            "Search term cannot be empty! Type '-' to clear it or 'E' to go back.");
+        String typed = ConsoleUtil.getStringInput("Search term: ");
+        if (typed.trim().isEmpty()) continue;
+        return typed;
       } catch (IllegalArgumentException e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -330,16 +331,14 @@ public class BookingReportView {
         System.out.println("Type '-' at either prompt to leave that end open.");
         System.out.println("E - Exit and keep the current range\n");
 
-        String from =
-            requireText(
-                "From date: ",
-                "Date cannot be empty! Type '-' to leave the start open, or 'E' to go back.");
+        String from = ConsoleUtil.getStringInput("From date: ");
+        if (from.trim().isEmpty()) continue;
         if ("E".equalsIgnoreCase(from.trim())) {
           return new String[] {"E", null};
         }
 
-        String to =
-            requireText("To date: ", "Date cannot be empty! Type '-' to leave the end open.");
+        String to = ConsoleUtil.getStringInput("To date: ");
+        if (to.trim().isEmpty()) continue;
         return new String[] {from, to};
       } catch (IllegalArgumentException e) {
         ConsoleUtil.printError(e.getMessage());
@@ -360,7 +359,7 @@ public class BookingReportView {
 
         return requireInt("Minimum wait in minutes [0 - 1440]: ", 0, 1440);
       } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -396,7 +395,7 @@ public class BookingReportView {
         }
         return new int[] {low, high};
       } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -411,9 +410,9 @@ public class BookingReportView {
         System.out.println("Type '-' to clear the filter.");
         System.out.println("E - Exit and keep the current filter\n");
 
-        return requireText(
-            "Room number: ",
-            "Room number cannot be empty! Type '-' to clear it or 'E' to go back.");
+        String typed = ConsoleUtil.getStringInput("Room number: ");
+        if (typed.trim().isEmpty()) continue;
+        return typed;
       } catch (IllegalArgumentException e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -541,7 +540,9 @@ public class BookingReportView {
         System.out.println("Format: YYYY-MM-DD");
         System.out.println("E - Exit and keep the current date\n");
 
-        return requireText("Start date: ", "Start date cannot be empty! Type 'E' to go back.");
+        String typed = ConsoleUtil.getStringInput("Start date: ");
+        if (typed.trim().isEmpty()) continue;
+        return typed;
       } catch (IllegalArgumentException e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -559,7 +560,7 @@ public class BookingReportView {
 
         return requireInt("Nights [1 - 90]: ", 1, 90);
       } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
       }
     }
   }

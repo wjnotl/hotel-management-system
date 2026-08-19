@@ -19,6 +19,7 @@ public class WalkInQueueView {
   private static final int[] SPAN_WIDTH = {93};
   private static final int[] KV_WIDTHS = {22, 68};
   private static final int SCREEN_WIDTH = 83;
+  private static final String BLANK_INPUT = "Input cannot be empty!";
   private static final int HOLDS_PREVIEW_ROWS = 5;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -277,8 +278,7 @@ public class WalkInQueueView {
         new String[] {"NO.", "POS", "RES ID", "GUEST NAME", "PHONE", "WAITED", "STRIKES"},
         headerSettings);
 
-    int totalMatches = (lineRows == null) ? 0 : lineRows.getNumberOfEntries();
-    if (totalMatches == 0) {
+    if (lineRows == null || lineRows.getNumberOfEntries() == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.printTableRow(
           new String[] {"*** NOBODY IS STANDING IN THE " + roomType.name() + " LINE ***"},
@@ -287,6 +287,7 @@ public class WalkInQueueView {
       return;
     }
 
+    int totalMatches = lineRows.getNumberOfEntries();
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
     int startIndex = (currentPage - 1) * pageSize + 1;
@@ -335,14 +336,14 @@ public class WalkInQueueView {
         new String[] {"NO.", "RES ID", "GUEST NAME", "ROOM", "HELD FOR", "EXPIRES IN"},
         headerSettings);
 
-    int total = (holds == null) ? 0 : holds.getNumberOfEntries();
-    if (total == 0) {
+    if (holds == null || holds.getNumberOfEntries() == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.printTableRow(new String[] {"*** NO ROOMS ARE ON HOLD ***"}, spanSettings);
       TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
       return;
     }
 
+    int total = holds.getNumberOfEntries();
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
     int startIndex = (page - 1) * pageSize + 1;
@@ -908,9 +909,9 @@ public class WalkInQueueView {
         System.out.println("Type '-' to clear the term.");
         System.out.println("E - Exit and keep the current term\n");
 
-        return requireText(
-            "Search term: ",
-            "Search term cannot be empty! Type '-' to clear it or 'E' to go back.");
+        String typed = ConsoleUtil.getStringInput("Search term: ");
+        if (typed.trim().isEmpty()) continue;
+        return typed;
       } catch (IllegalArgumentException e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -930,7 +931,7 @@ public class WalkInQueueView {
 
         return requireInt("Minimum wait in minutes [0 - 1440]: ", 0, 1440);
       } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -1028,15 +1029,5 @@ public class WalkInQueueView {
     ConsoleUtil.GetMenuInputResult result =
         ConsoleUtil.getMenuInput(prompt, min, max, new char[] {'C'});
     return result.isNumber ? Integer.valueOf(result.getAsInt()) : null;
-  }
-
-  // A blank line is rejected here rather than in the controller, so the error redraws this screen
-  // instead of the menu above it.
-  private String requireText(String prompt, String emptyMessage) {
-    String typed = ConsoleUtil.getStringInput(prompt);
-    if (typed == null || typed.trim().isEmpty()) {
-      throw new IllegalArgumentException(emptyMessage);
-    }
-    return typed;
   }
 }
