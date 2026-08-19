@@ -129,7 +129,14 @@ public class ManageRoomStatusView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
         new String[] {
-          "NO.", "ROOM NO.", "ROOM TYPE", "STATUS", "PRICE/NIGHT", "RES. ID", "GUEST NAME", "CONFIRM NO."
+          "NO.",
+          "ROOM NO.",
+          "ROOM TYPE",
+          "STATUS",
+          "PRICE/NIGHT",
+          "RES. ID",
+          "GUEST NAME",
+          "CONFIRM NO."
         },
         settings);
 

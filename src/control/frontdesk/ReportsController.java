@@ -80,13 +80,21 @@ public class ReportsController {
 
         GetMenuInputResult result =
             reportsView.renderCheckoutReport(
-                filtered, summary, fromDate, toDate,
-                paymentFilter, roomTypeFilter, sortCriteria, currentPage, PAGE_SIZE);
+                filtered,
+                summary,
+                fromDate,
+                toDate,
+                paymentFilter,
+                roomTypeFilter,
+                sortCriteria,
+                currentPage,
+                PAGE_SIZE);
 
         String raw = result.input.trim();
         if ("E".equalsIgnoreCase(raw)) return;
-        else if ("R".equalsIgnoreCase(raw)) { /* re-fetched */ }
-        else if ("N".equalsIgnoreCase(raw)) {
+        else if ("R".equalsIgnoreCase(raw)) {
+          /* re-fetched */
+        } else if ("N".equalsIgnoreCase(raw)) {
           if (currentPage < totalPages) currentPage++;
           else ConsoleUtil.printError("Already on the last page!");
         } else if ("P".equalsIgnoreCase(raw)) {
@@ -94,14 +102,17 @@ public class ReportsController {
           else ConsoleUtil.printError("Already on the first page!");
         } else if ("S".equalsIgnoreCase(raw)) {
           LocalDate[] dates = handleFilterMenu(fromDate, toDate, paymentFilter, roomTypeFilter);
-          fromDate      = dates[0];
-          toDate        = dates[1];
-          paymentFilter  = reportsView.getLastPaymentFilter();
+          fromDate = dates[0];
+          toDate = dates[1];
+          paymentFilter = reportsView.getLastPaymentFilter();
           roomTypeFilter = reportsView.getLastRoomTypeFilter();
-          currentPage    = 1;
+          currentPage = 1;
         } else if ("O".equalsIgnoreCase(raw)) {
           String newSort = handleCheckoutSortMenu(sortCriteria);
-          if (newSort != null) { sortCriteria = newSort; currentPage = 1; }
+          if (newSort != null) {
+            sortCriteria = newSort;
+            currentPage = 1;
+          }
         } else if ("X".equalsIgnoreCase(raw)) {
           exportCheckoutReport(filtered, summary, fromDate, toDate);
         }
@@ -138,17 +149,23 @@ public class ReportsController {
 
         GetMenuInputResult result =
             reportsView.renderRoomPerformanceReport(
-                occupancyRows, occupancySummary,
-                revenueRows, revenueSummary,
-                fromDate, toDate, roomTypeFilter, sortCriteria);
+                occupancyRows,
+                occupancySummary,
+                revenueRows,
+                revenueSummary,
+                fromDate,
+                toDate,
+                roomTypeFilter,
+                sortCriteria);
 
         String raw = result.input.trim();
         if ("E".equalsIgnoreCase(raw)) return;
-        else if ("R".equalsIgnoreCase(raw)) { /* re-fetched */ }
-        else if ("S".equalsIgnoreCase(raw)) {
+        else if ("R".equalsIgnoreCase(raw)) {
+          /* re-fetched */
+        } else if ("S".equalsIgnoreCase(raw)) {
           LocalDate[] dates = handleFilterMenu(fromDate, toDate, null, roomTypeFilter);
-          fromDate       = dates[0];
-          toDate         = dates[1];
+          fromDate = dates[0];
+          toDate = dates[1];
           roomTypeFilter = reportsView.getLastRoomTypeFilter();
         } else if ("O".equalsIgnoreCase(raw)) {
           String newSort = handleCheckoutSortMenu(sortCriteria);
@@ -189,13 +206,20 @@ public class ReportsController {
 
         GetMenuInputResult result =
             reportsView.renderStayReport(
-                filtered, summary, fromDate, toDate, roomTypeFilter, sortCriteria,
-                currentPage, PAGE_SIZE);
+                filtered,
+                summary,
+                fromDate,
+                toDate,
+                roomTypeFilter,
+                sortCriteria,
+                currentPage,
+                PAGE_SIZE);
 
         String raw = result.input.trim();
         if ("E".equalsIgnoreCase(raw)) return;
-        else if ("R".equalsIgnoreCase(raw)) { /* re-fetched */ }
-        else if ("N".equalsIgnoreCase(raw)) {
+        else if ("R".equalsIgnoreCase(raw)) {
+          /* re-fetched */
+        } else if ("N".equalsIgnoreCase(raw)) {
           if (currentPage < totalPages) currentPage++;
           else ConsoleUtil.printError("Already on the last page!");
         } else if ("P".equalsIgnoreCase(raw)) {
@@ -203,13 +227,16 @@ public class ReportsController {
           else ConsoleUtil.printError("Already on the first page!");
         } else if ("S".equalsIgnoreCase(raw)) {
           LocalDate[] dates = handleFilterMenu(fromDate, toDate, null, roomTypeFilter);
-          fromDate       = dates[0];
-          toDate         = dates[1];
+          fromDate = dates[0];
+          toDate = dates[1];
           roomTypeFilter = reportsView.getLastRoomTypeFilter();
-          currentPage    = 1;
+          currentPage = 1;
         } else if ("O".equalsIgnoreCase(raw)) {
           String newSort = handleStaySortMenu(sortCriteria);
-          if (newSort != null) { sortCriteria = newSort; currentPage = 1; }
+          if (newSort != null) {
+            sortCriteria = newSort;
+            currentPage = 1;
+          }
         } else if ("X".equalsIgnoreCase(raw)) {
           exportStayReport(filtered, summary);
         }
@@ -223,8 +250,8 @@ public class ReportsController {
   // FILTER MENUS
   // =========================================================================
 
-  private LocalDate[] handleFilterMenu(LocalDate currentFrom, LocalDate currentTo,
-      String currentPayment, String currentRoomType) {
+  private LocalDate[] handleFilterMenu(
+      LocalDate currentFrom, LocalDate currentTo, String currentPayment, String currentRoomType) {
     while (true) {
       try {
         int choice =
@@ -232,7 +259,7 @@ public class ReportsController {
         if (choice == 1) {
           LocalDate[] dates = reportsView.promptDateRange(currentFrom, currentTo);
           currentFrom = dates[0];
-          currentTo   = dates[1];
+          currentTo = dates[1];
         } else if (choice == 2) {
           reportsView.setLastPaymentFilter(handlePaymentSubmenu(currentPayment));
           currentPayment = reportsView.getLastPaymentFilter();
@@ -242,11 +269,11 @@ public class ReportsController {
         } else if (choice == 4) {
           reportsView.setLastPaymentFilter(null);
           reportsView.setLastRoomTypeFilter(null);
-          return new LocalDate[]{null, null};
+          return new LocalDate[] {null, null};
         } else if (choice == 5) {
           reportsView.setLastPaymentFilter(currentPayment);
           reportsView.setLastRoomTypeFilter(currentRoomType);
-          return new LocalDate[]{currentFrom, currentTo};
+          return new LocalDate[] {currentFrom, currentTo};
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -262,7 +289,9 @@ public class ReportsController {
         if (choice == 2) return "UNPAID";
         if (choice == 3) return null;
         if (choice == 4) return current;
-      } catch (Exception e) { ConsoleUtil.printError(e.getMessage()); }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -274,7 +303,9 @@ public class ReportsController {
         if (choice == 2) return "SUITE";
         if (choice == 3) return "STANDARD";
         if (choice == 4) return null;
-      } catch (Exception e) { ConsoleUtil.printError(e.getMessage()); }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -282,7 +313,9 @@ public class ReportsController {
     while (true) {
       try {
         return reportsView.displayCheckoutSortMenu(current);
-      } catch (Exception e) { ConsoleUtil.printError(e.getMessage()); }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -290,7 +323,9 @@ public class ReportsController {
     while (true) {
       try {
         return reportsView.displayStaySortMenu(current);
-      } catch (Exception e) { ConsoleUtil.printError(e.getMessage()); }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -316,8 +351,8 @@ public class ReportsController {
   }
 
   /**
-   * Checkout DTOs — billings whose checkOutDate is strictly before today.
-   * (A checkout date of today means the guest may still be occupying the room.)
+   * Checkout DTOs — billings whose checkOutDate is strictly before today. (A checkout date of today
+   * means the guest may still be occupying the room.)
    */
   private ArrayList<ReportsView.CheckoutRowDTO> buildCheckoutDTOs(
       DoublyLinkedHashMap<String, String> guestNameMap) {
@@ -331,23 +366,24 @@ public class ReportsController {
       if (b == null || b.getCheckOutDate() == null) continue;
       if (!b.getCheckOutDate().isBefore(today)) continue;
 
-      String guestName = (b.getGuestId() != null)
-          ? guestNameMap.get(b.getGuestId().toLowerCase()) : null;
+      String guestName =
+          (b.getGuestId() != null) ? guestNameMap.get(b.getGuestId().toLowerCase()) : null;
       if (guestName == null) guestName = "N/A";
 
-      buffer.add(new ReportsView.CheckoutRowDTO(
-          b.getBillingId(),
-          b.getGuestId()    != null ? b.getGuestId()    : "N/A",
-          guestName,
-          b.getRoomNumber() != null ? b.getRoomNumber() : "N/A",
-          b.getRoomType()   != null ? b.getRoomType().name() : "N/A",
-          b.getCheckInDate()  != null ? b.getCheckInDate().format(DATE_FMT)  : "N/A",
-          b.getCheckOutDate() != null ? b.getCheckOutDate().format(DATE_FMT) : "N/A",
-          b.getCheckInDate(),
-          b.getCheckOutDate(),
-          b.getNumberOfNights(),
-          b.getTotalAmount(),
-          b.getStatus().name()));
+      buffer.add(
+          new ReportsView.CheckoutRowDTO(
+              b.getBillingId(),
+              b.getGuestId() != null ? b.getGuestId() : "N/A",
+              guestName,
+              b.getRoomNumber() != null ? b.getRoomNumber() : "N/A",
+              b.getRoomType() != null ? b.getRoomType().name() : "N/A",
+              b.getCheckInDate() != null ? b.getCheckInDate().format(DATE_FMT) : "N/A",
+              b.getCheckOutDate() != null ? b.getCheckOutDate().format(DATE_FMT) : "N/A",
+              b.getCheckInDate(),
+              b.getCheckOutDate(),
+              b.getNumberOfNights(),
+              b.getTotalAmount(),
+              b.getStatus().name()));
     }
 
     ArrayList<ReportsView.CheckoutRowDTO> result = new ArrayList<>();
@@ -357,22 +393,26 @@ public class ReportsController {
 
   private ArrayList<ReportsView.CheckoutRowDTO> filterAndSortCheckoutDTOs(
       ArrayList<ReportsView.CheckoutRowDTO> source,
-      LocalDate fromDate, LocalDate toDate,
-      String paymentFilter, String roomTypeFilter, String sort) {
+      LocalDate fromDate,
+      LocalDate toDate,
+      String paymentFilter,
+      String roomTypeFilter,
+      String sort) {
 
     LinkedList<ReportsView.CheckoutRowDTO> buffer = new LinkedList<>();
     if (source != null) {
       for (int i = 1; i <= source.getNumberOfEntries(); i++) {
         ReportsView.CheckoutRowDTO dto = source.getEntry(i);
         if (dto == null) continue;
-        boolean matchFrom = fromDate == null || dto.checkOutDateRaw == null
-            || !dto.checkOutDateRaw.isBefore(fromDate);
-        boolean matchTo = toDate == null || dto.checkOutDateRaw == null
-            || !dto.checkOutDateRaw.isAfter(toDate);
-        boolean matchPayment = paymentFilter == null
-            || paymentFilter.equalsIgnoreCase(dto.paymentStatus);
-        boolean matchType = roomTypeFilter == null
-            || roomTypeFilter.equalsIgnoreCase(dto.roomType);
+        boolean matchFrom =
+            fromDate == null
+                || dto.checkOutDateRaw == null
+                || !dto.checkOutDateRaw.isBefore(fromDate);
+        boolean matchTo =
+            toDate == null || dto.checkOutDateRaw == null || !dto.checkOutDateRaw.isAfter(toDate);
+        boolean matchPayment =
+            paymentFilter == null || paymentFilter.equalsIgnoreCase(dto.paymentStatus);
+        boolean matchType = roomTypeFilter == null || roomTypeFilter.equalsIgnoreCase(dto.roomType);
         if (matchFrom && matchTo && matchPayment && matchType) buffer.add(dto);
       }
     }
@@ -391,8 +431,7 @@ public class ReportsController {
       buffer.sort((a, b) -> Double.compare(a.totalAmount, b.totalAmount));
     else if ("NIGHTS (HIGH -> LOW)".equalsIgnoreCase(sort))
       buffer.sort((a, b) -> Long.compare(b.nights, a.nights));
-    else
-      buffer.sort((a, b) -> compareDates(b.checkOutDateRaw, a.checkOutDateRaw));
+    else buffer.sort((a, b) -> compareDates(b.checkOutDateRaw, a.checkOutDateRaw));
 
     ArrayList<ReportsView.CheckoutRowDTO> result = new ArrayList<>();
     for (int i = 1; i <= buffer.getNumberOfEntries(); i++) result.add(buffer.getEntry(i));
@@ -412,33 +451,45 @@ public class ReportsController {
       if ("PAID".equalsIgnoreCase(dto.paymentStatus)) {
         paid++;
         revenue += dto.totalAmount;
-        if ("LUXURY".equalsIgnoreCase(dto.roomType))        luxuryRevenue   += dto.totalAmount;
-        else if ("SUITE".equalsIgnoreCase(dto.roomType))    suiteRevenue    += dto.totalAmount;
+        if ("LUXURY".equalsIgnoreCase(dto.roomType)) luxuryRevenue += dto.totalAmount;
+        else if ("SUITE".equalsIgnoreCase(dto.roomType)) suiteRevenue += dto.totalAmount;
         else if ("STANDARD".equalsIgnoreCase(dto.roomType)) standardRevenue += dto.totalAmount;
       } else {
         unpaid++;
       }
     }
 
-    String generated = LocalDateTime.now()
-        .format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a"));
-    String period = (from != null ? from.format(DATE_FMT) : "All")
-        + "  —  " + (to != null ? to.format(DATE_FMT) : "All");
+    String generated =
+        LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a"));
+    String period =
+        (from != null ? from.format(DATE_FMT) : "All")
+            + "  —  "
+            + (to != null ? to.format(DATE_FMT) : "All");
 
-    return new ReportsView.CheckoutSummaryDTO(total, paid, unpaid, revenue,
-        luxuryRevenue, suiteRevenue, standardRevenue, generated, period);
+    return new ReportsView.CheckoutSummaryDTO(
+        total,
+        paid,
+        unpaid,
+        revenue,
+        luxuryRevenue,
+        suiteRevenue,
+        standardRevenue,
+        generated,
+        period);
   }
 
   /**
-   * Builds one OccupancyRowDTO per room type.
-   * Tallies each room's status using its Room.Status enum; CLEANING and
-   * INSPECTED are handled defensively by name in case the enum variant is
-   * absent from an older local build.
+   * Builds one OccupancyRowDTO per room type. Tallies each room's status using its Room.Status
+   * enum; CLEANING and INSPECTED are handled defensively by name in case the enum variant is absent
+   * from an older local build.
    */
   private ArrayList<ReportsView.OccupancyRowDTO> buildOccupancyDTOs(String roomTypeFilter) {
     ListInterface<Room> allRooms = roomRepo.getRoomList();
-    int[] dirty = new int[3], cleaning = new int[3], inspected = new int[3],
-          vacantClean = new int[3], occupied = new int[3];
+    int[] dirty = new int[3],
+        cleaning = new int[3],
+        inspected = new int[3],
+        vacantClean = new int[3],
+        occupied = new int[3];
 
     for (int i = 1; i <= allRooms.getNumberOfEntries(); i++) {
       Room r = allRooms.getEntry(i);
@@ -451,12 +502,16 @@ public class ReportsController {
         occupied[t]++;
       } else {
         switch (r.getStatus()) {
-          case DIRTY:        dirty[t]++;       break;
-          case VACANT_CLEAN: vacantClean[t]++; break;
+          case DIRTY:
+            dirty[t]++;
+            break;
+          case VACANT_CLEAN:
+            vacantClean[t]++;
+            break;
           default:
             // Guard CLEANING / INSPECTED by name — safe if enum is absent on older builds
             String sName = r.getStatus().name();
-            if ("CLEANING".equals(sName))  cleaning[t]++;
+            if ("CLEANING".equals(sName)) cleaning[t]++;
             else if ("INSPECTED".equals(sName)) inspected[t]++;
             break;
         }
@@ -470,8 +525,16 @@ public class ReportsController {
       int total = dirty[t] + cleaning[t] + inspected[t] + vacantClean[t] + occupied[t];
       if (total == 0) continue;
       double rate = (100.0 * occupied[t] / total);
-      result.add(new ReportsView.OccupancyRowDTO(typeNames[t], dirty[t], cleaning[t],
-          inspected[t], vacantClean[t], occupied[t], total, String.format("%.1f%%", rate)));
+      result.add(
+          new ReportsView.OccupancyRowDTO(
+              typeNames[t],
+              dirty[t],
+              cleaning[t],
+              inspected[t],
+              vacantClean[t],
+              occupied[t],
+              total,
+              String.format("%.1f%%", rate)));
     }
     return result;
   }
@@ -482,16 +545,21 @@ public class ReportsController {
     for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
       ReportsView.OccupancyRowDTO r = rows.getEntry(i);
       if (r == null) continue;
-      totalRooms    += r.total;
+      totalRooms += r.total;
       totalOccupied += r.occupied;
-      totalDirty    += r.dirty;
-      totalVacant   += r.vacantClean;
+      totalDirty += r.dirty;
+      totalVacant += r.vacantClean;
     }
     double rate = (totalRooms > 0) ? (100.0 * totalOccupied / totalRooms) : 0.0;
-    String generated = LocalDateTime.now()
-        .format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a"));
-    return new ReportsView.OccupancySummaryDTO(totalRooms, totalOccupied, totalDirty,
-        totalVacant, String.format("%.1f%%", rate), generated);
+    String generated =
+        LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a"));
+    return new ReportsView.OccupancySummaryDTO(
+        totalRooms,
+        totalOccupied,
+        totalDirty,
+        totalVacant,
+        String.format("%.1f%%", rate),
+        generated);
   }
 
   /** Stay DTOs = all billing records (active and historical). */
@@ -504,21 +572,22 @@ public class ReportsController {
     for (int i = 1; i <= allBillings.getNumberOfEntries(); i++) {
       Billing b = allBillings.getEntry(i);
       if (b == null || b.getCheckInDate() == null || b.getCheckOutDate() == null) continue;
-      String guestName = (b.getGuestId() != null)
-          ? guestNameMap.get(b.getGuestId().toLowerCase()) : null;
+      String guestName =
+          (b.getGuestId() != null) ? guestNameMap.get(b.getGuestId().toLowerCase()) : null;
       if (guestName == null) guestName = "N/A";
-      buffer.add(new ReportsView.StayRowDTO(
-          b.getGuestId()    != null ? b.getGuestId()    : "N/A",
-          guestName,
-          b.getRoomNumber() != null ? b.getRoomNumber() : "N/A",
-          b.getRoomType()   != null ? b.getRoomType().name() : "N/A",
-          b.getCheckInDate().format(DATE_FMT),
-          b.getCheckOutDate().format(DATE_FMT),
-          b.getCheckInDate(),
-          b.getCheckOutDate(),
-          b.getNumberOfNights(),
-          b.getTotalAmount(),
-          b.getStatus().name()));
+      buffer.add(
+          new ReportsView.StayRowDTO(
+              b.getGuestId() != null ? b.getGuestId() : "N/A",
+              guestName,
+              b.getRoomNumber() != null ? b.getRoomNumber() : "N/A",
+              b.getRoomType() != null ? b.getRoomType().name() : "N/A",
+              b.getCheckInDate().format(DATE_FMT),
+              b.getCheckOutDate().format(DATE_FMT),
+              b.getCheckInDate(),
+              b.getCheckOutDate(),
+              b.getNumberOfNights(),
+              b.getTotalAmount(),
+              b.getStatus().name()));
     }
 
     ArrayList<ReportsView.StayRowDTO> result = new ArrayList<>();
@@ -528,19 +597,23 @@ public class ReportsController {
 
   private ArrayList<ReportsView.StayRowDTO> filterAndSortStayDTOs(
       ArrayList<ReportsView.StayRowDTO> source,
-      LocalDate fromDate, LocalDate toDate, String roomTypeFilter, String sort) {
+      LocalDate fromDate,
+      LocalDate toDate,
+      String roomTypeFilter,
+      String sort) {
 
     LinkedList<ReportsView.StayRowDTO> buffer = new LinkedList<>();
     if (source != null) {
       for (int i = 1; i <= source.getNumberOfEntries(); i++) {
         ReportsView.StayRowDTO dto = source.getEntry(i);
         if (dto == null) continue;
-        boolean matchFrom = fromDate == null || dto.checkInDateRaw == null
-            || !dto.checkInDateRaw.isBefore(fromDate);
-        boolean matchTo = toDate == null || dto.checkOutDateRaw == null
-            || !dto.checkOutDateRaw.isAfter(toDate);
-        boolean matchType = roomTypeFilter == null
-            || roomTypeFilter.equalsIgnoreCase(dto.roomType);
+        boolean matchFrom =
+            fromDate == null
+                || dto.checkInDateRaw == null
+                || !dto.checkInDateRaw.isBefore(fromDate);
+        boolean matchTo =
+            toDate == null || dto.checkOutDateRaw == null || !dto.checkOutDateRaw.isAfter(toDate);
+        boolean matchType = roomTypeFilter == null || roomTypeFilter.equalsIgnoreCase(dto.roomType);
         if (matchFrom && matchTo && matchType) buffer.add(dto);
       }
     }
@@ -555,20 +628,26 @@ public class ReportsController {
       buffer.sort((a, b) -> compareDates(a.checkInDateRaw, b.checkInDateRaw));
     else if ("TOTAL AMOUNT (HIGH -> LOW)".equalsIgnoreCase(sort))
       buffer.sort((a, b) -> Double.compare(b.totalAmount, a.totalAmount));
-    else
-      buffer.sort((a, b) -> Long.compare(b.nights, a.nights));
+    else buffer.sort((a, b) -> Long.compare(b.nights, a.nights));
 
     ArrayList<ReportsView.StayRowDTO> result = new ArrayList<>();
     for (int i = 1; i <= buffer.getNumberOfEntries(); i++) result.add(buffer.getEntry(i));
     return result;
   }
 
-  private ReportsView.StaySummaryDTO buildStaySummary(
-      ArrayList<ReportsView.StayRowDTO> filtered) {
+  private ReportsView.StaySummaryDTO buildStaySummary(ArrayList<ReportsView.StayRowDTO> filtered) {
 
     int total = filtered.getNumberOfEntries();
     if (total == 0) {
-      return new ReportsView.StaySummaryDTO(0, 0.0, 0, 0, 0, 0, 0, 0,
+      return new ReportsView.StaySummaryDTO(
+          0,
+          0.0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a")));
     }
 
@@ -581,15 +660,22 @@ public class ReportsController {
       long n = dto.nights;
       nightsSum += n;
       if (n < shortest) shortest = n;
-      if (n > longest)  longest  = n;
+      if (n > longest) longest = n;
       if (n == 1) one++;
       else if (n <= 3) twoThree++;
       else if (n <= 7) fourSeven++;
       else eightPlus++;
     }
 
-    return new ReportsView.StaySummaryDTO(total, (double) nightsSum / total,
-        shortest, longest, one, twoThree, fourSeven, eightPlus,
+    return new ReportsView.StaySummaryDTO(
+        total,
+        (double) nightsSum / total,
+        shortest,
+        longest,
+        one,
+        twoThree,
+        fourSeven,
+        eightPlus,
         LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a")));
   }
 
@@ -603,22 +689,30 @@ public class ReportsController {
     for (int i = 1; i <= count; i++) {
       ReportsView.CheckoutRowDTO dto = filtered.getEntry(i);
       if (dto == null) continue;
-      total        += dto.totalAmount;
-      totalNights  += dto.nights;
-      if ("LUXURY".equalsIgnoreCase(dto.roomType))        luxury   += dto.totalAmount;
-      else if ("SUITE".equalsIgnoreCase(dto.roomType))    suite    += dto.totalAmount;
+      total += dto.totalAmount;
+      totalNights += dto.nights;
+      if ("LUXURY".equalsIgnoreCase(dto.roomType)) luxury += dto.totalAmount;
+      else if ("SUITE".equalsIgnoreCase(dto.roomType)) suite += dto.totalAmount;
       else if ("STANDARD".equalsIgnoreCase(dto.roomType)) standard += dto.totalAmount;
     }
 
-    String generated = LocalDateTime.now()
-        .format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a"));
-    String period = (from != null ? from.format(DATE_FMT) : "All")
-        + "  —  " + (to != null ? to.format(DATE_FMT) : "All");
+    String generated =
+        LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a"));
+    String period =
+        (from != null ? from.format(DATE_FMT) : "All")
+            + "  —  "
+            + (to != null ? to.format(DATE_FMT) : "All");
 
-    return new ReportsView.RevenueSummaryDTO(count, total, luxury, suite, standard,
+    return new ReportsView.RevenueSummaryDTO(
+        count,
+        total,
+        luxury,
+        suite,
+        standard,
         (count > 0 ? total / count : 0.0),
         (totalNights > 0 ? total / totalNights : 0.0),
-        generated, period);
+        generated,
+        period);
   }
 
   // =========================================================================
@@ -628,8 +722,11 @@ public class ReportsController {
   // timestamped .txt file and returns the saved path for the success screen.
   // =========================================================================
 
-  private void exportCheckoutReport(ArrayList<ReportsView.CheckoutRowDTO> filtered,
-      ReportsView.CheckoutSummaryDTO summary, LocalDate from, LocalDate to) {
+  private void exportCheckoutReport(
+      ArrayList<ReportsView.CheckoutRowDTO> filtered,
+      ReportsView.CheckoutSummaryDTO summary,
+      LocalDate from,
+      LocalDate to) {
     String content = ConsoleUtil.getCapturedString();
     String path = TxtExportUtil.export("frontdesk/checkout_report", content);
     reportsView.showExportSuccess(path, filtered.getNumberOfEntries());
@@ -640,14 +737,15 @@ public class ReportsController {
       ReportsView.OccupancySummaryDTO occupancySummary,
       ArrayList<ReportsView.CheckoutRowDTO> revenueRows,
       ReportsView.RevenueSummaryDTO revenueSummary,
-      LocalDate from, LocalDate to) {
+      LocalDate from,
+      LocalDate to) {
     String content = ConsoleUtil.getCapturedString();
     String path = TxtExportUtil.export("frontdesk/room_performance_report", content);
     reportsView.showExportSuccess(path, revenueRows.getNumberOfEntries());
   }
 
-  private void exportStayReport(ArrayList<ReportsView.StayRowDTO> filtered,
-      ReportsView.StaySummaryDTO summary) {
+  private void exportStayReport(
+      ArrayList<ReportsView.StayRowDTO> filtered, ReportsView.StaySummaryDTO summary) {
     String content = ConsoleUtil.getCapturedString();
     String path = TxtExportUtil.export("frontdesk/stay_duration_report", content);
     reportsView.showExportSuccess(path, filtered.getNumberOfEntries());

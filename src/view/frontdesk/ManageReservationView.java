@@ -221,7 +221,8 @@ public class ManageReservationView {
             + (current == null || current.isEmpty() ? "None" : "\"" + current + "\"")
             + " ]");
     System.out.println();
-    System.out.println("Can Search by Guest ID, Guest Name, Room No., Res. ID, or Confirmation No.");
+    System.out.println(
+        "Can Search by Guest ID, Guest Name, Room No., Res. ID, or Confirmation No.");
     System.out.println("Press Enter to clear/ C to cancel.\n");
     String input = ConsoleUtil.getStringInput("Search: ");
     if (input == null || "C".equalsIgnoreCase(input.trim())) return current;

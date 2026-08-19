@@ -35,7 +35,8 @@ public class ManageGuestView {
       this.memberLevel = memberLevel != null ? memberLevel : "NON-MEMBER";
     }
   }
-//Guest Table
+
+  // Guest Table
   public ConsoleUtil.GetMenuInputResult renderGuestTable(
       ListInterface<GuestRowDTO> guests,
       String searchQuery,
@@ -120,7 +121,7 @@ public class ManageGuestView {
         new char[] {'S', 'O', 'R', 'N', 'P', 'E'});
   }
 
-  //Filter Menu
+  // Filter Menu
   public int displayFilterMenu(String search, String memberLevel) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH & FILTER GUESTS", 68);
@@ -136,7 +137,8 @@ public class ManageGuestView {
     System.out.println("4. Apply & Back\n");
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 4).getAsInt();
   }
-// search
+
+  // search
   public String promptSearchQuery(String currentQuery) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH GUESTS", 68);
@@ -151,7 +153,8 @@ public class ManageGuestView {
     if (input == null || "C".equalsIgnoreCase(input.trim())) return currentQuery;
     return input.trim().isEmpty() ? null : input.trim();
   }
-// filter by member level
+
+  // filter by member level
   public int displayMemberLevelSubmenu(String current) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("FILTER BY MEMBER LEVEL", 50);
@@ -163,7 +166,8 @@ public class ManageGuestView {
     System.out.println("5. Show All\n");
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 5).getAsInt();
   }
-//Sorting Menu
+
+  // Sorting Menu
   public String displaySortMenu(String currentSort) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SORT GUESTS", 60);
@@ -189,7 +193,7 @@ public class ManageGuestView {
     }
   }
 
- //Guest Action Submenu
+  // Guest Action Submenu
   public int displayGuestActionSubmenu(Guest guest) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
@@ -447,7 +451,7 @@ public class ManageGuestView {
     }
   }
 
- // receipt
+  // receipt
   public void displayReceipt(Guest guest, Billing billing) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("RECEIPT: " + billing.getBillingId(), 68);
@@ -485,7 +489,7 @@ public class ManageGuestView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
- // reservation history
+  // reservation history
   public ConsoleUtil.GetMenuInputResult displayReservationHistory(
       Guest guest, ListInterface<Reservation> historyNewToOld, int currentPage, int pageSize) {
 

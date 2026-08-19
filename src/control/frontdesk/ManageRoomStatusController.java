@@ -502,8 +502,8 @@ public class ManageRoomStatusController {
         confNum = (linked.getConfirmationNumber() != null) ? linked.getConfirmationNumber() : "N/A";
       }
 
-      String resId = (linked != null && linked.getReservationId() != null)
-          ? linked.getReservationId() : null;
+      String resId =
+          (linked != null && linked.getReservationId() != null) ? linked.getReservationId() : null;
 
       dtoBuffer.add(
           new ManageRoomStatusView.RoomRowDTO(
