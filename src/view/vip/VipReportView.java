@@ -736,14 +736,21 @@ public class VipReportView {
     }
   }
 
-  public GetMenuInputResult renderSlaReportScreen(
-      SlaReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
-
+  public void displayReportTitleHeader(String title) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("REPORT 1: WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT", 88);
+    ConsoleUtil.printTitleBox(title, 88);
+  }
 
-    ConsoleUtil.clearBuffer();
-    ConsoleUtil.startRecording();
+  public GetMenuInputResult promptReportActionMenu() {
+    System.out.println(
+        "\n"
+            + "[B] Back to Filter Matrix    [R] Refresh Report      [E] Export Report       [Q]"
+            + " Quit to Analytics Hub\n");
+    return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'B', 'R', 'E', 'Q'});
+  }
+
+  public void renderSlaReportBody(
+      SlaReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
 
     System.out.println(
         "Generated At: "
@@ -818,31 +825,10 @@ public class VipReportView {
     if (viewModel != null && viewModel.getSummary() != null) {
       printSlaSummaryBlock(viewModel.getSummary());
     }
-
-    ConsoleUtil.stopRecording();
-
-    while (true) {
-      System.out.println(
-          "\n"
-              + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q]"
-              + " Quit to Analytics Hub\n");
-      try {
-        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-        return null;
-      }
-    }
   }
 
-  public GetMenuInputResult renderPenaltyReportScreen(
+  public void renderPenaltyReportBody(
       PenaltyReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
-
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("REPORT 2: VIP PENALTY & EVICTION AUDIT REPORT", 88);
-
-    ConsoleUtil.clearBuffer();
-    ConsoleUtil.startRecording();
 
     System.out.println(
         "Generated At: "
@@ -914,31 +900,10 @@ public class VipReportView {
     if (viewModel != null && viewModel.getSummary() != null) {
       printPenaltySummaryBlock(viewModel.getSummary());
     }
-
-    ConsoleUtil.stopRecording();
-
-    while (true) {
-      System.out.println(
-          "\n"
-              + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q]"
-              + " Quit to Analytics Hub\n");
-      try {
-        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-        return null;
-      }
-    }
   }
 
-  public GetMenuInputResult renderHoldingReportScreen(
+  public void renderHoldingReportBody(
       HoldingReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
-
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("REPORT 3: ROOM HOLDING BAY & GRACE WINDOW AUDIT", 88);
-
-    ConsoleUtil.clearBuffer();
-    ConsoleUtil.startRecording();
 
     System.out.println(
         "Generated At: "
@@ -1021,21 +986,6 @@ public class VipReportView {
 
     if (viewModel != null && viewModel.getSummary() != null) {
       printHoldingSummaryBlock(viewModel.getSummary());
-    }
-
-    ConsoleUtil.stopRecording();
-
-    while (true) {
-      System.out.println(
-          "\n"
-              + "[S] Modify Filter Matrix    [R] Refresh Report      [E] Export Report       [Q]"
-              + " Quit to Analytics Hub\n");
-      try {
-        return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'S', 'R', 'E', 'Q'});
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-        return null;
-      }
     }
   }
 
