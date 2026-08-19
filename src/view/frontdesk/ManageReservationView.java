@@ -6,17 +6,13 @@ import entity.Guest;
 import entity.Room;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 
 public class ManageReservationView {
 
-  // =========================================================================
-  // DTO — view only renders pre-processed data, never entity lookups
-  // =========================================================================
-
+  // DTO
   public static class ReservationRowDTO {
     public final String billingId;
     public final String guestId;
@@ -60,10 +56,7 @@ public class ManageReservationView {
     }
   }
 
-  // =========================================================================
-  // MAIN LIST SCREEN
-  // =========================================================================
-
+  //manage reservation list
   public GetMenuInputResult renderReservationScreen(
       ArrayList<ReservationRowDTO> list,
       String searchQuery,
@@ -155,8 +148,8 @@ public class ManageReservationView {
             dto.guestName,
             dto.roomNumber,
             dto.roomType,
-            formatDate(dto.checkInDate),
-            formatDate(dto.checkOutDate),
+            dto.checkInDate,
+            dto.checkOutDate,
             dto.paymentStatus,
             dto.stayStatus
           },
@@ -290,20 +283,6 @@ public class ManageReservationView {
   }
 
   // =========================================================================
-  // CREATE BILLING DTO
-  // =========================================================================
-
-  public static class CreateBillingInputDTO {
-    public final LocalDate checkInDate;
-    public final LocalDate checkOutDate;
-
-    public CreateBillingInputDTO(LocalDate checkInDate, LocalDate checkOutDate) {
-      this.checkInDate = checkInDate;
-      this.checkOutDate = checkOutDate;
-    }
-  }
-
-  // =========================================================================
   // NO BILLING NOTICE — shown when room is OCCUPIED but has no billing record
   // Returns: 1 = Create Billing, 2 = Back
   // =========================================================================
@@ -338,7 +317,8 @@ public class ManageReservationView {
   // CREATE BILLING PROMPTS
   // =========================================================================
 
-  public CreateBillingInputDTO promptCreateBilling(
+  /** Returns the raw typed strings for [check-in, check-out]; the controller parses/validates. */
+  public String[] promptCreateBillingDatesRaw(
       ReservationRowDTO dto, LocalDate defaultCheckIn, LocalDate defaultCheckOut, double rate) {
 
     ConsoleUtil.clearScreen();
@@ -349,27 +329,16 @@ public class ManageReservationView {
     System.out.println();
     System.out.println("Format: YYYY-MM-DD   |   blank = use suggested value   |   C = cancel\n");
 
-    LocalDate checkIn = promptDate("Check-in  date [" + defaultCheckIn + "]: ", defaultCheckIn);
-    if (checkIn == null) return null;
+    String checkIn = ConsoleUtil.getStringInput("Check-in  date [" + defaultCheckIn + "]: ");
+    String checkOut = ConsoleUtil.getStringInput("Check-out date [" + defaultCheckOut + "]: ");
+    return new String[] {checkIn, checkOut};
+  }
 
-    LocalDate checkOut = promptDate("Check-out date [" + defaultCheckOut + "]: ", defaultCheckOut);
-    if (checkOut == null) return null;
-
-    if (!checkOut.isAfter(checkIn)) {
-      ConsoleUtil.printError("Check-out must be after check-in. Billing creation cancelled.");
-      return null;
-    }
-
-    long nights = java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
-    double total = nights * rate * (1 + entity.Billing.SST_RATE);
-    boolean confirmed =
-        ConsoleUtil.showConfirmMessage(
-            String.format(
-                "Create billing: %d night(s) × RM %.2f = RM %.2f (incl. 8%% SST)?",
-                nights, rate, total));
-    if (!confirmed) return null;
-
-    return new CreateBillingInputDTO(checkIn, checkOut);
+  public boolean confirmCreateBilling(long nights, double rate, double total) {
+    return ConsoleUtil.showConfirmMessage(
+        String.format(
+            "Create billing: %d night(s) × RM %.2f = RM %.2f (incl. 8%% SST)?",
+            nights, rate, total));
   }
 
   public void displayBillingCreated(entity.Billing billing) {
@@ -502,7 +471,8 @@ public class ManageReservationView {
   // STAY EXTENSION
   // =========================================================================
 
-  public Integer promptStayExtension(Guest guest, Billing billing) {
+  /** Returns the raw typed string, or null/blank/"0"/"C" to cancel; the controller parses it. */
+  public String promptStayExtensionInput(Guest guest, Billing billing) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("STAY EXTENSION", 68);
 
@@ -526,32 +496,15 @@ public class ManageReservationView {
     System.out.println("Enter the number of extra days to extend the stay.");
     System.out.println("Enter 0 or C to cancel.\n");
 
-    String input = ConsoleUtil.getStringInput("Extra days (1-30): ");
-    if (input == null || "C".equalsIgnoreCase(input.trim()) || "0".equals(input.trim())) {
-      return null;
-    }
-    try {
-      int days = Integer.parseInt(input.trim());
-      if (days < 1 || days > 30) {
-        ConsoleUtil.printError("Please enter a value between 1 and 30.");
-        return null;
-      }
-      LocalDate newCheckOut =
-          (billing != null && billing.getCheckOutDate() != null)
-              ? billing.getCheckOutDate().plusDays(days)
-              : null;
-      boolean confirmed =
-          ConsoleUtil.showConfirmMessage(
-              "Extend stay by "
-                  + days
-                  + " day(s)?"
-                  + (newCheckOut != null ? "  New check-out: " + formatDate(newCheckOut) : ""));
-      if (!confirmed) return null;
-      return days;
-    } catch (NumberFormatException e) {
-      ConsoleUtil.printError("Invalid input. Extension cancelled.");
-      return null;
-    }
+    return ConsoleUtil.getStringInput("Extra days (1-30): ");
+  }
+
+  public boolean confirmStayExtension(int days, LocalDate newCheckOut) {
+    return ConsoleUtil.showConfirmMessage(
+        "Extend stay by "
+            + days
+            + " day(s)?"
+            + (newCheckOut != null ? "  New check-out: " + formatDate(newCheckOut) : ""));
   }
 
   public void displayStayExtensionSuccess(Guest guest, Billing billing, int extraDays) {
@@ -601,18 +554,6 @@ public class ManageReservationView {
   // UTILITY
   // =========================================================================
 
-  private LocalDate promptDate(String prompt, LocalDate defaultVal) {
-    String raw = ConsoleUtil.getStringInput(prompt);
-    if (raw == null || "C".equalsIgnoreCase(raw.trim())) return null;
-    if (raw.trim().isEmpty()) return defaultVal;
-    try {
-      return LocalDate.parse(raw.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-    } catch (DateTimeParseException e) {
-      ConsoleUtil.printError("Invalid date format. Using suggested value.");
-      return defaultVal;
-    }
-  }
-
   private void printKvRow(String label, String value, TableUtil.TableSettings settings) {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(new String[] {label, value}, settings);
@@ -621,14 +562,5 @@ public class ManageReservationView {
   private String formatDate(LocalDate date) {
     if (date == null) return "N/A";
     return date.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
-  }
-
-  private String formatDate(String dateStr) {
-    if (dateStr == null || "N/A".equals(dateStr)) return "N/A";
-    try {
-      return LocalDate.parse(dateStr).format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
-    } catch (Exception e) {
-      return dateStr;
-    }
   }
 }

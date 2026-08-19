@@ -8,6 +8,8 @@ import entity.Member;
 import entity.Reservation;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import repo.BillingRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
@@ -329,10 +331,24 @@ public class ManageGuestController {
   private LocalDate[] handleBillingDateFilter(LocalDate currentFrom, LocalDate currentTo) {
     while (true) {
       try {
-        return manageGuestView.promptDateFilter(currentFrom, currentTo);
-      } catch (Exception e) {
-        ConsoleUtil.printError("Invalid date input. Please use YYYY-MM-DD format.");
+        String[] raw = manageGuestView.promptDateFilterRaw(currentFrom, currentTo);
+        LocalDate from = parseDateOrKeep(raw[0], currentFrom);
+        LocalDate to = parseDateOrKeep(raw[1], currentTo);
+        return new LocalDate[] {from, to};
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
       }
+    }
+  }
+
+  /** Blank keeps the current value, '-' clears it, otherwise parses as YYYY-MM-DD. */
+  private LocalDate parseDateOrKeep(String raw, LocalDate current) {
+    if (raw == null || raw.trim().isEmpty()) return current;
+    if ("-".equals(raw.trim())) return null;
+    try {
+      return LocalDate.parse(raw.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException("Invalid date format. Please use YYYY-MM-DD.");
     }
   }
 

@@ -9,7 +9,6 @@ import entity.Reservation;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import util.ConsoleUtil;
 import util.TableUtil;
 
@@ -422,7 +421,8 @@ public class ManageGuestView {
         new char[] {'F', 'N', 'P', 'C'});
   }
 
-  public LocalDate[] promptDateFilter(LocalDate currentFrom, LocalDate currentTo) {
+  /** Returns the raw typed strings for [from, to]; parsing/validation is done by the controller. */
+  public String[] promptDateFilterRaw(LocalDate currentFrom, LocalDate currentTo) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("DATE FILTER — BILLING HISTORY", 60);
     System.out.println(
@@ -434,21 +434,9 @@ public class ManageGuestView {
     System.out.println();
     System.out.println("Format: YYYY-MM-DD   |   blank = keep current   |   '-' = clear\n");
 
-    LocalDate from = promptDate("From date: ", currentFrom);
-    LocalDate to = promptDate("To date  : ", currentTo);
-    return new LocalDate[] {from, to};
-  }
-
-  private LocalDate promptDate(String prompt, LocalDate current) {
-    String raw = ConsoleUtil.getStringInput(prompt);
-    if (raw == null || raw.trim().isEmpty()) return current;
-    if ("-".equals(raw.trim())) return null;
-    try {
-      return LocalDate.parse(raw.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-    } catch (DateTimeParseException e) {
-      ConsoleUtil.printError("Invalid date format. Keeping previous value.");
-      return current;
-    }
+    String from = ConsoleUtil.getStringInput("From date: ");
+    String to = ConsoleUtil.getStringInput("To date  : ");
+    return new String[] {from, to};
   }
 
   // receipt
@@ -609,14 +597,7 @@ public class ManageGuestView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  // =========================================================================
-  // UTILITY
-  // =========================================================================
-
-  /**
-   * Prints a MIDDLE separator then a data row. Used for every row AFTER the first (which uses TOP +
-   * first row directly).
-   */
+  // utility
   private void printKvRow(String label, String value, TableUtil.TableSettings settings) {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(new String[] {label, value}, settings);

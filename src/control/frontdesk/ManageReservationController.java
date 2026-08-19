@@ -10,6 +10,9 @@ import entity.Reservation;
 import entity.Room;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import repo.BillingRepo;
 import repo.GuestRepo;
 import repo.HousekeepingTaskRepo;
@@ -22,6 +25,9 @@ import view.frontdesk.ManageReservationView;
 public class ManageReservationController {
 
   private static final int PAGE_SIZE = 10;
+  private static final int MIN_EXTENSION_DAYS = 1;
+  private static final int MAX_EXTENSION_DAYS = 30;
+  private static final DateTimeFormatter DISPLAY_DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
   private final ManageReservationView view = new ManageReservationView();
   private final GuestRepo guestRepo;
@@ -232,10 +238,30 @@ public class ManageReservationController {
       if (!confirm) return;
     }
 
-    Integer extraDays = view.promptStayExtension(guest, billing);
-    if (extraDays == null) return;
+    String input = view.promptStayExtensionInput(guest, billing);
+    if (input == null || "C".equalsIgnoreCase(input.trim()) || "0".equals(input.trim())) {
+      return;
+    }
 
-    billing.setCheckOutDate(billing.getCheckOutDate().plusDays(extraDays));
+    int extraDays;
+    try {
+      extraDays = Integer.parseInt(input.trim());
+    } catch (NumberFormatException e) {
+      ConsoleUtil.printError("Invalid input. Extension cancelled.");
+      return;
+    }
+
+    if (extraDays < MIN_EXTENSION_DAYS || extraDays > MAX_EXTENSION_DAYS) {
+      ConsoleUtil.printError(
+          "Please enter a value between " + MIN_EXTENSION_DAYS + " and " + MAX_EXTENSION_DAYS + ".");
+      return;
+    }
+
+    LocalDate newCheckOut =
+        billing.getCheckOutDate() != null ? billing.getCheckOutDate().plusDays(extraDays) : null;
+    if (!view.confirmStayExtension(extraDays, newCheckOut)) return;
+
+    billing.setCheckOutDate(newCheckOut);
 
     // Reset to UNPAID — the new total is higher and must be re-settled
     billing.setStatus(Billing.Status.UNPAID);
@@ -316,9 +342,14 @@ public class ManageReservationController {
       }
     }
 
-    ManageReservationView.CreateBillingInputDTO input =
-        view.promptCreateBilling(dto, defaultCheckIn, defaultCheckOut, rate);
-    if (input == null) return null;
+    LocalDate[] dates = promptCreateBillingDates(dto, defaultCheckIn, defaultCheckOut, rate);
+    if (dates == null) return null;
+    LocalDate checkIn = dates[0];
+    LocalDate checkOut = dates[1];
+
+    long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
+    double total = nights * rate * (1 + Billing.SST_RATE);
+    if (!view.confirmCreateBilling(nights, rate, total)) return null;
 
     String billingId = generateBillingId();
     Billing billing =
@@ -328,8 +359,8 @@ public class ManageReservationController {
             "N/A".equals(dto.reservationId) ? null : dto.reservationId,
             dto.roomNumber,
             room != null ? room.getRoomType() : null,
-            input.checkInDate,
-            input.checkOutDate,
+            checkIn,
+            checkOut,
             rate,
             Billing.Status.UNPAID,
             LocalDateTime.now());
@@ -337,6 +368,43 @@ public class ManageReservationController {
     billingRepo.addBilling(billing);
     view.displayBillingCreated(billing);
     return billing;
+  }
+
+  /** Prompts for check-in/check-out until valid, or returns null if the user cancels. */
+  private LocalDate[] promptCreateBillingDates(
+      ManageReservationView.ReservationRowDTO dto,
+      LocalDate defaultCheckIn,
+      LocalDate defaultCheckOut,
+      double rate) {
+    while (true) {
+      try {
+        String[] raw = view.promptCreateBillingDatesRaw(dto, defaultCheckIn, defaultCheckOut, rate);
+        if (isCancel(raw[0]) || isCancel(raw[1])) return null;
+
+        LocalDate checkIn = parseDateOrDefault(raw[0], defaultCheckIn);
+        LocalDate checkOut = parseDateOrDefault(raw[1], defaultCheckOut);
+        if (!checkOut.isAfter(checkIn)) {
+          throw new IllegalArgumentException("Check-out must be after check-in.");
+        }
+        return new LocalDate[] {checkIn, checkOut};
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean isCancel(String raw) {
+    return raw != null && "C".equalsIgnoreCase(raw.trim());
+  }
+
+  /** Blank uses the suggested default, otherwise parses as YYYY-MM-DD. */
+  private LocalDate parseDateOrDefault(String raw, LocalDate defaultVal) {
+    if (raw == null || raw.trim().isEmpty()) return defaultVal;
+    try {
+      return LocalDate.parse(raw.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException("Invalid date format. Please use YYYY-MM-DD.");
+    }
   }
 
   /** Generates the next BILL-XXXX id by scanning existing billings. */
@@ -635,14 +703,14 @@ public class ManageReservationController {
     String confNum = (res != null) ? res.getConfirmationNumber() : "N/A";
     String checkIn = "N/A", checkOut = "N/A";
     if (billing != null && billing.getCheckInDate() != null) {
-      checkIn = billing.getCheckInDate().toString();
+      checkIn = billing.getCheckInDate().format(DISPLAY_DATE_FMT);
     } else if (res != null && res.getAllocatedTime() != null) {
-      checkIn = res.getAllocatedTime().toLocalDate().toString();
+      checkIn = res.getAllocatedTime().toLocalDate().format(DISPLAY_DATE_FMT);
     }
     if (billing != null && billing.getCheckOutDate() != null) {
-      checkOut = billing.getCheckOutDate().toString();
+      checkOut = billing.getCheckOutDate().format(DISPLAY_DATE_FMT);
     } else if (res != null && res.getAllocatedTime() != null && res.getStayDays() != null) {
-      checkOut = res.getAllocatedTime().toLocalDate().plusDays(res.getStayDays()).toString();
+      checkOut = res.getAllocatedTime().toLocalDate().plusDays(res.getStayDays()).format(DISPLAY_DATE_FMT);
     }
 
     String payment;
