@@ -55,11 +55,7 @@ public class BookingController {
               .startQueueManagement();
         } else if ("3".equals(choice)) {
           new AdvanceBookingController(
-                  standardReservationRepo,
-                  guestRepo,
-                  memberRepo,
-                  roomRepo,
-                  bookingSettingsRepo)
+                  standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsRepo)
               .startAdvanceBookingManagement();
         } else if ("4".equals(choice)) {
           new BookingReportController(
