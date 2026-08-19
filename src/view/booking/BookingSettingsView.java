@@ -15,70 +15,74 @@ public class BookingSettingsView {
   private static final int SCREEN_WIDTH = 83;
 
   public int displayMasterSettingsMenu(BookingSettings config) {
-    {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("WALK-IN & BOOKING SETTINGS", SCREEN_WIDTH);
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("WALK-IN & BOOKING SETTINGS", SCREEN_WIDTH);
 
-      System.out.println(
-          "HOLD RULES    : "
-              + config.getHoldGraceMinutes()
-              + " min grace  |  "
-              + config.getMaxStrikes()
-              + " strikes  |  lapsed hold -> "
-              + lapsedLabel(config.isRequeueOnLapse()).toLowerCase());
-      System.out.println(
-          "QUEUE RULES   : "
-              + config.getInitialQueueCapacity()
-              + " slots, "
-              + (config.isAllowQueueExpansion() ? "may grow" : "fixed size")
-              + "  |  line limit "
-              + queueLimitLabel(config).toLowerCase()
-              + "  |  auto-assign "
-              + yesNo(config.isAutoAssignWhenRoomFree()));
-      System.out.println(
-          "ORDER RULES   : VIP bypass "
-              + yesNo(config.isEnforceVipBypass())
-              + "  |  bypass override "
-              + yesNo(config.isAllowBypassOverride())
-              + "  |  serve out of order "
-              + yesNo(config.isAllowNonFrontAllocation()));
-      System.out.println(
-          "ADVANCE       : "
-              + leadLabel(config)
-              + "  |  same day "
-              + yesNo(config.isAllowSameDayAdvanceBooking())
-              + "  |  block overbooking "
-              + yesNo(config.isBlockOverbooking()));
-      System.out.println(
-          "DESK DEFAULTS : "
-              + config.getPageSize()
-              + " rows per page  |  stays up to "
-              + config.getMaxStayNights()
-              + " nights  |  one booking per guest "
-              + yesNo(config.isBlockDuplicateAcrossLines()));
-      System.out.println("DEFAULT SORTS : line [ " + config.getDefaultQueueSort() + " ]");
-      System.out.println("                adv  [ " + config.getDefaultAdvanceSort() + " ]");
-      System.out.println(
-          "REPORT OPENS  : "
-              + config.getDefaultReportPeriod()
-              + "  |  "
-              + (config.getDefaultRecordLimit() == 0
-                  ? "show all rows"
-                  : "top " + config.getDefaultRecordLimit() + " rows"));
-      System.out.println(
-          "OVERRIDES     : " + config.countOverrides() + " per-room-type override(s) in force\n");
+        System.out.println(
+            "HOLD RULES    : "
+                + config.getHoldGraceMinutes()
+                + " min grace  |  "
+                + config.getMaxStrikes()
+                + " strikes  |  lapsed hold -> "
+                + lapsedLabel(config.isRequeueOnLapse()).toLowerCase());
+        System.out.println(
+            "QUEUE RULES   : "
+                + config.getInitialQueueCapacity()
+                + " slots, "
+                + (config.isAllowQueueExpansion() ? "may grow" : "fixed size")
+                + "  |  line limit "
+                + queueLimitLabel(config).toLowerCase()
+                + "  |  auto-assign "
+                + yesNo(config.isAutoAssignWhenRoomFree()));
+        System.out.println(
+            "ORDER RULES   : VIP bypass "
+                + yesNo(config.isEnforceVipBypass())
+                + "  |  bypass override "
+                + yesNo(config.isAllowBypassOverride())
+                + "  |  serve out of order "
+                + yesNo(config.isAllowNonFrontAllocation()));
+        System.out.println(
+            "ADVANCE       : "
+                + leadLabel(config)
+                + "  |  same day "
+                + yesNo(config.isAllowSameDayAdvanceBooking())
+                + "  |  block overbooking "
+                + yesNo(config.isBlockOverbooking()));
+        System.out.println(
+            "DESK DEFAULTS : "
+                + config.getPageSize()
+                + " rows per page  |  stays up to "
+                + config.getMaxStayNights()
+                + " nights  |  one booking per guest "
+                + yesNo(config.isBlockDuplicateAcrossLines()));
+        System.out.println("DEFAULT SORTS : line [ " + config.getDefaultQueueSort() + " ]");
+        System.out.println("                adv  [ " + config.getDefaultAdvanceSort() + " ]");
+        System.out.println(
+            "REPORT OPENS  : "
+                + config.getDefaultReportPeriod()
+                + "  |  "
+                + (config.getDefaultRecordLimit() == 0
+                    ? "show all rows"
+                    : "top " + config.getDefaultRecordLimit() + " rows"));
+        System.out.println(
+            "OVERRIDES     : " + config.countOverrides() + " per-room-type override(s) in force\n");
 
-      System.out.println("1. Hold & No-Show Rules");
-      System.out.println("2. Queue & Order Rules");
-      System.out.println("3. Advance Booking Rules");
-      System.out.println("4. Desk & Report Defaults");
-      System.out.println("5. Per-Room-Type Overrides");
-      System.out.println("6. Rebuild Live Lines From Current Capacity");
-      System.out.println("7. Reset To Factory Defaults");
-      System.out.println("8. Back to Walk-In & Booking Menu\n");
+        System.out.println("1. Hold & No-Show Rules");
+        System.out.println("2. Queue & Order Rules");
+        System.out.println("3. Advance Booking Rules");
+        System.out.println("4. Desk & Report Defaults");
+        System.out.println("5. Per-Room-Type Overrides");
+        System.out.println("6. Rebuild Live Lines From Current Capacity");
+        System.out.println("7. Reset To Factory Defaults");
+        System.out.println("8. Back to Walk-In & Booking Menu\n");
 
-      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 8).getAsInt();
-      return (choice == 8) ? 0 : choice;
+        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 8).getAsInt();
+        return (choice == 8) ? 0 : choice;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -173,60 +177,64 @@ public class BookingSettingsView {
 
   // Shows what each line is actually running on, so an override is never edited blind.
   public int displayPerTypeMenu(BookingSettings config) {
-    {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("PER-ROOM-TYPE OVERRIDES", SCREEN_WIDTH);
-      System.out.println("A line with no override of its own runs on the house wide value.");
-      System.out.println("Clearing an override hands that line back to the house value.\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("PER-ROOM-TYPE OVERRIDES", SCREEN_WIDTH);
+        System.out.println("A line with no override of its own runs on the house wide value.");
+        System.out.println("Clearing an override hands that line back to the house value.\n");
 
-      TableUtil.TableSettings settings =
-          new TableUtil.TableSettings(TYPE_WIDTHS)
-              .setHAlign(0, TableUtil.Align.CENTER)
-              .setHAlign(2, TableUtil.Align.CENTER)
-              .setHAlign(3, TableUtil.Align.CENTER)
-              .setHAlign(4, TableUtil.Align.CENTER);
+        TableUtil.TableSettings settings =
+            new TableUtil.TableSettings(TYPE_WIDTHS)
+                .setHAlign(0, TableUtil.Align.CENTER)
+                .setHAlign(2, TableUtil.Align.CENTER)
+                .setHAlign(3, TableUtil.Align.CENTER)
+                .setHAlign(4, TableUtil.Align.CENTER);
 
-      TableUtil.TableSettings headerSettings = centeredHeader(TYPE_WIDTHS);
+        TableUtil.TableSettings headerSettings = centeredHeader(TYPE_WIDTHS);
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"WHAT EACH LINE IS RUNNING ON"}, spanSettings());
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
-      TableUtil.printTableRow(
-          new String[] {"NO.", "ROOM TYPE", "GRACE (MIN)", "QUEUE SLOTS", "MAX LINE LENGTH"},
-          headerSettings);
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-      Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
-      for (int i = 0; i < types.length; i++) {
+        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+        TableUtil.printTableRow(new String[] {"WHAT EACH LINE IS RUNNING ON"}, spanSettings());
+        TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
         TableUtil.printTableRow(
-            new String[] {
-              String.valueOf(i + 1),
-              types[i].name(),
-              overrideCell(
-                  config.getHoldGraceMinutesOverride(types[i]),
-                  config.getHoldGraceMinutes(types[i])),
-              overrideCell(
-                  config.getInitialQueueCapacityOverride(types[i]),
-                  config.getInitialQueueCapacity(types[i])),
-              overrideCell(
-                  config.getMaxQueueLengthOverride(types[i]),
-                  config.getMaxQueueLength(types[i]),
-                  true)
-            },
-            settings);
+            new String[] {"NO.", "ROOM TYPE", "GRACE (MIN)", "QUEUE SLOTS", "MAX LINE LENGTH"},
+            headerSettings);
+        TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+        Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
+        for (int i = 0; i < types.length; i++) {
+          TableUtil.printTableRow(
+              new String[] {
+                String.valueOf(i + 1),
+                types[i].name(),
+                overrideCell(
+                    config.getHoldGraceMinutesOverride(types[i]),
+                    config.getHoldGraceMinutes(types[i])),
+                overrideCell(
+                    config.getInitialQueueCapacityOverride(types[i]),
+                    config.getInitialQueueCapacity(types[i])),
+                overrideCell(
+                    config.getMaxQueueLengthOverride(types[i]),
+                    config.getMaxQueueLength(types[i]),
+                    true)
+              },
+              settings);
+        }
+
+        TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+
+        System.out.println();
+        System.out.println("1. Edit LUXURY");
+        System.out.println("2. Edit SUITE");
+        System.out.println("3. Edit STANDARD");
+        System.out.println("4. Clear Every Override");
+        System.out.println("5. Back\n");
+
+        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+        return (choice == 5) ? 0 : choice;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
       }
-
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
-
-      System.out.println();
-      System.out.println("1. Edit LUXURY");
-      System.out.println("2. Edit SUITE");
-      System.out.println("3. Edit STANDARD");
-      System.out.println("4. Clear Every Override");
-      System.out.println("5. Back\n");
-
-      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
-      return (choice == 5) ? 0 : choice;
     }
   }
 
@@ -271,27 +279,33 @@ public class BookingSettingsView {
       String unit,
       String warning) {
 
-    {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
 
-      TableUtil.TableSettings kvSettings = kvSettings();
+        TableUtil.TableSettings kvSettings = kvSettings();
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"SETTING DETAIL"}, spanSettings());
-      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-      printKeyValue(kvSettings, "Setting", title, true);
-      printKeyValue(kvSettings, "Current Value", currentLabel, true);
-      printKeyValue(kvSettings, "Allowed Range", min + " to " + max + " " + unit, true);
-      printKeyValue(kvSettings, "What It Changes", explanation, warning != null);
-      if (warning != null) {
-        printKeyValue(kvSettings, "[!] Live Data Warning", warning, false);
+        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+        TableUtil.printTableRow(new String[] {"SETTING DETAIL"}, spanSettings());
+        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+        printKeyValue(kvSettings, "Setting", title, true);
+        printKeyValue(kvSettings, "Current Value", currentLabel, true);
+        printKeyValue(kvSettings, "Allowed Range", min + " to " + max + " " + unit, true);
+        printKeyValue(kvSettings, "What It Changes", explanation, warning != null);
+        if (warning != null) {
+          printKeyValue(kvSettings, "[!] Live Data Warning", warning, false);
+        }
+
+        System.out.println();
+        System.out.println("Type 'C' to keep the current value\n");
+
+        ConsoleUtil.GetMenuInputResult result =
+            ConsoleUtil.getMenuInput("New value: ", min, max, new char[] {'C'});
+        return result.isNumber ? Integer.valueOf(result.getAsInt()) : null;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
       }
-
-      System.out.println();
-      System.out.println("Press Enter or 'C' to keep the current value\n");
-
-      return ConsoleUtil.getIntegerInput("New value: ", min, max);
     }
   }
 
@@ -303,50 +317,58 @@ public class BookingSettingsView {
       String offLabel,
       String warning) {
 
-    {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
 
-      TableUtil.TableSettings kvSettings = kvSettings();
+        TableUtil.TableSettings kvSettings = kvSettings();
 
-      TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-      TableUtil.printTableRow(new String[] {"SETTING DETAIL"}, spanSettings());
-      TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-      printKeyValue(kvSettings, "Setting", title, true);
-      printKeyValue(kvSettings, "Current Value", currentValue ? onLabel : offLabel, true);
-      printKeyValue(kvSettings, "What It Changes", explanation, warning != null);
-      if (warning != null) {
-        printKeyValue(kvSettings, "[!] Live Data Warning", warning, false);
+        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+        TableUtil.printTableRow(new String[] {"SETTING DETAIL"}, spanSettings());
+        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+        printKeyValue(kvSettings, "Setting", title, true);
+        printKeyValue(kvSettings, "Current Value", currentValue ? onLabel : offLabel, true);
+        printKeyValue(kvSettings, "What It Changes", explanation, warning != null);
+        if (warning != null) {
+          printKeyValue(kvSettings, "[!] Live Data Warning", warning, false);
+        }
+
+        System.out.println();
+        System.out.println("1. " + onLabel);
+        System.out.println("2. " + offLabel);
+        System.out.println("3. Back (keep the current value)\n");
+
+        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+        if (choice == 3) return null;
+        return (choice == 1) ? Boolean.TRUE : Boolean.FALSE;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
       }
-
-      System.out.println();
-      System.out.println("1. " + onLabel);
-      System.out.println("2. " + offLabel);
-      System.out.println("3. Back (keep the current value)\n");
-
-      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
-      if (choice == 3) return null;
-      return (choice == 1) ? Boolean.TRUE : Boolean.FALSE;
     }
   }
 
   public String promptSortSetting(String title, String current, ListInterface<String> options) {
-    {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
-      System.out.println("Current default: [ " + current + " ]\n");
-      System.out.println("A clerk can still change the order for the session with [O] on the");
-      System.out.println("screen itself. This only decides how the screen opens.\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("MODIFY " + title.toUpperCase(), SCREEN_WIDTH);
+        System.out.println("Current default: [ " + current + " ]\n");
+        System.out.println("A clerk can still change the order for the session with [O] on the");
+        System.out.println("screen itself. This only decides how the screen opens.\n");
 
-      int total = options.getNumberOfEntries();
-      for (int i = 1; i <= total; i++) {
-        System.out.println(i + ". " + options.getEntry(i));
+        int total = options.getNumberOfEntries();
+        for (int i = 1; i <= total; i++) {
+          System.out.println(i + ". " + options.getEntry(i));
+        }
+        System.out.println((total + 1) + ". Back (keep the current default)\n");
+
+        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, total + 1).getAsInt();
+        if (choice == total + 1) return null;
+        return options.getEntry(choice);
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
       }
-      System.out.println((total + 1) + ". Back (keep the current default)\n");
-
-      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, total + 1).getAsInt();
-      if (choice == total + 1) return null;
-      return options.getEntry(choice);
     }
   }
 
@@ -391,22 +413,26 @@ public class BookingSettingsView {
   }
 
   public boolean promptResetConfirmation() {
-    {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("RESET BOOKING SETTINGS", SCREEN_WIDTH);
-      printNoticeBox(
-          "STATUS: [!] EVERY BOOKING SETTING WILL BE OVERWRITTEN",
-          "Scope",
-          "Hold rules, queue rules, advance booking rules, desk defaults and every"
-              + " per-room-type override",
-          "This restores the factory values for this module only. Reservations, guests and rooms"
-              + " are not touched, and the live lines are rebuilt afterwards so the restored"
-              + " capacity takes effect straight away.");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("RESET BOOKING SETTINGS", SCREEN_WIDTH);
+        printNoticeBox(
+            "STATUS: [!] EVERY BOOKING SETTING WILL BE OVERWRITTEN",
+            "Scope",
+            "Hold rules, queue rules, advance booking rules, desk defaults and every"
+                + " per-room-type override",
+            "This restores the factory values for this module only. Reservations, guests and rooms"
+                + " are not touched, and the live lines are rebuilt afterwards so the restored"
+                + " capacity takes effect straight away.");
 
-      System.out.println("1. Reset Every Booking Setting To Its Default");
-      System.out.println("2. Leave The Settings Alone\n");
+        System.out.println("1. Reset Every Booking Setting To Its Default");
+        System.out.println("2. Leave The Settings Alone\n");
 
-      return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
+        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -435,23 +461,27 @@ public class BookingSettingsView {
   }
 
   private int numberedMenu(String title, String[] contextLines, String[] options) {
-    {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
 
-      for (String line : contextLines) {
-        System.out.println(line);
+        for (String line : contextLines) {
+          System.out.println(line);
+        }
+        System.out.println();
+
+        for (int i = 0; i < options.length; i++) {
+          System.out.println((i + 1) + ". " + options[i]);
+        }
+        int backOption = options.length + 1;
+        System.out.println(backOption + ". Back\n");
+
+        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, backOption).getAsInt();
+        return (choice == backOption) ? 0 : choice;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
       }
-      System.out.println();
-
-      for (int i = 0; i < options.length; i++) {
-        System.out.println((i + 1) + ". " + options[i]);
-      }
-      int backOption = options.length + 1;
-      System.out.println(backOption + ". Back\n");
-
-      int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, backOption).getAsInt();
-      return (choice == backOption) ? 0 : choice;
     }
   }
 

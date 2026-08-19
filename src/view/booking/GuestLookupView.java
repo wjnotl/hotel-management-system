@@ -23,7 +23,7 @@ public class GuestLookupView {
   public static final int FIELD_BOOKING_CODE = 7;
   public static final int FIELD_ALL = 8;
   public static final int TOGGLE_MATCH_MODE = 9;
-  public static final int REGISTER_NEW_GUEST = 10;
+  public static final int BACK = 0;
 
   public static class GuestRowDTO {
     private final String guestId;
@@ -62,45 +62,52 @@ public class GuestLookupView {
     }
   }
 
-  // Returns one of the FIELD_ constants, TOGGLE_MATCH_MODE, REGISTER_NEW_GUEST, or the back option
-  // which is always the last number on the list.
-  public int displayFieldMenu(String title, String matchMode, boolean offerRegistration) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
+  // Returns one of the FIELD_ constants, TOGGLE_MATCH_MODE, or BACK. The fields fill 1 to 9, so
+  // back is 0 rather than a tenth entry the eye has to hunt for at the bottom of the list.
+  public int displayFieldMenu(String title, String matchMode) {
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
 
-    System.out.println("Pick the field you are searching on, then type the value.");
-    System.out.println("Part of a value is enough while the match mode is CONTAINS.\n");
-    System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
+        System.out.println("Pick the field you are searching on, then type the value.");
+        System.out.println("Part of a value is enough while the match mode is CONTAINS.\n");
+        System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
 
-    System.out.println(" 1. Guest ID");
-    System.out.println(" 2. Full Name");
-    System.out.println(" 3. IC Number");
-    System.out.println(" 4. Passport Number");
-    System.out.println(" 5. Phone Number");
-    System.out.println(" 6. Email Address");
-    System.out.println(" 7. Reservation ID or Confirmation Code");
-    System.out.println(" 8. All Of The Above");
-    System.out.println(
-        " 9. Switch Match Mode To " + ("EXACT".equals(matchMode) ? "CONTAINS" : "EXACT"));
+        System.out.println("1. Guest ID");
+        System.out.println("2. Full Name");
+        System.out.println("3. IC Number");
+        System.out.println("4. Passport Number");
+        System.out.println("5. Phone Number");
+        System.out.println("6. Email Address");
+        System.out.println("7. Reservation ID or Confirmation Code");
+        System.out.println("8. All Of The Above");
+        System.out.println(
+            "9. Switch Match Mode To " + ("EXACT".equals(matchMode) ? "CONTAINS" : "EXACT"));
+        System.out.println("0. Back\n");
 
-    int backOption = offerRegistration ? 11 : 10;
-    if (offerRegistration) {
-      System.out.println("10. Register A New Guest");
+        return ConsoleUtil.getMenuInput("Choose an option: ", 0, 9).getAsInt();
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-    System.out.println(backOption + ". Back\n");
-
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, backOption).getAsInt();
   }
 
   // "E" backs out of the prompt. A blank line is rejected rather than silently treated as a
   // command, so an empty search reports itself instead of doing nothing.
   public String promptSearchTerm(String fieldLabel, String matchMode) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("SEARCH BY " + fieldLabel.toUpperCase(), SCREEN_WIDTH);
-    System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
-    System.out.println("E - Exit back to the field list\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("SEARCH BY " + fieldLabel.toUpperCase(), SCREEN_WIDTH);
+        System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
+        System.out.println("E - Exit back to the field list\n");
 
-    return ConsoleUtil.getStringInput(fieldLabel + ": ");
+        return requireText(fieldLabel + ": ", "Search term cannot be empty! Type 'E' to go back.");
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public GetMenuInputResult displayMatches(
@@ -110,57 +117,66 @@ public class GuestLookupView {
       ListInterface<GuestRowDTO> matches,
       int currentPage,
       int pageSize) {
+    while (true) {
+      try {
 
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("MATCHING GUEST RECORDS", SCREEN_WIDTH);
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("MATCHING GUEST RECORDS", SCREEN_WIDTH);
 
-    System.out.println("FIELD      : [ " + fieldLabel + " ]");
-    System.out.println("TERM       : [ \"" + term + "\" ]");
-    System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
+        System.out.println("FIELD      : [ " + fieldLabel + " ]");
+        System.out.println("TERM       : [ \"" + term + "\" ]");
+        System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
 
-    int total = matches.getNumberOfEntries();
-    int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / pageSize);
+        int total = matches.getNumberOfEntries();
+        int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / pageSize);
 
-    printMatchTable(matches, currentPage, pageSize);
+        printMatchTable(matches, currentPage, pageSize);
 
-    int rowsOnPage = countRowsOnPage(total, currentPage, pageSize);
-    System.out.printf(
-        "%nPage %d / %d (Matches: %d)%n%n", (totalPages == 0) ? 0 : currentPage, totalPages, total);
+        int rowsOnPage = countRowsOnPage(total, currentPage, pageSize);
+        System.out.printf(
+            "%nPage %d / %d (Matches: %d)%n%n",
+            (totalPages == 0) ? 0 : currentPage, totalPages, total);
 
-    System.out.println("[P] Prev Page   [N] Next Page   [S] Search Again   [E] Exit\n");
+        System.out.println("[P] Prev Page   [N] Next Page   [0] Back\n");
 
-    char[] commands = {'P', 'N', 'S', 'E'};
+        char[] commands = {'P', 'N'};
 
-    if (rowsOnPage <= 0) {
-      return ConsoleUtil.getMenuInput("Enter a command: ", commands);
+        if (rowsOnPage <= 0) {
+          return ConsoleUtil.getMenuInput("Enter a command: ", 0, 0, commands);
+        }
+
+        String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
+        return ConsoleUtil.getMenuInput(
+            "Pick the guest (" + range + ") or a command: ", 0, rowsOnPage, commands);
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-
-    String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
-    return ConsoleUtil.getMenuInput(
-        "Pick the guest (" + range + ") or a command: ", 1, rowsOnPage, commands);
   }
 
-  public int displayNotFoundScreen(String fieldLabel, String term, boolean offerRegistration) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("GUEST NOT ON RECORD", SCREEN_WIDTH);
+  // Returns 1 to search again, or BACK. Opening a guest file is not offered here, because the mode
+  // menu at the head of the flow already asked whether this person is new.
+  public int displayNotFoundScreen(String fieldLabel, String term) {
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("GUEST NOT ON RECORD", SCREEN_WIDTH);
 
-    printNoticeBox(
-        "STATUS: [!] NO MATCHING GUEST FILE",
-        "Searched " + fieldLabel,
-        term,
-        "Nothing in the guest register matches this term. A first-time arrival has no file yet,"
-            + " so one can be opened now before they are given a room or a place in line.");
+        printNoticeBox(
+            "STATUS: [!] NO MATCHING GUEST FILE",
+            "Searched " + fieldLabel,
+            term,
+            "Nothing in the guest register matches this term. A first-time arrival has no file yet,"
+                + " so back out to the previous screen and choose New Guest to open one.");
 
-    if (offerRegistration) {
-      System.out.println("1. Register This Person As A New Guest");
-      System.out.println("2. Search Again");
-      System.out.println("3. Back\n");
-      return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+        System.out.println("1. Search Again");
+        System.out.println("0. Back\n");
+
+        return ConsoleUtil.getMenuInput("Choose an option: ", 0, 1).getAsInt();
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-
-    System.out.println("1. Search Again");
-    System.out.println("2. Back\n");
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() + 1;
   }
 
   private void printMatchTable(ListInterface<GuestRowDTO> matches, int page, int pageSize) {
@@ -257,5 +273,15 @@ public class GuestLookupView {
     TableUtil.printTableBorder(
         settings,
         moreRowsFollow ? TableUtil.BorderPosition.MIDDLE : TableUtil.BorderPosition.BOTTOM);
+  }
+
+  // A blank line is rejected here rather than in the controller, so the error redraws this screen
+  // instead of the menu above it.
+  private String requireText(String prompt, String emptyMessage) {
+    String typed = ConsoleUtil.getStringInput(prompt);
+    if (typed == null || typed.trim().isEmpty()) {
+      throw new IllegalArgumentException(emptyMessage);
+    }
+    return typed;
   }
 }

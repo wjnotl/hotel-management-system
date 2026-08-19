@@ -60,8 +60,8 @@ public class GuestRegistrationController {
   }
 
   // Returns the saved guest, or null if the clerk cancelled or walked back out of the form.
-  // The suggestion is whatever was typed at the booking screen, so a clerk who searched by
-  // name does not have to type it a second time.
+  // A suggested name pre-fills the first field; both booking flows open the form from their mode
+  // menu with nothing typed yet, so they pass null.
   public Guest registerNewGuest(String suggestedName) {
     String name = (suggestedName == null) ? "" : suggestedName.trim();
     String icNumber = "";

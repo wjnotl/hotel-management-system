@@ -25,21 +25,19 @@ public class GuestLookupController {
   }
 
   /**
-   * Runs the whole find-or-create loop.
+   * Runs the whole search loop.
    *
-   * @param offerRegistration whether opening a brand new guest file is allowed from here
-   * @return the chosen or newly created guest, or null when the clerk backed out
+   * @return the chosen guest, or null when the clerk backed out
    */
-  public Guest findGuest(String title, boolean offerRegistration) {
+  public Guest findGuest(String title) {
     boolean exactMatch = false;
-    int backOption = offerRegistration ? 11 : 10;
 
     while (true) {
       try {
         String matchMode = exactMatch ? "EXACT" : "CONTAINS";
-        int choice = lookupView.displayFieldMenu(title, matchMode, offerRegistration);
+        int choice = lookupView.displayFieldMenu(title, matchMode);
 
-        if (choice == backOption) {
+        if (choice == GuestLookupView.BACK) {
           return null;
         }
 
@@ -48,13 +46,7 @@ public class GuestLookupController {
           continue;
         }
 
-        if (offerRegistration && choice == GuestLookupView.REGISTER_NEW_GUEST) {
-          Guest created = new GuestRegistrationController(guestRepo).registerNewGuest(null);
-          if (created != null) return created;
-          continue;
-        }
-
-        Guest picked = runSearch(choice, exactMatch, offerRegistration);
+        Guest picked = runSearch(choice, exactMatch);
         if (picked != null) return picked;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -63,16 +55,13 @@ public class GuestLookupController {
   }
 
   // Returns the guest once one is settled on, or null to fall back to the field menu.
-  private Guest runSearch(int field, boolean exactMatch, boolean offerRegistration) {
+  private Guest runSearch(int field, boolean exactMatch) {
     String fieldLabel = labelFor(field);
     String matchMode = exactMatch ? "EXACT" : "CONTAINS";
 
     while (true) {
       String term = lookupView.promptSearchTerm(fieldLabel, matchMode);
 
-      if (term == null || term.trim().isEmpty()) {
-        throw new IllegalArgumentException("Search term cannot be empty!");
-      }
       if ("E".equalsIgnoreCase(term.trim())) {
         return null;
       }
@@ -81,14 +70,8 @@ public class GuestLookupController {
       ListInterface<Guest> matches = search(field, term, exactMatch);
 
       if (matches.isEmpty()) {
-        int choice = lookupView.displayNotFoundScreen(fieldLabel, term, offerRegistration);
-        if (choice == 3) return null;
-
-        if (offerRegistration && choice == 1) {
-          Guest created =
-              new GuestRegistrationController(guestRepo)
-                  .registerNewGuest(nameSuggestionFrom(field, term));
-          if (created != null) return created;
+        if (lookupView.displayNotFoundScreen(fieldLabel, term) == GuestLookupView.BACK) {
+          return null;
         }
         continue;
       }
@@ -114,10 +97,6 @@ public class GuestLookupController {
         ConsoleUtil.GetMenuInputResult result =
             lookupView.displayMatches(fieldLabel, term, matchMode, rows, page, MATCH_PAGE_SIZE);
 
-        if ("E".equalsIgnoreCase(result.input) || "S".equalsIgnoreCase(result.input)) {
-          return null;
-        }
-
         int totalPages = (int) Math.ceil((double) matches.getNumberOfEntries() / MATCH_PAGE_SIZE);
 
         if ("N".equalsIgnoreCase(result.input)) {
@@ -139,6 +118,10 @@ public class GuestLookupController {
         }
 
         if (result.isNumber) {
+          if (result.getAsInt() == GuestLookupView.BACK) {
+            return null;
+          }
+
           // The table renumbers from 1 on every page, so the row read off the screen is an offset
           // into the page and the page origin has to be added back.
           int index = (page - 1) * MATCH_PAGE_SIZE + result.getAsInt();
@@ -227,13 +210,6 @@ public class GuestLookupController {
     if (field == GuestLookupView.FIELD_EMAIL) return "Email Address";
     if (field == GuestLookupView.FIELD_BOOKING_CODE) return "Reservation ID Or Code";
     return "Any Field";
-  }
-
-  // Only a name search can pre-fill the name on the registration form. An ID, a phone number or an
-  // IC typed into the search box is not what the guest is called.
-  private String nameSuggestionFrom(int field, String term) {
-    if (field != GuestLookupView.FIELD_NAME) return null;
-    return term;
   }
 
   private String blankToNa(String value) {
