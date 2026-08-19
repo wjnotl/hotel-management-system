@@ -521,7 +521,8 @@ public class ReportsController {
             vacantClean[t]++;
             break;
           default:
-            // Guard CLEANING / INSPECTED by name — safe if enum is absent on older builds
+            // Guard CLEANING / INSPECTED by name — safe if enum is absent on older
+            // builds
             String sName = r.getStatus().name();
             if ("CLEANING".equals(sName)) cleaning[t]++;
             else if ("INSPECTED".equals(sName)) inspected[t]++;

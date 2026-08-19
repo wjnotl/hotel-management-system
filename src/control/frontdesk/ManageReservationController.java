@@ -27,7 +27,8 @@ public class ManageReservationController {
   private static final int PAGE_SIZE = 10;
   private static final int MIN_EXTENSION_DAYS = 1;
   private static final int MAX_EXTENSION_DAYS = 30;
-  private static final DateTimeFormatter DISPLAY_DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
+  private static final DateTimeFormatter DISPLAY_DATE_FMT =
+      DateTimeFormatter.ofPattern("dd MMM yyyy");
 
   private final ManageReservationView view = new ManageReservationView();
   private final GuestRepo guestRepo;
@@ -233,8 +234,8 @@ public class ManageReservationController {
     if (billing.getStatus() == Billing.Status.PAID) {
       boolean confirm =
           ConsoleUtil.showConfirmMessage(
-              "This stay has already been marked as PAID. Extending will reset payment to UNPAID"
-                  + " as the total amount has changed. Continue?");
+              "This stay has already been marked as PAID. Extending will reset"
+                  + " payment to UNPAID as the total amount has changed. Continue?");
       if (!confirm) return;
     }
 
@@ -253,7 +254,11 @@ public class ManageReservationController {
 
     if (extraDays < MIN_EXTENSION_DAYS || extraDays > MAX_EXTENSION_DAYS) {
       ConsoleUtil.printError(
-          "Please enter a value between " + MIN_EXTENSION_DAYS + " and " + MAX_EXTENSION_DAYS + ".");
+          "Please enter a value between "
+              + MIN_EXTENSION_DAYS
+              + " and "
+              + MAX_EXTENSION_DAYS
+              + ".");
       return;
     }
 
@@ -645,7 +650,8 @@ public class ManageReservationController {
       Room room = roomRepo.findByRoomNumber(res.getRoomNumber());
       dtoBuffer.add(
           buildDTO(
-              res.getReservationId(), // use resId as billingId placeholder — no billing yet
+              res.getReservationId(), // use resId as billingId placeholder — no
+              // billing yet
               res.getGuestId(),
               guest,
               res.getRoomNumber(),
@@ -710,7 +716,8 @@ public class ManageReservationController {
     if (billing != null && billing.getCheckOutDate() != null) {
       checkOut = billing.getCheckOutDate().format(DISPLAY_DATE_FMT);
     } else if (res != null && res.getAllocatedTime() != null && res.getStayDays() != null) {
-      checkOut = res.getAllocatedTime().toLocalDate().plusDays(res.getStayDays()).format(DISPLAY_DATE_FMT);
+      checkOut =
+          res.getAllocatedTime().toLocalDate().plusDays(res.getStayDays()).format(DISPLAY_DATE_FMT);
     }
 
     String payment;

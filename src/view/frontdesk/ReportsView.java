@@ -468,7 +468,8 @@ public class ReportsView {
 
     // ── SECTION 2: REVENUE ───────────────────────────────────────────────
     System.out.println(
-        "─────────────── SECTION 2 : REVENUE BREAKDOWN  (PAID STAYS IN PERIOD) ───────────────");
+        "─────────────── SECTION 2 : REVENUE BREAKDOWN  (PAID STAYS IN PERIOD)"
+            + " ───────────────");
     System.out.println();
 
     int revTotal = (revenueRows == null) ? 0 : revenueRows.getNumberOfEntries();

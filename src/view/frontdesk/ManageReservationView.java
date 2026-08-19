@@ -56,7 +56,7 @@ public class ManageReservationView {
     }
   }
 
-  //manage reservation list
+  // manage reservation list
   public GetMenuInputResult renderReservationScreen(
       ArrayList<ReservationRowDTO> list,
       String searchQuery,
