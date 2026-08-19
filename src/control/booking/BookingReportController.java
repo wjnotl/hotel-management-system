@@ -84,10 +84,10 @@ public class BookingReportController {
           return;
         }
 
-        if (choice == ROOM_UTILISATION) {
-          runUtilisationReport();
-        } else {
+        if (choice == ARRIVAL_REGISTER || choice == QUEUE_PERFORMANCE) {
           runReportPipeline(choice);
+        } else if (choice == ROOM_UTILISATION) {
+          runUtilisationReport();
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -247,10 +247,6 @@ public class BookingReportController {
         if (picked > 0) scope.searchField = fieldNameFor(picked);
       } else if (choice == 2) {
         String typed = reportView.promptSearchTerm(scope.searchField, scope.searchTerm);
-        if (typed == null || typed.trim().isEmpty()) {
-          throw new IllegalArgumentException(
-              "Search term cannot be empty! Type '-' to clear it or 'E' to go back.");
-        }
         if (!"E".equalsIgnoreCase(typed.trim())) {
           scope.searchTerm = "-".equals(typed.trim()) ? null : typed.trim();
         }
@@ -885,12 +881,16 @@ public class BookingReportController {
 
           if ("B".equalsIgnoreCase(result.input)) return;
         } else if ("1".equals(command)) {
-          String typedStart = reportView.promptStartDate(startDate.format(DATE_FORMAT));
-          if (typedStart == null || typedStart.trim().isEmpty()) {
-            throw new IllegalArgumentException("Start date cannot be empty! Type 'E' to go back.");
-          }
-          if (!"E".equalsIgnoreCase(typedStart.trim())) {
-            startDate = parseDate(typedStart.trim());
+          while (true) {
+            try {
+              String typedStart = reportView.promptStartDate(startDate.format(DATE_FORMAT));
+              if (!"E".equalsIgnoreCase(typedStart.trim())) {
+                startDate = parseDate(typedStart.trim());
+              }
+              break;
+            } catch (IllegalArgumentException e) {
+              ConsoleUtil.printError(e.getMessage());
+            }
           }
         } else if ("2".equals(command)) {
           Integer picked = reportView.promptHorizon(horizonDays);
@@ -1050,7 +1050,8 @@ public class BookingReportController {
   // Pads every column to the widest value it holds so the file lines up in a plain text editor.
   private String buildTxtTable(String[] headers, String[][] rows) {
     final String gap = "   ";
-    int columnCount = (headers == null) ? 0 : headers.length;
+    if (headers == null) return "";
+    int columnCount = headers.length;
     int[] widths = new int[columnCount];
 
     for (int c = 0; c < columnCount; c++) {

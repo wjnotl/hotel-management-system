@@ -13,6 +13,7 @@ public class BookingSettingsView {
   private static final int[] KV_WIDTHS = {34, 56};
   private static final int[] TYPE_WIDTHS = {4, 10, 21, 21, 25};
   private static final int SCREEN_WIDTH = 83;
+  private static final String BLANK_INPUT = "Input cannot be empty!";
 
   public int displayMasterSettingsMenu(BookingSettings config) {
     while (true) {
@@ -304,7 +305,7 @@ public class BookingSettingsView {
             ConsoleUtil.getMenuInput("New value: ", min, max, new char[] {'C'});
         return result.isNumber ? Integer.valueOf(result.getAsInt()) : null;
       } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
       }
     }
   }
