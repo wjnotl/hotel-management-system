@@ -768,11 +768,22 @@ public class DatabaseSeeder {
               "010-2244668",
               null,
               2);
+      Guest g11 =
+          new Guest(
+              "G-111",
+              "John Doe",
+              "000118-10-2367",
+              "K12459876",
+              "john@mail.com",
+              "010-2244668",
+              null,
+              0);
 
       guestRepo.addGuest(g7);
       guestRepo.addGuest(g8);
       guestRepo.addGuest(g9);
       guestRepo.addGuest(g10);
+      guestRepo.addGuest(g11);
 
       // ==========================================
       // 9. SEED STANDARD RESERVATIONS (3 FIFO QUEUES)

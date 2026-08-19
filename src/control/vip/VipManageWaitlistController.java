@@ -247,10 +247,43 @@ public class VipManageWaitlistController {
   }
 
   private Guest promptGuestDisambiguation(ListInterface<Guest> matches, String searchId) {
+    if (matches == null || matches.isEmpty()) return null;
+
+    int pageSize = 10;
+    int totalMatches = matches.getNumberOfEntries();
+    int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
+    int currentPage = 1;
+
     while (true) {
       try {
-        return waitlistView.displayGuestDisambiguationScreen(
-            matches, memberRepo.getMemberList(), searchId);
+        ConsoleUtil.GetMenuInputResult input =
+            waitlistView.displayGuestDisambiguationScreen(
+                matches, memberRepo.getMemberList(), searchId, currentPage, pageSize);
+
+        if (input == null) return null;
+
+        if (!input.isNumber) {
+          char cmd = input.input.toUpperCase().charAt(0);
+          if (cmd == 'P') {
+            if (currentPage > 1) {
+              currentPage--;
+            } else {
+              ConsoleUtil.printError("Already on the first page!");
+            }
+          } else if (cmd == 'N') {
+            if (currentPage < totalPages) {
+              currentPage++;
+            } else {
+              ConsoleUtil.printError("Already on the last page!");
+            }
+          } else if (cmd == 'C') {
+            return null;
+          }
+        } else {
+          int startIndex = (currentPage - 1) * pageSize + 1;
+          int rowIdx = input.getAsInt();
+          return matches.getEntry(startIndex + rowIdx - 1);
+        }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
