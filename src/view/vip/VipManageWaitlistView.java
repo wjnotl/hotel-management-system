@@ -815,14 +815,16 @@ public class VipManageWaitlistView {
     return dateTime.format(formatter);
   }
 
-  public Guest displayGuestDisambiguationScreen(
-      ListInterface<Guest> matches, ListInterface<Member> memberList, String searchQuery) {
+  public GetMenuInputResult displayGuestDisambiguationScreen(
+      ListInterface<Guest> matches,
+      ListInterface<Member> memberList,
+      String searchQuery,
+      int currentPage,
+      int pageSize) {
     if (matches == null || matches.isEmpty()) return null;
 
-    int pageSize = 10;
     int totalMatches = matches.getNumberOfEntries();
     int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
-    int currentPage = 1;
 
     int[] columnWidths = {4, 10, 18, 18, 14, 18};
 
@@ -844,105 +846,76 @@ public class VipManageWaitlistView {
             .setHAlign(5, TableUtil.Align.CENTER)
             .setTruncate(2);
 
-    while (true) {
-      ConsoleUtil.clearScreen();
-      ConsoleUtil.printTitleBox("MULTIPLE GUEST MATCHES FOUND");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("MULTIPLE GUEST MATCHES FOUND");
 
-      System.out.println("Search Term: \"" + searchQuery + "\"");
-      if (totalMatches > pageSize) {
-        System.out.println(
-            "(Tip: If there are too many results, enter a more specific search query)");
-      }
-      System.out.println();
+    System.out.println("Search Term: \"" + searchQuery + "\"");
+    if (totalMatches > pageSize) {
+      System.out.println(
+          "(Tip: If there are too many results, enter a more specific search query)");
+    }
+    System.out.println();
 
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {
+          "NO.", "GUEST ID", "GUEST NAME", "IC / PASSPORT NO.", "PHONE NO.", "MEMBER TIER"
+        },
+        headerSettings);
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+    int rowsOnPage = endIndex - startIndex + 1;
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      Guest g = matches.getEntry(i);
+      if (g == null) continue;
+
+      Member m = (g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
+      String icOrPass =
+          (g.getIcNumber() != null && !g.getIcNumber().isEmpty())
+              ? g.getIcNumber()
+              : (g.getPassportNumber() != null ? g.getPassportNumber() : "N/A");
+      String phone = (g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
+      String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+
+      int displayNum = i - startIndex + 1;
       TableUtil.printTableRow(
           new String[] {
-            "NO.", "GUEST ID", "GUEST NAME", "IC / PASSPORT NO.", "PHONE NO.", "MEMBER TIER"
+            String.valueOf(displayNum), g.getGuestId(), g.getName(), icOrPass, phone, tierStr
           },
-          headerSettings);
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-      int startIndex = (currentPage - 1) * pageSize + 1;
-      int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
-      int rowsOnPage = endIndex - startIndex + 1;
-
-      for (int i = startIndex; i <= endIndex; i++) {
-        Guest g = matches.getEntry(i);
-        if (g == null) continue;
-
-        Member m = (g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
-        String icOrPass =
-            (g.getIcNumber() != null && !g.getIcNumber().isEmpty())
-                ? g.getIcNumber()
-                : (g.getPassportNumber() != null ? g.getPassportNumber() : "N/A");
-        String phone = (g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
-        String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
-
-        int displayNum = i - startIndex + 1;
-        TableUtil.printTableRow(
-            new String[] {
-              String.valueOf(displayNum), g.getGuestId(), g.getName(), icOrPass, phone, tierStr
-            },
-            settings);
-      }
-
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
-      System.out.printf(
-          "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, totalMatches);
-
-      StringBuilder navLine = new StringBuilder();
-      ArrayList<Character> validList = new ArrayList<>();
-      validList.add('C');
-
-      if (currentPage > 1) {
-        navLine.append("[P] Previous Page    ");
-        validList.add('P');
-      }
-      if (currentPage < totalPages) {
-        navLine.append("[N] Next Page        ");
-        validList.add('N');
-      }
-      navLine.append("[C] Cancel / Refine Search");
-      System.out.println(navLine.toString());
-      System.out.println();
-
-      char[] validChars = new char[validList.getNumberOfEntries()];
-      for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
-        validChars[i - 1] = validList.getEntry(i);
-      }
-
-      try {
-        String rangeStr = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
-        GetMenuInputResult input =
-            ConsoleUtil.getMenuInput(
-                "Select guest index (" + rangeStr + ") or command: ", 1, rowsOnPage, validChars);
-
-        if (!input.isNumber) {
-          char cmd = input.input.toUpperCase().charAt(0);
-          if (cmd == 'P') {
-            if (currentPage > 1) {
-              currentPage--;
-            } else {
-              ConsoleUtil.printError("Already on the first page!");
-            }
-          } else if (cmd == 'N') {
-            if (currentPage < totalPages) {
-              currentPage++;
-            } else {
-              ConsoleUtil.printError("Already on the last page!");
-            }
-          } else if (cmd == 'C') {
-            return null;
-          }
-        } else {
-          int rowIdx = input.getAsInt();
-          return matches.getEntry(startIndex + rowIdx - 1);
-        }
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
+          settings);
     }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    System.out.printf(
+        "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, totalMatches);
+
+    StringBuilder navLine = new StringBuilder();
+    ArrayList<Character> validList = new ArrayList<>();
+    validList.add('C');
+
+    if (currentPage > 1) {
+      navLine.append("[P] Previous Page    ");
+      validList.add('P');
+    }
+    if (currentPage < totalPages) {
+      navLine.append("[N] Next Page        ");
+      validList.add('N');
+    }
+    navLine.append("[C] Cancel / Refine Search");
+    System.out.println(navLine.toString());
+    System.out.println();
+
+    char[] validChars = new char[validList.getNumberOfEntries()];
+    for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
+      validChars[i - 1] = validList.getEntry(i);
+    }
+
+    String rangeStr = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
+    String promptText = "Select guest index (" + rangeStr + ") or command: ";
+    return ConsoleUtil.getMenuInput(promptText, 1, rowsOnPage, validChars);
   }
 
   private Member findMember(ListInterface<Member> memberList, String memberId) {

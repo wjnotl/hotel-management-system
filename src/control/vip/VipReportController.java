@@ -143,31 +143,37 @@ public class VipReportController {
         String sortStr = state.sortAttribute + " (" + state.sortDirection + ")";
         GetMenuInputResult result;
 
+        reportView.displayReportTitleHeader(
+            (reportType == 1)
+                ? "REPORT 1: WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT"
+                : (reportType == 2)
+                    ? "REPORT 2: VIP PENALTY & EVICTION AUDIT REPORT"
+                    : "REPORT 3: ROOM HOLDING BAY & GRACE WINDOW AUDIT");
+
         ConsoleUtil.clearBuffer();
         ConsoleUtil.startRecording();
 
         if (reportType == 1) {
           VipReportView.SlaReportDTO dto = buildSlaReportDTO(filteredList, state.recordLimit);
-          result = reportView.renderSlaReportScreen(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderSlaReportBody(dto, scopeStr, sortStr, state.recordLimit);
         } else if (reportType == 2) {
           VipReportView.PenaltyReportDTO dto =
               buildPenaltyReportDTO(filteredList, state.recordLimit);
-          result = reportView.renderPenaltyReportScreen(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderPenaltyReportBody(dto, scopeStr, sortStr, state.recordLimit);
         } else {
           VipReportView.HoldingReportDTO dto =
               buildHoldingReportDTO(filteredList, state.recordLimit);
-          result = reportView.renderHoldingReportScreen(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderHoldingReportBody(dto, scopeStr, sortStr, state.recordLimit);
         }
 
-        if (result == null) {
-          continue;
-        }
-
+        ConsoleUtil.stopRecording();
         String capturedReportText = ConsoleUtil.getCapturedString();
+
+        result = reportView.promptReportActionMenu();
 
         if ("Q".equalsIgnoreCase(result.input)) {
           return;
-        } else if ("S".equalsIgnoreCase(result.input)) {
+        } else if ("B".equalsIgnoreCase(result.input)) {
           boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
           if (!generateSelected) {
             return;
