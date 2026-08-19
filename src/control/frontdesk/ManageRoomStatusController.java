@@ -502,14 +502,18 @@ public class ManageRoomStatusController {
         confNum = (linked.getConfirmationNumber() != null) ? linked.getConfirmationNumber() : "N/A";
       }
 
+      String resId =
+          (linked != null && linked.getReservationId() != null) ? linked.getReservationId() : null;
+
       dtoBuffer.add(
           new ManageRoomStatusView.RoomRowDTO(
               r.getRoomNumber(),
               r.getRoomType().name(),
-              r.getStatus().name(),
+              r.getIsOccupied() ? "OCCUPIED" : r.getStatus().name(),
               String.format("%.2f", r.getPrice()),
               guestName,
-              confNum));
+              confNum,
+              resId));
     }
 
     // Transfer LinkedList → ArrayList for index-based paging

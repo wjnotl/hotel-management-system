@@ -546,6 +546,47 @@ public class ManageReservationController {
               stayStatus));
     }
 
+    // TERTIARY: CHECKED_IN / ALLOCATED reservations with no billing record yet.
+    // These fall through both passes above and would never appear in the table.
+    // Collect reservation IDs already represented in the buffer first.
+    LinkedList<String> addedResIds = new LinkedList<>();
+    for (int i = 1; i <= dtoBuffer.getNumberOfEntries(); i++) {
+      ManageReservationView.ReservationRowDTO d = dtoBuffer.getEntry(i);
+      if (d != null && d.reservationId != null && !"N/A".equalsIgnoreCase(d.reservationId)) {
+        addedResIds.add(d.reservationId);
+      }
+    }
+
+    for (int i = 1; i <= allReservations.getNumberOfEntries(); i++) {
+      Reservation res = allReservations.getEntry(i);
+      if (res == null || res.getRoomNumber() == null) continue;
+      if (res.getStatus() != Reservation.Status.CHECKED_IN
+          && res.getStatus() != Reservation.Status.ALLOCATED) continue;
+
+      // Skip if this reservation is already represented
+      boolean seen = false;
+      for (int k = 1; k <= addedResIds.getNumberOfEntries(); k++) {
+        if (res.getReservationId().equalsIgnoreCase(addedResIds.getEntry(k))) {
+          seen = true;
+          break;
+        }
+      }
+      if (seen) continue;
+
+      Guest guest = guestRepo.findById(res.getGuestId());
+      Room room = roomRepo.findByRoomNumber(res.getRoomNumber());
+      dtoBuffer.add(
+          buildDTO(
+              res.getReservationId(), // use resId as billingId placeholder — no billing yet
+              res.getGuestId(),
+              guest,
+              res.getRoomNumber(),
+              room != null ? room.getRoomType() : null,
+              res,
+              null, // no billing record
+              "CHECKED_IN"));
+    }
+
     ArrayList<ManageReservationView.ReservationRowDTO> result = new ArrayList<>();
     for (int i = 1; i <= dtoBuffer.getNumberOfEntries(); i++) result.add(dtoBuffer.getEntry(i));
     return result;

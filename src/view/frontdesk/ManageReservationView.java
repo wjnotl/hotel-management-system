@@ -75,7 +75,7 @@ public class ManageReservationView {
       int pageSize) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("MANAGE RESERVATION", 110);
+    ConsoleUtil.printTitleBox("MANAGE RESERVATION", 135);
 
     System.out.println(
         "SEARCH FILTER   : [ "
@@ -95,7 +95,7 @@ public class ManageReservationView {
     int total = (list == null) ? 0 : list.getNumberOfEntries();
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
-    int[] colWidths = {4, 10, 10, 18, 8, 9, 12, 12, 9, 12};
+    int[] colWidths = {4, 10, 10, 18, 8, 9, 12, 12, 9, 13};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(colWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
@@ -121,7 +121,7 @@ public class ManageReservationView {
     if (total == 0 || list == null) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {111}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {132}).setHAlign(0, TableUtil.Align.CENTER);
       boolean hasFilters =
           searchQuery != null
               || roomTypeFilter != null
@@ -193,7 +193,7 @@ public class ManageReservationView {
     System.out.println(
         "Payment Status : [ " + (paymentStatus == null ? "ALL" : paymentStatus) + " ]");
     System.out.println("Stay Status    : [ " + (stayStatus == null ? "ALL" : stayStatus) + " ]\n");
-    System.out.println("1. Set Search Query  (Guest ID / Name / Room No. / Res. ID / Confirm No.)");
+    System.out.println("1. Search)");
     System.out.println("2. Filter by Room Type");
     System.out.println("3. Filter by Payment Status");
     System.out.println("4. Filter by Stay Status");
@@ -221,8 +221,9 @@ public class ManageReservationView {
             + (current == null || current.isEmpty() ? "None" : "\"" + current + "\"")
             + " ]");
     System.out.println();
-    System.out.println("Search by: Guest ID, Guest Name, Room No., Res. ID, or Confirmation No.");
-    System.out.println("Leave blank to clear. Enter C to cancel.\n");
+    System.out.println(
+        "Can Search by Guest ID, Guest Name, Room No., Res. ID, or Confirmation No.");
+    System.out.println("Press Enter to clear/ C to cancel.\n");
     String input = ConsoleUtil.getStringInput("Search: ");
     if (input == null || "C".equalsIgnoreCase(input.trim())) return current;
     return input.trim().isEmpty() ? null : input.trim();
@@ -427,14 +428,12 @@ public class ManageReservationView {
     printKvRow("Payment Status", billing != null ? billing.getStatus().name() : "N/A", kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
-    System.out.println("\n-- Payment Processing --");
     System.out.println("1. Calculate Room Charges");
     System.out.println("2. Record Payment");
     System.out.println("3. Print Receipt");
-    System.out.println("\n-- Stay Management --");
     System.out.println("4. Stay Extension");
     System.out.println("5. Complete Check-Out");
-    System.out.println("\n6. Back to Reservation List\n");
+    System.out.println("6. Back to Reservation List\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
   }

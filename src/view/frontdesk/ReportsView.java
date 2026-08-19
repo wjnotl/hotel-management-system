@@ -2,7 +2,6 @@ package view.frontdesk;
 
 import adt.ArrayList;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import util.ConsoleUtil;
@@ -14,7 +13,6 @@ public class ReportsView {
   private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
   private static final DateTimeFormatter INPUT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-  // Retained between filter menu calls so the controller can read them back
   private String lastPaymentFilter = null;
   private String lastRoomTypeFilter = null;
 
@@ -35,22 +33,15 @@ public class ReportsView {
   }
 
   // =========================================================================
-  // DTOs — all data pre-computed in controller; view just formats strings
+  // DTOs
   // =========================================================================
 
   public static class CheckoutRowDTO {
-    public final String billingId;
-    public final String guestId;
-    public final String guestName;
-    public final String roomNumber;
-    public final String roomType;
-    public final String checkInDate;
-    public final String checkOutDate;
-    public final LocalDate checkInDateRaw;
-    public final LocalDate checkOutDateRaw;
+    public final String billingId, guestId, guestName, roomNumber, roomType;
+    public final String checkInDate, checkOutDate, paymentStatus;
+    public final LocalDate checkInDateRaw, checkOutDateRaw;
     public final long nights;
     public final double totalAmount;
-    public final String paymentStatus;
 
     public CheckoutRowDTO(
         String billingId,
@@ -81,15 +72,9 @@ public class ReportsView {
   }
 
   public static class CheckoutSummaryDTO {
-    public final int totalCheckouts;
-    public final int paidCount;
-    public final int unpaidCount;
-    public final double totalRevenue;
-    public final double luxuryRevenue;
-    public final double suiteRevenue;
-    public final double standardRevenue;
-    public final String generatedAt;
-    public final String period;
+    public final int totalCheckouts, paidCount, unpaidCount;
+    public final double totalRevenue, luxuryRevenue, suiteRevenue, standardRevenue;
+    public final String generatedAt, period;
 
     public CheckoutSummaryDTO(
         int totalCheckouts,
@@ -114,9 +99,8 @@ public class ReportsView {
   }
 
   public static class OccupancyRowDTO {
-    public final String roomType;
+    public final String roomType, occupancyRate;
     public final int dirty, cleaning, inspected, vacantClean, occupied, total;
-    public final String occupancyRate;
 
     public OccupancyRowDTO(
         String roomType,
@@ -140,8 +124,7 @@ public class ReportsView {
 
   public static class OccupancySummaryDTO {
     public final int totalRooms, totalOccupied, totalDirty, totalVacantClean;
-    public final String overallOccupancyRate;
-    public final String generatedAt;
+    public final String overallOccupancyRate, generatedAt;
 
     public OccupancySummaryDTO(
         int totalRooms,
@@ -193,10 +176,9 @@ public class ReportsView {
   }
 
   public static class StaySummaryDTO {
-    public final int totalStays;
+    public final int totalStays, oneNight, twoThreeNights, fourSevenNights, eightPlusNights;
     public final double avgNights;
     public final long shortestNights, longestNights;
-    public final int oneNight, twoThreeNights, fourSevenNights, eightPlusNights;
     public final String generatedAt;
 
     public StaySummaryDTO(
@@ -256,16 +238,11 @@ public class ReportsView {
   public int displayReportHubMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("FRONT-DESK REPORT HUB", 60);
-    System.out.println(
-        "  Generated : "
-            + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy  hh:mm a"))
-            + "\n");
     System.out.println("1. Guest Check-Out Report");
-    System.out.println("2. Room Occupancy & Status Report");
+    System.out.println("2. Room Performance & Revenue Report");
     System.out.println("3. Guest Stay Duration Analysis");
-    System.out.println("4. Revenue Summary Report");
-    System.out.println("5. Back to Front-Desk Menu\n");
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    System.out.println("4. Back to Front-Desk Menu\n");
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   // =========================================================================
@@ -286,8 +263,9 @@ public class ReportsView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST CHECK-OUT REPORT", 104);
 
-    System.out.println("  Generated : " + summary.generatedAt);
-    System.out.println("  Period    : " + summary.period);
+    ConsoleUtil.clearBuffer();
+    ConsoleUtil.startRecording();
+
     System.out.println();
     System.out.println("DATE RANGE      : [ FROM " + fmt(fromDate) + "  TO  " + fmt(toDate) + " ]");
     System.out.println(
@@ -295,19 +273,6 @@ public class ReportsView {
     System.out.println(
         "ROOM TYPE       : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
     System.out.println("SORT CRITERIA   : [ " + sortCriteria + " ]");
-    System.out.println();
-
-    // Summary panel
-    printSummaryPanel(
-        new String[][] {
-          {"Total Check-outs", String.valueOf(summary.totalCheckouts)},
-          {"Paid", String.valueOf(summary.paidCount)},
-          {"Unpaid", String.valueOf(summary.unpaidCount)},
-          {"Total Revenue", "RM " + String.format("%.2f", summary.totalRevenue)},
-          {"Luxury Rev.", "RM " + String.format("%.2f", summary.luxuryRevenue)},
-          {"Suite Rev.", "RM " + String.format("%.2f", summary.suiteRevenue)},
-          {"Standard Rev.", "RM " + String.format("%.2f", summary.standardRevenue)},
-        });
     System.out.println();
 
     int total = (list == null) ? 0 : list.getNumberOfEntries();
@@ -339,11 +304,30 @@ public class ReportsView {
     if (total == 0 || list == null) {
       printEmptyTable(
           settings,
-          107,
+          134,
           (fromDate != null || paymentFilter != null || roomTypeFilter != null)
               ? "*** NO CHECK-OUTS MATCH ACTIVE FILTERS ***"
               : "*** NO CHECK-OUT RECORDS FOUND ***");
       System.out.println("\nPage 0 / 0 (Total: 0)\n");
+      System.out.println(
+          "Total Check-outs : "
+              + summary.totalCheckouts
+              + "   |   Paid : "
+              + summary.paidCount
+              + "   |   Unpaid : "
+              + summary.unpaidCount);
+      System.out.println(
+          "Total Revenue    : RM "
+              + String.format("%.2f", summary.totalRevenue)
+              + "   (Luxury: RM "
+              + String.format("%.2f", summary.luxuryRevenue)
+              + "  |  Suite: RM "
+              + String.format("%.2f", summary.suiteRevenue)
+              + "  |  Standard: RM "
+              + String.format("%.2f", summary.standardRevenue)
+              + ")");
+      System.out.println();
+      ConsoleUtil.stopRecording();
       System.out.println("[S] Filter & Sort     [R] Refresh     [X] Export     [E] Back\n");
       return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'X', 'E'});
     }
@@ -351,14 +335,12 @@ public class ReportsView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
     int startIndex = (currentPage - 1) * pageSize + 1;
     int endIndex = Math.min(startIndex + pageSize - 1, total);
-
     for (int i = startIndex; i <= endIndex; i++) {
       CheckoutRowDTO dto = list.getEntry(i);
       if (dto == null) continue;
-      int displayNum = i - startIndex + 1;
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum),
+            String.valueOf(i - startIndex + 1),
             dto.guestId,
             dto.guestName,
             dto.roomNumber,
@@ -373,7 +355,28 @@ public class ReportsView {
     }
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
 
+    System.out.println();
+    System.out.println(
+        "Total Check-outs : "
+            + summary.totalCheckouts
+            + "   |   Paid : "
+            + summary.paidCount
+            + "   |   Unpaid : "
+            + summary.unpaidCount);
+    System.out.println(
+        "Total Revenue    : RM "
+            + String.format("%.2f", summary.totalRevenue)
+            + "   (Luxury: RM "
+            + String.format("%.2f", summary.luxuryRevenue)
+            + "  |  Suite: RM "
+            + String.format("%.2f", summary.suiteRevenue)
+            + "  |  Standard: RM "
+            + String.format("%.2f", summary.standardRevenue)
+            + ")");
     System.out.printf("\nPage %d / %d (Total: %d)\n\n", currentPage, totalPages, total);
+
+    ConsoleUtil.stopRecording();
+
     System.out.println("[S] Filter & Sort     [O] Change Sort     [R] Refresh");
     System.out.println("[P] Prev Page         [N] Next Page       [X] Export     [E] Back\n");
     return ConsoleUtil.getMenuInput(
@@ -381,105 +384,172 @@ public class ReportsView {
   }
 
   // =========================================================================
-  // REPORT 2 — ROOM OCCUPANCY & STATUS REPORT
+  // REPORT 2 — ROOM PERFORMANCE & REVENUE REPORT
   // =========================================================================
 
-  public GetMenuInputResult renderOccupancyReport(
-      ArrayList<OccupancyRowDTO> rows, OccupancySummaryDTO summary, String roomTypeFilter) {
+  public GetMenuInputResult renderRoomPerformanceReport(
+      ArrayList<OccupancyRowDTO> occupancyRows,
+      OccupancySummaryDTO occupancySummary,
+      ArrayList<CheckoutRowDTO> revenueRows,
+      RevenueSummaryDTO revenueSummary,
+      LocalDate fromDate,
+      LocalDate toDate,
+      String roomTypeFilter,
+      String sortCriteria) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("ROOM OCCUPANCY & STATUS REPORT", 84);
+    ConsoleUtil.printTitleBox("ROOM PERFORMANCE & REVENUE REPORT", 104);
 
-    System.out.println("  Generated : " + summary.generatedAt);
+    ConsoleUtil.clearBuffer();
+    ConsoleUtil.startRecording();
+
+    System.out.println();
+    System.out.println("DATE RANGE    : [ FROM " + fmt(fromDate) + "  TO  " + fmt(toDate) + " ]");
     System.out.println(
-        "  ROOM TYPE : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
+        "ROOM TYPE     : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
+    System.out.println("SORT CRITERIA : [ " + sortCriteria + " ]");
     System.out.println();
 
-    int total = (rows == null) ? 0 : rows.getNumberOfEntries();
+    // ── SECTION 1: OCCUPANCY ─────────────────────────────────────────────
+    System.out.println(
+        "──────────────────── SECTION 1 : CURRENT OCCUPANCY SNAPSHOT ────────────────────");
+    System.out.println();
 
-    // Main breakdown table
-    int[] colWidths = {12, 7, 10, 11, 14, 10, 7, 7};
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(colWidths)
+    int occTotal = (occupancyRows == null) ? 0 : occupancyRows.getNumberOfEntries();
+    int[] occWidths = {12, 10, 14, 7, 7, 7};
+    TableUtil.TableSettings occSettings =
+        new TableUtil.TableSettings(occWidths)
             .setHAlign(0, TableUtil.Align.LEFT)
             .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
             .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER)
-            .setHAlign(7, TableUtil.Align.CENTER);
+            .setHAlign(5, TableUtil.Align.CENTER);
 
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {
-          "ROOM TYPE",
-          "DIRTY",
-          "CLEANING",
-          "INSPECTED",
-          "VACANT_CLEAN",
-          "OCCUPIED",
-          "TOTAL",
-          "OCC %"
-        },
-        settings);
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+        new String[] {"ROOM TYPE", "OCCUPIED", "VACANT_CLEAN", "DIRTY", "TOTAL", "OCC %"},
+        occSettings);
+    TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.HEADER_CLOSE);
 
-    if (total == 0 || rows == null) {
-      TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {81}).setHAlign(0, TableUtil.Align.CENTER);
-      TableUtil.printTableRow(new String[] {"*** NO ROOM DATA FOUND ***"}, emptySettings);
-      TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+    if (occTotal == 0 || occupancyRows == null) {
+      TableUtil.TableSettings es =
+          new TableUtil.TableSettings(new int[] {72}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.printTableRow(new String[] {"*** NO ROOM DATA ***"}, es);
+      TableUtil.printTableBorder(es, TableUtil.BorderPosition.PLAIN_BOTTOM);
     } else {
-      for (int i = 1; i <= total; i++) {
-        OccupancyRowDTO r = rows.getEntry(i);
+      for (int i = 1; i <= occTotal; i++) {
+        OccupancyRowDTO r = occupancyRows.getEntry(i);
         if (r == null) continue;
         TableUtil.printTableRow(
             new String[] {
               r.roomType,
-              String.valueOf(r.dirty),
-              String.valueOf(r.cleaning),
-              String.valueOf(r.inspected),
-              String.valueOf(r.vacantClean),
               String.valueOf(r.occupied),
+              String.valueOf(r.vacantClean),
+              String.valueOf(r.dirty),
               String.valueOf(r.total),
               r.occupancyRate
             },
-            settings);
-        if (i < total) TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+            occSettings);
+        if (i < occTotal) TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.MIDDLE);
       }
-      // Grand total row
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+      TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.MIDDLE);
       TableUtil.printTableRow(
           new String[] {
             "TOTAL",
-            String.valueOf(sumDirty(rows)),
-            String.valueOf(sumCleaning(rows)),
-            String.valueOf(sumInspected(rows)),
-            String.valueOf(sumVacant(rows)),
-            String.valueOf(summary.totalOccupied),
-            String.valueOf(summary.totalRooms),
-            summary.overallOccupancyRate
+            String.valueOf(occupancySummary.totalOccupied),
+            String.valueOf(occupancySummary.totalVacantClean),
+            String.valueOf(occupancySummary.totalDirty),
+            String.valueOf(occupancySummary.totalRooms),
+            occupancySummary.overallOccupancyRate
           },
-          settings);
-      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+          occSettings);
+      TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.BOTTOM);
+    }
+    System.out.println();
+
+    // ── SECTION 2: REVENUE ───────────────────────────────────────────────
+    System.out.println(
+        "─────────────── SECTION 2 : REVENUE BREAKDOWN  (PAID STAYS IN PERIOD) ───────────────");
+    System.out.println();
+
+    int revTotal = (revenueRows == null) ? 0 : revenueRows.getNumberOfEntries();
+    int[] revWidths = {4, 10, 22, 9, 10, 12, 12, 7, 12};
+    TableUtil.TableSettings revSettings =
+        new TableUtil.TableSettings(revWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.LEFT)
+            .setHAlign(2, TableUtil.Align.LEFT)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.CENTER)
+            .setHAlign(8, TableUtil.Align.RIGHT)
+            .setTruncate(2);
+
+    TableUtil.printTableBorder(revSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {
+          "NO.",
+          "GUEST ID",
+          "GUEST NAME",
+          "ROOM NO.",
+          "ROOM TYPE",
+          "CHECK-IN",
+          "CHECK-OUT",
+          "NIGHTS",
+          "TOTAL (RM)"
+        },
+        revSettings);
+
+    if (revTotal == 0 || revenueRows == null) {
+      printEmptyTable(revSettings, 122, "*** NO PAID STAYS IN SELECTED PERIOD ***");
+    } else {
+      TableUtil.printTableBorder(revSettings, TableUtil.BorderPosition.MIDDLE);
+      for (int i = 1; i <= revTotal; i++) {
+        CheckoutRowDTO dto = revenueRows.getEntry(i);
+        if (dto == null) continue;
+        TableUtil.printTableRow(
+            new String[] {
+              String.valueOf(i),
+              dto.guestId,
+              dto.guestName,
+              dto.roomNumber,
+              dto.roomType,
+              dto.checkInDate,
+              dto.checkOutDate,
+              String.valueOf(dto.nights),
+              String.format("%.2f", dto.totalAmount)
+            },
+            revSettings);
+      }
+      TableUtil.printTableBorder(revSettings, TableUtil.BorderPosition.BOTTOM);
     }
 
-    System.out.println();
+    System.out.println(
+        "\nTotal Stays   : "
+            + revenueSummary.totalStays
+            + "   |   Total Revenue : RM "
+            + String.format("%.2f", revenueSummary.totalRevenue));
+    System.out.println(
+        "Avg / Stay    : RM "
+            + String.format("%.2f", revenueSummary.avgRevenuePerStay)
+            + "   |   Avg / Night : RM "
+            + String.format("%.2f", revenueSummary.avgRevenuePerNight));
+    System.out.println(
+        "Luxury : RM "
+            + String.format("%.2f", revenueSummary.luxuryRevenue)
+            + "   |   Suite : RM "
+            + String.format("%.2f", revenueSummary.suiteRevenue)
+            + "   |   Standard : RM "
+            + String.format("%.2f", revenueSummary.standardRevenue));
+    System.out.printf("Total Paid Stays : %d%n%n", revTotal);
 
-    // Summary panel
-    printSummaryPanel(
-        new String[][] {
-          {"Total Rooms", String.valueOf(summary.totalRooms)},
-          {"Occupied", String.valueOf(summary.totalOccupied)},
-          {"Dirty / Cleaning", summary.totalDirty + " / " + sumCleaning(rows)},
-          {"Available", String.valueOf(summary.totalVacantClean)},
-          {"Occupancy Rate", summary.overallOccupancyRate},
-        });
+    ConsoleUtil.stopRecording();
 
-    System.out.println();
-    System.out.println("[T] Filter Room Type     [R] Refresh     [X] Export     [E] Back\n");
-    return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'T', 'R', 'X', 'E'});
+    System.out.println("[S] Filter   [O] Change Sort   [X] Export   [R] Refresh   [E] Back\n");
+    return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'O', 'X', 'R', 'E'});
   }
 
   // =========================================================================
@@ -499,26 +569,14 @@ public class ReportsView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST STAY DURATION ANALYSIS", 104);
 
-    System.out.println("  Generated : " + summary.generatedAt);
+    ConsoleUtil.clearBuffer();
+    ConsoleUtil.startRecording();
+
     System.out.println();
     System.out.println("DATE RANGE    : [ FROM " + fmt(fromDate) + "  TO  " + fmt(toDate) + " ]");
     System.out.println(
         "ROOM TYPE     : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
     System.out.println("SORT CRITERIA : [ " + sortCriteria + " ]");
-    System.out.println();
-
-    // Summary panel
-    printSummaryPanel(
-        new String[][] {
-          {"Total Stays", String.valueOf(summary.totalStays)},
-          {"Avg Nights", String.format("%.1f", summary.avgNights)},
-          {"Shortest", summary.shortestNights + " night(s)"},
-          {"Longest", summary.longestNights + " night(s)"},
-          {"1 Night", String.valueOf(summary.oneNight)},
-          {"2-3 Nights", String.valueOf(summary.twoThreeNights)},
-          {"4-7 Nights", String.valueOf(summary.fourSevenNights)},
-          {"8+ Nights", String.valueOf(summary.eightPlusNights)},
-        });
     System.out.println();
 
     int total = (list == null) ? 0 : list.getNumberOfEntries();
@@ -550,11 +608,13 @@ public class ReportsView {
     if (total == 0 || list == null) {
       printEmptyTable(
           settings,
-          107,
+          134,
           (fromDate != null || toDate != null || roomTypeFilter != null)
               ? "*** NO STAYS MATCH ACTIVE FILTERS ***"
               : "*** NO STAY RECORDS FOUND ***");
       System.out.println("\nPage 0 / 0 (Total: 0)\n");
+      printStaySummaryLine(summary);
+      ConsoleUtil.stopRecording();
       System.out.println("[S] Filter & Sort     [R] Refresh     [X] Export     [E] Back\n");
       return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'X', 'E'});
     }
@@ -562,14 +622,12 @@ public class ReportsView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
     int startIndex = (currentPage - 1) * pageSize + 1;
     int endIndex = Math.min(startIndex + pageSize - 1, total);
-
     for (int i = startIndex; i <= endIndex; i++) {
       StayRowDTO dto = list.getEntry(i);
       if (dto == null) continue;
-      int displayNum = i - startIndex + 1;
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum),
+            String.valueOf(i - startIndex + 1),
             dto.guestId,
             dto.guestName,
             dto.roomNumber,
@@ -584,7 +642,12 @@ public class ReportsView {
     }
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
 
-    System.out.printf("\nPage %d / %d (Total: %d)\n\n", currentPage, totalPages, total);
+    System.out.println();
+    printStaySummaryLine(summary);
+    System.out.printf("Page %d / %d (Total: %d)%n%n", currentPage, totalPages, total);
+
+    ConsoleUtil.stopRecording();
+
     System.out.println("[S] Filter & Sort     [O] Change Sort     [R] Refresh");
     System.out.println("[P] Prev Page         [N] Next Page       [X] Export     [E] Back\n");
     return ConsoleUtil.getMenuInput(
@@ -592,112 +655,11 @@ public class ReportsView {
   }
 
   // =========================================================================
-  // REPORT 4 — REVENUE SUMMARY REPORT
-  // =========================================================================
-
-  public GetMenuInputResult renderRevenueReport(
-      ArrayList<CheckoutRowDTO> list,
-      RevenueSummaryDTO summary,
-      LocalDate fromDate,
-      LocalDate toDate,
-      String roomTypeFilter) {
-
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("REVENUE SUMMARY REPORT", 104);
-
-    System.out.println("  Generated : " + summary.generatedAt);
-    System.out.println("  Period    : " + summary.period);
-    System.out.println();
-    System.out.println("DATE RANGE  : [ FROM " + fmt(fromDate) + "  TO  " + fmt(toDate) + " ]");
-    System.out.println(
-        "ROOM TYPE   : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
-    System.out.println("(Only PAID stays are included in revenue figures)");
-    System.out.println();
-
-    // Summary panel
-    printSummaryPanel(
-        new String[][] {
-          {"Total Stays", String.valueOf(summary.totalStays)},
-          {"Total Revenue", "RM " + String.format("%.2f", summary.totalRevenue)},
-          {"Avg / Stay", "RM " + String.format("%.2f", summary.avgRevenuePerStay)},
-          {"Avg / Night", "RM " + String.format("%.2f", summary.avgRevenuePerNight)},
-          {"Luxury Revenue", "RM " + String.format("%.2f", summary.luxuryRevenue)},
-          {"Suite Revenue", "RM " + String.format("%.2f", summary.suiteRevenue)},
-          {"Standard Revenue", "RM " + String.format("%.2f", summary.standardRevenue)},
-        });
-    System.out.println();
-
-    int total = (list == null) ? 0 : list.getNumberOfEntries();
-
-    int[] colWidths = {4, 10, 22, 9, 10, 12, 12, 7, 12};
-    TableUtil.TableSettings settings =
-        new TableUtil.TableSettings(colWidths)
-            .setHAlign(0, TableUtil.Align.CENTER)
-            .setHAlign(1, TableUtil.Align.LEFT)
-            .setHAlign(2, TableUtil.Align.LEFT)
-            .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.CENTER)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.CENTER)
-            .setHAlign(7, TableUtil.Align.CENTER)
-            .setHAlign(8, TableUtil.Align.RIGHT)
-            .setTruncate(2);
-
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(
-        new String[] {
-          "NO.",
-          "GUEST ID",
-          "GUEST NAME",
-          "ROOM NO.",
-          "ROOM TYPE",
-          "CHECK-IN",
-          "CHECK-OUT",
-          "NIGHTS",
-          "TOTAL (RM)"
-        },
-        settings);
-
-    if (total == 0 || list == null) {
-      printEmptyTable(settings, 95, "*** NO PAID STAYS IN SELECTED PERIOD ***");
-      System.out.println("\nPage 0 / 0 (Total: 0)\n");
-      System.out.println("[S] Change Filters     [R] Refresh     [X] Export     [E] Back\n");
-      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'X', 'E'});
-    }
-
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-    for (int i = 1; i <= total; i++) {
-      CheckoutRowDTO dto = list.getEntry(i);
-      if (dto == null) continue;
-      TableUtil.printTableRow(
-          new String[] {
-            String.valueOf(i),
-            dto.guestId,
-            dto.guestName,
-            dto.roomNumber,
-            dto.roomType,
-            dto.checkInDate,
-            dto.checkOutDate,
-            String.valueOf(dto.nights),
-            String.format("%.2f", dto.totalAmount)
-          },
-          settings);
-    }
-    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
-
-    System.out.printf("\nTotal Paid Stays: %d\n\n", total);
-    System.out.println("[S] Change Filters     [R] Refresh     [X] Export     [E] Back\n");
-    return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'X', 'E'});
-  }
-
-  // =========================================================================
-  // FILTER MENU — shared across all reports
+  // FILTER MENUS
   // =========================================================================
 
   public int displayFilterMenu(
       LocalDate fromDate, LocalDate toDate, String paymentFilter, String roomTypeFilter) {
-
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("FILTER & SORT OPTIONS", 68);
     System.out.println("Date Range     : [ FROM " + fmt(fromDate) + "  TO  " + fmt(toDate) + " ]");
@@ -752,7 +714,6 @@ public class ReportsView {
   // SORT MENUS
   // =========================================================================
 
-  /** Returns selected sort string, or null if cancelled. */
   public String displayCheckoutSortMenu(String currentSort) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SORT ORDER", 60);
@@ -766,7 +727,6 @@ public class ReportsView {
     System.out.println("7. Total Amount (Low -> High)");
     System.out.println("8. Nights (High -> Low)");
     System.out.println("9. Cancel\n");
-
     int choice = ConsoleUtil.getMenuInput("Choose option: ", 1, 9).getAsInt();
     switch (choice) {
       case 1:
@@ -790,7 +750,6 @@ public class ReportsView {
     }
   }
 
-  /** Returns selected sort string, or null if cancelled. */
   public String displayStaySortMenu(String currentSort) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SORT ORDER", 60);
@@ -802,7 +761,6 @@ public class ReportsView {
     System.out.println("5. Check-in (Earliest First)");
     System.out.println("6. Total Amount (High -> Low)");
     System.out.println("7. Cancel\n");
-
     int choice = ConsoleUtil.getMenuInput("Choose option: ", 1, 7).getAsInt();
     switch (choice) {
       case 1:
@@ -838,29 +796,37 @@ public class ReportsView {
   // SHARED HELPERS
   // =========================================================================
 
-  /** Prints a 2-column label|value summary panel. */
-  private void printSummaryPanel(String[][] pairs) {
-    int[] kvWidths = {22, 36};
-    TableUtil.TableSettings kvSettings =
-        new TableUtil.TableSettings(kvWidths)
-            .setHAlign(0, TableUtil.Align.LEFT)
-            .setHAlign(1, TableUtil.Align.LEFT);
-
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.TOP);
-    for (int i = 0; i < pairs.length; i++) {
-      TableUtil.printTableRow(new String[] {pairs[i][0], pairs[i][1]}, kvSettings);
-      if (i < pairs.length - 1)
-        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.MIDDLE);
-    }
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
+  private void printStaySummaryLine(StaySummaryDTO summary) {
+    System.out.println(
+        "Total Stays : "
+            + summary.totalStays
+            + "   |   Avg : "
+            + String.format("%.1f", summary.avgNights)
+            + " nights"
+            + "   |   Shortest : "
+            + summary.shortestNights
+            + " night(s)"
+            + "   |   Longest : "
+            + summary.longestNights
+            + " night(s)");
+    System.out.println(
+        "Distribution — 1 Night : "
+            + summary.oneNight
+            + "   |   2-3 Nights : "
+            + summary.twoThreeNights
+            + "   |   4-7 Nights : "
+            + summary.fourSevenNights
+            + "   |   8+ Nights : "
+            + summary.eightPlusNights);
+    System.out.println();
   }
 
   private void printEmptyTable(TableUtil.TableSettings settings, int emptyWidth, String msg) {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
-    TableUtil.TableSettings emptySettings =
+    TableUtil.TableSettings es =
         new TableUtil.TableSettings(new int[] {emptyWidth}).setHAlign(0, TableUtil.Align.CENTER);
-    TableUtil.printTableRow(new String[] {msg}, emptySettings);
-    TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+    TableUtil.printTableRow(new String[] {msg}, es);
+    TableUtil.printTableBorder(es, TableUtil.BorderPosition.PLAIN_BOTTOM);
   }
 
   private LocalDate promptSingleDate(String prompt, LocalDate current) {
@@ -877,47 +843,6 @@ public class ReportsView {
 
   private String fmt(LocalDate date) {
     return (date == null) ? "All Dates" : date.format(DATE_FMT);
-  }
-
-  // Occupancy table column sum helpers
-  private int sumDirty(ArrayList<OccupancyRowDTO> rows) {
-    int s = 0;
-    if (rows != null)
-      for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
-        OccupancyRowDTO r = rows.getEntry(i);
-        if (r != null) s += r.dirty;
-      }
-    return s;
-  }
-
-  private int sumCleaning(ArrayList<OccupancyRowDTO> rows) {
-    int s = 0;
-    if (rows != null)
-      for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
-        OccupancyRowDTO r = rows.getEntry(i);
-        if (r != null) s += r.cleaning;
-      }
-    return s;
-  }
-
-  private int sumInspected(ArrayList<OccupancyRowDTO> rows) {
-    int s = 0;
-    if (rows != null)
-      for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
-        OccupancyRowDTO r = rows.getEntry(i);
-        if (r != null) s += r.inspected;
-      }
-    return s;
-  }
-
-  private int sumVacant(ArrayList<OccupancyRowDTO> rows) {
-    int s = 0;
-    if (rows != null)
-      for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
-        OccupancyRowDTO r = rows.getEntry(i);
-        if (r != null) s += r.vacantClean;
-      }
-    return s;
   }
 
   private static String orNA(String s) {
