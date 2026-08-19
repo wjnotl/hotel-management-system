@@ -21,6 +21,9 @@ import view.booking.WalkInRegistrationView;
 // Both the top-level Register Walk-In item and the [A] command inside a line come through here, so
 // the assign-or-enqueue rule, the duplicate guard and the member block cannot drift apart.
 public class WalkInRegistrationController {
+  private static final int MODE_NEW = 2;
+  private static final int MODE_BACK = 3;
+
   private final WalkInRegistrationView registrationView = new WalkInRegistrationView();
   private final StandardReservationRepo standardReservationRepo;
   private final VipReservationRepo vipReservationRepo;
@@ -51,17 +54,19 @@ public class WalkInRegistrationController {
   public void registerWalkIn(Room.RoomType preselectedType) {
     while (true) {
       try {
-        Guest guest =
-            new GuestLookupController(guestRepo, standardReservationRepo)
-                .findGuest("REGISTER WALK-IN - FIND THE GUEST", true);
+        int mode = registrationView.displayModeMenu();
+        if (mode == MODE_BACK) return;
 
-        // Backing out of the search is the only exit. Every later step falls back to it rather
-        // than dropping the clerk onto the module menu.
-        if (guest == null) return;
+        Guest guest = (mode == MODE_NEW) ? registerNewGuest() : findExistingGuest();
 
-        if (isMemberBlocked(guest)) continue;
+        // Backing out of either mode returns to the mode menu, so picking the wrong one costs a
+        // keystroke rather than the whole flow.
+        if (guest == null) continue;
+
         if (isBlockedByLiveBooking(guest)) continue;
 
+        // Checked before membership, because this module is the only place a standard booking can
+        // be claimed and blocking a member first would strand the booking forever.
         Reservation reserved =
             standardReservationRepo.findReservedBookingForGuest(guest.getGuestId());
         if (reserved != null) {
@@ -74,6 +79,8 @@ public class WalkInRegistrationController {
           }
         }
 
+        if (isMemberBlocked(guest)) continue;
+
         Room.RoomType roomType = preselectedType;
         if (roomType == null) {
           roomType = promptRoomType(guest);
@@ -85,6 +92,17 @@ public class WalkInRegistrationController {
         ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  // The existing-guest search offers no registration of its own, because the mode menu already
+  // asked that question and the clerk answered it.
+  private Guest findExistingGuest() {
+    return new GuestLookupController(guestRepo, standardReservationRepo)
+        .findGuest("REGISTER WALK-IN - EXISTING GUEST");
+  }
+
+  private Guest registerNewGuest() {
+    return new GuestRegistrationController(guestRepo).registerNewGuest(null);
   }
 
   private BookingSettings settings() {

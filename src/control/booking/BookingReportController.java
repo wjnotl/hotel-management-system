@@ -184,7 +184,8 @@ public class BookingReportController {
             int picked = reportView.displayStatusSubmenu(scope.statusFilter);
             if (picked > 0) scope.statusFilter = statusNameFor(picked);
           } else {
-            scope.minWaitMinutes = reportView.promptMinimumWait(scope.minWaitMinutes);
+            Integer minWait = reportView.promptMinimumWait(scope.minWaitMinutes);
+            if (minWait != null) scope.minWaitMinutes = minWait;
           }
         } else if ("4".equals(command)) {
           int picked = reportView.displaySourceSubmenu(scope.sourceFilter);
@@ -199,18 +200,17 @@ public class BookingReportController {
           scope.maxStrikes = range[1];
         } else if ("7".equals(command)) {
           String typedRoom = reportView.promptRoomNumber(scope.roomNumberFilter);
-          if (typedRoom != null
-              && !typedRoom.trim().isEmpty()
-              && !"E".equalsIgnoreCase(typedRoom.trim())) {
+          if (!"E".equalsIgnoreCase(typedRoom.trim())) {
             scope.roomNumberFilter = "-".equals(typedRoom.trim()) ? null : typedRoom.trim();
           }
         } else if ("8".equals(command)) {
           int attribute = reportView.displaySortAttributeSubmenu(scope.sortAttribute, isRegister);
           if (attribute > 0) {
-            scope.sortAttribute = sortAttributeFor(attribute, isRegister);
             int direction = reportView.displaySortDirectionSubmenu(scope.sortDirection);
-            if (direction == 1) scope.sortDirection = "DESCENDING";
-            else if (direction == 2) scope.sortDirection = "ASCENDING";
+            if (direction == 1 || direction == 2) {
+              scope.sortAttribute = sortAttributeFor(attribute, isRegister);
+              scope.sortDirection = (direction == 1) ? "DESCENDING" : "ASCENDING";
+            }
           }
         } else if ("9".equals(command)) {
           int picked = reportView.displayGroupBySubmenu(scope.groupBy);
@@ -247,7 +247,11 @@ public class BookingReportController {
         if (picked > 0) scope.searchField = fieldNameFor(picked);
       } else if (choice == 2) {
         String typed = reportView.promptSearchTerm(scope.searchField, scope.searchTerm);
-        if (typed != null && !typed.trim().isEmpty() && !"E".equalsIgnoreCase(typed.trim())) {
+        if (typed == null || typed.trim().isEmpty()) {
+          throw new IllegalArgumentException(
+              "Search term cannot be empty! Type '-' to clear it or 'E' to go back.");
+        }
+        if (!"E".equalsIgnoreCase(typed.trim())) {
           scope.searchTerm = "-".equals(typed.trim()) ? null : typed.trim();
         }
       } else if (choice == 3) {
@@ -264,21 +268,27 @@ public class BookingReportController {
     if (picked == 0) return;
 
     if (picked == 6) {
-      String[] typed = reportView.promptDateRange(periodLabel(scope));
-      String rawFrom = (typed[0] == null) ? "" : typed[0].trim();
-      if ("E".equalsIgnoreCase(rawFrom)) return;
+      while (true) {
+        try {
+          String[] typed = reportView.promptDateRange(periodLabel(scope));
+          if ("E".equalsIgnoreCase(typed[0].trim())) return;
 
-      LocalDate parsedFrom = parseOrNull(rawFrom);
-      LocalDate parsedTo = parseOrNull(typed[1]);
+          LocalDate parsedFrom = parseOrNull(typed[0]);
+          LocalDate parsedTo = parseOrNull(typed[1]);
 
-      if (parsedFrom != null && parsedTo != null && parsedTo.isBefore(parsedFrom)) {
-        throw new IllegalArgumentException("The end of the range cannot fall before its start!");
+          if (parsedFrom != null && parsedTo != null && parsedTo.isBefore(parsedFrom)) {
+            throw new IllegalArgumentException(
+                "The end of the range cannot fall before its start!");
+          }
+
+          scope.fromDate = parsedFrom;
+          scope.toDate = parsedTo;
+          scope.periodFilter = (parsedFrom == null && parsedTo == null) ? "ALL TIME" : "CUSTOM";
+          return;
+        } catch (IllegalArgumentException e) {
+          ConsoleUtil.printError(e.getMessage());
+        }
       }
-
-      scope.fromDate = parsedFrom;
-      scope.toDate = parsedTo;
-      scope.periodFilter = (parsedFrom == null && parsedTo == null) ? "ALL TIME" : "CUSTOM";
-      return;
     }
 
     scope.fromDate = null;
@@ -379,8 +389,11 @@ public class BookingReportController {
     }
 
     String target = reportView.promptReservationIdSearch();
-    if (target == null || target.trim().isEmpty() || "B".equalsIgnoreCase(target.trim())) {
+    if (target == null || "B".equalsIgnoreCase(target.trim())) {
       return;
+    }
+    if (target.trim().isEmpty()) {
+      throw new IllegalArgumentException("Reservation ID cannot be empty!");
     }
 
     String needle = target.trim();
@@ -873,9 +886,10 @@ public class BookingReportController {
           if ("B".equalsIgnoreCase(result.input)) return;
         } else if ("1".equals(command)) {
           String typedStart = reportView.promptStartDate(startDate.format(DATE_FORMAT));
-          if (typedStart != null
-              && !typedStart.trim().isEmpty()
-              && !"E".equalsIgnoreCase(typedStart.trim())) {
+          if (typedStart == null || typedStart.trim().isEmpty()) {
+            throw new IllegalArgumentException("Start date cannot be empty! Type 'E' to go back.");
+          }
+          if (!"E".equalsIgnoreCase(typedStart.trim())) {
             startDate = parseDate(typedStart.trim());
           }
         } else if ("2".equals(command)) {
@@ -1025,7 +1039,7 @@ public class BookingReportController {
   }
 
   private LocalDate parseOrNull(String raw) {
-    if (raw == null || raw.trim().isEmpty()) return null;
+    if (raw == null || raw.trim().isEmpty() || "-".equals(raw.trim())) return null;
     return parseDate(raw.trim());
   }
 

@@ -492,7 +492,7 @@ public class WalkInQueueController {
           if (picked > 0) field = fieldNameFor(picked);
         } else if (choice == 2) {
           String typed = walkInQueueView.promptSearchTerm(field, term);
-          if (typed != null && !typed.trim().isEmpty() && !"E".equalsIgnoreCase(typed.trim())) {
+          if (!"E".equalsIgnoreCase(typed.trim())) {
             term = "-".equals(typed.trim()) ? null : typed.trim();
           }
         } else if (choice == 3) {

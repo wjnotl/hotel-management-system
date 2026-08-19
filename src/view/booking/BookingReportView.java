@@ -15,18 +15,24 @@ public class BookingReportView {
   private static final int SCREEN_WIDTH = 90;
 
   public int displayReportHubMenu() {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("BOOKING ANALYTICS HUB", SCREEN_WIDTH);
-    System.out.println("1. Daily Arrival Register");
-    System.out.println("   Who arrived, what they were given and how long they waited.\n");
-    System.out.println("2. Queue Performance & No-Show Analysis");
-    System.out.println("   Average and worst waits, served counts and no-show rates.\n");
-    System.out.println("3. Room Utilisation & Forecast");
-    System.out.println("   Rooms committed per night ahead, from the booking calendar.\n");
-    System.out.println("4. Back to Walk-In & Booking Menu\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("BOOKING ANALYTICS HUB", SCREEN_WIDTH);
+        System.out.println("1. Daily Arrival Register");
+        System.out.println("   Who arrived, what they were given and how long they waited.\n");
+        System.out.println("2. Queue Performance & No-Show Analysis");
+        System.out.println("   Average and worst waits, served counts and no-show rates.\n");
+        System.out.println("3. Room Utilisation & Forecast");
+        System.out.println("   Rooms committed per night ahead, from the booking calendar.\n");
+        System.out.println("4. Back to Walk-In & Booking Menu\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose a report: ", 1, 4).getAsInt();
-    return (choice == 4) ? 0 : choice;
+        int choice = ConsoleUtil.getMenuInput("Choose a report: ", 1, 4).getAsInt();
+        return (choice == 4) ? 0 : choice;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   /**
@@ -51,44 +57,53 @@ public class BookingReportView {
       int recordLimit,
       int matchCount,
       boolean showStatusFilter) {
+    while (true) {
+      try {
 
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox(reportTitle, SCREEN_WIDTH);
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox(reportTitle, SCREEN_WIDTH);
 
-    System.out.println(" 1. Text Search      : [ " + searchLabel + " ]");
-    System.out.println(
-        " 2. Room Type        : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
-    if (showStatusFilter) {
-      System.out.println(
-          " 3. Booking Status   : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
-    } else {
-      System.out.println(
-          " 3. Minimum Wait     : [ "
-              + (minWaitMinutes == null ? "None" : minWaitMinutes + " minutes")
-              + " ]");
+        System.out.println(" 1. Text Search      : [ " + searchLabel + " ]");
+        System.out.println(
+            " 2. Room Type        : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
+        if (showStatusFilter) {
+          System.out.println(
+              " 3. Booking Status   : [ " + (statusFilter == null ? "ALL" : statusFilter) + " ]");
+        } else {
+          System.out.println(
+              " 3. Minimum Wait     : [ "
+                  + (minWaitMinutes == null ? "None" : minWaitMinutes + " minutes")
+                  + " ]");
+        }
+        System.out.println(
+            " 4. Booking Source   : [ " + (sourceFilter == null ? "ALL" : sourceFilter) + " ]");
+        System.out.println(" 5. Reporting Period : [ " + periodLabel + " ]");
+        System.out.println(" 6. Strike Count     : [ " + strikeLabel + " ]");
+        System.out.println(
+            " 7. Room Number      : [ "
+                + (roomNumberFilter == null ? "Any" : roomNumberFilter)
+                + " ]");
+        System.out.println(
+            " 8. Sort Order       : [ " + sortAttribute + " (" + sortDirection + ") ]");
+        System.out.println(" 9. Group Rows By    : [ " + groupBy + " ]");
+        System.out.println("10. Columns Exported : [ " + columnsLabel + " ]");
+        System.out.println(
+            "11. Record Limit     : [ "
+                + (recordLimit == 0 ? "Show All" : "Top " + recordLimit)
+                + " ]");
+        System.out.println();
+        System.out.println("Records matching the current scope: " + matchCount);
+        System.out.println();
+        System.out.println("[X] Export Report To TXT   [R] Reset All Filters");
+        System.out.println("[E] Exit to Analytics Hub\n");
+
+        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 11, new char[] {'X', 'R', 'E'})
+            .input
+            .toUpperCase();
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-    System.out.println(
-        " 4. Booking Source   : [ " + (sourceFilter == null ? "ALL" : sourceFilter) + " ]");
-    System.out.println(" 5. Reporting Period : [ " + periodLabel + " ]");
-    System.out.println(" 6. Strike Count     : [ " + strikeLabel + " ]");
-    System.out.println(
-        " 7. Room Number      : [ " + (roomNumberFilter == null ? "Any" : roomNumberFilter) + " ]");
-    System.out.println(" 8. Sort Order       : [ " + sortAttribute + " (" + sortDirection + ") ]");
-    System.out.println(" 9. Group Rows By    : [ " + groupBy + " ]");
-    System.out.println("10. Columns Exported : [ " + columnsLabel + " ]");
-    System.out.println(
-        "11. Record Limit     : [ "
-            + (recordLimit == 0 ? "Show All" : "Top " + recordLimit)
-            + " ]");
-    System.out.println();
-    System.out.println("Records matching the current scope: " + matchCount);
-    System.out.println();
-    System.out.println("[X] Export Report To TXT   [R] Reset All Filters");
-    System.out.println("[E] Exit to Analytics Hub\n");
-
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 11, new char[] {'X', 'R', 'E'})
-        .input
-        .toUpperCase();
   }
 
   public GetMenuInputResult showExportReceipt(
@@ -101,50 +116,63 @@ public class BookingReportView {
       String filePath,
       boolean offerBinarySearch,
       boolean binarySearchAvailable) {
+    while (true) {
+      try {
 
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("EXPORT SUCCESSFUL", SCREEN_WIDTH);
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("EXPORT SUCCESSFUL", SCREEN_WIDTH);
 
-    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
-    TableUtil.TableSettings spanSettings =
-        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
+        TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
+        TableUtil.TableSettings spanSettings =
+            new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
 
-    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {reportTitle}, spanSettings);
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-    printKeyValue(kvSettings, "Scope", scope, true);
-    printKeyValue(kvSettings, "Sorted By", sortLabel, true);
-    printKeyValue(kvSettings, "Grouped By", groupLabel, true);
-    printKeyValue(
-        kvSettings,
-        "Records",
-        matchCount + " matching, " + exportedCount + " written to the file",
-        true);
-    printKeyValue(kvSettings, "Saved To", filePath, false);
+        TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
+        TableUtil.printTableRow(new String[] {reportTitle}, spanSettings);
+        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+        printKeyValue(kvSettings, "Scope", scope, true);
+        printKeyValue(kvSettings, "Sorted By", sortLabel, true);
+        printKeyValue(kvSettings, "Grouped By", groupLabel, true);
+        printKeyValue(
+            kvSettings,
+            "Records",
+            matchCount + " matching, " + exportedCount + " written to the file",
+            true);
+        printKeyValue(kvSettings, "Saved To", filePath, false);
 
-    System.out.println();
-    if (offerBinarySearch) {
-      if (binarySearchAvailable) {
-        System.out.println("[F] Find A Reservation ID (binary search on the sorted register)");
-      } else {
-        System.out.println("[F] Find A Reservation ID (needs the RESERVATION ID sort order)");
+        System.out.println();
+        if (offerBinarySearch) {
+          if (binarySearchAvailable) {
+            System.out.println("[F] Find A Reservation ID (binary search on the sorted register)");
+          } else {
+            System.out.println("[F] Find A Reservation ID (needs the RESERVATION ID sort order)");
+          }
+        }
+        System.out.println("[S] Change Filters   [R] Export Again   [E] Exit to Analytics Hub\n");
+
+        char[] commands =
+            offerBinarySearch ? new char[] {'F', 'S', 'R', 'E'} : new char[] {'S', 'R', 'E'};
+
+        return ConsoleUtil.getMenuInput("Enter a command: ", commands);
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
       }
     }
-    System.out.println("[S] Change Filters   [R] Export Again   [E] Exit to Analytics Hub\n");
-
-    char[] commands =
-        offerBinarySearch ? new char[] {'F', 'S', 'R', 'E'} : new char[] {'S', 'R', 'E'};
-
-    return ConsoleUtil.getMenuInput("Enter a command: ", commands);
   }
 
   public String promptReservationIdSearch() {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("FIND A RESERVATION ID", SCREEN_WIDTH);
-    System.out.println("The register is sorted by reservation ID, so this halves the remaining");
-    System.out.println("rows on every step instead of scanning them one by one.\n");
-    System.out.println("E - Exit back to the receipt\n");
-    return ConsoleUtil.getStringInput("Enter the reservation ID: ");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("FIND A RESERVATION ID", SCREEN_WIDTH);
+        System.out.println(
+            "The register is sorted by reservation ID, so this halves the remaining");
+        System.out.println("rows on every step instead of scanning them one by one.\n");
+        System.out.println("E - Exit back to the receipt\n");
+        return requireText("Enter the reservation ID: ", "Reservation ID cannot be empty!");
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public void displayBinarySearchResult(
@@ -229,14 +257,22 @@ public class BookingReportView {
   }
 
   public String promptSearchTerm(String fieldLabel, String current) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("SEARCH TERM", SCREEN_WIDTH);
-    System.out.println("Field   : [ " + fieldLabel + " ]");
-    System.out.println("Current : [ " + (current == null ? "None" : current) + " ]\n");
-    System.out.println("Type '-' to clear the term.");
-    System.out.println("E - Exit and keep the current term\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("SEARCH TERM", SCREEN_WIDTH);
+        System.out.println("Field   : [ " + fieldLabel + " ]");
+        System.out.println("Current : [ " + (current == null ? "None" : current) + " ]\n");
+        System.out.println("Type '-' to clear the term.");
+        System.out.println("E - Exit and keep the current term\n");
 
-    return ConsoleUtil.getStringInput("Search term: ");
+        return requireText(
+            "Search term: ",
+            "Search term cannot be empty! Type '-' to clear it or 'E' to go back.");
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public int displayRoomTypeSubmenu(String current) {
@@ -285,58 +321,103 @@ public class BookingReportView {
 
   // Returns the two raw strings the clerk typed, for the controller to parse.
   public String[] promptDateRange(String currentLabel) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CUSTOM DATE RANGE", SCREEN_WIDTH);
-    System.out.println("Current: [ " + currentLabel + " ]\n");
-    System.out.println("Format: YYYY-MM-DD. Leave either end blank to leave it open.");
-    System.out.println("E - Exit and keep the current range\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("CUSTOM DATE RANGE", SCREEN_WIDTH);
+        System.out.println("Current: [ " + currentLabel + " ]\n");
+        System.out.println("Format: YYYY-MM-DD.");
+        System.out.println("Type '-' at either prompt to leave that end open.");
+        System.out.println("E - Exit and keep the current range\n");
 
-    String from = ConsoleUtil.getStringInput("From date: ");
-    if (from != null && "E".equalsIgnoreCase(from.trim())) {
-      return new String[] {from.trim(), null};
+        String from =
+            requireText(
+                "From date: ",
+                "Date cannot be empty! Type '-' to leave the start open, or 'E' to go back.");
+        if ("E".equalsIgnoreCase(from.trim())) {
+          return new String[] {"E", null};
+        }
+
+        String to =
+            requireText("To date: ", "Date cannot be empty! Type '-' to leave the end open.");
+        return new String[] {from, to};
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-
-    return new String[] {from, ConsoleUtil.getStringInput("To date: ")};
   }
 
   public Integer promptMinimumWait(Integer current) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("MINIMUM WAIT THRESHOLD", SCREEN_WIDTH);
-    System.out.println("Current: [ " + (current == null ? "None" : current + " minutes") + " ]\n");
-    System.out.println("Only bookings that waited at least this long stay in scope.");
-    System.out.println("Enter 0 to clear the threshold.");
-    System.out.println("Press Enter or 'C' to keep the current threshold\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("MINIMUM WAIT THRESHOLD", SCREEN_WIDTH);
+        System.out.println(
+            "Current: [ " + (current == null ? "None" : current + " minutes") + " ]\n");
+        System.out.println("Only bookings that waited at least this long stay in scope.");
+        System.out.println("Enter 0 to clear the threshold.");
+        System.out.println("Type 'C' to keep the current threshold\n");
 
-    return ConsoleUtil.getIntegerInput("Minimum wait in minutes [0 - 1440]: ", 0, 1440);
+        return requireInt("Minimum wait in minutes [0 - 1440]: ", 0, 1440);
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   // Returns {min, max}; -1 in either slot means that end is unbounded.
   public int[] promptStrikeRange(int currentMin, int currentMax) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("STRIKE COUNT RANGE", SCREEN_WIDTH);
-    System.out.println(
-        "Current: [ "
-            + ((currentMin < 0) ? "any" : String.valueOf(currentMin))
-            + "  ..  "
-            + ((currentMax < 0) ? "any" : String.valueOf(currentMax))
-            + " ]\n");
-    System.out.println("Press Enter at either prompt to leave that end unbounded.\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("STRIKE COUNT RANGE", SCREEN_WIDTH);
+        System.out.println(
+            "Current: [ "
+                + ((currentMin < 0) ? "any" : String.valueOf(currentMin))
+                + "  ..  "
+                + ((currentMax < 0) ? "any" : String.valueOf(currentMax))
+                + " ]\n");
+        System.out.println("Type '-' at either prompt to leave that end unbounded.");
+        System.out.println("E - Exit and keep the current range\n");
 
-    Integer min = ConsoleUtil.getIntegerInput("Minimum strikes [0 - 50]: ", 0, 50);
-    Integer max = ConsoleUtil.getIntegerInput("Maximum strikes [0 - 50]: ", 0, 50);
+        ConsoleUtil.GetMenuInputResult min =
+            ConsoleUtil.getMenuInput("Minimum strikes [0 - 50]: ", 0, 50, new char[] {'E', '-'});
+        if (!min.isNumber && "E".equalsIgnoreCase(min.input)) {
+          return new int[] {currentMin, currentMax};
+        }
 
-    return new int[] {(min == null) ? -1 : min, (max == null) ? -1 : max};
+        ConsoleUtil.GetMenuInputResult max =
+            ConsoleUtil.getMenuInput("Maximum strikes [0 - 50]: ", 0, 50, new char[] {'-'});
+
+        int low = min.isNumber ? min.getAsInt() : -1;
+        int high = max.isNumber ? max.getAsInt() : -1;
+        if (low >= 0 && high >= 0 && high < low) {
+          throw new IllegalArgumentException("The top of the range cannot fall below its bottom!");
+        }
+        return new int[] {low, high};
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public String promptRoomNumber(String current) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("ROOM NUMBER FILTER", SCREEN_WIDTH);
-    System.out.println("Current: [ " + (current == null ? "Any" : current) + " ]\n");
-    System.out.println("Only bookings attached to this room stay in scope.");
-    System.out.println("Type '-' to clear the filter.");
-    System.out.println("E - Exit and keep the current filter\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("ROOM NUMBER FILTER", SCREEN_WIDTH);
+        System.out.println("Current: [ " + (current == null ? "Any" : current) + " ]\n");
+        System.out.println("Only bookings attached to this room stay in scope.");
+        System.out.println("Type '-' to clear the filter.");
+        System.out.println("E - Exit and keep the current filter\n");
 
-    return ConsoleUtil.getStringInput("Room number: ");
+        return requireText(
+            "Room number: ",
+            "Room number cannot be empty! Type '-' to clear it or 'E' to go back.");
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public int displaySortAttributeSubmenu(String current, boolean registerReport) {
@@ -394,90 +475,121 @@ public class BookingReportView {
    * @return the 1-based column to flip, 0 to go back, -1 to select every column
    */
   public int displayColumnSelection(String[] columnNames, boolean[] selected) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("COLUMNS EXPORTED", SCREEN_WIDTH);
-    System.out.println("Pick a number to switch that column on or off.\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("COLUMNS EXPORTED", SCREEN_WIDTH);
+        System.out.println("Pick a number to switch that column on or off.\n");
 
-    int chosen = 0;
-    for (int i = 0; i < columnNames.length; i++) {
-      if (selected[i]) chosen++;
-      System.out.printf("%2d. [%s] %s%n", i + 1, selected[i] ? "x" : " ", columnNames[i]);
+        int chosen = 0;
+        for (int i = 0; i < columnNames.length; i++) {
+          if (selected[i]) chosen++;
+          System.out.printf("%2d. [%s] %s%n", i + 1, selected[i] ? "x" : " ", columnNames[i]);
+        }
+
+        System.out.println();
+        System.out.println(chosen + " of " + columnNames.length + " columns will be written.");
+        System.out.println();
+        System.out.println("[A] Select Every Column   [E] Exit\n");
+
+        GetMenuInputResult result =
+            ConsoleUtil.getMenuInput(
+                "Choose a column: ", 1, columnNames.length, new char[] {'A', 'E'});
+
+        if ("E".equalsIgnoreCase(result.input)) return 0;
+        if ("A".equalsIgnoreCase(result.input)) return -1;
+        return result.getAsInt();
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-
-    System.out.println();
-    System.out.println(chosen + " of " + columnNames.length + " columns will be written.");
-    System.out.println();
-    System.out.println("[A] Select Every Column   [E] Exit\n");
-
-    GetMenuInputResult result =
-        ConsoleUtil.getMenuInput("Choose a column: ", 1, columnNames.length, new char[] {'A', 'E'});
-
-    if ("E".equalsIgnoreCase(result.input)) return 0;
-    if ("A".equalsIgnoreCase(result.input)) return -1;
-    return result.getAsInt();
   }
 
   public String displayUtilisationPanel(
       int horizonDays, String roomTypeFilter, String startDateLabel, int matchCount) {
+    while (true) {
+      try {
 
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("ROOM UTILISATION & FORECAST - SCOPE", SCREEN_WIDTH);
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("ROOM UTILISATION & FORECAST - SCOPE", SCREEN_WIDTH);
 
-    System.out.println("1. Start Date       : [ " + startDateLabel + " ]");
-    System.out.println("2. Horizon          : [ " + horizonDays + " nights ]");
-    System.out.println(
-        "3. Room Type        : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
-    System.out.println();
-    System.out.println("Live bookings feeding the forecast: " + matchCount);
-    System.out.println();
-    System.out.println("[X] Export Report To TXT   [R] Reset Scope");
-    System.out.println("[E] Exit to Analytics Hub\n");
+        System.out.println("1. Start Date       : [ " + startDateLabel + " ]");
+        System.out.println("2. Horizon          : [ " + horizonDays + " nights ]");
+        System.out.println(
+            "3. Room Type        : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
+        System.out.println();
+        System.out.println("Live bookings feeding the forecast: " + matchCount);
+        System.out.println();
+        System.out.println("[X] Export Report To TXT   [R] Reset Scope");
+        System.out.println("[E] Exit to Analytics Hub\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3, new char[] {'X', 'R', 'E'})
-        .input
-        .toUpperCase();
+        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3, new char[] {'X', 'R', 'E'})
+            .input
+            .toUpperCase();
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public String promptStartDate(String currentLabel) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("FORECAST START DATE", SCREEN_WIDTH);
-    System.out.println("Current: [ " + currentLabel + " ]\n");
-    System.out.println("Format: YYYY-MM-DD");
-    System.out.println("E - Exit and keep the current date\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("FORECAST START DATE", SCREEN_WIDTH);
+        System.out.println("Current: [ " + currentLabel + " ]\n");
+        System.out.println("Format: YYYY-MM-DD");
+        System.out.println("E - Exit and keep the current date\n");
 
-    return ConsoleUtil.getStringInput("Start date: ");
+        return requireText("Start date: ", "Start date cannot be empty! Type 'E' to go back.");
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   public Integer promptHorizon(int current) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("FORECAST HORIZON", SCREEN_WIDTH);
-    System.out.println("Current: [ " + current + " nights ]\n");
-    System.out.println("How many nights forward the forecast table should cover.");
-    System.out.println("Press Enter or 'C' to keep the current horizon\n");
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox("FORECAST HORIZON", SCREEN_WIDTH);
+        System.out.println("Current: [ " + current + " nights ]\n");
+        System.out.println("How many nights forward the forecast table should cover.");
+        System.out.println("Type 'C' to keep the current horizon\n");
 
-    return ConsoleUtil.getIntegerInput("Nights [1 - 90]: ", 1, 90);
+        return requireInt("Nights [1 - 90]: ", 1, 90);
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   // Every submenu in this view is the same shape: a heading, some context lines, a numbered list
   // and a trailing Back option. Returning 0 means the clerk backed out.
   private int numberedMenu(String title, String[] contextLines, String[] options) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
+    while (true) {
+      try {
+        ConsoleUtil.clearScreen();
+        ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
 
-    for (String line : contextLines) {
-      System.out.println(line);
+        for (String line : contextLines) {
+          System.out.println(line);
+        }
+        System.out.println();
+
+        for (int i = 0; i < options.length; i++) {
+          System.out.println((i + 1) + ". " + options[i]);
+        }
+
+        int backOption = options.length + 1;
+        System.out.println(backOption + ". Back\n");
+
+        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, backOption).getAsInt();
+        return (choice == backOption) ? 0 : choice;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-    System.out.println();
-
-    for (int i = 0; i < options.length; i++) {
-      System.out.println((i + 1) + ". " + options[i]);
-    }
-
-    int backOption = options.length + 1;
-    System.out.println(backOption + ". Back\n");
-
-    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, backOption).getAsInt();
-    return (choice == backOption) ? 0 : choice;
   }
 
   private void printKeyValue(
@@ -491,5 +603,23 @@ public class BookingReportView {
     TableUtil.printTableBorder(
         settings,
         moreRowsFollow ? TableUtil.BorderPosition.MIDDLE : TableUtil.BorderPosition.BOTTOM);
+  }
+
+  // Blank is an error rather than a silent cancel, so Enter never quietly discards what the clerk
+  // was part way through. 'C' stays the explicit way out.
+  private Integer requireInt(String prompt, int min, int max) {
+    ConsoleUtil.GetMenuInputResult result =
+        ConsoleUtil.getMenuInput(prompt, min, max, new char[] {'C'});
+    return result.isNumber ? Integer.valueOf(result.getAsInt()) : null;
+  }
+
+  // A blank line is rejected here rather than in the controller, so the error redraws this screen
+  // instead of the menu above it.
+  private String requireText(String prompt, String emptyMessage) {
+    String typed = ConsoleUtil.getStringInput(prompt);
+    if (typed == null || typed.trim().isEmpty()) {
+      throw new IllegalArgumentException(emptyMessage);
+    }
+    return typed;
   }
 }

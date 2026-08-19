@@ -23,6 +23,9 @@ import util.ConsoleUtil;
 import view.booking.AdvanceBookingView;
 
 public class AdvanceBookingController {
+  private static final int MODE_NEW = 2;
+  private static final int MODE_BACK = 3;
+
   private static final int STEP_DATE = 1;
   private static final int STEP_TYPE = 2;
   private static final int STEP_NIGHTS = 3;
@@ -166,10 +169,14 @@ public class AdvanceBookingController {
   private void handleNewBooking() {
     while (true) {
       try {
-        Guest guest =
-            new GuestLookupController(guestRepo, standardReservationRepo)
-                .findGuest("NEW ADVANCE BOOKING - FIND THE GUEST", true);
-        if (guest == null) return;
+        int mode = advanceBookingView.displayModeMenu();
+        if (mode == MODE_BACK) return;
+
+        Guest guest = (mode == MODE_NEW) ? registerNewGuest() : findExistingGuest();
+
+        // Backing out of either mode returns to the mode menu, so picking the wrong one costs a
+        // keystroke rather than the whole booking.
+        if (guest == null) continue;
 
         Member member =
             (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
@@ -183,6 +190,17 @@ public class AdvanceBookingController {
         ConsoleUtil.printError(e.getMessage());
       }
     }
+  }
+
+  // The existing-guest search offers no registration of its own, because the mode menu already
+  // asked that question and the clerk answered it.
+  private Guest findExistingGuest() {
+    return new GuestLookupController(guestRepo, standardReservationRepo)
+        .findGuest("NEW ADVANCE BOOKING - EXISTING GUEST");
+  }
+
+  private Guest registerNewGuest() {
+    return new GuestRegistrationController(guestRepo).registerNewGuest(null);
   }
 
   // Walks the arrival date, room type, nights and time as separate steps so backing out of any of
@@ -206,14 +224,10 @@ public class AdvanceBookingController {
           String typed = advanceBookingView.promptArrivalDate(guest, earliest, latest, arrivalDate);
           if (typed == null || "E".equalsIgnoreCase(typed.trim())) return false;
 
-          // A blank line keeps whatever was already captured, so walking back into this step and
-          // pressing Enter does not wipe the date the clerk already agreed with the guest.
+          // Blank is always an error. Keeping a date the clerk could not see themselves typing
+          // was indistinguishable from the step being skipped.
           if (typed.trim().isEmpty()) {
-            if (arrivalDate == null) {
-              throw new IllegalArgumentException("Arrival date cannot be empty!");
-            }
-            step = STEP_TYPE;
-            continue;
+            throw new IllegalArgumentException("Arrival date cannot be empty!");
           }
 
           LocalDate picked = parseDate(typed.trim());
@@ -272,9 +286,15 @@ public class AdvanceBookingController {
         } else if (step == STEP_TIME) {
           String typed = advanceBookingView.promptArrivalTime(arrivalDate, arrivalTime);
 
-          if (typed == null || typed.trim().isEmpty() || "B".equalsIgnoreCase(typed.trim())) {
+          if (typed == null || "B".equalsIgnoreCase(typed.trim())) {
             step = STEP_NIGHTS;
             continue;
+          }
+
+          // Only 'B' steps back. Blank used to do it silently, which is what made Enter feel
+          // like a Back key everywhere in this form.
+          if (typed.trim().isEmpty()) {
+            throw new IllegalArgumentException("Arrival time cannot be empty!");
           }
 
           arrivalTime = parseTime(typed.trim());
@@ -377,16 +397,18 @@ public class AdvanceBookingController {
 
     // The table renumbers every page from 1, so the row read off the screen is an offset into the
     // page and the page origin has to be added back before indexing the list.
-    Integer selection =
-        ConsoleUtil.getIntegerInput(
+    ConsoleUtil.GetMenuInputResult picked =
+        ConsoleUtil.getMenuInput(
             "\nEnter the row number of the guest who arrived [1 - "
                 + rowsOnPage
-                + "] (blank to cancel): ",
+                + "] or C to cancel: ",
             1,
-            rowsOnPage);
-    if (selection == null) {
+            rowsOnPage,
+            new char[] {'C'});
+    if (!picked.isNumber) {
       return;
     }
+    int selection = picked.getAsInt();
 
     markArrival(rows.getEntry(startIndex + selection - 1));
   }
@@ -523,7 +545,11 @@ public class AdvanceBookingController {
           if (picked > 0) field = fieldNameFor(picked);
         } else if (choice == 2) {
           String typed = advanceBookingView.promptSearchTerm(field, term);
-          if (typed != null && !typed.trim().isEmpty() && !"E".equalsIgnoreCase(typed.trim())) {
+          if (typed == null || typed.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "Search term cannot be empty! Type '-' to clear it or 'E' to go back.");
+          }
+          if (!"E".equalsIgnoreCase(typed.trim())) {
             term = "-".equals(typed.trim()) ? null : typed.trim();
           }
         } else if (choice == 3) {
@@ -535,25 +561,9 @@ public class AdvanceBookingController {
           else if (picked == 3) roomType = "STANDARD";
           else if (picked == 4) roomType = null;
         } else if (choice == 5) {
-          String[] typed = advanceBookingView.promptDateRange(from, to);
-          String rawFrom = (typed[0] == null) ? "" : typed[0].trim();
-
-          if (!"E".equalsIgnoreCase(rawFrom)) {
-            if ("-".equals(rawFrom)) {
-              from = null;
-              to = null;
-            } else {
-              LocalDate parsedFrom = parseOrNull(rawFrom);
-              LocalDate parsedTo = parseOrNull(typed[1]);
-
-              if (parsedFrom != null && parsedTo != null && parsedTo.isBefore(parsedFrom)) {
-                throw new IllegalArgumentException(
-                    "The end of the range cannot fall before its start!");
-              }
-              from = parsedFrom;
-              to = parsedTo;
-            }
-          }
+          LocalDate[] range = askDateRange(from, to);
+          from = range[0];
+          to = range[1];
         } else if (choice == 6) {
           field = FIELD_NAME;
           term = null;
@@ -619,8 +629,28 @@ public class AdvanceBookingController {
     }
   }
 
+  private LocalDate[] askDateRange(LocalDate currentFrom, LocalDate currentTo) {
+    while (true) {
+      try {
+        String[] typed = advanceBookingView.promptDateRange(currentFrom, currentTo);
+        if ("E".equalsIgnoreCase(typed[0].trim())) {
+          return new LocalDate[] {currentFrom, currentTo};
+        }
+
+        LocalDate parsedFrom = parseOrNull(typed[0]);
+        LocalDate parsedTo = parseOrNull(typed[1]);
+        if (parsedFrom != null && parsedTo != null && parsedTo.isBefore(parsedFrom)) {
+          throw new IllegalArgumentException("The end of the range cannot fall before its start!");
+        }
+        return new LocalDate[] {parsedFrom, parsedTo};
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
   private LocalDate parseOrNull(String raw) {
-    if (raw == null || raw.trim().isEmpty()) return null;
+    if (raw == null || raw.trim().isEmpty() || "-".equals(raw.trim())) return null;
     return parseDate(raw.trim());
   }
 
