@@ -3,7 +3,6 @@ package view.frontdesk;
 import adt.ArrayList;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
@@ -11,7 +10,6 @@ import util.TableUtil;
 public class ReportsView {
 
   private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
-  private static final DateTimeFormatter INPUT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   private String lastPaymentFilter = null;
   private String lastRoomTypeFilter = null;
@@ -470,7 +468,8 @@ public class ReportsView {
 
     // ── SECTION 2: REVENUE ───────────────────────────────────────────────
     System.out.println(
-        "─────────────── SECTION 2 : REVENUE BREAKDOWN  (PAID STAYS IN PERIOD) ───────────────");
+        "─────────────── SECTION 2 : REVENUE BREAKDOWN  (PAID STAYS IN PERIOD)"
+            + " ───────────────");
     System.out.println();
 
     int revTotal = (revenueRows == null) ? 0 : revenueRows.getNumberOfEntries();
@@ -675,7 +674,8 @@ public class ReportsView {
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 5).getAsInt();
   }
 
-  public LocalDate[] promptDateRange(LocalDate currentFrom, LocalDate currentTo) {
+  /** Returns the raw typed strings for [from, to]; parsing/validation is done by the controller. */
+  public String[] promptDateRangeRaw(LocalDate currentFrom, LocalDate currentTo) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SET DATE RANGE", 68);
     System.out.println(
@@ -683,9 +683,9 @@ public class ReportsView {
     System.out.println();
     System.out.println(
         "Format: YYYY-MM-DD   |   blank = keep current   |   '-' = clear (All Dates)\n");
-    LocalDate from = promptSingleDate("From date: ", currentFrom);
-    LocalDate to = promptSingleDate("To date  : ", currentTo);
-    return new LocalDate[] {from, to};
+    String from = ConsoleUtil.getStringInput("From date: ");
+    String to = ConsoleUtil.getStringInput("To date  : ");
+    return new String[] {from, to};
   }
 
   public int displayPaymentSubmenu(String current) {
@@ -827,18 +827,6 @@ public class ReportsView {
         new TableUtil.TableSettings(new int[] {emptyWidth}).setHAlign(0, TableUtil.Align.CENTER);
     TableUtil.printTableRow(new String[] {msg}, es);
     TableUtil.printTableBorder(es, TableUtil.BorderPosition.PLAIN_BOTTOM);
-  }
-
-  private LocalDate promptSingleDate(String prompt, LocalDate current) {
-    String raw = ConsoleUtil.getStringInput(prompt);
-    if (raw == null || raw.trim().isEmpty()) return current;
-    if ("-".equals(raw.trim())) return null;
-    try {
-      return LocalDate.parse(raw.trim(), INPUT_FMT);
-    } catch (DateTimeParseException e) {
-      ConsoleUtil.printError("Invalid date. Keeping: " + fmt(current));
-      return current;
-    }
   }
 
   private String fmt(LocalDate date) {

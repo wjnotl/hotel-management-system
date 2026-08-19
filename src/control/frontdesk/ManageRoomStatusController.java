@@ -311,7 +311,8 @@ public class ManageRoomStatusController {
                   + room.getRoomNumber()
                   + " has confirmation "
                   + linked.getConfirmationNumber()
-                  + " attached. Marking Available will detach the reservation. Continue?");
+                  + " attached. Marking Available will detach the reservation."
+                  + " Continue?");
       if (!confirm) return;
       linked.setRoomNumber(null);
       reservationRepo.updateReservation(linked);

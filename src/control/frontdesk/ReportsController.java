@@ -10,6 +10,7 @@ import entity.Room;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import repo.BillingRepo;
 import repo.GuestRepo;
 import repo.RoomRepo;
@@ -257,9 +258,9 @@ public class ReportsController {
         int choice =
             reportsView.displayFilterMenu(currentFrom, currentTo, currentPayment, currentRoomType);
         if (choice == 1) {
-          LocalDate[] dates = reportsView.promptDateRange(currentFrom, currentTo);
-          currentFrom = dates[0];
-          currentTo = dates[1];
+          String[] raw = reportsView.promptDateRangeRaw(currentFrom, currentTo);
+          currentFrom = parseDateOrKeep(raw[0], currentFrom);
+          currentTo = parseDateOrKeep(raw[1], currentTo);
         } else if (choice == 2) {
           reportsView.setLastPaymentFilter(handlePaymentSubmenu(currentPayment));
           currentPayment = reportsView.getLastPaymentFilter();
@@ -278,6 +279,17 @@ public class ReportsController {
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
+    }
+  }
+
+  /** Blank keeps the current value, '-' clears it, otherwise parses as YYYY-MM-DD. */
+  private LocalDate parseDateOrKeep(String raw, LocalDate current) {
+    if (raw == null || raw.trim().isEmpty()) return current;
+    if ("-".equals(raw.trim())) return null;
+    try {
+      return LocalDate.parse(raw.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException("Invalid date format. Please use YYYY-MM-DD.");
     }
   }
 
@@ -509,7 +521,8 @@ public class ReportsController {
             vacantClean[t]++;
             break;
           default:
-            // Guard CLEANING / INSPECTED by name — safe if enum is absent on older builds
+            // Guard CLEANING / INSPECTED by name — safe if enum is absent on older
+            // builds
             String sName = r.getStatus().name();
             if ("CLEANING".equals(sName)) cleaning[t]++;
             else if ("INSPECTED".equals(sName)) inspected[t]++;
