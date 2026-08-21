@@ -186,7 +186,7 @@ public class ManageReservationView {
     System.out.println(
         "Payment Status : [ " + (paymentStatus == null ? "ALL" : paymentStatus) + " ]");
     System.out.println("Stay Status    : [ " + (stayStatus == null ? "ALL" : stayStatus) + " ]\n");
-    System.out.println("1. Search)");
+    System.out.println("1. Search");
     System.out.println("2. Filter by Room Type");
     System.out.println("3. Filter by Payment Status");
     System.out.println("4. Filter by Stay Status");
@@ -433,14 +433,13 @@ public class ManageReservationView {
         kvSettings);
     printKvRow("Check-in Date", formatDate(billing.getCheckInDate()), kvSettings);
     printKvRow("Check-out Date", formatDate(billing.getCheckOutDate()), kvSettings);
-    printKvRow("Nights Stayed", String.valueOf(billing.getNumberOfNights()), kvSettings);
-    printKvRow("Rate / Night (RM)", String.format("%.2f", billing.getRatePerNight()), kvSettings);
-    printKvRow("Subtotal (RM)", String.format("%.2f", billing.getSubtotal()), kvSettings);
+    printKvRow("Total Nights", String.valueOf(billing.getNumberOfNights()), kvSettings);
+    printKvRow("Nights Paid", String.valueOf(billing.getPaidNights()), kvSettings);
+    printKvRow("Nights Due", String.valueOf(billing.getOutstandingNights()), kvSettings);
     printKvRow(
-        "SST (" + (int) (Billing.SST_RATE * 100) + "%) (RM)",
-        String.format("%.2f", billing.getSstAmount()),
-        kvSettings);
-    printKvRow("TOTAL DUE (RM)", String.format("%.2f", billing.getTotalAmount()), kvSettings);
+        "Subtotal (RM)", String.format("%.2f", billing.getOutstandingSubtotal()), kvSettings);
+    printKvRow("SST (8%) (RM)", String.format("%.2f", billing.getOutstandingSST()), kvSettings);
+    printKvRow("TOTAL DUE (RM)", String.format("%.2f", billing.getOutstandingTotal()), kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
@@ -451,11 +450,11 @@ public class ManageReservationView {
   // PAYMENT RECORDED
   // =========================================================================
 
-  public void displayPaymentRecorded(Billing billing) {
+  public void displayPaymentRecorded(Billing billing, double amountCollected) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("PAYMENT RECORDED", 60);
     System.out.println("Billing " + billing.getBillingId() + " marked as PAID.");
-    System.out.printf("Amount Collected (RM): %.2f%n%n", billing.getTotalAmount());
+    System.out.printf("Amount Collected (RM): %.2f%n%n", amountCollected);
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
@@ -543,7 +542,7 @@ public class ManageReservationView {
     printKvRow("Room Status", "DIRTY  (Pending Housekeeping)", kvSettings);
     printKvRow("Check-out Date", formatDate(billing.getCheckOutDate()), kvSettings);
     printKvRow("Total Paid (RM)", String.format("%.2f", billing.getTotalAmount()), kvSettings);
-    printKvRow("Reservation", "Status → CHECKED_OUT  |  Confirmation cleared", kvSettings);
+    printKvRow("Reservation", "Status → CHECKED_OUT", kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println("\nGuest has been removed from the active reservation list.\n");

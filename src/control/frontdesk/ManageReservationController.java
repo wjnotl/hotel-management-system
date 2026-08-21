@@ -204,7 +204,7 @@ public class ManageReservationController {
 
   private void handleCalculateRoomCharges(Billing billing) {
     LocalDate today = LocalDate.now();
-    if (!today.equals(billing.getCheckOutDate())) {
+    if (billing.getCheckOutDate() == null || billing.getCheckOutDate().isBefore(today)) {
       billing.setCheckOutDate(today);
       billingRepo.updateBilling(billing);
     }
@@ -221,9 +221,11 @@ public class ManageReservationController {
       ConsoleUtil.printError("Payment has already been recorded for this stay!");
       return;
     }
+    double amountDue = billing.getOutstandingTotal();
+    billing.setPaidNights(billing.getPaidNights() + billing.getOutstandingNights());
     billing.setStatus(Billing.Status.PAID);
     billingRepo.updateBilling(billing);
-    view.displayPaymentRecorded(billing);
+    view.displayPaymentRecorded(billing, amountDue);
   }
 
   // =========================================================================
@@ -267,8 +269,6 @@ public class ManageReservationController {
     if (!view.confirmStayExtension(extraDays, newCheckOut)) return;
 
     billing.setCheckOutDate(newCheckOut);
-
-    // Reset to UNPAID — the new total is higher and must be re-settled
     billing.setStatus(Billing.Status.UNPAID);
 
     billingRepo.updateBilling(billing);
@@ -335,6 +335,28 @@ public class ManageReservationController {
     Room room = roomRepo.findByRoomNumber(dto.roomNumber);
     double rate = (room != null) ? room.getPrice() : 0.0;
 
+    // Block re-billing same room if already paid
+    Billing existingBilling =
+        billingRepo
+            .getBillingList()
+            .find(
+                b ->
+                    b != null
+                        && dto.reservationId != null
+                        && dto.reservationId.equalsIgnoreCase(b.getReservationId())
+                        && dto.roomNumber.equalsIgnoreCase(b.getRoomNumber()));
+
+    if (existingBilling != null && existingBilling.getStatus() == Billing.Status.PAID) {
+      ConsoleUtil.printError(
+          "A paid billing ("
+              + existingBilling.getBillingId()
+              + ") already exists for this reservation.\n"
+              + "Original room: "
+              + existingBilling.getRoomNumber()
+              + " — use Stay Extension to extend the current stay instead.");
+      return null;
+    }
+
     ListInterface<Reservation> allRes = reservationRepo.getAllReservations();
     Reservation res = findReservationById(allRes, dto.reservationId);
 
@@ -344,10 +366,31 @@ public class ManageReservationController {
       defaultCheckIn = res.getAllocatedTime().toLocalDate();
       if (res.getStayDays() != null) {
         defaultCheckOut = defaultCheckIn.plusDays(res.getStayDays());
+      } else {
+        defaultCheckOut = defaultCheckIn.plusDays(1);
       }
     }
 
+    // ── If another room was already paid for this reservation,
+    //    default check-in to that billing's check-out (room change date) ──
+    Billing previousPaidBilling =
+        billingRepo
+            .getBillingList()
+            .find(
+                b ->
+                    b != null
+                        && dto.reservationId != null
+                        && dto.reservationId.equalsIgnoreCase(b.getReservationId())
+                        && b.getStatus() == Billing.Status.PAID);
+
+    if (previousPaidBilling != null && previousPaidBilling.getCheckOutDate() != null) {
+      defaultCheckIn = previousPaidBilling.getCheckOutDate(); // start from when L room ended
+      defaultCheckOut = defaultCheckIn.plusDays(1);
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     LocalDate[] dates = promptCreateBillingDates(dto, defaultCheckIn, defaultCheckOut, rate);
+
     if (dates == null) return null;
     LocalDate checkIn = dates[0];
     LocalDate checkOut = dates[1];
@@ -636,6 +679,10 @@ public class ManageReservationController {
       if (res.getStatus() != Reservation.Status.CHECKED_IN
           && res.getStatus() != Reservation.Status.ALLOCATED) continue;
 
+      Room roomCheck = roomRepo.findByRoomNumber(res.getRoomNumber());
+      if (res.getStatus() == Reservation.Status.ALLOCATED
+          && (roomCheck == null || !roomCheck.getIsOccupied())) continue;
+
       // Skip if this reservation is already represented
       boolean seen = false;
       for (int k = 1; k <= addedResIds.getNumberOfEntries(); k++) {
@@ -795,7 +842,13 @@ public class ManageReservationController {
         boolean matchesStayStatus =
             stayStatus == null || stayStatus.equalsIgnoreCase(dto.stayStatus);
 
-        if (matchesSearch && matchesRoomType && matchesPayment && matchesStayStatus) {
+        boolean hasCheckOut = !"N/A".equalsIgnoreCase(dto.checkOutDate);
+
+        if (matchesSearch
+            && matchesRoomType
+            && matchesPayment
+            && matchesStayStatus
+            && hasCheckOut) {
           filteredBuffer.add(dto);
         }
       }

@@ -428,7 +428,7 @@ public class ReportsView {
     TableUtil.printTableRow(
         new String[] {"ROOM TYPE", "OCCUPIED", "VACANT_CLEAN", "DIRTY", "TOTAL", "OCC %"},
         occSettings);
-    TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.HEADER_CLOSE);
+    TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.MIDDLE);
 
     if (occTotal == 0 || occupancyRows == null) {
       TableUtil.TableSettings es =

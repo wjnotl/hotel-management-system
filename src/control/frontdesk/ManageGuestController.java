@@ -416,8 +416,16 @@ public class ManageGuestController {
           Member member = (g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
           String memberLevel =
               (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+          String icOrPassport =
+              (g.getIcNumber() != null
+                      && !g.getIcNumber().trim().isEmpty()
+                      && !"N/A".equalsIgnoreCase(g.getIcNumber().trim()))
+                  ? g.getIcNumber()
+                  : (g.getPassportNumber() != null && !g.getPassportNumber().trim().isEmpty()
+                      ? g.getPassportNumber()
+                      : "N/A");
           return new ManageGuestView.GuestRowDTO(
-              g.getGuestId(), g.getName(), g.getIcNumber(), g.getPhoneNumber(), memberLevel);
+              g.getGuestId(), g.getName(), icOrPassport, g.getPhoneNumber(), memberLevel);
         });
   }
 
