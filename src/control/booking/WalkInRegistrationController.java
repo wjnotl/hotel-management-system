@@ -65,12 +65,20 @@ public class WalkInRegistrationController {
 
         if (isBlockedByLiveBooking(guest)) continue;
 
+        if (standardReservationRepo.isBlockedByStrikes(guest, guestRepo)) {
+          registrationView.displayStrikeBlockedScreen(
+              guest,
+              standardReservationRepo.effectiveStrikes(guest, guestRepo),
+              settings().getStrikeBlockThreshold());
+          continue;
+        }
+
         // Checked before membership, because this module is the only place a standard booking can
         // be claimed and blocking a member first would strand the booking forever.
         Reservation reserved =
             standardReservationRepo.findReservedBookingForGuest(guest.getGuestId());
         if (reserved != null) {
-          int choice = registrationView.displayHasAdvanceBookingScreen(guest, reserved);
+          int choice = promptHasAdvanceBooking(guest, reserved);
           if (choice == 1) {
             arriveOnExistingBooking(reserved, guest);
             return;
@@ -147,14 +155,69 @@ public class WalkInRegistrationController {
       lineLength[i] = standardReservationRepo.getQueueByRoomType(types[i]).getNumberOfEntries();
     }
 
-    return registrationView.promptRoomType(
-        guest,
-        vacant,
-        arrivingToday,
-        vipWaiting,
-        lineLength,
-        settings().isEnforceVipBypass(),
-        settings().isAutoAssignWhenRoomFree());
+    while (true) {
+      try {
+        return registrationView.promptRoomType(
+            guest,
+            vacant,
+            arrivingToday,
+            vipWaiting,
+            lineLength,
+            settings().isEnforceVipBypass(),
+            settings().isAutoAssignWhenRoomFree());
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptHasAdvanceBooking(Guest guest, Reservation booking) {
+    while (true) {
+      try {
+        return registrationView.displayHasAdvanceBookingScreen(guest, booking);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptEnqueueConfirmation(
+      Guest guest,
+      Room.RoomType roomType,
+      int waiting,
+      int queueCapacity,
+      int vacant,
+      int arrivingToday,
+      int vipWaiting,
+      String reasonForWaiting) {
+    while (true) {
+      try {
+        return registrationView.displayEnqueueConfirmationScreen(
+            guest,
+            roomType,
+            waiting + 1,
+            waiting,
+            queueCapacity,
+            vacant,
+            arrivingToday,
+            vipWaiting,
+            reasonForWaiting);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptAssignConfirmation(
+      Guest guest, Room room, int graceMinutes, int vacant, int arrivingToday, int vipWaiting) {
+    while (true) {
+      try {
+        return registrationView.displayAssignConfirmationScreen(
+            guest, room, graceMinutes, vacant, arrivingToday, vipWaiting);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   // True when this walk-in is finished with, either served, queued or refused. False sends the
@@ -229,8 +292,7 @@ public class WalkInRegistrationController {
 
     int graceMinutes = standardReservationRepo.getHoldGraceMinutes(roomType);
 
-    if (!registrationView.displayAssignConfirmationScreen(
-        guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
+    if (!promptAssignConfirmation(guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
       return false;
     }
 
@@ -282,10 +344,9 @@ public class WalkInRegistrationController {
       return true;
     }
 
-    if (!registrationView.displayEnqueueConfirmationScreen(
+    if (!promptEnqueueConfirmation(
         guest,
         roomType,
-        waiting + 1,
         waiting,
         standardReservationRepo.getQueueCapacity(roomType),
         vacant,
@@ -383,8 +444,7 @@ public class WalkInRegistrationController {
 
     int graceMinutes = standardReservationRepo.getHoldGraceMinutes(roomType);
 
-    if (!registrationView.displayAssignConfirmationScreen(
-        guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
+    if (!promptAssignConfirmation(guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
       return;
     }
 

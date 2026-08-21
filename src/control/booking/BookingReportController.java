@@ -21,12 +21,14 @@ import view.booking.BookingReportView;
 public class BookingReportController {
   private static final int ARRIVAL_REGISTER = 1;
   private static final int QUEUE_PERFORMANCE = 2;
-  private static final int ROOM_UTILISATION = 3;
 
   private static final String REGISTER_TITLE = "DAILY ARRIVAL REGISTER";
   private static final String PERFORMANCE_TITLE = "QUEUE PERFORMANCE & NO-SHOW ANALYSIS";
-  private static final String UTILISATION_TITLE = "ROOM UTILISATION & FORECAST";
   private static final String NEW_LINE = System.lineSeparator();
+  private static final String BLANK_INPUT = "Input cannot be empty!";
+
+  // Leaves room for the title box and the command line on an 80 by 25 console.
+  private static final int REPORT_PAGE_LINES = 18;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   private static final String FIELD_NAME = "GUEST NAME";
@@ -86,8 +88,6 @@ public class BookingReportController {
 
         if (choice == ARRIVAL_REGISTER || choice == QUEUE_PERFORMANCE) {
           runReportPipeline(choice);
-        } else if (choice == ROOM_UTILISATION) {
-          runUtilisationReport();
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -177,43 +177,43 @@ public class BookingReportController {
         } else if ("1".equals(command)) {
           handleSearchSubmenu(scope);
         } else if ("2".equals(command)) {
-          int picked = reportView.displayRoomTypeSubmenu(scope.roomTypeFilter);
+          int picked = promptRoomTypeFilter(scope.roomTypeFilter);
           if (picked > 0) scope.roomTypeFilter = roomTypeNameFor(picked);
         } else if ("3".equals(command)) {
           if (isRegister) {
-            int picked = reportView.displayStatusSubmenu(scope.statusFilter);
+            int picked = promptStatusFilter(scope.statusFilter);
             if (picked > 0) scope.statusFilter = statusNameFor(picked);
           } else {
-            Integer minWait = reportView.promptMinimumWait(scope.minWaitMinutes);
+            Integer minWait = promptMinimumWait(scope.minWaitMinutes);
             if (minWait != null) scope.minWaitMinutes = minWait;
           }
         } else if ("4".equals(command)) {
-          int picked = reportView.displaySourceSubmenu(scope.sourceFilter);
+          int picked = promptSourceFilter(scope.sourceFilter);
           if (picked == 1) scope.sourceFilter = "WALK-IN";
           else if (picked == 2) scope.sourceFilter = "ADVANCE";
           else if (picked == 3) scope.sourceFilter = null;
         } else if ("5".equals(command)) {
           handlePeriodSubmenu(scope);
         } else if ("6".equals(command)) {
-          int[] range = reportView.promptStrikeRange(scope.minStrikes, scope.maxStrikes);
+          int[] range = promptStrikeRange(scope.minStrikes, scope.maxStrikes);
           scope.minStrikes = range[0];
           scope.maxStrikes = range[1];
         } else if ("7".equals(command)) {
-          String typedRoom = reportView.promptRoomNumber(scope.roomNumberFilter);
+          String typedRoom = promptRoomNumber(scope.roomNumberFilter);
           if (!"E".equalsIgnoreCase(typedRoom.trim())) {
             scope.roomNumberFilter = "-".equals(typedRoom.trim()) ? null : typedRoom.trim();
           }
         } else if ("8".equals(command)) {
-          int attribute = reportView.displaySortAttributeSubmenu(scope.sortAttribute, isRegister);
+          int attribute = promptSortAttribute(scope.sortAttribute, isRegister);
           if (attribute > 0) {
-            int direction = reportView.displaySortDirectionSubmenu(scope.sortDirection);
+            int direction = promptSortDirection(scope.sortDirection);
             if (direction == 1 || direction == 2) {
               scope.sortAttribute = sortAttributeFor(attribute, isRegister);
               scope.sortDirection = (direction == 1) ? "DESCENDING" : "ASCENDING";
             }
           }
         } else if ("9".equals(command)) {
-          int picked = reportView.displayGroupBySubmenu(scope.groupBy);
+          int picked = promptGroupBy(scope.groupBy);
           if (picked == 1) scope.groupBy = "NO GROUPING";
           else if (picked == 2) scope.groupBy = "ROOM TYPE";
           else if (picked == 3) scope.groupBy = "BOOKING STATUS";
@@ -221,7 +221,7 @@ public class BookingReportController {
         } else if ("10".equals(command)) {
           handleColumnSelection(scope);
         } else if ("11".equals(command)) {
-          int picked = reportView.displayRecordLimitSubmenu(scope.recordLimit);
+          int picked = promptRecordLimit(scope.recordLimit);
           if (picked == 1) scope.recordLimit = 5;
           else if (picked == 2) scope.recordLimit = 10;
           else if (picked == 3) scope.recordLimit = 25;
@@ -236,38 +236,179 @@ public class BookingReportController {
 
   private void handleSearchSubmenu(ReportScope scope) {
     while (true) {
-      int choice =
-          reportView.displaySearchSubmenu(
-              scope.searchField, scope.searchTerm, scope.exactMatch ? "EXACT" : "CONTAINS");
+      try {
+        int choice =
+            reportView.displaySearchSubmenu(
+                scope.searchField, scope.searchTerm, scope.exactMatch ? "EXACT" : "CONTAINS");
 
-      if (choice == 0) return;
+        if (choice == 0) return;
 
-      if (choice == 1) {
-        int picked = reportView.displaySearchFieldSubmenu(scope.searchField);
-        if (picked > 0) scope.searchField = fieldNameFor(picked);
-      } else if (choice == 2) {
-        String typed = reportView.promptSearchTerm(scope.searchField, scope.searchTerm);
-        if (!"E".equalsIgnoreCase(typed.trim())) {
-          scope.searchTerm = "-".equals(typed.trim()) ? null : typed.trim();
+        if (choice == 1) {
+          int picked = promptSearchField(scope.searchField);
+          if (picked > 0) scope.searchField = fieldNameFor(picked);
+        } else if (choice == 2) {
+          String typed = promptSearchTerm(scope.searchField, scope.searchTerm);
+          if (!"E".equalsIgnoreCase(typed.trim())) {
+            scope.searchTerm = "-".equals(typed.trim()) ? null : typed.trim();
+          }
+        } else if (choice == 3) {
+          scope.exactMatch = !scope.exactMatch;
+        } else if (choice == 4) {
+          scope.searchTerm = null;
+          return;
         }
-      } else if (choice == 3) {
-        scope.exactMatch = !scope.exactMatch;
-      } else if (choice == 4) {
-        scope.searchTerm = null;
-        return;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptRoomTypeFilter(String current) {
+    while (true) {
+      try {
+        return reportView.displayRoomTypeSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptStatusFilter(String current) {
+    while (true) {
+      try {
+        return reportView.displayStatusSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptSourceFilter(String current) {
+    while (true) {
+      try {
+        return reportView.displaySourceSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptSortAttribute(String current, boolean registerReport) {
+    while (true) {
+      try {
+        return reportView.displaySortAttributeSubmenu(current, registerReport);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptSortDirection(String current) {
+    while (true) {
+      try {
+        return reportView.displaySortDirectionSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptGroupBy(String current) {
+    while (true) {
+      try {
+        return reportView.displayGroupBySubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptRecordLimit(int current) {
+    while (true) {
+      try {
+        return reportView.displayRecordLimitSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private Integer promptMinimumWait(Integer current) {
+    while (true) {
+      try {
+        return reportView.promptMinimumWait(current);
+      } catch (Exception e) {
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int[] promptStrikeRange(int currentMin, int currentMax) {
+    while (true) {
+      try {
+        return reportView.promptStrikeRange(currentMin, currentMax);
+      } catch (Exception e) {
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String promptRoomNumber(String current) {
+    while (true) {
+      try {
+        String typed = reportView.promptRoomNumber(current);
+        if (typed.trim().isEmpty()) continue;
+        return typed;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptSearchField(String current) {
+    while (true) {
+      try {
+        return reportView.displaySearchFieldSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // Blank keeps the current term and redraws, so a stray Enter never clears a filter.
+  private String promptSearchTerm(String fieldLabel, String current) {
+    while (true) {
+      try {
+        String typed = reportView.promptSearchTerm(fieldLabel, current);
+        if (typed.trim().isEmpty()) continue;
+        return typed;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
   private void handlePeriodSubmenu(ReportScope scope) {
-    int picked = reportView.displayPeriodSubmenu(periodLabel(scope));
+    int picked;
+    while (true) {
+      try {
+        picked = reportView.displayPeriodSubmenu(periodLabel(scope));
+        break;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
     if (picked == 0) return;
 
     if (picked == 6) {
       while (true) {
         try {
           String[] typed = reportView.promptDateRange(periodLabel(scope));
-          if ("E".equalsIgnoreCase(typed[0].trim())) return;
+          String from = (typed[0] == null) ? "" : typed[0].trim();
+          // Blank keeps the current range and redraws, so a stray Enter never clears a filter.
+          if (from.isEmpty()) continue;
+          if ("E".equalsIgnoreCase(from)) return;
+          if (typed[1] == null || typed[1].trim().isEmpty()) continue;
 
           LocalDate parsedFrom = parseOrNull(typed[0]);
           LocalDate parsedTo = parseOrNull(typed[1]);
@@ -298,17 +439,21 @@ public class BookingReportController {
 
   private void handleColumnSelection(ReportScope scope) {
     while (true) {
-      int picked = reportView.displayColumnSelection(COLUMN_NAMES, scope.columns);
-      if (picked == 0) return;
+      try {
+        int picked = reportView.displayColumnSelection(COLUMN_NAMES, scope.columns);
+        if (picked == 0) return;
 
-      if (picked == -1) {
-        for (int i = 0; i < scope.columns.length; i++) {
-          scope.columns[i] = true;
+        if (picked == -1) {
+          for (int i = 0; i < scope.columns.length; i++) {
+            scope.columns[i] = true;
+          }
+          continue;
         }
-        continue;
-      }
 
-      scope.columns[picked - 1] = !scope.columns[picked - 1];
+        scope.columns[picked - 1] = !scope.columns[picked - 1];
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 
@@ -324,7 +469,12 @@ public class BookingReportController {
     String scopeLabel = buildScopeLabel(scope);
 
     ListInterface<Reservation> sorted = sortReservations(matched, scope);
-    String path = writeReportFile(isRegister, sorted, title, scopeLabel, sortLabel, scope);
+    String content = buildReportText(isRegister, sorted, title, scopeLabel, sortLabel, scope);
+    String path = TxtExportUtil.export(reportFileName(isRegister), content);
+
+    // Generating a report means producing it, so it is put on the screen at once. The receipt and
+    // the saved .txt follow, rather than being the only thing the clerk ever sees.
+    showReportOnScreen(title, content, path);
 
     while (true) {
       try {
@@ -346,7 +496,10 @@ public class BookingReportController {
         } else if ("S".equalsIgnoreCase(result.input)) {
           return false;
         } else if ("R".equalsIgnoreCase(result.input)) {
-          path = writeReportFile(isRegister, sorted, title, scopeLabel, sortLabel, scope);
+          content = buildReportText(isRegister, sorted, title, scopeLabel, sortLabel, scope);
+          path = TxtExportUtil.export(reportFileName(isRegister), content);
+        } else if ("V".equalsIgnoreCase(result.input)) {
+          showReportOnScreen(title, content, path);
         } else if ("F".equalsIgnoreCase(result.input)) {
           handleBinarySearch(sorted, scope);
         }
@@ -356,7 +509,7 @@ public class BookingReportController {
     }
   }
 
-  private String writeReportFile(
+  private String buildReportText(
       boolean isRegister,
       ListInterface<Reservation> sorted,
       String title,
@@ -364,14 +517,51 @@ public class BookingReportController {
       String sortLabel,
       ReportScope scope) {
 
-    String content =
-        isRegister
-            ? buildArrivalRegisterTxt(sorted, title, scopeLabel, sortLabel, scope)
-            : buildPerformanceReportTxt(sorted, title, scopeLabel, sortLabel, scope);
+    return isRegister
+        ? buildArrivalRegisterTxt(sorted, title, scopeLabel, sortLabel, scope)
+        : buildPerformanceReportTxt(sorted, title, scopeLabel, sortLabel, scope);
+  }
 
-    return TxtExportUtil.export(
-        isRegister ? "booking/daily_arrival_register" : "booking/queue_performance_report",
-        content);
+  private String reportFileName(boolean isRegister) {
+    return isRegister ? "booking/daily_arrival_register" : "booking/queue_performance_report";
+  }
+
+  // The report is one long string, so it is split into lines once and paged from the list. The
+  // page counter lives here because a view may draw a page but must not own where the reader is.
+  private void showReportOnScreen(String title, String content, String path) {
+    ListInterface<String> lines = new ArrayList<>();
+    for (String line : content.split("\\R", -1)) {
+      lines.add(line);
+    }
+
+    int totalPages =
+        Math.max(1, (int) Math.ceil((double) lines.getNumberOfEntries() / REPORT_PAGE_LINES));
+    int page = 1;
+
+    while (true) {
+      try {
+        ConsoleUtil.GetMenuInputResult result =
+            reportView.displayReportPage(title, lines, page, REPORT_PAGE_LINES, totalPages, path);
+
+        if ("E".equalsIgnoreCase(result.input)) return;
+
+        if ("N".equalsIgnoreCase(result.input)) {
+          if (page < totalPages) {
+            page++;
+          } else {
+            ConsoleUtil.printError("Already on the last page!");
+          }
+        } else if ("P".equalsIgnoreCase(result.input)) {
+          if (page > 1) {
+            page--;
+          } else {
+            ConsoleUtil.printError("Already on the first page!");
+          }
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   // Binary search is only valid on the key the list is actually ordered by.
@@ -384,7 +574,15 @@ public class BookingReportController {
       return;
     }
 
-    String target = reportView.promptReservationIdSearch();
+    String target;
+    while (true) {
+      try {
+        target = reportView.promptReservationIdSearch();
+        break;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
     if (target == null || "B".equalsIgnoreCase(target.trim())) {
       return;
     }
@@ -736,8 +934,14 @@ public class BookingReportController {
     return row;
   }
 
+  // When this booking actually turned up. A walk-in arrives by joining the line, an advance
+  // booking arrives by being checked in, and one still awaited is dated by the time it is due.
+  // Reading only the queue stamp would date every reservation to the day it was booked for and
+  // drop guests who checked straight in out of today's register.
   private LocalDateTime arrivalStampOf(Reservation r) {
-    return (r.getQueueArrivalTime() != null) ? r.getQueueArrivalTime() : r.getExpectedArrivalTime();
+    if (r.getQueueArrivalTime() != null) return r.getQueueArrivalTime();
+    if (r.getCheckInTime() != null) return r.getCheckInTime();
+    return r.getExpectedArrivalTime();
   }
 
   private String[][] buildRoomTypeSubtotals(ListInterface<Reservation> rows) {
@@ -792,8 +996,9 @@ public class BookingReportController {
     return summariseRows(rows, null, "ALL TYPES");
   }
 
-  // A booking counts as an arrival once it has actually stood in a line, so RESERVED bookings
-  // that never turned up are left out of the wait and no-show maths entirely.
+  // A booking counts once it has reached its moment of truth: it stood in a line, it was checked
+  // in, or it was closed as a no-show. Bookings still awaited are left out, because they have not
+  // yet succeeded or failed and would only dilute the rate.
   private String[] summariseRows(
       ListInterface<Reservation> rows, Room.RoomType roomType, String label) {
 
@@ -807,11 +1012,12 @@ public class BookingReportController {
       Reservation r = rows.getEntry(i);
       if (r == null) continue;
       if (roomType != null && r.getRoomType() != roomType) continue;
-      if (r.getQueueArrivalTime() == null) continue;
+      if (!hasBeenResolved(r)) continue;
 
       arrivals++;
 
-      long wait = waitMinutesOf(r);
+      // A booking checked straight in never queued, so it waited nothing rather than -1.
+      long wait = Math.max(0, waitMinutesOf(r));
       totalWait += wait;
       if (wait > longestWait) {
         longestWait = wait;
@@ -836,147 +1042,10 @@ public class BookingReportController {
     };
   }
 
-  // ================= ROOM UTILISATION & FORECAST =================
-
-  private void runUtilisationReport() {
-    LocalDate startDate = LocalDate.now();
-    int horizonDays = 14;
-    String roomTypeFilter = null;
-
-    while (true) {
-      try {
-        standardReservationRepo.sweepLapsedHolds(roomRepo, guestRepo);
-
-        String command =
-            reportView.displayUtilisationPanel(
-                horizonDays, roomTypeFilter, startDate.format(DATE_FORMAT), countLiveBookings());
-
-        if ("E".equals(command)) {
-          return;
-        } else if ("R".equals(command)) {
-          startDate = LocalDate.now();
-          horizonDays = 14;
-          roomTypeFilter = null;
-        } else if ("X".equals(command)) {
-          String path =
-              TxtExportUtil.export(
-                  "booking/room_utilisation_forecast",
-                  buildUtilisationTxt(startDate, horizonDays, roomTypeFilter));
-
-          ConsoleUtil.GetMenuInputResult result =
-              reportView.showExportReceipt(
-                  UTILISATION_TITLE,
-                  startDate.format(DATE_FORMAT)
-                      + " for "
-                      + horizonDays
-                      + " nights  |  "
-                      + ((roomTypeFilter == null) ? "All Room Types" : roomTypeFilter),
-                  "CALENDAR DATE (ASCENDING)",
-                  "NIGHT",
-                  horizonDays,
-                  horizonDays,
-                  path,
-                  false,
-                  false);
-
-          if ("B".equalsIgnoreCase(result.input)) return;
-        } else if ("1".equals(command)) {
-          while (true) {
-            try {
-              String typedStart = reportView.promptStartDate(startDate.format(DATE_FORMAT));
-              if (!"E".equalsIgnoreCase(typedStart.trim())) {
-                startDate = parseDate(typedStart.trim());
-              }
-              break;
-            } catch (IllegalArgumentException e) {
-              ConsoleUtil.printError(e.getMessage());
-            }
-          }
-        } else if ("2".equals(command)) {
-          Integer picked = reportView.promptHorizon(horizonDays);
-          if (picked != null) horizonDays = picked;
-        } else if ("3".equals(command)) {
-          int picked = reportView.displayRoomTypeSubmenu(roomTypeFilter);
-          if (picked > 0) roomTypeFilter = roomTypeNameFor(picked);
-        }
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  private int countLiveBookings() {
-    ListInterface<Reservation> all = standardReservationRepo.getAllReservations();
-    int count = 0;
-    for (int i = 1; i <= all.getNumberOfEntries(); i++) {
-      Reservation r = all.getEntry(i);
-      if (r != null && r.getOccupancyStartDate() != null) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  private String buildUtilisationTxt(LocalDate startDate, int horizonDays, String roomTypeFilter) {
-    Room.RoomType[] allTypes = Room.RoomType.values();
-
-    ListInterface<Room.RoomType> types = new ArrayList<>();
-    for (Room.RoomType type : allTypes) {
-      if (roomTypeFilter == null || roomTypeFilter.equalsIgnoreCase(type.name())) {
-        types.add(type);
-      }
-    }
-
-    StringBuilder sb = new StringBuilder();
-    sb.append(UTILISATION_TITLE).append(NEW_LINE);
-    appendRule(sb, '=', UTILISATION_TITLE.length());
-    sb.append("GENERATED : ").append(formatTimestamp(LocalDateTime.now())).append(NEW_LINE);
-    sb.append("FROM      : ").append(startDate.format(DATE_FORMAT)).append(NEW_LINE);
-    sb.append("HORIZON   : ").append(horizonDays).append(" night(s)").append(NEW_LINE);
-    sb.append("ROOM TYPE : ")
-        .append((roomTypeFilter == null) ? "All room types" : roomTypeFilter)
-        .append(NEW_LINE)
-        .append(NEW_LINE);
-
-    for (int t = 1; t <= types.getNumberOfEntries(); t++) {
-      Room.RoomType type = types.getEntry(t);
-      int total = standardReservationRepo.getTotalRoomsOfType(roomRepo, type);
-
-      appendSectionHeading(sb, type.name() + "   (" + total + " room(s) in the house)");
-
-      String[][] rows = new String[horizonDays][];
-      for (int d = 0; d < horizonDays; d++) {
-        LocalDate date = startDate.plusDays(d);
-        int committed = standardReservationRepo.countCommittedOn(type, date);
-        int free = Math.max(0, total - committed);
-        String occupancy =
-            (total == 0) ? "-" : String.format("%.0f%%", (committed * 100.0) / total);
-
-        rows[d] =
-            new String[] {
-              date.format(DATE_FORMAT),
-              date.getDayOfWeek().name().substring(0, 3),
-              String.valueOf(total),
-              String.valueOf(committed),
-              String.valueOf(free),
-              occupancy,
-              (free == 0) ? "FULLY BOOKED" : ""
-            };
-      }
-
-      sb.append(
-          buildTxtTable(
-              new String[] {"Date", "Day", "Rooms", "Committed", "Free", "Occupancy", "Note"},
-              rows));
-      sb.append(NEW_LINE);
-    }
-
-    sb.append("Committed counts advance bookings, guests still in their rooms and rooms currently")
-        .append(NEW_LINE)
-        .append("on hold, across every module. Checkout day is a turnover day and is counted free.")
-        .append(NEW_LINE);
-
-    return sb.toString();
+  private boolean hasBeenResolved(Reservation r) {
+    return r.getQueueArrivalTime() != null
+        || r.getCheckInTime() != null
+        || r.getStatus() == Reservation.Status.NO_SHOW;
   }
 
   // ================= SHARED TXT LAYOUT =================

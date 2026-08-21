@@ -6,11 +6,6 @@ import util.ConsoleUtil;
 import view.booking.GuestRegistrationView;
 
 public class GuestRegistrationController {
-  private static final int STEP_NAME = 1;
-  private static final int STEP_IC = 2;
-  private static final int STEP_PASSPORT = 3;
-  private static final int STEP_PHONE = 4;
-  private static final int STEP_EMAIL = 5;
   private static final int STEP_CONFIRM = 6;
 
   private static final int MIN_NAME_LENGTH = 2;
@@ -63,26 +58,28 @@ public class GuestRegistrationController {
   // A suggested name pre-fills the first field; both booking flows open the form from their mode
   // menu with nothing typed yet, so they pass null.
   public Guest registerNewGuest(String suggestedName) {
-    String name = (suggestedName == null) ? "" : suggestedName.trim();
-    String icNumber = "";
-    String passportNumber = "";
-    String phoneNumber = "";
-    String email = "";
+    FormState form = new FormState();
+    form.name = (suggestedName == null) ? "" : suggestedName.trim();
 
-    int step = STEP_NAME;
+    int step = GuestRegistrationView.STEP_NAME;
 
     while (true) {
+      String name = form.name;
+      String icNumber = form.icNumber;
+      String passportNumber = form.passportNumber;
+      String phoneNumber = form.phoneNumber;
+      String email = form.email;
+
       if (step == STEP_CONFIRM) {
         // The id is minted only once the clerk is looking at the summary, so a cancelled or
         // reopened form never burns a number that the next guest would then skip over.
         String guestId = guestRepo.generateGuestId();
 
         int choice =
-            registrationView.displayConfirmationScreen(
-                guestId, name, icNumber, passportNumber, phoneNumber, email);
+            promptGuestConfirmation(guestId, name, icNumber, passportNumber, phoneNumber, email);
 
         if (choice == 2) {
-          step = STEP_EMAIL;
+          step = GuestRegistrationView.STEP_EMAIL;
           continue;
         } else if (choice != 1) {
           return null;
@@ -106,21 +103,21 @@ public class GuestRegistrationController {
 
       StepResult result;
 
-      if (step == STEP_IC) {
-        result = collectIcNumber(name, icNumber);
-        if (result.outcome == StepResult.NEXT) icNumber = result.value;
-      } else if (step == STEP_PASSPORT) {
-        result = collectPassportNumber(name, passportNumber);
-        if (result.outcome == StepResult.NEXT) passportNumber = result.value;
-      } else if (step == STEP_PHONE) {
-        result = collectPhoneNumber(name, phoneNumber);
-        if (result.outcome == StepResult.NEXT) phoneNumber = result.value;
-      } else if (step == STEP_EMAIL) {
-        result = collectEmail(name, email);
-        if (result.outcome == StepResult.NEXT) email = result.value;
+      if (step == GuestRegistrationView.STEP_IC) {
+        result = collectIcNumber(form);
+        if (result.outcome == StepResult.NEXT) form.icNumber = result.value;
+      } else if (step == GuestRegistrationView.STEP_PASSPORT) {
+        result = collectPassportNumber(form);
+        if (result.outcome == StepResult.NEXT) form.passportNumber = result.value;
+      } else if (step == GuestRegistrationView.STEP_PHONE) {
+        result = collectPhoneNumber(form);
+        if (result.outcome == StepResult.NEXT) form.phoneNumber = result.value;
+      } else if (step == GuestRegistrationView.STEP_EMAIL) {
+        result = collectEmail(form);
+        if (result.outcome == StepResult.NEXT) form.email = result.value;
       } else {
-        result = collectName(name);
-        if (result.outcome == StepResult.NEXT) name = result.value;
+        result = collectName(form);
+        if (result.outcome == StepResult.NEXT) form.name = result.value;
       }
 
       if (result.outcome == StepResult.CANCEL) {
@@ -131,7 +128,7 @@ public class GuestRegistrationController {
         step--;
         // Stepping back off the first field leaves the form, which returns the clerk to the
         // guest search they came from rather than trapping them in the registration screens.
-        if (step < STEP_NAME) return null;
+        if (step < GuestRegistrationView.STEP_NAME) return null;
         continue;
       }
 
@@ -139,201 +136,259 @@ public class GuestRegistrationController {
 
       // Checked on the way out of the passport step rather than at the summary, so the clerk
       // is not asked for three more fields before being told the file has no document on it.
-      if (step == STEP_PHONE && icNumber.isEmpty() && passportNumber.isEmpty()) {
-        registrationView.displayFieldErrorScreen(
-            "Identity Document",
-            "",
+      if (step == GuestRegistrationView.STEP_PHONE
+          && form.icNumber.isEmpty()
+          && form.passportNumber.isEmpty()) {
+        step = GuestRegistrationView.STEP_IC;
+        form.pendingError =
             "A guest file needs at least one identity document. Capture either the IC number or"
-                + " the passport number.");
-        step = STEP_IC;
+                + " the passport number.";
       }
     }
   }
 
-  private StepResult collectName(String current) {
+  // The form is walked field by field, so every screen has to redraw everything captured so far.
+  // Holding the five values together keeps that from being five parameters on every call.
+  private static class FormState {
+    private String name = "";
+    private String icNumber = "";
+    private String passportNumber = "";
+    private String phoneNumber = "";
+    private String email = "";
+
+    // Set when a rule that spans two fields fails, so the message survives the jump back.
+    private String pendingError;
+
+    private GuestRegistrationView.FormDTO toDTO() {
+      return new GuestRegistrationView.FormDTO(name, icNumber, passportNumber, phoneNumber, email);
+    }
+
+    private String takeError() {
+      String error = pendingError;
+      pendingError = null;
+      return error;
+    }
+  }
+
+  private int promptGuestConfirmation(
+      String guestId,
+      String name,
+      String icNumber,
+      String passportNumber,
+      String phoneNumber,
+      String email) {
     while (true) {
       try {
-        String input = registrationView.promptName(STEP_NAME, current);
-        if (isExit(input)) return StepResult.cancel();
-        if (isBack(input)) return StepResult.back();
-
-        String name = input.trim();
-        if (name.isEmpty() && !current.isEmpty()) {
-          return StepResult.next(current);
-        }
-
-        if (name.length() < MIN_NAME_LENGTH || name.length() > MAX_NAME_LENGTH) {
-          registrationView.displayFieldErrorScreen(
-              "Full Name",
-              name,
-              "A name must be between "
-                  + MIN_NAME_LENGTH
-                  + " and "
-                  + MAX_NAME_LENGTH
-                  + " characters.");
-          continue;
-        }
-
-        if (!isValidName(name)) {
-          registrationView.displayFieldErrorScreen(
-              "Full Name",
-              name,
-              "A name may only contain letters, spaces, apostrophes, hyphens, full stops and"
-                  + " slashes.");
-          continue;
-        }
-
-        // findByName returns the first match, so a second guest under the same name would be
-        // unreachable by name at every booking screen. The clerk is told before that happens.
-        Guest sameName = guestRepo.findByName(name);
-        if (sameName != null && !registrationView.displaySameNameWarningScreen(name, sameName)) {
-          continue;
-        }
-
-        return StepResult.next(name);
+        return registrationView.displayConfirmationScreen(
+            guestId, name, icNumber, passportNumber, phoneNumber, email);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
-  private StepResult collectIcNumber(String name, String current) {
+  private boolean promptSameNameWarning(String name, Guest existing) {
     while (true) {
       try {
-        String input = registrationView.promptIcNumber(STEP_IC, name, current);
-        if (isExit(input)) return StepResult.cancel();
-        if (isBack(input)) return StepResult.back();
-
-        String typed = input.trim();
-        if (typed.isEmpty()) return StepResult.next(current);
-        if (CLEAR.equals(typed)) return StepResult.next("");
-
-        // Storing the hyphens is what lets findByIdentityDocument match at all, so a clerk
-        // who reads the 12 digits straight off the card still ends up with the same value as
-        // one who typed the mask.
-        String icNumber = applyIcMask(typed);
-
-        if (!isValidMalaysianIc(icNumber)) {
-          registrationView.displayFieldErrorScreen(
-              "IC Number",
-              icNumber,
-              "A Malaysian IC must read XXXXXX-XX-XXXX, where the first six digits are the date"
-                  + " of birth as YYMMDD. Example: 920101-14-5543. The 12 digits may be typed"
-                  + " without hyphens and the mask is applied automatically.");
-          continue;
-        }
-
-        Guest owner = guestRepo.findByIdentityDocument(icNumber);
-        if (owner != null) {
-          registrationView.displayDuplicateGuestScreen("IC Number", icNumber, owner);
-          continue;
-        }
-
-        return StepResult.next(icNumber);
+        return registrationView.displaySameNameWarningScreen(name, existing);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
-  private StepResult collectPassportNumber(String name, String current) {
+  private StepResult collectName(FormState form) {
+    String error = form.takeError();
+
     while (true) {
-      try {
-        String input = registrationView.promptPassportNumber(STEP_PASSPORT, name, current);
-        if (isExit(input)) return StepResult.cancel();
-        if (isBack(input)) return StepResult.back();
+      String input =
+          registrationView.promptFormField(GuestRegistrationView.STEP_NAME, form.toDTO(), error);
+      error = null;
 
-        String passportNumber = input.trim();
-        if (passportNumber.isEmpty()) return StepResult.next(current);
-        if (CLEAR.equals(passportNumber)) return StepResult.next("");
+      if (isExit(input)) return StepResult.cancel();
+      if (isBack(input)) return StepResult.back();
 
-        if (passportNumber.length() < MIN_PASSPORT_LENGTH
-            || passportNumber.length() > MAX_PASSPORT_LENGTH
-            || !isAlphanumeric(passportNumber)) {
-          registrationView.displayFieldErrorScreen(
-              "Passport Number",
-              passportNumber,
-              "A passport number must be "
-                  + MIN_PASSPORT_LENGTH
-                  + " to "
-                  + MAX_PASSPORT_LENGTH
-                  + " letters and digits with no spaces.");
-          continue;
-        }
-
-        Guest owner = guestRepo.findByIdentityDocument(passportNumber);
-        if (owner != null) {
-          registrationView.displayDuplicateGuestScreen("Passport Number", passportNumber, owner);
-          continue;
-        }
-
-        return StepResult.next(passportNumber);
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
+      String name = input.trim();
+      if (name.isEmpty() && !form.name.isEmpty()) {
+        return StepResult.next(form.name);
       }
+
+      if (name.length() < MIN_NAME_LENGTH || name.length() > MAX_NAME_LENGTH) {
+        error =
+            "A name must be between "
+                + MIN_NAME_LENGTH
+                + " and "
+                + MAX_NAME_LENGTH
+                + " characters.";
+        continue;
+      }
+
+      if (!isValidName(name)) {
+        error =
+            "A name may only contain letters, spaces, apostrophes, hyphens, full stops and"
+                + " slashes.";
+        continue;
+      }
+
+      // findByName returns the first match, so a second guest under the same name would be
+      // unreachable by name at every booking screen. The clerk is told before that happens.
+      Guest sameName = guestRepo.findByName(name);
+      if (sameName != null && !promptSameNameWarning(name, sameName)) {
+        continue;
+      }
+
+      return StepResult.next(name);
     }
   }
 
-  private StepResult collectPhoneNumber(String name, String current) {
+  private StepResult collectIcNumber(FormState form) {
+    String error = form.takeError();
+
     while (true) {
-      try {
-        String input = registrationView.promptPhoneNumber(STEP_PHONE, name, current);
-        if (isExit(input)) return StepResult.cancel();
-        if (isBack(input)) return StepResult.back();
+      String input =
+          registrationView.promptFormField(GuestRegistrationView.STEP_IC, form.toDTO(), error);
+      error = null;
 
-        String phoneNumber = input.trim();
-        if (phoneNumber.isEmpty() && !current.isEmpty()) {
-          return StepResult.next(current);
-        }
+      if (isExit(input)) return StepResult.cancel();
+      if (isBack(input)) return StepResult.back();
 
-        if (countDigits(phoneNumber) < MIN_PHONE_DIGITS || !isPhoneShaped(phoneNumber)) {
-          registrationView.displayFieldErrorScreen(
-              "Phone Number",
-              phoneNumber,
-              "A phone number must hold at least "
-                  + MIN_PHONE_DIGITS
-                  + " digits and may only contain digits, spaces, hyphens and a leading plus.");
-          continue;
-        }
+      String typed = input.trim();
+      if (typed.isEmpty()) return StepResult.next(form.icNumber);
+      if (CLEAR.equals(typed)) return StepResult.next("");
 
-        Guest owner = guestRepo.findByPhoneNumber(phoneNumber);
-        if (owner != null) {
-          registrationView.displayDuplicateGuestScreen("Phone Number", phoneNumber, owner);
-          continue;
-        }
+      // Storing the hyphens is what lets findByIdentityDocument match at all, so a clerk
+      // who reads the 12 digits straight off the card still ends up with the same value as
+      // one who typed the mask.
+      String icNumber = applyIcMask(typed);
 
-        return StepResult.next(phoneNumber);
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
+      if (!isValidMalaysianIc(icNumber)) {
+        error =
+            "\""
+                + icNumber
+                + "\" is not a Malaysian IC. It must read XXXXXX-XX-XXXX, where the first six"
+                + " digits are the date of birth as YYMMDD. Example: 920101-14-5543.";
+        continue;
       }
+
+      Guest owner = guestRepo.findByIdentityDocument(icNumber);
+      if (owner != null) {
+        error = duplicateMessage("IC number", icNumber, owner);
+        continue;
+      }
+
+      return StepResult.next(icNumber);
     }
   }
 
-  private StepResult collectEmail(String name, String current) {
+  private StepResult collectPassportNumber(FormState form) {
+    String error = form.takeError();
+
     while (true) {
-      try {
-        String input = registrationView.promptEmail(STEP_EMAIL, name, current);
-        if (isExit(input)) return StepResult.cancel();
-        if (isBack(input)) return StepResult.back();
+      String input =
+          registrationView.promptFormField(
+              GuestRegistrationView.STEP_PASSPORT, form.toDTO(), error);
+      error = null;
 
-        String email = input.trim();
-        if (email.isEmpty()) return StepResult.next(current);
-        if (CLEAR.equals(email)) return StepResult.next("");
+      if (isExit(input)) return StepResult.cancel();
+      if (isBack(input)) return StepResult.back();
 
-        if (!isValidEmail(email)) {
-          registrationView.displayFieldErrorScreen(
-              "Email Address",
-              email,
-              "An email address needs one '@' with text on both sides and a dot in the domain,"
-                  + " for example name@example.com.");
-          continue;
-        }
+      String passportNumber = input.trim();
+      if (passportNumber.isEmpty()) return StepResult.next(form.passportNumber);
+      if (CLEAR.equals(passportNumber)) return StepResult.next("");
 
-        return StepResult.next(email);
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
+      if (passportNumber.length() < MIN_PASSPORT_LENGTH
+          || passportNumber.length() > MAX_PASSPORT_LENGTH
+          || !isAlphanumeric(passportNumber)) {
+        error =
+            "A passport number must be "
+                + MIN_PASSPORT_LENGTH
+                + " to "
+                + MAX_PASSPORT_LENGTH
+                + " letters and digits with no spaces.";
+        continue;
       }
+
+      Guest owner = guestRepo.findByIdentityDocument(passportNumber);
+      if (owner != null) {
+        error = duplicateMessage("passport number", passportNumber, owner);
+        continue;
+      }
+
+      return StepResult.next(passportNumber);
     }
+  }
+
+  private StepResult collectPhoneNumber(FormState form) {
+    String error = form.takeError();
+
+    while (true) {
+      String input =
+          registrationView.promptFormField(GuestRegistrationView.STEP_PHONE, form.toDTO(), error);
+      error = null;
+
+      if (isExit(input)) return StepResult.cancel();
+      if (isBack(input)) return StepResult.back();
+
+      String phoneNumber = input.trim();
+      if (phoneNumber.isEmpty() && !form.phoneNumber.isEmpty()) {
+        return StepResult.next(form.phoneNumber);
+      }
+
+      if (countDigits(phoneNumber) < MIN_PHONE_DIGITS || !isPhoneShaped(phoneNumber)) {
+        error =
+            "A phone number must hold at least "
+                + MIN_PHONE_DIGITS
+                + " digits and may only contain digits, spaces, hyphens and a leading plus.";
+        continue;
+      }
+
+      Guest owner = guestRepo.findByPhoneNumber(phoneNumber);
+      if (owner != null) {
+        error = duplicateMessage("phone number", phoneNumber, owner);
+        continue;
+      }
+
+      return StepResult.next(phoneNumber);
+    }
+  }
+
+  private StepResult collectEmail(FormState form) {
+    String error = form.takeError();
+
+    while (true) {
+      String input =
+          registrationView.promptFormField(GuestRegistrationView.STEP_EMAIL, form.toDTO(), error);
+      error = null;
+
+      if (isExit(input)) return StepResult.cancel();
+      if (isBack(input)) return StepResult.back();
+
+      String email = input.trim();
+      if (email.isEmpty()) return StepResult.next(form.email);
+      if (CLEAR.equals(email)) return StepResult.next("");
+
+      if (!isValidEmail(email)) {
+        error =
+            "An email address needs one '@' with text on both sides and a dot in the domain,"
+                + " for example name@example.com.";
+        continue;
+      }
+
+      return StepResult.next(email);
+    }
+  }
+
+  private String duplicateMessage(String field, String value, Guest owner) {
+    return "That "
+        + field
+        + " already belongs to "
+        + owner.getName()
+        + " ("
+        + owner.getGuestId()
+        + "). Opening a second file would split this guest's history across two records. Search"
+        + " for "
+        + owner.getGuestId()
+        + " instead, or capture a different value.";
   }
 
   private boolean isExit(String input) {

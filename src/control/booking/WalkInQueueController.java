@@ -20,6 +20,8 @@ import util.ConsoleUtil;
 import view.booking.WalkInQueueView;
 
 public class WalkInQueueController {
+  private static final String BLANK_INPUT = "Input cannot be empty!";
+
   private static final String FIELD_NAME = "GUEST NAME";
   private static final String FIELD_GUEST_ID = "GUEST ID";
   private static final String FIELD_IC = "IC NUMBER";
@@ -298,7 +300,7 @@ public class WalkInQueueController {
     boolean overridden = fifoSkip || vipBypass;
 
     if (overridden
-        && !walkInQueueView.displayAllocationOverrideScreen(
+        && !promptAllocationOverride(
             roomType,
             target,
             guest,
@@ -319,7 +321,7 @@ public class WalkInQueueController {
       return;
     }
 
-    if (!walkInQueueView.displayAllocateConfirmationScreen(
+    if (!promptAllocateConfirmation(
         target,
         guest,
         room,
@@ -342,6 +344,39 @@ public class WalkInQueueController {
 
     walkInQueueView.displayAllocateSuccessScreen(
         allocated, guest, room, queue.getNumberOfEntries(), overridden);
+
+    // The guest is standing right there, so the hold usually turns into a check-in seconds later.
+    // Offering it here saves walking back out to the line screen and into [C] to find the same
+    // record again. Declining leaves the hold running on its grace window as before.
+    if (promptCheckInNow(allocated, guest, room)) {
+      checkInHold(allocated, guest, room, roomType);
+    }
+  }
+
+  private boolean promptCheckInNow(Reservation allocated, Guest guest, Room room) {
+    while (true) {
+      try {
+        return walkInQueueView.displayCheckInNowScreen(
+            allocated,
+            guest,
+            room,
+            standardReservationRepo.getHoldGraceMinutes(room.getRoomType()));
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // One check-in path for both the offer above and the [C] hold list, so a room taken straight
+  // after allocation is stamped exactly like one taken later.
+  private void checkInHold(Reservation hold, Guest guest, Room room, Room.RoomType roomType) {
+    Integer stayDays =
+        promptStayDays(hold, guest, room, settings().getMaxStayNights(), maxNightsFrom(roomType));
+    if (stayDays == null) return;
+
+    standardReservationRepo.checkIn(hold, stayDays);
+    walkInQueueView.displayCheckInSuccessScreen(
+        hold, guest, room, stayDays, hold.getOccupancyEndDate());
   }
 
   private String namesAheadOf(Room.RoomType roomType, int position) {
@@ -365,6 +400,143 @@ public class WalkInQueueController {
     return names.toString();
   }
 
+  private int promptSearchField(String current) {
+    while (true) {
+      try {
+        return walkInQueueView.displaySearchFieldSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // Blank keeps the current term and redraws, so a stray Enter never clears a filter.
+  private String promptSearchTerm(String fieldLabel, String current) {
+    while (true) {
+      try {
+        String typed = walkInQueueView.promptSearchTerm(fieldLabel, current);
+        if (typed.trim().isEmpty()) continue;
+        return typed;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private Integer promptMinimumWait(Integer current) {
+    while (true) {
+      try {
+        return walkInQueueView.promptMinimumWait(current);
+      } catch (Exception e) {
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptAllocationOverride(
+      Room.RoomType roomType,
+      Reservation target,
+      Guest guest,
+      int position,
+      int waiting,
+      int aheadCount,
+      String namesAhead,
+      int freeToCounter,
+      int vipWaiting,
+      boolean fifoSkip,
+      boolean vipBypass) {
+    while (true) {
+      try {
+        return walkInQueueView.displayAllocationOverrideScreen(
+            roomType,
+            target,
+            guest,
+            position,
+            waiting,
+            aheadCount,
+            namesAhead,
+            freeToCounter,
+            vipWaiting,
+            fifoSkip,
+            vipBypass);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptAllocateConfirmation(
+      Reservation target, Guest guest, Room room, int graceMinutes, int vipWaiting, int position) {
+    while (true) {
+      try {
+        return walkInQueueView.displayAllocateConfirmationScreen(
+            target, guest, room, graceMinutes, vipWaiting, position);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptCloseQueueConfirmation(Room.RoomType roomType, int waiting) {
+    while (true) {
+      try {
+        return walkInQueueView.displayCloseQueueConfirmationScreen(roomType, waiting);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private Integer promptStayDays(
+      Reservation hold, Guest guest, Room room, int maxStayNights, int availableNights) {
+    while (true) {
+      try {
+        return walkInQueueView.promptStayDays(hold, guest, room, maxStayNights, availableNights);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // Returns the 1-based index into the whole hold list, or null when the clerk backed out.
+  private Integer promptHoldSelection(
+      ListInterface<WalkInQueueView.HoldRowDTO> rows, int graceMinutes, int pageSize) {
+    int total = (rows == null) ? 0 : rows.getNumberOfEntries();
+    int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / pageSize);
+    int page = 1;
+
+    while (true) {
+      try {
+        page = Math.min(Math.max(page, 1), Math.max(totalPages, 1));
+        ConsoleUtil.GetMenuInputResult result =
+            walkInQueueView.renderHoldPicker(rows, graceMinutes, page, pageSize);
+
+        if ("E".equalsIgnoreCase(result.input)) return null;
+
+        if ("N".equalsIgnoreCase(result.input)) {
+          if (page < totalPages) {
+            page++;
+          } else {
+            ConsoleUtil.printError("Already on the last page!");
+          }
+          continue;
+        }
+        if ("P".equalsIgnoreCase(result.input)) {
+          if (page > 1) {
+            page--;
+          } else {
+            ConsoleUtil.printError("Already on the first page!");
+          }
+          continue;
+        }
+
+        return (page - 1) * pageSize + result.getAsInt();
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
   private void handleCheckInHold(
       ListInterface<Reservation> holds, Room.RoomType roomType, int pageSize, int graceMinutes) {
     if (holds == null || holds.isEmpty()) {
@@ -373,8 +545,7 @@ public class WalkInQueueController {
     }
 
     Integer selection =
-        walkInQueueView.promptHoldSelection(
-            buildHoldRowDTO(holds, graceMinutes), graceMinutes, pageSize);
+        promptHoldSelection(buildHoldRowDTO(holds, graceMinutes), graceMinutes, pageSize);
     if (selection == null) {
       return;
     }
@@ -388,16 +559,7 @@ public class WalkInQueueController {
     Guest guest = guestRepo.findById(hold.getGuestId());
     Room room = standardReservationRepo.findHeldRoom(hold, roomRepo);
 
-    Integer stayDays =
-        walkInQueueView.promptStayDays(
-            hold, guest, room, settings().getMaxStayNights(), maxNightsFrom(roomType));
-    if (stayDays == null) {
-      return;
-    }
-
-    standardReservationRepo.checkIn(hold, stayDays);
-    walkInQueueView.displayCheckInSuccessScreen(
-        hold, guest, room, stayDays, hold.getOccupancyEndDate());
+    checkInHold(hold, guest, room, roomType);
   }
 
   // The first night is always available because this guest is already holding the room. Only the
@@ -417,8 +579,7 @@ public class WalkInQueueController {
       return;
     }
 
-    if (!walkInQueueView.displayCloseQueueConfirmationScreen(
-        roomType, queue.getNumberOfEntries())) {
+    if (!promptCloseQueueConfirmation(roomType, queue.getNumberOfEntries())) {
       return;
     }
 
@@ -449,24 +610,48 @@ public class WalkInQueueController {
         Guest guest = guestRepo.findById(selected.getGuestId());
         int position = queue.getPosition(selected);
 
-        int action =
-            walkInQueueView.displayRowActionSubmenu(
-                selected, guest, position, queue.getNumberOfEntries());
+        int vacant = countVacantCleanRooms(roomType);
+        int freeToCounter = Math.max(0, vacant - arrivingToday(roomType));
+        int vipWaiting = countVipWaiting(roomType);
+        Room onOffer = roomRepo.findVacantCleanRoom(roomType);
 
-        if (action == 1) {
-          walkInQueueView.displayReservationDetailScreen(
-              selected, guest, position, queue.getNumberOfEntries());
-        } else if (action == 2) {
+        // Shown before the choice is made, so the clerk knows which of the two assign options
+        // will actually go through rather than finding out after picking the wrong one.
+        boolean fifoSkip = position > 1;
+        boolean vipBypass = settings().isEnforceVipBypass() && freeToCounter <= vipWaiting;
+
+        int action =
+            walkInQueueView.displayAllocationDetailScreen(
+                selected,
+                guest,
+                position,
+                queue.getNumberOfEntries(),
+                (onOffer == null) ? null : onOffer.getRoomNumber(),
+                freeToCounter,
+                vipWaiting,
+                fifoSkip || vipBypass);
+
+        if (action == 1 || action == 2) {
           allocateToGuest(selected, roomType);
           return;
         } else if (action == 3) {
-          if (walkInQueueView.displayCancelConfirmationScreen(selected, guest, position)) {
+          if (promptCancelConfirmation(selected, guest, position)) {
             standardReservationRepo.cancelReservation(selected);
             return;
           }
         } else {
           return;
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptCancelConfirmation(Reservation target, Guest guest, int position) {
+    while (true) {
+      try {
+        return walkInQueueView.displayCancelConfirmationScreen(target, guest, position);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -488,17 +673,17 @@ public class WalkInQueueController {
         int choice = walkInQueueView.displayFilterMainMenu(field, term, mode, minWait);
 
         if (choice == 1) {
-          int picked = walkInQueueView.displaySearchFieldSubmenu(field);
+          int picked = promptSearchField(field);
           if (picked > 0) field = fieldNameFor(picked);
         } else if (choice == 2) {
-          String typed = walkInQueueView.promptSearchTerm(field, term);
+          String typed = promptSearchTerm(field, term);
           if (!"E".equalsIgnoreCase(typed.trim())) {
             term = "-".equals(typed.trim()) ? null : typed.trim();
           }
         } else if (choice == 3) {
           mode = "EXACT".equals(mode) ? "CONTAINS" : "EXACT";
         } else if (choice == 4) {
-          Integer entered = walkInQueueView.promptMinimumWait(minWait);
+          Integer entered = promptMinimumWait(minWait);
           if (entered != null) {
             minWait = (entered == 0) ? null : entered;
           }

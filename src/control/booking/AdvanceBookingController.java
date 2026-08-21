@@ -2,7 +2,6 @@ package control.booking;
 
 import adt.ArrayList;
 import adt.ListInterface;
-import adt.QueueInterface;
 import entity.BookingSettings;
 import entity.Guest;
 import entity.Member;
@@ -42,6 +41,7 @@ public class AdvanceBookingController {
   private static final String FIELD_ALL = "ALL FIELDS";
 
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  private static final DateTimeFormatter SHORT_DATE_FORMAT = DateTimeFormatter.ofPattern("MM-dd");
   private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
   private final AdvanceBookingView advanceBookingView = new AdvanceBookingView();
@@ -118,9 +118,6 @@ public class AdvanceBookingController {
         } else if ("A".equalsIgnoreCase(result.input)) {
           handleNewBooking();
           currentPage = 1;
-        } else if ("M".equalsIgnoreCase(result.input)) {
-          handleMarkArrivalByPrompt(rows, currentPage, pageSize);
-          currentPage = 1;
         } else if ("S".equalsIgnoreCase(result.input)) {
           Object[] filters =
               handleFilterMenu(
@@ -174,13 +171,17 @@ public class AdvanceBookingController {
         // keystroke rather than the whole booking.
         if (guest == null) continue;
 
-        Member member =
-            (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
-        if (member != null && member.getTier() != null) {
-          advanceBookingView.displayMemberBlockedScreen(guest, member);
+        // Checked before any dates are asked for, so a guest the strike policy will refuse is
+        // told at once rather than after picking a room type and a stay length.
+        if (standardReservationRepo.isBlockedByStrikes(guest, guestRepo)) {
+          advanceBookingView.displayStrikeBlockedScreen(
+              guest, strikesOf(guest), settings().getStrikeBlockThreshold());
           continue;
         }
 
+        // Members book here on the same terms as anyone else. The tier is recorded on the
+        // reservation and shown on the screens, but it buys no priority, because a booking already
+        // holds a slot for the night and there is nothing left for a tier to jump ahead of.
         if (collectBooking(guest)) return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -339,6 +340,9 @@ public class AdvanceBookingController {
                   0,
                   LocalDateTime.now(),
                   null,
+                  // isVip marks which module owns the record, not whether the guest holds a
+                  // tier. StandardReservationRepo filters on it, so a booking taken here stays
+                  // false however senior the member is. The tier is read off the guest file.
                   false);
 
           booking.setExpectedArrivalTime(arrival);
@@ -379,59 +383,46 @@ public class AdvanceBookingController {
       free[i] = standardReservationRepo.countAvailableOn(roomRepo, types[i], arrival);
     }
 
-    return advanceBookingView.promptRoomType(guest, arrival, total, free);
+    while (true) {
+      try {
+        return advanceBookingView.promptRoomType(guest, arrival, total, free);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
-  private void handleMarkArrivalByPrompt(
-      ListInterface<Reservation> rows, int currentPage, int pageSize) {
-    if (rows == null || rows.isEmpty()) {
-      ConsoleUtil.printError("There are no advance bookings awaiting arrival!");
-      return;
+  private boolean promptCheckInConfirmation(
+      Reservation booking,
+      Guest guest,
+      Room room,
+      int nights,
+      Member.LoyaltyTier tier,
+      LocalDate checkOutDate) {
+    while (true) {
+      try {
+        return advanceBookingView.displayCheckInConfirmationScreen(
+            booking, guest, room, nights, tier, timingNoteFor(booking), checkOutDate);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
+  }
 
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, rows.getNumberOfEntries());
-    int rowsOnPage = endIndex - startIndex + 1;
-
-    if (rowsOnPage <= 0) {
-      ConsoleUtil.printError("There are no advance bookings on this page!");
-      return;
+  private boolean promptCancelConfirmation(Reservation booking, Guest guest) {
+    while (true) {
+      try {
+        return advanceBookingView.displayCancelConfirmationScreen(booking, guest);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
-
-    // The table renumbers every page from 1, so the row read off the screen is an offset into the
-    // page and the page origin has to be added back before indexing the list.
-    ConsoleUtil.GetMenuInputResult picked =
-        ConsoleUtil.getMenuInput(
-            "\nEnter the row number of the guest who arrived [1 - "
-                + rowsOnPage
-                + "] or C to cancel: ",
-            1,
-            rowsOnPage,
-            new char[] {'C'});
-    if (!picked.isNumber) {
-      return;
-    }
-    int selection = picked.getAsInt();
-
-    markArrival(rows.getEntry(startIndex + selection - 1));
   }
 
   private void markArrival(Reservation booking) {
-    if (booking == null) {
-      ConsoleUtil.printError("Invalid booking selection!");
-      return;
-    }
+    if (booking == null) return;
 
     Guest guest = guestRepo.findById(booking.getGuestId());
-
-    Member member =
-        (guest != null && guest.getMemberId() != null)
-            ? memberRepo.findById(guest.getMemberId())
-            : null;
-    if (member != null && member.getTier() != null) {
-      advanceBookingView.displayMemberBlockedScreen(guest, member);
-      return;
-    }
 
     Reservation alreadyQueued =
         findQueuedReservationForGuest(booking.getRoomType(), booking.getGuestId());
@@ -440,33 +431,103 @@ public class AdvanceBookingController {
       return;
     }
 
-    if (standardReservationRepo.isLineAtPolicyLimit(booking.getRoomType())) {
-      ConsoleUtil.printError(
-          "The "
-              + booking.getRoomType().name()
-              + " line has reached the maximum length set under Settings & Configuration!");
+    // The slot was promised months ago, but a physical room still has to be clean and empty this
+    // morning. When housekeeping is behind, that is what the clerk is told, because the booking
+    // is not at fault and must not be cancelled or pushed into a line over it.
+    Room room = roomRepo.findVacantCleanRoom(booking.getRoomType());
+    if (room == null) {
+      advanceBookingView.displayNoRoomReadyScreen(
+          booking, guest, countVacantCleanRooms(booking.getRoomType()));
       return;
     }
 
-    QueueInterface<Reservation> queue =
-        standardReservationRepo.getQueueByRoomType(booking.getRoomType());
+    int nights = (booking.getStayDays() != null) ? booking.getStayDays() : 1;
 
-    if (!advanceBookingView.displayMarkArrivalConfirmationScreen(
-        booking,
-        guest,
-        queue.getNumberOfEntries(),
-        standardReservationRepo.getQueueCapacity(booking.getRoomType()),
-        timingNoteFor(booking))) {
+    if (!promptCheckInConfirmation(
+        booking, guest, room, nights, tierOf(guest), LocalDate.now().plusDays(nights))) {
       return;
     }
 
-    if (!standardReservationRepo.joinQueue(booking)) {
-      ConsoleUtil.printError("This booking could not be moved into the line!");
+    booking.setRoomNumber(room.getRoomNumber());
+    standardReservationRepo.updateReservation(booking);
+
+    if (!standardReservationRepo.checkIn(booking, nights)) {
+      ConsoleUtil.printError("This booking could not be checked in!");
       return;
     }
 
-    advanceBookingView.displayMarkArrivalSuccessScreen(
-        booking, guest, queue.getPosition(booking), queue.getNumberOfEntries());
+    room.setIsOccupied(true);
+    roomRepo.updateRoom(room);
+
+    advanceBookingView.displayCheckInSuccessScreen(
+        booking, guest, room, nights, booking.getOccupancyEndDate());
+  }
+
+  private boolean markNoShow(Reservation booking, Guest guest) {
+    int strikes = strikesOf(guest);
+    boolean earnsStrike = settings().isStrikeOnNoShow();
+
+    if (!promptNoShowConfirmation(
+        booking, guest, strikes, standardReservationRepo.getMaxStrikes(), earnsStrike)) {
+      return false;
+    }
+
+    booking.setStatus(Reservation.Status.NO_SHOW);
+    standardReservationRepo.updateReservation(booking);
+
+    int after = earnsStrike ? standardReservationRepo.recordStrike(guest, guestRepo) : strikes;
+
+    advanceBookingView.displayClosureSuccessScreen(booking, guest, true, after);
+    return true;
+  }
+
+  // Read through the repository so the decay window set under Settings is applied here too. A
+  // strike the policy has already forgiven must not be counted against the guest on this screen.
+  private int strikesOf(Guest guest) {
+    return standardReservationRepo.effectiveStrikes(guest, guestRepo);
+  }
+
+  // Cancelling on the arrival day leaves no time to resell the night, so the policy may charge
+  // for it. Cancelling any earlier is always free.
+  private int applyCancelStrike(Reservation booking, Guest guest) {
+    LocalDate arrival = booking.getOccupancyStartDate();
+    boolean sameDay = arrival != null && arrival.equals(LocalDate.now());
+
+    if (!settings().isStrikeOnSameDayCancel() || !sameDay) {
+      return strikesOf(guest);
+    }
+    return standardReservationRepo.recordStrike(guest, guestRepo);
+  }
+
+  private boolean promptNoShowConfirmation(
+      Reservation booking, Guest guest, int strikesNow, int maxStrikes, boolean earnsStrike) {
+    while (true) {
+      try {
+        return advanceBookingView.displayNoShowConfirmationScreen(
+            booking, guest, strikesNow, maxStrikes, earnsStrike);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int countVacantCleanRooms(Room.RoomType roomType) {
+    ListInterface<Room> rooms = roomRepo.getRoomList();
+    int count = 0;
+
+    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
+      Room r = rooms.getEntry(i);
+      if (r != null && r.getRoomType() == roomType && r.getStatus() == Room.Status.VACANT_CLEAN) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private Member.LoyaltyTier tierOf(Guest guest) {
+    if (guest == null || guest.getMemberId() == null) return null;
+    Member member = memberRepo.findById(guest.getMemberId());
+    return (member == null) ? null : member.getTier();
   }
 
   private String timingNoteFor(Reservation booking) {
@@ -504,15 +565,19 @@ public class AdvanceBookingController {
         int action = advanceBookingView.displayRowActionSubmenu(selected, guest);
 
         if (action == 1) {
-          advanceBookingView.displayDetailScreen(selected, guest);
+          advanceBookingView.displayDetailScreen(selected, guest, tierOf(guest));
         } else if (action == 2) {
           markArrival(selected);
           return;
         } else if (action == 3) {
-          if (advanceBookingView.displayCancelConfirmationScreen(selected, guest)) {
+          if (promptCancelConfirmation(selected, guest)) {
             standardReservationRepo.cancelReservation(selected);
+            advanceBookingView.displayClosureSuccessScreen(
+                selected, guest, false, applyCancelStrike(selected, guest));
             return;
           }
+        } else if (action == 4) {
+          if (markNoShow(selected, guest)) return;
         } else {
           return;
         }
@@ -544,17 +609,17 @@ public class AdvanceBookingController {
             advanceBookingView.displayFilterMainMenu(field, term, mode, roomType, from, to);
 
         if (choice == 1) {
-          int picked = advanceBookingView.displaySearchFieldSubmenu(field);
+          int picked = promptSearchField(field);
           if (picked > 0) field = fieldNameFor(picked);
         } else if (choice == 2) {
-          String typed = advanceBookingView.promptSearchTerm(field, term);
+          String typed = promptSearchTerm(field, term);
           if (!"E".equalsIgnoreCase(typed.trim())) {
             term = "-".equals(typed.trim()) ? null : typed.trim();
           }
         } else if (choice == 3) {
           mode = "EXACT".equals(mode) ? "CONTAINS" : "EXACT";
         } else if (choice == 4) {
-          int picked = advanceBookingView.displayRoomTypeSubmenu(roomType);
+          int picked = promptRoomTypeFilter(roomType);
           if (picked == 1) roomType = "LUXURY";
           else if (picked == 2) roomType = "SUITE";
           else if (picked == 3) roomType = "STANDARD";
@@ -607,14 +672,21 @@ public class AdvanceBookingController {
 
       Guest g = guestRepo.findById(r.getGuestId());
 
+      Member.LoyaltyTier tier = tierOf(g);
+      LocalDate start = r.getOccupancyStartDate();
+      Integer nights = r.getStayDays();
+
       rows.add(
           new AdvanceBookingView.BookingRowDTO(
               r.getReservationId(),
               (g != null) ? g.getName() : "N/A",
               r.getRoomType().name(),
-              formatArrival(r.getExpectedArrivalTime()),
-              (r.getStayDays() != null) ? String.valueOf(r.getStayDays()) : "-",
-              formatShortDate(r.getReservationTime())));
+              (tier == null) ? "NONE" : tier.name(),
+              (start != null) ? start.format(SHORT_DATE_FORMAT) : "-",
+              (start != null && nights != null)
+                  ? start.plusDays(nights).format(SHORT_DATE_FORMAT)
+                  : "-",
+              (nights != null) ? String.valueOf(nights) : "-"));
     }
     return rows;
   }
@@ -628,13 +700,49 @@ public class AdvanceBookingController {
     }
   }
 
+  private int promptSearchField(String current) {
+    while (true) {
+      try {
+        return advanceBookingView.displaySearchFieldSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptRoomTypeFilter(String current) {
+    while (true) {
+      try {
+        return advanceBookingView.displayRoomTypeSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // Blank keeps the current term and redraws, so a stray Enter never clears a filter.
+  private String promptSearchTerm(String fieldLabel, String current) {
+    while (true) {
+      try {
+        String typed = advanceBookingView.promptSearchTerm(fieldLabel, current);
+        if (typed.trim().isEmpty()) continue;
+        return typed;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
   private LocalDate[] askDateRange(LocalDate currentFrom, LocalDate currentTo) {
     while (true) {
       try {
         String[] typed = advanceBookingView.promptDateRange(currentFrom, currentTo);
-        if ("E".equalsIgnoreCase(typed[0].trim())) {
+        String from = (typed[0] == null) ? "" : typed[0].trim();
+        if (from.isEmpty()) continue;
+        if ("E".equalsIgnoreCase(from)) {
           return new LocalDate[] {currentFrom, currentTo};
         }
+        if (typed[1] == null || typed[1].trim().isEmpty()) continue;
 
         LocalDate parsedFrom = parseOrNull(typed[0]);
         LocalDate parsedTo = parseOrNull(typed[1]);
@@ -669,11 +777,6 @@ public class AdvanceBookingController {
   private String formatArrival(LocalDateTime dateTime) {
     if (dateTime == null) return "Not set";
     return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
-  }
-
-  private String formatShortDate(LocalDateTime dateTime) {
-    if (dateTime == null) return "-";
-    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yy"));
   }
 
   private ListInterface<Reservation> collectReserved() {

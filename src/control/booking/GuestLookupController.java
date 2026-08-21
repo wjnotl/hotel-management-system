@@ -60,29 +60,43 @@ public class GuestLookupController {
     String matchMode = exactMatch ? "EXACT" : "CONTAINS";
 
     while (true) {
-      String term = lookupView.promptSearchTerm(fieldLabel, matchMode);
+      try {
+        String term = lookupView.promptSearchTerm(fieldLabel, matchMode);
 
-      if ("E".equalsIgnoreCase(term.trim())) {
-        return null;
-      }
-
-      term = term.trim();
-      ListInterface<Guest> matches = search(field, term, exactMatch);
-
-      if (matches.isEmpty()) {
-        if (lookupView.displayNotFoundScreen(fieldLabel, term) == GuestLookupView.BACK) {
+        if ("E".equalsIgnoreCase(term.trim())) {
           return null;
         }
-        continue;
-      }
 
-      // A single hit is not a choice, so the clerk is not made to confirm a list of one.
-      if (matches.getNumberOfEntries() == 1) {
-        return matches.getEntry(1);
-      }
+        term = term.trim();
+        ListInterface<Guest> matches = search(field, term, exactMatch);
 
-      Guest picked = pickFromMatches(fieldLabel, term, matchMode, matches);
-      if (picked != null) return picked;
+        if (matches.isEmpty()) {
+          if (promptNotFound(fieldLabel, term) == GuestLookupView.BACK) {
+            return null;
+          }
+          continue;
+        }
+
+        // A single hit is not a choice, so the clerk is not made to confirm a list of one.
+        if (matches.getNumberOfEntries() == 1) {
+          return matches.getEntry(1);
+        }
+
+        Guest picked = pickFromMatches(fieldLabel, term, matchMode, matches);
+        if (picked != null) return picked;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptNotFound(String fieldLabel, String term) {
+    while (true) {
+      try {
+        return lookupView.displayNotFoundScreen(fieldLabel, term);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
     }
   }
 

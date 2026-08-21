@@ -24,12 +24,22 @@ public class BookingSettings implements Serializable {
   // of them switched off and look like a deliberate choice. The stamp is what makes the two
   // distinguishable: an older file carries 0 and gets the new fields filled in once.
   private static final int CURRENT_SCHEMA = 2;
+
+  // A decay window or a block threshold of this value switches that rule off entirely.
+  public static final int STRIKE_RULE_OFF = 0;
   private int schemaVersion;
 
   // Hold & No-Show Rules
   private int holdGraceMinutes;
   private int maxStrikes;
   private boolean requeueOnLapse;
+
+  // Strike Policy: what earns a strike, how long one is remembered and what it costs
+  private boolean strikeOnLapsedHold;
+  private boolean strikeOnNoShow;
+  private boolean strikeOnSameDayCancel;
+  private int strikeDecayDays;
+  private int strikeBlockThreshold;
 
   // Queue Rules
   private int initialQueueCapacity;
@@ -69,6 +79,12 @@ public class BookingSettings implements Serializable {
     this.holdGraceMinutes = 15;
     this.maxStrikes = 3;
     this.requeueOnLapse = true;
+
+    this.strikeOnLapsedHold = true;
+    this.strikeOnNoShow = true;
+    this.strikeOnSameDayCancel = false;
+    this.strikeDecayDays = 90;
+    this.strikeBlockThreshold = STRIKE_RULE_OFF;
 
     this.initialQueueCapacity = 8;
     this.allowQueueExpansion = true;
@@ -117,6 +133,9 @@ public class BookingSettings implements Serializable {
       this.advanceBookingLeadDays = 365;
       this.defaultReportPeriod = "TODAY";
       this.defaultRecordLimit = 10;
+      this.strikeOnLapsedHold = true;
+      this.strikeOnNoShow = true;
+      this.strikeDecayDays = 90;
       this.schemaVersion = CURRENT_SCHEMA;
     }
 
@@ -145,6 +164,48 @@ public class BookingSettings implements Serializable {
     if (maxStrikes <= 0) maxStrikes = 3;
     if (advanceBookingLeadDays < 0) advanceBookingLeadDays = 365;
     if (defaultRecordLimit < 0) defaultRecordLimit = 10;
+    if (strikeDecayDays < 0) strikeDecayDays = STRIKE_RULE_OFF;
+    if (strikeBlockThreshold < 0) strikeBlockThreshold = STRIKE_RULE_OFF;
+  }
+
+  public boolean isStrikeOnLapsedHold() {
+    return strikeOnLapsedHold;
+  }
+
+  public void setStrikeOnLapsedHold(boolean strikeOnLapsedHold) {
+    this.strikeOnLapsedHold = strikeOnLapsedHold;
+  }
+
+  public boolean isStrikeOnNoShow() {
+    return strikeOnNoShow;
+  }
+
+  public void setStrikeOnNoShow(boolean strikeOnNoShow) {
+    this.strikeOnNoShow = strikeOnNoShow;
+  }
+
+  public boolean isStrikeOnSameDayCancel() {
+    return strikeOnSameDayCancel;
+  }
+
+  public void setStrikeOnSameDayCancel(boolean strikeOnSameDayCancel) {
+    this.strikeOnSameDayCancel = strikeOnSameDayCancel;
+  }
+
+  public int getStrikeDecayDays() {
+    return strikeDecayDays;
+  }
+
+  public void setStrikeDecayDays(int strikeDecayDays) {
+    this.strikeDecayDays = strikeDecayDays;
+  }
+
+  public int getStrikeBlockThreshold() {
+    return strikeBlockThreshold;
+  }
+
+  public void setStrikeBlockThreshold(int strikeBlockThreshold) {
+    this.strikeBlockThreshold = strikeBlockThreshold;
   }
 
   private int overrideOr(int[] overrides, int index, int houseValue) {
