@@ -24,6 +24,7 @@ public class Billing implements Serializable {
   private LocalDate checkInDate;
   private LocalDate checkOutDate;
   private double ratePerNight;
+  private long paidNights;
   private Status status;
   private LocalDateTime createdAt; // Used to order billing/stay history newest -> oldest
 
@@ -126,6 +127,14 @@ public class Billing implements Serializable {
     this.ratePerNight = ratePerNight;
   }
 
+  public long getPaidNights() {
+    return paidNights;
+  }
+
+  public void setPaidNights(long paidNights) {
+    this.paidNights = paidNights;
+  }
+
   public void setStatus(Status status) {
     this.status = status;
   }
@@ -152,6 +161,22 @@ public class Billing implements Serializable {
 
   public double getTotalAmount() {
     return getSubtotal() + getSstAmount();
+  }
+
+  public long getOutstandingNights() {
+    return Math.max(0, getNumberOfNights() - paidNights);
+  }
+
+  public double getOutstandingSubtotal() {
+    return getOutstandingNights() * ratePerNight;
+  }
+
+  public double getOutstandingSST() {
+    return getOutstandingSubtotal() * SST_RATE;
+  }
+
+  public double getOutstandingTotal() {
+    return getOutstandingSubtotal() + getOutstandingSST();
   }
 
   @Override

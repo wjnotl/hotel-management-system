@@ -407,19 +407,27 @@ public class ManageGuestController {
   }
 
   /** Build DTOs — view never touches entity-to-entity lookups. */
-  private ListInterface<ManageGuestView.GuestRowDTO> buildGuestRowDTOs(
-      ListInterface<Guest> guests) {
-    if (guests == null) return new ArrayList<>();
+private ListInterface<ManageGuestView.GuestRowDTO> buildGuestRowDTOs(
+    ListInterface<Guest> guests) {
+  if (guests == null) return new ArrayList<>();
 
-    return guests.map(
-        g -> {
-          Member member = (g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
-          String memberLevel =
-              (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
-          return new ManageGuestView.GuestRowDTO(
-              g.getGuestId(), g.getName(), g.getIcNumber(), g.getPhoneNumber(), memberLevel);
-        });
-  }
+  return guests.map(
+      g -> {
+        Member member = (g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+        String memberLevel =
+            (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+        String icOrPassport =
+            (g.getIcNumber() != null
+                && !g.getIcNumber().trim().isEmpty()
+                && !"N/A".equalsIgnoreCase(g.getIcNumber().trim()))
+                ? g.getIcNumber()
+                : (g.getPassportNumber() != null && !g.getPassportNumber().trim().isEmpty()
+                    ? g.getPassportNumber()
+                    : "N/A");
+        return new ManageGuestView.GuestRowDTO(
+            g.getGuestId(), g.getName(), icOrPassport, g.getPhoneNumber(), memberLevel);
+      });
+}
 
   /** Billing sorted newest → oldest, with optional date-range filter on check-in. */
   private ListInterface<Billing> getGuestBillingSortedNewToOld(

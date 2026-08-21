@@ -273,7 +273,7 @@ public class ManageRoomStatusView {
             + " ]");
     System.out.println("Room Type      : [ " + (roomType == null ? "ALL" : roomType) + " ]");
     System.out.println("Room Status    : [ " + (roomStatus == null ? "ALL" : roomStatus) + " ]\n");
-    System.out.println("1.Search");
+    System.out.println("1. Search");
     System.out.println("2. Filter by Room Type");
     System.out.println("3. Filter by Room Status");
     System.out.println("4. Clear All Filters");
