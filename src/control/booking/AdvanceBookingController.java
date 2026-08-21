@@ -774,11 +774,6 @@ public class AdvanceBookingController {
     return (date == null) ? "N/A" : date.format(DATE_FORMAT);
   }
 
-  private String formatArrival(LocalDateTime dateTime) {
-    if (dateTime == null) return "Not set";
-    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
-  }
-
   private ListInterface<Reservation> collectReserved() {
     ListInterface<Reservation> all = standardReservationRepo.getAllReservations();
     ListInterface<Reservation> reserved = new ArrayList<>();

@@ -18,64 +18,85 @@ public class BookingSettingsView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("WALK-IN & BOOKING SETTINGS", SCREEN_WIDTH);
 
-    System.out.println(
-        "HOLD RULES    : "
+    // Each number carries the values it edits. A separate summary block above the menu made the
+    // clerk map one list onto the other, and the two lists did not even run in the same order.
+    printCard(
+        1,
+        "HOLD & NO-SHOW RULES",
+        "Grace "
             + config.getHoldGraceMinutes()
-            + " min grace  |  "
+            + " min   Max strikes "
             + config.getMaxStrikes()
-            + " strikes  |  lapsed hold -> "
+            + "   Lapsed hold "
             + lapsedLabel(config.isRequeueOnLapse()).toLowerCase());
-    System.out.println(
-        "QUEUE RULES   : "
-            + config.getInitialQueueCapacity()
+
+    printCard(
+        2,
+        "STRIKE POLICY",
+        "Earned by   lapsed hold "
+            + yesNo(config.isStrikeOnLapsedHold())
+            + "   no-show "
+            + yesNo(config.isStrikeOnNoShow())
+            + "   same-day cancel "
+            + yesNo(config.isStrikeOnSameDayCancel()),
+        decaySummary(config) + "   " + blockSummary(config));
+
+    printCard(
+        3,
+        "QUEUE & ORDER RULES",
+        config.getInitialQueueCapacity()
             + " slots, "
             + (config.isAllowQueueExpansion() ? "may grow" : "fixed size")
-            + "  |  line limit "
+            + "   Line limit "
             + queueLimitLabel(config).toLowerCase()
-            + "  |  auto-assign "
-            + yesNo(config.isAutoAssignWhenRoomFree()));
-    System.out.println(
-        "ORDER RULES   : VIP bypass "
+            + "   Auto-assign "
+            + yesNo(config.isAutoAssignWhenRoomFree()),
+        "VIP bypass "
             + yesNo(config.isEnforceVipBypass())
-            + "  |  bypass override "
+            + "   Override "
             + yesNo(config.isAllowBypassOverride())
-            + "  |  serve out of order "
-            + yesNo(config.isAllowNonFrontAllocation()));
-    System.out.println(
-        "ADVANCE       : "
-            + leadLabel(config)
-            + "  |  same day "
-            + yesNo(config.isAllowSameDayAdvanceBooking())
-            + "  |  block overbooking "
-            + yesNo(config.isBlockOverbooking()));
-    System.out.println(
-        "DESK DEFAULTS : "
-            + config.getPageSize()
-            + " rows per page  |  stays up to "
-            + config.getMaxStayNights()
-            + " nights  |  one booking per guest "
+            + "   Out of order "
+            + yesNo(config.isAllowNonFrontAllocation())
+            + "   One booking per guest "
             + yesNo(config.isBlockDuplicateAcrossLines()));
-    System.out.println("DEFAULT SORTS : line [ " + config.getDefaultQueueSort() + " ]");
-    System.out.println("                adv  [ " + config.getDefaultAdvanceSort() + " ]");
-    System.out.println(
-        "REPORT OPENS  : "
-            + config.getDefaultReportPeriod()
-            + "  |  "
-            + (config.getDefaultRecordLimit() == 0
-                ? "show all rows"
-                : "top " + config.getDefaultRecordLimit() + " rows"));
-    System.out.println(
-        "OVERRIDES     : " + config.countOverrides() + " per-room-type override(s) in force\n");
 
-    System.out.println("1. Hold & No-Show Rules");
-    System.out.println("2. Strike Policy");
-    System.out.println("3. Queue & Order Rules");
-    System.out.println("4. Advance Booking Rules");
-    System.out.println("5. Desk & Report Defaults");
-    System.out.println("6. Per-Room-Type Overrides");
-    System.out.println("7. Rebuild Live Lines From Current Capacity");
-    System.out.println("8. Reset To Factory Defaults");
-    System.out.println("9. Back to Walk-In & Booking Menu\n");
+    printCard(
+        4,
+        "ADVANCE BOOKING RULES",
+        "Sell "
+            + leadLabel(config)
+            + "   Same-day "
+            + yesNo(config.isAllowSameDayAdvanceBooking())
+            + "   Block overbooking "
+            + yesNo(config.isBlockOverbooking()),
+        "Checkout day reusable " + yesNo(config.isCheckoutDayReusable()));
+
+    printCard(
+        5,
+        "DESK & REPORT DEFAULTS",
+        config.getPageSize()
+            + " rows per page   Max stay "
+            + config.getMaxStayNights()
+            + " nights   Report opens "
+            + config.getDefaultReportPeriod()
+            + ", "
+            + (config.getDefaultRecordLimit() == 0
+                ? "all rows"
+                : "top " + config.getDefaultRecordLimit()),
+        "Line sort  " + config.getDefaultQueueSort(),
+        "Adv sort   " + config.getDefaultAdvanceSort());
+
+    printCard(
+        6,
+        "PER-ROOM-TYPE OVERRIDES",
+        (config.countOverrides() == 0)
+            ? "None in force"
+            : config.countOverrides() + " override(s) in force");
+
+    printOption(7, "Rebuild live lines from current capacity");
+    printOption(8, "Reset to factory defaults");
+    printOption(9, "Back to Walk-In & Booking Menu");
+    System.out.println();
 
     int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 9).getAsInt();
     return (choice == 9) ? 0 : choice;
@@ -115,6 +136,32 @@ public class BookingSettingsView {
           "Strikes Are Forgiven After         [Current: " + decayLabel(config) + "]",
           "Refuse A Booking At                [Current: " + blockLabel(config) + "]"
         });
+  }
+
+  private void printCard(int number, String title, String... lines) {
+    System.out.println("  " + number + "  " + title);
+    for (String line : lines) {
+      System.out.println("     " + line);
+    }
+    System.out.println();
+  }
+
+  private void printOption(int number, String label) {
+    System.out.println("  " + number + "  " + label);
+  }
+
+  private String decaySummary(BookingSettings config) {
+    int days = config.getStrikeDecayDays();
+    return (days == BookingSettings.STRIKE_RULE_OFF)
+        ? "Never forgiven"
+        : "Forgiven after " + days + " days";
+  }
+
+  private String blockSummary(BookingSettings config) {
+    int threshold = config.getStrikeBlockThreshold();
+    return (threshold == BookingSettings.STRIKE_RULE_OFF)
+        ? "Booking never refused"
+        : "Booking refused at " + threshold + " strikes";
   }
 
   private String decayLabel(BookingSettings config) {

@@ -373,7 +373,6 @@ public class StandardReservationRepo {
 
   // A console app has no event loop, so a lapsed hold is resolved the next time a
   // screen asks for the data rather than by a background timer that dies with the process.
-  @SuppressWarnings("null")
   public int sweepLapsedHolds(RoomRepo roomRepo, GuestRepo guestRepo) {
     LocalDateTime now = LocalDateTime.now();
     BookingSettings config = settings();
