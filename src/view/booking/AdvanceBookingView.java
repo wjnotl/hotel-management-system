@@ -22,7 +22,6 @@ public class AdvanceBookingView {
   private static final int[] KV_WIDTHS = {22, 64};
   private static final int SCREEN_WIDTH = 83;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-  private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
   public static class BookingRowDTO {
     private final String reservationId;
@@ -308,20 +307,6 @@ public class AdvanceBookingView {
     return requireText("Arrival date: ", "Arrival date cannot be empty! Type 'E' to go back.");
   }
 
-  public String promptArrivalTime(LocalDate arrival, java.time.LocalTime current) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - ARRIVAL TIME", SCREEN_WIDTH);
-    System.out.println("Arrives on: " + arrival.format(DATE_FORMAT) + "\n");
-    System.out.println("Format: HH:MM on a 24 hour clock, for example 14:30.");
-    System.out.println("This is the time the desk expects the guest at the counter.");
-    if (current != null) {
-      System.out.println("Current value: " + current.format(TIME_FORMAT));
-    }
-    System.out.println("\nB - Back to the nights step\n");
-
-    return requireText("Arrival time: ", "Arrival time cannot be empty! Type 'B' to go back.");
-  }
-
   public Integer promptNights(
       Room.RoomType roomType, LocalDate arrival, int maxBookable, int houseMax, Integer current) {
 
@@ -411,11 +396,7 @@ public class AdvanceBookingView {
     printKeyValue(kvSettings, "Phone Number", blankToNa(g.getPhoneNumber()), true);
     printKeyValue(kvSettings, "Email Address", blankToNa(g.getEmail()), true);
     printKeyValue(kvSettings, "Room Type Booked", roomType.name(), true);
-    printKeyValue(
-        kvSettings,
-        "Expected Arrival",
-        arrival.format(DATE_FORMAT) + " at " + arrival.format(TIME_FORMAT),
-        true);
+    printKeyValue(kvSettings, "Expected Arrival", arrival.format(DATE_FORMAT), true);
     printKeyValue(kvSettings, "Nights", String.valueOf(nights), true);
     printKeyValue(kvSettings, "Due To Check Out", departure.format(DATE_FORMAT), true);
     printKeyValue(
@@ -467,7 +448,6 @@ public class AdvanceBookingView {
       Room room,
       int nights,
       Member.LoyaltyTier tier,
-      String timingNote,
       LocalDate checkOutDate) {
 
     ConsoleUtil.clearScreen();
@@ -484,7 +464,6 @@ public class AdvanceBookingView {
     printKeyValue(kvSettings, "Room Type", r.getRoomType().name(), true);
     printKeyValue(kvSettings, "Room To Give", room.getRoomNumber(), true);
     printKeyValue(kvSettings, "Expected Arrival", formatArrival(r.getExpectedArrivalTime()), true);
-    printKeyValue(kvSettings, "Timing", timingNote, true);
     printKeyValue(kvSettings, "Booked Days", stayRangeLabel(r, nights), true);
     // Checking in re-anchors the stay to the night the guest actually takes the room, so an early
     // or late arrival is given its real checkout date rather than the one that was sold.
@@ -880,9 +859,11 @@ public class AdvanceBookingView {
     return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
   }
 
+  // A booking reserves a night, not a moment, so the hour is never shown even though the field
+  // that carries it is a LocalDateTime.
   private String formatArrival(LocalDateTime dateTime) {
     if (dateTime == null) return "Not set";
-    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
+    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
   }
 
   // Blank is an error rather than a silent cancel, so Enter never quietly discards what the clerk

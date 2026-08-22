@@ -941,16 +941,16 @@ public class DatabaseSeeder {
       // --- ADVANCE BOOKINGS, one per outcome of the arrival date rule ---
       // A booking may only be checked in on the night it reserves, so only the first of these
       // five can be taken up with [M] today.
-      advance(standardRepo, "G-101", Room.RoomType.LUXURY, today.atTime(14, 0), 2);
-      advance(standardRepo, "G-102", Room.RoomType.STANDARD, today.plusDays(1).atTime(15, 0), 3);
-      advance(standardRepo, "G-103", Room.RoomType.LUXURY, today.plusDays(4).atTime(12, 0), 1);
-      advance(standardRepo, "G-104", Room.RoomType.STANDARD, today.plusDays(9).atTime(16, 0), 5);
-      advance(standardRepo, "G-105", Room.RoomType.SUITE, today.minusDays(2).atTime(13, 0), 2);
-      advance(standardRepo, "G-106", Room.RoomType.STANDARD, today.minusDays(1).atTime(13, 0), 1);
+      advance(standardRepo, "G-101", Room.RoomType.LUXURY, today.atStartOfDay(), 2);
+      advance(standardRepo, "G-102", Room.RoomType.STANDARD, today.plusDays(1).atStartOfDay(), 3);
+      advance(standardRepo, "G-103", Room.RoomType.LUXURY, today.plusDays(4).atStartOfDay(), 1);
+      advance(standardRepo, "G-104", Room.RoomType.STANDARD, today.plusDays(9).atStartOfDay(), 5);
+      advance(standardRepo, "G-105", Room.RoomType.SUITE, today.minusDays(2).atStartOfDay(), 2);
+      advance(standardRepo, "G-106", Room.RoomType.STANDARD, today.minusDays(1).atStartOfDay(), 1);
 
       // Due today as well, and against the STANDARD line, so the queue screen has a room held back
       // for an arrival and the walk-in flow has a booking it may actually claim.
-      advance(standardRepo, "G-121", Room.RoomType.STANDARD, today.atTime(16, 30), 2);
+      advance(standardRepo, "G-121", Room.RoomType.STANDARD, today.atStartOfDay(), 2);
 
       // --- A date with no SUITE left ---
       // Twelve bookings against twelve SUITE rooms commit the type solid for two nights, which is
@@ -964,7 +964,7 @@ public class DatabaseSeeder {
             standardRepo,
             suiteHolders[i],
             Room.RoomType.SUITE,
-            today.plusDays(5).atTime(13 + (i % 4), 0),
+            today.plusDays(5).atStartOfDay(),
             2);
       }
 

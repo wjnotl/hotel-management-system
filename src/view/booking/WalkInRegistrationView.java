@@ -216,7 +216,7 @@ public class WalkInRegistrationView {
     printKeyValue(kvSettings, "Confirmation Code", booking.getConfirmationNumber(), true);
     printKeyValue(kvSettings, "Room Type Booked", booking.getRoomType().name(), true);
     printKeyValue(
-        kvSettings, "Expected Arrival", formatTime(booking.getExpectedArrivalTime()), true);
+        kvSettings, "Expected Arrival", formatBookedNight(booking.getExpectedArrivalTime()), true);
     printKeyValue(
         kvSettings,
         "Nights Booked",
@@ -426,6 +426,13 @@ public class WalkInRegistrationView {
 
   private String blankToNa(String value) {
     return (value == null || value.isEmpty()) ? "N/A" : value;
+  }
+
+  // A booking reserves a night rather than a moment, and the desk never asks for a clock time, so
+  // showing one here would invent a promise the guest never made.
+  private String formatBookedNight(LocalDateTime dateTime) {
+    if (dateTime == null) return "Not set";
+    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
   }
 
   private String formatTime(LocalDateTime dateTime) {

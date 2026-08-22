@@ -7,10 +7,8 @@ import entity.Guest;
 import entity.Member;
 import entity.Reservation;
 import entity.Room;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import repo.BookingSettingsRepo;
@@ -28,7 +26,6 @@ public class AdvanceBookingController {
   private static final int STEP_DATE = 1;
   private static final int STEP_TYPE = 2;
   private static final int STEP_NIGHTS = 3;
-  private static final int STEP_TIME = 4;
   private static final int STEP_CONFIRM = 5;
 
   private static final String FIELD_NAME = "GUEST NAME";
@@ -43,7 +40,6 @@ public class AdvanceBookingController {
 
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
   private static final DateTimeFormatter SHORT_DATE_FORMAT = DateTimeFormatter.ofPattern("MM-dd");
-  private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
   private final AdvanceBookingView advanceBookingView = new AdvanceBookingView();
   private final StandardReservationRepo standardReservationRepo;
@@ -201,7 +197,6 @@ public class AdvanceBookingController {
     LocalDate arrivalDate = null;
     Room.RoomType roomType = null;
     Integer nights = null;
-    LocalTime arrivalTime = LocalTime.of(14, 0);
 
     int step = STEP_DATE;
 
@@ -271,23 +266,6 @@ public class AdvanceBookingController {
           }
 
           nights = picked;
-          step = STEP_TIME;
-
-        } else if (step == STEP_TIME) {
-          String typed = advanceBookingView.promptArrivalTime(arrivalDate, arrivalTime);
-
-          if (typed == null || "B".equalsIgnoreCase(typed.trim())) {
-            step = STEP_NIGHTS;
-            continue;
-          }
-
-          // Only 'B' steps back. Blank used to do it silently, which is what made Enter feel
-          // like a Back key everywhere in this form.
-          if (typed.trim().isEmpty()) {
-            throw new IllegalArgumentException("Arrival time cannot be empty!");
-          }
-
-          arrivalTime = parseTime(typed.trim());
           step = STEP_CONFIRM;
 
         } else {
@@ -312,13 +290,16 @@ public class AdvanceBookingController {
             continue;
           }
 
-          LocalDateTime arrival = LocalDateTime.of(arrivalDate, arrivalTime);
+          // The desk never asks for a clock time, because a booking reserves a night rather than
+          // a moment and nothing in the module reads the hour. The field is a LocalDateTime, so
+          // the date is stored at the start of its own day.
+          LocalDateTime arrival = arrivalDate.atStartOfDay();
           int freeAcross =
               standardReservationRepo.countAvailableAcross(roomRepo, roomType, arrivalDate, nights);
 
           if (!advanceBookingView.displayNewBookingConfirmationScreen(
               guest, roomType, arrival, nights, arrivalDate.plusDays(nights), freeAcross - 1)) {
-            step = STEP_TIME;
+            step = STEP_NIGHTS;
             continue;
           }
 
@@ -395,7 +376,7 @@ public class AdvanceBookingController {
     while (true) {
       try {
         return advanceBookingView.displayCheckInConfirmationScreen(
-            booking, guest, room, nights, tier, timingNoteFor(booking), checkOutDate);
+            booking, guest, room, nights, tier, checkOutDate);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -511,24 +492,6 @@ public class AdvanceBookingController {
     if (guest == null || guest.getMemberId() == null) return null;
     Member member = memberRepo.findById(guest.getMemberId());
     return (member == null) ? null : member.getTier();
-  }
-
-  private String timingNoteFor(Reservation booking) {
-    LocalDateTime expected = booking.getExpectedArrivalTime();
-    if (expected == null) return "No arrival time was recorded on this booking.";
-
-    long minutes = Duration.between(expected, LocalDateTime.now()).toMinutes();
-    if (Math.abs(minutes) < 60) return "On time, within the hour.";
-
-    long hours = Math.abs(minutes) / 60;
-    if (hours < 24) {
-      return (minutes < 0) ? hours + " hour(s) early." : hours + " hour(s) late.";
-    }
-
-    long days = hours / 24;
-    return (minutes < 0)
-        ? days + " day(s) early. The room was only held from the booked date."
-        : days + " day(s) late. The room may already have gone to somebody else.";
   }
 
   private void handleRowAction(
@@ -742,15 +705,6 @@ public class AdvanceBookingController {
   private LocalDate parseOrNull(String raw) {
     if (raw == null || raw.trim().isEmpty() || "-".equals(raw.trim())) return null;
     return parseDate(raw.trim());
-  }
-
-  private LocalTime parseTime(String raw) {
-    try {
-      return LocalTime.parse(raw, TIME_FORMAT);
-    } catch (java.time.format.DateTimeParseException e) {
-      throw new IllegalArgumentException(
-          "Invalid time! Type it as HH:MM on a 24 hour clock, for example 14:30.");
-    }
   }
 
   private String format(LocalDate date) {

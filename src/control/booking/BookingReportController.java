@@ -935,7 +935,7 @@ public class BookingReportController {
       all[7] = r.getStatus().name();
       all[8] = sourceOf(r);
       all[9] = formatMinutes(waitMinutesOf(r));
-      all[10] = formatClock(arrivalStampOf(r));
+      all[10] = hasArrived(r) ? formatClock(arrivalStampOf(r)) : formatDay(arrivalStampOf(r));
       all[11] = (r.getStayDays() != null) ? String.valueOf(r.getStayDays()) : "-";
       all[12] = String.valueOf((g != null) ? g.getStrikeCount() : 0);
     }
@@ -1391,6 +1391,17 @@ public class BookingReportController {
     if (minutes < 0) return "-";
     if (minutes < 60) return minutes + "m";
     return (minutes / 60) + "h " + String.format("%02dm", minutes % 60);
+  }
+
+  // A walk-in and a checked-in guest both turned up at a knowable minute. A booking still awaited
+  // has only the night it is due, so printing a clock against it would invent one.
+  private boolean hasArrived(Reservation r) {
+    return r.getQueueArrivalTime() != null || r.getCheckInTime() != null;
+  }
+
+  private String formatDay(LocalDateTime dateTime) {
+    if (dateTime == null) return "-";
+    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM"));
   }
 
   private String formatClock(LocalDateTime dateTime) {
