@@ -7,8 +7,6 @@ import util.ConsoleUtil;
 import view.booking.GuestRegistrationView;
 
 public class GuestRegistrationController {
-  private static final int STEP_CONFIRM = 6;
-
   private static final int MIN_NAME_LENGTH = 2;
   private static final int MAX_NAME_LENGTH = 60;
   private static final int MIN_PASSPORT_LENGTH = 5;
@@ -62,88 +60,83 @@ public class GuestRegistrationController {
     FormState form = new FormState();
     form.name = (suggestedName == null) ? "" : suggestedName.trim();
 
-    int step = GuestRegistrationView.STEP_NAME;
-
     while (true) {
-      String name = form.name;
-      String icNumber = form.icNumber;
-      String passportNumber = form.passportNumber;
-      String phoneNumber = form.phoneNumber;
-      String email = form.email;
+      StepResult nameStep = collectName(form);
+      if (nameStep.outcome == StepResult.CANCEL) return null;
+      // Stepping back off the first field leaves the form, which returns the clerk to the
+      // guest search they came from rather than trapping them in the registration screens.
+      if (nameStep.outcome == StepResult.BACK) return null;
+      form.name = nameStep.value;
 
-      if (step == STEP_CONFIRM) {
-        // The id is minted only once the clerk is looking at the summary, so a cancelled or
-        // reopened form never burns a number that the next guest would then skip over.
-        String guestId = guestRepo.generateGuestId();
+      while (true) {
+        StepResult icStep = collectIcNumber(form);
+        if (icStep.outcome == StepResult.CANCEL) return null;
+        if (icStep.outcome == StepResult.BACK) break;
+        form.icNumber = icStep.value;
 
-        int choice =
-            promptGuestConfirmation(guestId, name, icNumber, passportNumber, phoneNumber, email);
+        while (true) {
+          StepResult passportStep = collectPassportNumber(form);
+          if (passportStep.outcome == StepResult.CANCEL) return null;
+          if (passportStep.outcome == StepResult.BACK) break;
+          form.passportNumber = passportStep.value;
 
-        if (choice == 2) {
-          step = GuestRegistrationView.STEP_EMAIL;
-          continue;
-        } else if (choice != 1) {
-          return null;
+          // Checked on the way out of the passport step rather than at the summary, so the clerk
+          // is not asked for three more fields before being told the file has no document on it.
+          // Leaving this loop re-opens the IC step, which is where the message is read.
+          if (form.icNumber.isEmpty() && form.passportNumber.isEmpty()) {
+            form.pendingError =
+                "A guest file needs at least one identity document. Capture either the IC number or"
+                    + " the passport number.";
+            break;
+          }
+
+          while (true) {
+            StepResult phoneStep = collectPhoneNumber(form);
+            if (phoneStep.outcome == StepResult.CANCEL) return null;
+            if (phoneStep.outcome == StepResult.BACK) break;
+            form.phoneNumber = phoneStep.value;
+
+            while (true) {
+              StepResult emailStep = collectEmail(form);
+              if (emailStep.outcome == StepResult.CANCEL) return null;
+              if (emailStep.outcome == StepResult.BACK) break;
+              form.email = emailStep.value;
+
+              // The id is minted only once the clerk is looking at the summary, so a cancelled or
+              // reopened form never burns a number that the next guest would then skip over.
+              String guestId = guestRepo.generateGuestId();
+
+              int choice =
+                  promptGuestConfirmation(
+                      guestId,
+                      form.name,
+                      form.icNumber,
+                      form.passportNumber,
+                      form.phoneNumber,
+                      form.email);
+
+              // Amending from the summary re-opens the email field, which is the step this loop
+              // already owns.
+              if (choice == 2) continue;
+              if (choice != 1) return null;
+
+              Guest guest =
+                  new Guest(
+                      guestId,
+                      form.name,
+                      form.icNumber.isEmpty() ? null : form.icNumber,
+                      form.passportNumber.isEmpty() ? null : form.passportNumber,
+                      form.email.isEmpty() ? null : form.email,
+                      form.phoneNumber,
+                      null,
+                      0);
+
+              guestRepo.addGuest(guest);
+              registrationView.displaySuccessScreen(guest);
+              return guest;
+            }
+          }
         }
-
-        Guest guest =
-            new Guest(
-                guestId,
-                name,
-                icNumber.isEmpty() ? null : icNumber,
-                passportNumber.isEmpty() ? null : passportNumber,
-                email.isEmpty() ? null : email,
-                phoneNumber,
-                null,
-                0);
-
-        guestRepo.addGuest(guest);
-        registrationView.displaySuccessScreen(guest);
-        return guest;
-      }
-
-      StepResult result;
-
-      if (step == GuestRegistrationView.STEP_IC) {
-        result = collectIcNumber(form);
-        if (result.outcome == StepResult.NEXT) form.icNumber = result.value;
-      } else if (step == GuestRegistrationView.STEP_PASSPORT) {
-        result = collectPassportNumber(form);
-        if (result.outcome == StepResult.NEXT) form.passportNumber = result.value;
-      } else if (step == GuestRegistrationView.STEP_PHONE) {
-        result = collectPhoneNumber(form);
-        if (result.outcome == StepResult.NEXT) form.phoneNumber = result.value;
-      } else if (step == GuestRegistrationView.STEP_EMAIL) {
-        result = collectEmail(form);
-        if (result.outcome == StepResult.NEXT) form.email = result.value;
-      } else {
-        result = collectName(form);
-        if (result.outcome == StepResult.NEXT) form.name = result.value;
-      }
-
-      if (result.outcome == StepResult.CANCEL) {
-        return null;
-      }
-
-      if (result.outcome == StepResult.BACK) {
-        step--;
-        // Stepping back off the first field leaves the form, which returns the clerk to the
-        // guest search they came from rather than trapping them in the registration screens.
-        if (step < GuestRegistrationView.STEP_NAME) return null;
-        continue;
-      }
-
-      step++;
-
-      // Checked on the way out of the passport step rather than at the summary, so the clerk
-      // is not asked for three more fields before being told the file has no document on it.
-      if (step == GuestRegistrationView.STEP_PHONE
-          && form.icNumber.isEmpty()
-          && form.passportNumber.isEmpty()) {
-        step = GuestRegistrationView.STEP_IC;
-        form.pendingError =
-            "A guest file needs at least one identity document. Capture either the IC number or"
-                + " the passport number.";
       }
     }
   }

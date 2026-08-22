@@ -23,11 +23,6 @@ public class AdvanceBookingController {
   private static final int MODE_NEW = 2;
   private static final int MODE_BACK = 3;
 
-  private static final int STEP_DATE = 1;
-  private static final int STEP_TYPE = 2;
-  private static final int STEP_NIGHTS = 3;
-  private static final int STEP_CONFIRM = 5;
-
   private static final String FIELD_NAME = "GUEST NAME";
   private static final String FIELD_GUEST_ID = "GUEST ID";
   private static final String FIELD_IC = "IC NUMBER";
@@ -189,58 +184,21 @@ public class AdvanceBookingController {
     return new GuestRegistrationController(guestRepo).registerNewGuest(null);
   }
 
-  // Walks the arrival date, room type, nights and time as separate steps so backing out of any of
-  // them lands on the one before it rather than throwing the whole booking away.
   private boolean collectBooking(Guest guest) {
     BookingSettings config = settings();
 
     LocalDate arrivalDate = null;
-    Room.RoomType roomType = null;
     Integer nights = null;
 
-    int step = STEP_DATE;
-
     while (true) {
-      try {
-        if (step == STEP_DATE) {
-          LocalDate earliest = earliestArrival(config);
-          LocalDate latest = latestArrival(config);
+      arrivalDate = promptArrivalDate(guest, config, arrivalDate);
+      if (arrivalDate == null) return false;
 
-          String typed = advanceBookingView.promptArrivalDate(guest, earliest, latest, arrivalDate);
-          if (typed == null || "E".equalsIgnoreCase(typed.trim())) return false;
+      while (true) {
+        Room.RoomType roomType = promptRoomType(guest, arrivalDate);
+        if (roomType == null) break;
 
-          // Blank is always an error. Keeping a date the clerk could not see themselves typing
-          // was indistinguishable from the step being skipped.
-          if (typed.trim().isEmpty()) {
-            throw new IllegalArgumentException("Arrival date cannot be empty!");
-          }
-
-          LocalDate picked = parseDate(typed.trim());
-          if (picked.isBefore(earliest)) {
-            throw new IllegalArgumentException(
-                "That date is before the bookable window opens on " + format(earliest) + ".");
-          }
-          if (picked.isAfter(latest)) {
-            throw new IllegalArgumentException(
-                "Bookings are only taken up to "
-                    + format(latest)
-                    + " under the current lead time setting.");
-          }
-
-          arrivalDate = picked;
-          step = STEP_TYPE;
-
-        } else if (step == STEP_TYPE) {
-          Room.RoomType picked = promptRoomType(guest, arrivalDate);
-          if (picked == null) {
-            step = STEP_DATE;
-            continue;
-          }
-
-          roomType = picked;
-          step = STEP_NIGHTS;
-
-        } else if (step == STEP_NIGHTS) {
+        while (true) {
           int maxBookable =
               standardReservationRepo.findLongestBookableStay(
                   roomRepo, roomType, arrivalDate, config.getMaxStayNights());
@@ -251,30 +209,16 @@ public class AdvanceBookingController {
                 arrivalDate,
                 arrivalDate,
                 standardReservationRepo.getTotalRoomsOfType(roomRepo, roomType));
-            step = STEP_TYPE;
-            continue;
+            break;
           }
 
           int allowed = config.isBlockOverbooking() ? maxBookable : config.getMaxStayNights();
 
           Integer picked =
-              advanceBookingView.promptNights(
-                  roomType, arrivalDate, allowed, config.getMaxStayNights(), nights);
-          if (picked == null) {
-            step = STEP_TYPE;
-            continue;
-          }
+              promptNights(roomType, arrivalDate, allowed, config.getMaxStayNights(), nights);
+          if (picked == null) break;
 
           nights = picked;
-          step = STEP_CONFIRM;
-
-        } else {
-          // STEP_CONFIRM is only ever reached by walking the three steps above, so this cannot
-          // fire. It restarts the form rather than leaving the earlier steps merely implied.
-          if (arrivalDate == null || roomType == null || nights == null) {
-            step = STEP_DATE;
-            continue;
-          }
 
           // Re-checked at the last moment, because another booking may have taken the last room of
           // this type while this one was being typed in.
@@ -286,7 +230,6 @@ public class AdvanceBookingController {
                 arrivalDate,
                 firstFull,
                 standardReservationRepo.getTotalRoomsOfType(roomRepo, roomType));
-            step = STEP_NIGHTS;
             continue;
           }
 
@@ -297,9 +240,8 @@ public class AdvanceBookingController {
           int freeAcross =
               standardReservationRepo.countAvailableAcross(roomRepo, roomType, arrivalDate, nights);
 
-          if (!advanceBookingView.displayNewBookingConfirmationScreen(
+          if (!promptNewBookingConfirmation(
               guest, roomType, arrival, nights, arrivalDate.plusDays(nights), freeAcross - 1)) {
-            step = STEP_NIGHTS;
             continue;
           }
 
@@ -326,10 +268,6 @@ public class AdvanceBookingController {
           advanceBookingView.displayNewBookingSuccessScreen(booking, guest);
           return true;
         }
-      } catch (Exception e) {
-        // Reported against the step that raised it, so a mistyped date is retyped on the date
-        // screen instead of throwing away the guest and the whole booking.
-        ConsoleUtil.printError(e.getMessage());
       }
     }
   }
@@ -347,6 +285,40 @@ public class AdvanceBookingController {
     return LocalDate.now().plusDays(lead);
   }
 
+  // Null means the clerk left the form. The retry loop sits here so a mistyped date is retyped on
+  // the date screen instead of unwinding the steps around it.
+  private LocalDate promptArrivalDate(Guest guest, BookingSettings config, LocalDate current) {
+    while (true) {
+      try {
+        LocalDate earliest = earliestArrival(config);
+        LocalDate latest = latestArrival(config);
+
+        String typed = advanceBookingView.promptArrivalDate(guest, earliest, latest, current);
+        if (typed == null || "E".equalsIgnoreCase(typed.trim())) return null;
+
+        if (typed.trim().isEmpty()) {
+          throw new IllegalArgumentException("Arrival date cannot be empty!");
+        }
+
+        LocalDate picked = parseDate(typed.trim());
+        if (picked.isBefore(earliest)) {
+          throw new IllegalArgumentException(
+              "That date is before the bookable window opens on " + format(earliest) + ".");
+        }
+        if (picked.isAfter(latest)) {
+          throw new IllegalArgumentException(
+              "Bookings are only taken up to "
+                  + format(latest)
+                  + " under the current lead time setting.");
+        }
+
+        return picked;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
   private Room.RoomType promptRoomType(Guest guest, LocalDate arrival) {
     Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
     int[] total = new int[types.length];
@@ -360,6 +332,34 @@ public class AdvanceBookingController {
     while (true) {
       try {
         return advanceBookingView.promptRoomType(guest, arrival, total, free);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private Integer promptNights(
+      Room.RoomType roomType, LocalDate arrival, int maxBookable, int houseMax, Integer current) {
+    while (true) {
+      try {
+        return advanceBookingView.promptNights(roomType, arrival, maxBookable, houseMax, current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptNewBookingConfirmation(
+      Guest guest,
+      Room.RoomType roomType,
+      LocalDateTime arrival,
+      int nights,
+      LocalDate checkOutDate,
+      int othersFree) {
+    while (true) {
+      try {
+        return advanceBookingView.displayNewBookingConfirmationScreen(
+            guest, roomType, arrival, nights, checkOutDate, othersFree);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
