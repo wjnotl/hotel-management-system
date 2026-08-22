@@ -1,7 +1,6 @@
 package entity;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 public class Guest implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -14,7 +13,6 @@ public class Guest implements Serializable {
   private String phoneNumber; // Phone Number
   private String memberId; // Links to Member (null if non-member)
   private int strikeCount; // Daily no-show counter
-  private LocalDateTime lastStrikeTime; // Last time the strike count was updated
 
   public Guest(
       String guestId,
@@ -67,10 +65,6 @@ public class Guest implements Serializable {
     return strikeCount;
   }
 
-  public LocalDateTime getLastStrikeTime() {
-    return lastStrikeTime;
-  }
-
   public void setGuestId(String guestId) {
     this.guestId = guestId;
   }
@@ -101,10 +95,6 @@ public class Guest implements Serializable {
 
   public void setStrikeCount(int strikeCount) {
     this.strikeCount = strikeCount;
-  }
-
-  public void setLastStrikeTime(LocalDateTime lastStrikeTime) {
-    this.lastStrikeTime = lastStrikeTime;
   }
 
   @Override

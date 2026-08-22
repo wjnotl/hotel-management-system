@@ -32,17 +32,6 @@ public class BookingSettingsView {
 
     printCard(
         2,
-        "STRIKE POLICY",
-        "Earned by   lapsed hold "
-            + yesNo(config.isStrikeOnLapsedHold())
-            + "   no-show "
-            + yesNo(config.isStrikeOnNoShow())
-            + "   same-day cancel "
-            + yesNo(config.isStrikeOnSameDayCancel()),
-        decaySummary(config) + "   " + blockSummary(config));
-
-    printCard(
-        3,
         "QUEUE & ORDER RULES",
         config.getInitialQueueCapacity()
             + " slots, "
@@ -61,7 +50,7 @@ public class BookingSettingsView {
             + yesNo(config.isBlockDuplicateAcrossLines()));
 
     printCard(
-        4,
+        3,
         "ADVANCE BOOKING RULES",
         "Sell "
             + leadLabel(config)
@@ -72,7 +61,7 @@ public class BookingSettingsView {
         "Checkout day reusable " + yesNo(config.isCheckoutDayReusable()));
 
     printCard(
-        5,
+        4,
         "DESK & REPORT DEFAULTS",
         config.getPageSize()
             + " rows per page   Max stay "
@@ -87,19 +76,19 @@ public class BookingSettingsView {
         "Adv sort   " + config.getDefaultAdvanceSort());
 
     printCard(
-        6,
+        5,
         "PER-ROOM-TYPE OVERRIDES",
         (config.countOverrides() == 0)
             ? "None in force"
             : config.countOverrides() + " override(s) in force");
 
-    printOption(7, "Rebuild live lines from current capacity");
-    printOption(8, "Reset to factory defaults");
-    printOption(9, "Back to Walk-In & Booking Menu");
+    printOption(6, "Rebuild live lines from current capacity");
+    printOption(7, "Reset to factory defaults");
+    printOption(8, "Back to Walk-In & Booking Menu");
     System.out.println();
 
-    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 9).getAsInt();
-    return (choice == 9) ? 0 : choice;
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 8).getAsInt();
+    return (choice == 8) ? 0 : choice;
   }
 
   public int displayHoldRulesMenu(BookingSettings config) {
@@ -118,26 +107,6 @@ public class BookingSettingsView {
         });
   }
 
-  public int displayStrikePolicyMenu(BookingSettings config) {
-    return numberedMenu(
-        "STRIKE POLICY",
-        new String[] {
-          "A strike records a guest who cost the house a room. These decide what earns",
-          "one, how long one is held against them, and what it finally costs."
-        },
-        new String[] {
-          "Lapsed Hold Earns A Strike         [Current: "
-              + yesNo(config.isStrikeOnLapsedHold())
-              + "]",
-          "No-Show Earns A Strike             [Current: " + yesNo(config.isStrikeOnNoShow()) + "]",
-          "Same-Day Cancel Earns A Strike     [Current: "
-              + yesNo(config.isStrikeOnSameDayCancel())
-              + "]",
-          "Strikes Are Forgiven After         [Current: " + decayLabel(config) + "]",
-          "Refuse A Booking At                [Current: " + blockLabel(config) + "]"
-        });
-  }
-
   private void printCard(int number, String title, String... lines) {
     System.out.println("  " + number + "  " + title);
     for (String line : lines) {
@@ -148,30 +117,6 @@ public class BookingSettingsView {
 
   private void printOption(int number, String label) {
     System.out.println("  " + number + "  " + label);
-  }
-
-  private String decaySummary(BookingSettings config) {
-    int days = config.getStrikeDecayDays();
-    return (days == BookingSettings.STRIKE_RULE_OFF)
-        ? "Never forgiven"
-        : "Forgiven after " + days + " days";
-  }
-
-  private String blockSummary(BookingSettings config) {
-    int threshold = config.getStrikeBlockThreshold();
-    return (threshold == BookingSettings.STRIKE_RULE_OFF)
-        ? "Booking never refused"
-        : "Booking refused at " + threshold + " strikes";
-  }
-
-  private String decayLabel(BookingSettings config) {
-    int days = config.getStrikeDecayDays();
-    return (days == BookingSettings.STRIKE_RULE_OFF) ? "Never forgiven" : days + " days";
-  }
-
-  private String blockLabel(BookingSettings config) {
-    int threshold = config.getStrikeBlockThreshold();
-    return (threshold == BookingSettings.STRIKE_RULE_OFF) ? "Never refuse" : threshold + " strikes";
   }
 
   public int displayQueueRulesMenu(BookingSettings config) {

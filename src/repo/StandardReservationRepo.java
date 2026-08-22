@@ -405,10 +405,9 @@ public class StandardReservationRepo {
       Guest guest = (guestRepo != null) ? guestRepo.findById(r.getGuestId()) : null;
       int strikes = 0;
       if (guest != null) {
-        strikes =
-            config.isStrikeOnLapsedHold()
-                ? recordStrike(guest, guestRepo)
-                : effectiveStrikes(guest, guestRepo);
+        strikes = guest.getStrikeCount() + 1;
+        guest.setStrikeCount(strikes);
+        guestRepo.updateGuest(guest);
       }
 
       boolean requeue =
@@ -439,67 +438,6 @@ public class StandardReservationRepo {
       reservationRepo.save();
     }
     return lapsed;
-  }
-
-  /**
-   * The strike count after the decay window has been applied.
-   *
-   * <p>A strike is a warning, not a life sentence. Once the window set under Settings has passed
-   * with no fresh strike, the slate is wiped and written back, so the forgiveness is permanent
-   * rather than recalculated differently by whichever screen happens to ask next.
-   *
-   * @return the strikes that still count against this guest today
-   */
-  public int effectiveStrikes(Guest guest, GuestRepo guestRepo) {
-    if (guest == null) return 0;
-
-    int strikes = guest.getStrikeCount();
-    if (strikes <= 0) return 0;
-
-    int decayDays = settings().getStrikeDecayDays();
-    if (decayDays == BookingSettings.STRIKE_RULE_OFF) return strikes;
-
-    LocalDateTime last = guest.getLastStrikeTime();
-    // A strike carried over from a file written before the timestamp existed has no age to
-    // measure, so it is stamped as of now and starts its window from this moment.
-    if (last == null) {
-      guest.setLastStrikeTime(LocalDateTime.now());
-      if (guestRepo != null) guestRepo.updateGuest(guest);
-      return strikes;
-    }
-
-    if (Duration.between(last, LocalDateTime.now()).toDays() < decayDays) {
-      return strikes;
-    }
-
-    guest.setStrikeCount(0);
-    guest.setLastStrikeTime(null);
-    if (guestRepo != null) guestRepo.updateGuest(guest);
-    return 0;
-  }
-
-  /**
-   * Adds one strike and restarts the decay window.
-   *
-   * @return the guest's strike count after the new strike
-   */
-  public int recordStrike(Guest guest, GuestRepo guestRepo) {
-    if (guest == null) return 0;
-
-    int strikes = effectiveStrikes(guest, guestRepo) + 1;
-    guest.setStrikeCount(strikes);
-    guest.setLastStrikeTime(LocalDateTime.now());
-    if (guestRepo != null) guestRepo.updateGuest(guest);
-    return strikes;
-  }
-
-  // A guest carrying too many strikes is refused a new booking outright. Zero switches the rule
-  // off, which is the shipped default, so the desk opts into turning custom away.
-  public boolean isBlockedByStrikes(Guest guest, GuestRepo guestRepo) {
-    int threshold = settings().getStrikeBlockThreshold();
-    if (threshold == BookingSettings.STRIKE_RULE_OFF) return false;
-
-    return effectiveStrikes(guest, guestRepo) >= threshold;
   }
 
   public Room findHeldRoom(Reservation reservation, RoomRepo roomRepo) {

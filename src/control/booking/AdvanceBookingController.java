@@ -171,14 +171,6 @@ public class AdvanceBookingController {
         // keystroke rather than the whole booking.
         if (guest == null) continue;
 
-        // Checked before any dates are asked for, so a guest the strike policy will refuse is
-        // told at once rather than after picking a room type and a stay length.
-        if (standardReservationRepo.isBlockedByStrikes(guest, guestRepo)) {
-          advanceBookingView.displayStrikeBlockedScreen(
-              guest, strikesOf(guest), settings().getStrikeBlockThreshold());
-          continue;
-        }
-
         // Members book here on the same terms as anyone else. The tier is recorded on the
         // reservation and shown on the screens, but it buys no priority, because a booking already
         // holds a slot for the night and there is nothing left for a tier to jump ahead of.
@@ -463,48 +455,40 @@ public class AdvanceBookingController {
         booking, guest, room, nights, booking.getOccupancyEndDate());
   }
 
+  // A no-show costs the house the night, so it carries the same strike a lapsed hold does. The
+  // count is the shared daily one that resets at midnight, not a running record.
   private boolean markNoShow(Reservation booking, Guest guest) {
     int strikes = strikesOf(guest);
-    boolean earnsStrike = settings().isStrikeOnNoShow();
 
     if (!promptNoShowConfirmation(
-        booking, guest, strikes, standardReservationRepo.getMaxStrikes(), earnsStrike)) {
+        booking, guest, strikes, standardReservationRepo.getMaxStrikes())) {
       return false;
     }
 
     booking.setStatus(Reservation.Status.NO_SHOW);
     standardReservationRepo.updateReservation(booking);
 
-    int after = earnsStrike ? standardReservationRepo.recordStrike(guest, guestRepo) : strikes;
+    int after = strikes;
+    if (guest != null) {
+      after = strikes + 1;
+      guest.setStrikeCount(after);
+      guestRepo.updateGuest(guest);
+    }
 
     advanceBookingView.displayClosureSuccessScreen(booking, guest, true, after);
     return true;
   }
 
-  // Read through the repository so the decay window set under Settings is applied here too. A
-  // strike the policy has already forgiven must not be counted against the guest on this screen.
   private int strikesOf(Guest guest) {
-    return standardReservationRepo.effectiveStrikes(guest, guestRepo);
-  }
-
-  // Cancelling on the arrival day leaves no time to resell the night, so the policy may charge
-  // for it. Cancelling any earlier is always free.
-  private int applyCancelStrike(Reservation booking, Guest guest) {
-    LocalDate arrival = booking.getOccupancyStartDate();
-    boolean sameDay = arrival != null && arrival.equals(LocalDate.now());
-
-    if (!settings().isStrikeOnSameDayCancel() || !sameDay) {
-      return strikesOf(guest);
-    }
-    return standardReservationRepo.recordStrike(guest, guestRepo);
+    return (guest != null) ? guest.getStrikeCount() : 0;
   }
 
   private boolean promptNoShowConfirmation(
-      Reservation booking, Guest guest, int strikesNow, int maxStrikes, boolean earnsStrike) {
+      Reservation booking, Guest guest, int strikesNow, int maxStrikes) {
     while (true) {
       try {
         return advanceBookingView.displayNoShowConfirmationScreen(
-            booking, guest, strikesNow, maxStrikes, earnsStrike);
+            booking, guest, strikesNow, maxStrikes);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -573,7 +557,7 @@ public class AdvanceBookingController {
           if (promptCancelConfirmation(selected, guest)) {
             standardReservationRepo.cancelReservation(selected);
             advanceBookingView.displayClosureSuccessScreen(
-                selected, guest, false, applyCancelStrike(selected, guest));
+                selected, guest, false, strikesOf(guest));
             return;
           }
         } else if (action == 4) {

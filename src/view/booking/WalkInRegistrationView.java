@@ -134,22 +134,6 @@ public class WalkInRegistrationView {
   }
 
   // Members are ranked by priority score in the VIP module, never by FIFO arrival order.
-  public void displayStrikeBlockedScreen(Guest guest, int strikes, int threshold) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("WALK-IN REFUSED - STRIKES", SCREEN_WIDTH);
-    printNoticeBox(
-        "STATUS: [X] TOO MANY STRIKES",
-        "Guest",
-        guest.getName() + " (" + guest.getGuestId() + ")",
-        "This guest holds "
-            + strikes
-            + " strike(s) and the desk refuses a walk-in at "
-            + threshold
-            + ". The threshold and the window strikes are forgiven after are both set under"
-            + " Settings > Strike Policy.");
-    ConsoleUtil.printContinueMessage();
-  }
-
   public void displayMemberBlockedScreen(Guest guest, Member member) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("HANDLED BY THE VIP MODULE", SCREEN_WIDTH);

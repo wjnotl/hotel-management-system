@@ -18,10 +18,6 @@ public class BookingSettingsController {
   private static final int MAX_STRIKES = 10;
 
   // Zero is a legal value for both: it switches the rule off rather than setting it to nothing.
-  private static final int MIN_STRIKE_DECAY_DAYS = 0;
-  private static final int MAX_STRIKE_DECAY_DAYS = 730;
-  private static final int MIN_STRIKE_BLOCK = 0;
-  private static final int MAX_STRIKE_BLOCK = 10;
   private static final int MIN_QUEUE_CAPACITY = 1;
   private static final int MAX_QUEUE_CAPACITY = 500;
   private static final int MIN_LINE_LENGTH = 0;
@@ -55,18 +51,16 @@ public class BookingSettingsController {
         } else if (choice == 1) {
           manageHoldRules();
         } else if (choice == 2) {
-          manageStrikePolicy();
-        } else if (choice == 3) {
           manageQueueRules();
-        } else if (choice == 4) {
+        } else if (choice == 3) {
           manageAdvanceRules();
-        } else if (choice == 5) {
+        } else if (choice == 4) {
           manageDeskDefaults();
-        } else if (choice == 6) {
+        } else if (choice == 5) {
           managePerTypeOverrides();
-        } else if (choice == 7) {
+        } else if (choice == 6) {
           applyToLiveLines();
-        } else if (choice == 8) {
+        } else if (choice == 7) {
           resetToDefaults();
         }
       } catch (Exception e) {
@@ -198,109 +192,6 @@ public class BookingSettingsController {
         ConsoleUtil.printError(e.getMessage());
       }
     }
-  }
-
-  private void manageStrikePolicy() {
-    while (true) {
-      try {
-        int choice = settingsView.displayStrikePolicyMenu(config());
-        if (choice == 0) return;
-
-        if (choice == 1) {
-          Boolean value =
-              promptToggleSetting(
-                  "Lapsed Hold Earns A Strike",
-                  "A guest who is called, given a room and never comes to collect it has held"
-                      + " that room out of the market for the whole grace window.",
-                  config().isStrikeOnLapsedHold(),
-                  "Record a strike",
-                  "Let it go",
-                  null);
-          if (value != null) {
-            config().setStrikeOnLapsedHold(value);
-            persist();
-            settingsView.displaySavedScreen(
-                "Lapsed Hold Earns A Strike", value ? "Record a strike" : "Let it go", null);
-          }
-        } else if (choice == 2) {
-          Boolean value =
-              promptToggleSetting(
-                  "No-Show Earns A Strike",
-                  "A booking closed as a no-show cost the house a night that was taken off sale"
-                      + " and never used.",
-                  config().isStrikeOnNoShow(),
-                  "Record a strike",
-                  "Let it go",
-                  null);
-          if (value != null) {
-            config().setStrikeOnNoShow(value);
-            persist();
-            settingsView.displaySavedScreen(
-                "No-Show Earns A Strike", value ? "Record a strike" : "Let it go", null);
-          }
-        } else if (choice == 3) {
-          Boolean value =
-              promptToggleSetting(
-                  "Same-Day Cancel Earns A Strike",
-                  "Calling off a booking on the arrival day leaves too little time to resell the"
-                      + " night. Cancelling earlier is always free.",
-                  config().isStrikeOnSameDayCancel(),
-                  "Record a strike",
-                  "Let it go",
-                  null);
-          if (value != null) {
-            config().setStrikeOnSameDayCancel(value);
-            persist();
-            settingsView.displaySavedScreen(
-                "Same-Day Cancel Earns A Strike", value ? "Record a strike" : "Let it go", null);
-          }
-        } else if (choice == 4) {
-          Integer value =
-              promptIntSetting(
-                  "Strikes Are Forgiven After",
-                  "How many days a guest must go without a fresh strike before the count is"
-                      + " wiped. Type 0 to keep strikes on a file forever.",
-                  decayLabel(),
-                  MIN_STRIKE_DECAY_DAYS,
-                  MAX_STRIKE_DECAY_DAYS,
-                  "days",
-                  null);
-          if (value != null) {
-            config().setStrikeDecayDays(value);
-            persist();
-            settingsView.displaySavedScreen("Strikes Are Forgiven After", decayLabel(), null);
-          }
-        } else if (choice == 5) {
-          Integer value =
-              promptIntSetting(
-                  "Refuse A Booking At",
-                  "The strike count at which this desk stops taking bookings and walk-ins from a"
-                      + " guest. Type 0 to never refuse anyone.",
-                  blockLabel(),
-                  MIN_STRIKE_BLOCK,
-                  MAX_STRIKE_BLOCK,
-                  "strikes",
-                  null);
-          if (value != null) {
-            config().setStrikeBlockThreshold(value);
-            persist();
-            settingsView.displaySavedScreen("Refuse A Booking At", blockLabel(), null);
-          }
-        }
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  private String decayLabel() {
-    int days = config().getStrikeDecayDays();
-    return (days == BookingSettings.STRIKE_RULE_OFF) ? "Never forgiven" : days + " days";
-  }
-
-  private String blockLabel() {
-    int threshold = config().getStrikeBlockThreshold();
-    return (threshold == BookingSettings.STRIKE_RULE_OFF) ? "Never refuse" : threshold + " strikes";
   }
 
   private void manageQueueRules() {

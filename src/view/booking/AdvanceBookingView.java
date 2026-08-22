@@ -390,23 +390,6 @@ public class AdvanceBookingView {
         + " night(s))";
   }
 
-  public void displayStrikeBlockedScreen(Guest guest, int strikes, int threshold) {
-    ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("BOOKING REFUSED - STRIKES", SCREEN_WIDTH);
-    printNoticeBox(
-        "STATUS: [X] TOO MANY STRIKES",
-        "Guest",
-        guest.getName() + " (" + guest.getGuestId() + ")",
-        "This guest holds "
-            + strikes
-            + " strike(s) and the desk refuses a booking at "
-            + threshold
-            + ". Each strike is a night that was taken off sale and never used. The threshold and"
-            + " the window strikes are forgiven after are both set under Settings > Strike"
-            + " Policy.");
-    ConsoleUtil.printContinueMessage();
-  }
-
   public boolean displayNewBookingConfirmationScreen(
       Guest g,
       Room.RoomType roomType,
@@ -551,7 +534,7 @@ public class AdvanceBookingView {
   }
 
   public boolean displayNoShowConfirmationScreen(
-      Reservation r, Guest g, int strikesNow, int maxStrikes, boolean earnsStrike) {
+      Reservation r, Guest g, int strikesNow, int maxStrikes) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CONFIRM NO-SHOW", SCREEN_WIDTH);
@@ -559,16 +542,12 @@ public class AdvanceBookingView {
         "STATUS: [!] MARK AS NO-SHOW",
         "Target Booking",
         r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "The booking closes as NO_SHOW and the night it was holding goes back on sale. "
-            + (earnsStrike
-                ? "A strike is recorded against the guest, taking them to "
-                    + (strikesNow + 1)
-                    + " of "
-                    + maxStrikes
-                    + "."
-                : "No strike is recorded, because the strike policy under Settings does not"
-                    + " charge for a no-show.")
-            + " Cancelling instead is the kinder path when the guest did call ahead.");
+        "The booking closes as NO_SHOW and the night it was holding goes back on sale. A strike is"
+            + " recorded against the guest, taking them to "
+            + (strikesNow + 1)
+            + " of "
+            + maxStrikes
+            + " for today. Cancelling instead is the kinder path when the guest did call ahead.");
 
     System.out.println("1. Mark This Booking As A No-Show");
     System.out.println("2. Leave It Alone\n");

@@ -65,14 +65,6 @@ public class WalkInRegistrationController {
 
         if (isBlockedByLiveBooking(guest)) continue;
 
-        if (standardReservationRepo.isBlockedByStrikes(guest, guestRepo)) {
-          registrationView.displayStrikeBlockedScreen(
-              guest,
-              standardReservationRepo.effectiveStrikes(guest, guestRepo),
-              settings().getStrikeBlockThreshold());
-          continue;
-        }
-
         // Checked before membership, because this module is the only place a standard booking can
         // be claimed and blocking a member first would strand the booking forever.
         Reservation reserved =
