@@ -465,7 +465,7 @@ public class BookingReportController {
 
     boolean isRegister = (reportType == ARRIVAL_REGISTER);
     String title = isRegister ? REGISTER_TITLE : PERFORMANCE_TITLE;
-    String sortLabel = scope.sortAttribute + " (" + scope.sortDirection + ")";
+    String sortLabel = sortLabelOf(scope);
     String scopeLabel = buildScopeLabel(scope);
 
     ListInterface<Reservation> sorted = sortReservations(matched, scope);
@@ -488,8 +488,7 @@ public class BookingReportController {
                 exportedRowCount(sorted.getNumberOfEntries(), scope.recordLimit),
                 path,
                 isRegister,
-                "RESERVATION ID".equalsIgnoreCase(scope.sortAttribute)
-                    && "ASCENDING".equalsIgnoreCase(scope.sortDirection));
+                isBinarySearchable(scope));
 
         if ("E".equalsIgnoreCase(result.input)) {
           return true;
@@ -501,7 +500,20 @@ public class BookingReportController {
         } else if ("V".equalsIgnoreCase(result.input)) {
           showReportOnScreen(title, content, path);
         } else if ("F".equalsIgnoreCase(result.input)) {
-          handleBinarySearch(sorted, scope);
+          // Refusing the command and making the clerk hunt for the sort menu taught them nothing
+          // about why the order matters, so the screen offers the re-sort that makes it legal.
+          if (!isBinarySearchable(scope) && promptResortForSearch(sortLabel)) {
+            scope.sortAttribute = "RESERVATION ID";
+            scope.sortDirection = "ASCENDING";
+            sortLabel = sortLabelOf(scope);
+            sorted = sortReservations(matched, scope);
+            content = buildReportText(isRegister, sorted, title, scopeLabel, sortLabel, scope);
+            path = TxtExportUtil.export(reportFileName(isRegister), content);
+          }
+
+          if (isBinarySearchable(scope)) {
+            handleBinarySearch(sorted, scope);
+          }
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -564,16 +576,27 @@ public class BookingReportController {
     }
   }
 
-  // Binary search is only valid on the key the list is actually ordered by.
-  private void handleBinarySearch(ListInterface<Reservation> sorted, ReportScope scope) {
-    if (!"RESERVATION ID".equalsIgnoreCase(scope.sortAttribute)
-        || !"ASCENDING".equalsIgnoreCase(scope.sortDirection)) {
-      ConsoleUtil.printError(
-          "Binary search needs the register sorted by RESERVATION ID (ASCENDING). Change the"
-              + " sort order first.");
-      return;
-    }
+  private String sortLabelOf(ReportScope scope) {
+    return scope.sortAttribute + " (" + scope.sortDirection + ")";
+  }
 
+  // Binary search is only valid on the key the list is actually ordered by.
+  private boolean isBinarySearchable(ReportScope scope) {
+    return "RESERVATION ID".equalsIgnoreCase(scope.sortAttribute)
+        && "ASCENDING".equalsIgnoreCase(scope.sortDirection);
+  }
+
+  private boolean promptResortForSearch(String currentSortLabel) {
+    while (true) {
+      try {
+        return reportView.displayResortForSearchScreen(currentSortLabel);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void handleBinarySearch(ListInterface<Reservation> sorted, ReportScope scope) {
     String target;
     while (true) {
       try {

@@ -82,7 +82,7 @@ public class BookingSettingsView {
             ? "None in force"
             : config.countOverrides() + " override(s) in force");
 
-    printOption(6, "Rebuild live lines from current capacity");
+    printOption(6, "Apply changes now");
     printOption(7, "Reset to factory defaults");
     printOption(8, "Back to Walk-In & Booking Menu");
     System.out.println();
@@ -436,13 +436,11 @@ public class BookingSettingsView {
   public void displaySavedScreen(String settingName, String newValue, String effect) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SETTING SAVED", SCREEN_WIDTH);
-    printNoticeBox(
-        "STATUS: WRITTEN TO booking_settings.dat",
-        settingName,
-        newValue,
-        (effect == null || effect.isEmpty())
-            ? "The new value is in force immediately and survives a restart."
-            : effect);
+    if (effect == null || effect.isEmpty()) {
+      printStatusBox("STATUS: WRITTEN TO booking_settings.dat", settingName, newValue);
+    } else {
+      printNoticeBox("STATUS: WRITTEN TO booking_settings.dat", settingName, newValue, effect);
+    }
     ConsoleUtil.printContinueMessage();
   }
 
@@ -510,6 +508,16 @@ public class BookingSettingsView {
       settings.setHAlign(i, TableUtil.Align.CENTER);
     }
     return settings;
+  }
+
+  private void printStatusBox(String heading, String key, String value) {
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {heading}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, key, value, false);
+    System.out.println();
   }
 
   private void printNoticeBox(String heading, String key, String value, String notice) {

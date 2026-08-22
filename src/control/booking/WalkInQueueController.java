@@ -117,6 +117,7 @@ public class WalkInQueueController {
                 queue.getNumberOfEntries(),
                 standardReservationRepo.getQueueCapacity(roomType),
                 queue.isFull(),
+                standardReservationRepo.canQueueExpand(roomType),
                 countVacantCleanRooms(roomType),
                 arrivingToday(roomType),
                 countVipWaiting(roomType),
@@ -138,7 +139,7 @@ public class WalkInQueueController {
         } else if ("G".equalsIgnoreCase(result.input)) {
           handleAllocateNext(roomType);
         } else if ("C".equalsIgnoreCase(result.input)) {
-          handleCheckInHold(holds, roomType, pageSize, graceMinutes);
+          handleHoldAction(holds, roomType, pageSize, graceMinutes);
         } else if ("X".equalsIgnoreCase(result.input)) {
           handleCloseQueue(roomType);
           currentPage = 1;
@@ -348,19 +349,15 @@ public class WalkInQueueController {
     // The guest is standing right there, so the hold usually turns into a check-in seconds later.
     // Offering it here saves walking back out to the line screen and into [C] to find the same
     // record again. Declining leaves the hold running on its grace window as before.
-    if (promptCheckInNow(allocated, guest, room)) {
+    if (promptCheckInNow(guest, room)) {
       checkInHold(allocated, guest, room, roomType);
     }
   }
 
-  private boolean promptCheckInNow(Reservation allocated, Guest guest, Room room) {
+  private boolean promptCheckInNow(Guest guest, Room room) {
     while (true) {
       try {
-        return walkInQueueView.displayCheckInNowScreen(
-            allocated,
-            guest,
-            room,
-            standardReservationRepo.getHoldGraceMinutes(room.getRoomType()));
+        return walkInQueueView.displayCheckInNowScreen(guest, room);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -537,7 +534,7 @@ public class WalkInQueueController {
     }
   }
 
-  private void handleCheckInHold(
+  private void handleHoldAction(
       ListInterface<Reservation> holds, Room.RoomType roomType, int pageSize, int graceMinutes) {
     if (holds == null || holds.isEmpty()) {
       ConsoleUtil.printError("No " + roomType.name() + " rooms are currently on hold!");
@@ -559,7 +556,58 @@ public class WalkInQueueController {
     Guest guest = guestRepo.findById(hold.getGuestId());
     Room room = standardReservationRepo.findHeldRoom(hold, roomRepo);
 
-    checkInHold(hold, guest, room, roomType);
+    int action = promptHoldAction(hold, guest, room, graceMinutes);
+    if (action == 1) {
+      checkInHold(hold, guest, room, roomType);
+    } else if (action == 2) {
+      markHoldNoShow(hold, guest, room);
+    }
+  }
+
+  private int promptHoldAction(Reservation hold, Guest guest, Room room, int graceMinutes) {
+    while (true) {
+      try {
+        return walkInQueueView.displayHoldActionScreen(hold, guest, room, graceMinutes);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // The strike is the shared daily counter the VIP module clears at midnight, so this only ever
+  // adds one, exactly as a hold that lapses on its own does.
+  private void markHoldNoShow(Reservation hold, Guest guest, Room room) {
+    int strikes = (guest != null) ? guest.getStrikeCount() : 0;
+
+    if (!promptHoldNoShowConfirmation(hold, guest, room, strikes)) {
+      return;
+    }
+
+    if (!standardReservationRepo.markHoldNoShow(hold, roomRepo)) {
+      ConsoleUtil.printError("That hold is no longer open!");
+      return;
+    }
+
+    int after = strikes;
+    if (guest != null) {
+      after = strikes + 1;
+      guest.setStrikeCount(after);
+      guestRepo.updateGuest(guest);
+    }
+
+    walkInQueueView.displayHoldNoShowSuccessScreen(hold, guest, room, after);
+  }
+
+  private boolean promptHoldNoShowConfirmation(
+      Reservation hold, Guest guest, Room room, int strikesNow) {
+    while (true) {
+      try {
+        return walkInQueueView.displayHoldNoShowConfirmationScreen(
+            hold, guest, room, strikesNow, standardReservationRepo.getMaxStrikes());
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   // The first night is always available because this guest is already holding the room. Only the
@@ -854,17 +902,7 @@ public class WalkInQueueController {
   }
 
   private int countVacantCleanRooms(Room.RoomType roomType) {
-    ListInterface<Room> rooms = roomRepo.getRoomList();
-    int count = 0;
-    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
-      Room room = rooms.getEntry(i);
-      if (room != null
-          && room.getRoomType() == roomType
-          && room.getStatus() == Room.Status.VACANT_CLEAN) {
-        count++;
-      }
-    }
-    return count;
+    return standardReservationRepo.countFreeRooms(roomRepo, roomType);
   }
 
   private int countVipWaiting(Room.RoomType roomType) {

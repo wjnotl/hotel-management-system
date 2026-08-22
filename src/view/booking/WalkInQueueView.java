@@ -14,7 +14,7 @@ import util.TextUtil;
 public class WalkInQueueView {
 
   // Column widths must sum to 96 - 3n to frame to the same width as the spanned heading above.
-  private static final int[] LINE_WIDTHS = {5, 5, 12, 22, 12, 10, 9};
+  private static final int[] LINE_WIDTHS = {5, 5, 11, 21, 14, 10, 9};
   private static final int[] HOLD_WIDTHS = {5, 12, 24, 11, 12, 14};
   private static final int[] SPAN_WIDTH = {93};
   private static final int[] KV_WIDTHS = {22, 68};
@@ -134,6 +134,7 @@ public class WalkInQueueView {
       int waiting,
       int queueCapacity,
       boolean queueFull,
+      boolean queueCanExpand,
       int vacantRooms,
       int arrivingToday,
       int vipWaiting,
@@ -155,8 +156,7 @@ public class WalkInQueueView {
             + waiting
             + " / "
             + queueCapacity
-            + " array slots"
-            + (queueFull ? "   [FULL - next enqueue doubles the array]" : ""));
+            + fullNote(queueFull, queueCanExpand));
     System.out.println("NEXT UP (peek)    : " + nextUp);
     System.out.println(
         "ROOMS             : "
@@ -193,7 +193,7 @@ public class WalkInQueueView {
         totalMatches,
         (holds == null) ? 0 : holds.getNumberOfEntries());
 
-    System.out.println("[A] Add Walk-In        [G] Serve Next In Line  [C] Manage Check In");
+    System.out.println("[A] Add Walk-In        [G] Serve Next In Line  [C] Manage Holds");
     System.out.println("[S] Search / Filter    [O] Change Sort Order   [R] Refresh");
     System.out.println("[P] Prev Page          [N] Next Page           [X] Close Queue");
     System.out.println("[E] Exit to Line Menu\n");
@@ -209,6 +209,15 @@ public class WalkInQueueView {
     String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
     return ConsoleUtil.getMenuInput(
         "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
+  }
+
+  // Whether a full line refuses the next guest or quietly doubles its array is a house setting, so
+  // the badge has to name the outcome rather than assume the array grows.
+  private String fullNote(boolean queueFull, boolean queueCanExpand) {
+    if (!queueFull) return "";
+    return queueCanExpand
+        ? "   [FULL - the next join doubles the array]"
+        : "   [FULL - the next join is refused]";
   }
 
   // Rooms are held back one per waiting VIP rather than the whole type being frozen, so a line can
@@ -258,7 +267,7 @@ public class WalkInQueueView {
     TableUtil.TableSettings spanSettings = spanSettings();
 
     TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"THE LINE (FIFO ORDER)"}, spanSettings);
+    TableUtil.printTableRow(new String[] {"THE LINE"}, spanSettings);
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
     TableUtil.printTableRow(
         new String[] {"NO.", "POS", "RES ID", "GUEST NAME", "PHONE", "WAITED", "STRIKES"},
@@ -567,18 +576,13 @@ public class WalkInQueueView {
   }
 
   // One page of the hold list plus the command prompt. Paging is the controller's to drive.
-  public boolean displayCheckInNowScreen(Reservation r, Guest g, Room room, int graceMinutes) {
+  public boolean displayCheckInNowScreen(Guest g, Room room) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK IN RIGHT AWAY?", SCREEN_WIDTH);
-    printNoticeBox(
+    printStatusBox(
         "STATUS: ROOM HELD, NOT YET TAKEN",
         "Room Held",
-        room.getRoomNumber() + "  for  " + ((g != null) ? g.getName() : "N/A"),
-        "The guest is at the desk, so the hold can become a stay now. Declining leaves the hold"
-            + " running for "
-            + graceMinutes
-            + " minute(s), after which it lapses and the room goes back on sale. It can still be"
-            + " taken later from [C] Manage Check In.");
+        room.getRoomNumber() + "  for  " + ((g != null) ? g.getName() : "N/A"));
 
     System.out.println("1. Check In Now And State The Nights");
     System.out.println("2. Leave It On Hold\n");
@@ -590,7 +594,7 @@ public class WalkInQueueView {
       ListInterface<HoldRowDTO> holds, int graceMinutes, int page, int pageSize) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("CHECK IN A HELD ROOM", SCREEN_WIDTH);
+    ConsoleUtil.printTitleBox("MANAGE A HELD ROOM", SCREEN_WIDTH);
 
     int total = (holds == null) ? 0 : holds.getNumberOfEntries();
     int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / pageSize);
@@ -610,7 +614,87 @@ public class WalkInQueueView {
 
     String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
     return ConsoleUtil.getMenuInput(
-        "Pick the hold to check in (" + range + "): ", 1, rowsOnPage, commands);
+        "Pick the hold to manage (" + range + "): ", 1, rowsOnPage, commands);
+  }
+
+  /**
+   * A held room has two endings, so the clerk chooses between them in front of the same facts.
+   *
+   * @return 1 to check in, 2 to close it as a no-show, 3 to go back
+   */
+  public int displayHoldActionScreen(Reservation r, Guest g, Room room, int graceMinutes) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("HELD ROOM: " + r.getReservationId(), SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"THE HOLD"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(
+        kvSettings, "Phone Number", (g != null) ? blankToNa(g.getPhoneNumber()) : "N/A", true);
+    printKeyValue(
+        kvSettings, "Room Held", (room != null) ? room.getRoomNumber() : "UNLINKED", true);
+    printKeyValue(kvSettings, "Held Since", formatTime(r.getAllocatedTime()), true);
+    printKeyValue(kvSettings, "Waiting So Far", formatWait(r.getAllocatedTime()), true);
+    printKeyValue(kvSettings, "Grace Window", graceMinutes + " minute(s) from the hold", true);
+    printKeyValue(
+        kvSettings, "Strike Count", String.valueOf((g != null) ? g.getStrikeCount() : 0), false);
+
+    System.out.println();
+
+    System.out.println("1. Check In And State The Nights");
+    System.out.println("2. Mark No-Show (releases the room now)");
+    System.out.println("3. Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public boolean displayHoldNoShowConfirmationScreen(
+      Reservation r, Guest g, Room room, int strikesNow, int maxStrikes) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM NO-SHOW", SCREEN_WIDTH);
+    printNoticeBox(
+        "STATUS: [!] CLOSE THE HOLD EARLY",
+        "Room Held",
+        ((room != null) ? room.getRoomNumber() : "UNLINKED")
+            + "  for  "
+            + ((g != null) ? g.getName() : "N/A"),
+        "The room goes back on sale immediately rather than at the end of the grace window, and"
+            + " the booking closes as NO_SHOW. A strike is recorded against the guest, taking them"
+            + " to "
+            + (strikesNow + 1)
+            + " of "
+            + maxStrikes
+            + " for today. The guest is not sent back to the line, because this is the desk"
+            + " deciding they are not coming rather than a hold that merely ran out of time.");
+
+    System.out.println("1. Mark No-Show And Release The Room");
+    System.out.println("2. Leave The Hold Running\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
+  }
+
+  public void displayHoldNoShowSuccessScreen(Reservation r, Guest g, Room room, int strikesAfter) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("HOLD CLOSED AS NO-SHOW", SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"STATUS: ROOM RELEASED"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
+    printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(
+        kvSettings, "Room Back On Sale", (room != null) ? room.getRoomNumber() : "UNLINKED", true);
+    printKeyValue(kvSettings, "Strikes Today", String.valueOf(strikesAfter), false);
+
+    System.out.println();
+    ConsoleUtil.printContinueMessage();
   }
 
   public Integer promptStayDays(
@@ -682,11 +766,10 @@ public class WalkInQueueView {
   public void displayCloseQueueSuccessScreen(Room.RoomType roomType, int closed) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("LINE CLOSED", SCREEN_WIDTH);
-    printNoticeBox(
+    printStatusBox(
         "STATUS: QUEUE CLEARED",
         "Bookings Cancelled",
-        String.valueOf(closed),
-        "The " + roomType.name() + " line is now empty and ready for the next business cycle.");
+        closed + " from the " + roomType.name() + " line");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -893,6 +976,16 @@ public class WalkInQueueView {
       settings.setHAlign(i, TableUtil.Align.CENTER);
     }
     return settings;
+  }
+
+  private void printStatusBox(String heading, String key, String value) {
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {heading}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, key, value, false);
+    System.out.println();
   }
 
   private void printNoticeBox(String heading, String key, String value, String notice) {

@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
@@ -416,6 +417,13 @@ public class AdvanceBookingController {
 
     Guest guest = guestRepo.findById(booking.getGuestId());
 
+    if (!standardReservationRepo.isArrivalDueToday(booking)) {
+      LocalDate bookedFor = standardReservationRepo.bookedArrivalDate(booking);
+      advanceBookingView.displayWrongArrivalDayScreen(
+          booking, guest, bookedFor, ChronoUnit.DAYS.between(LocalDate.now(), bookedFor));
+      return;
+    }
+
     Reservation alreadyQueued =
         findQueuedReservationForGuest(booking.getRoomType(), booking.getGuestId());
     if (alreadyQueued != null) {
@@ -496,16 +504,7 @@ public class AdvanceBookingController {
   }
 
   private int countVacantCleanRooms(Room.RoomType roomType) {
-    ListInterface<Room> rooms = roomRepo.getRoomList();
-    int count = 0;
-
-    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
-      Room r = rooms.getEntry(i);
-      if (r != null && r.getRoomType() == roomType && r.getStatus() == Room.Status.VACANT_CLEAN) {
-        count++;
-      }
-    }
-    return count;
+    return standardReservationRepo.countFreeRooms(roomRepo, roomType);
   }
 
   private Member.LoyaltyTier tierOf(Guest guest) {

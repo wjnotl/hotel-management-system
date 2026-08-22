@@ -179,7 +179,7 @@ public class AdvanceBookingView {
     TableUtil.TableSettings spanSettings = spanSettings();
 
     TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"BOOKED AHEAD, NOT YET IN A LINE"}, spanSettings);
+    TableUtil.printTableRow(new String[] {"BOOKED AHEAD"}, spanSettings);
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
     TableUtil.printTableRow(
         new String[] {"NO.", "RES ID", "GUEST NAME", "TYPE", "TIER", "ARRIVE", "DEPART", "NTS"},
@@ -440,19 +440,24 @@ public class AdvanceBookingView {
   public void displayNewBookingSuccessScreen(Reservation r, Guest g) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ADVANCE BOOKING CREATED", SCREEN_WIDTH);
-    printNoticeBox(
-        "STATUS: RESERVED",
-        "Reservation ID",
-        r.getReservationId() + "   (code " + r.getConfirmationNumber() + ")",
-        ((g != null) ? g.getName() : "The guest")
-            + " holds a "
-            + r.getRoomType().name()
-            + " booking arriving "
-            + formatArrival(r.getExpectedArrivalTime())
-            + " for "
-            + ((r.getStayDays() != null) ? r.getStayDays() : 1)
-            + " night(s). Use [M] to check them in when they reach the desk. A room of this type"
-            + " is now held back on those dates and will not be given to a walk-in.");
+
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"STATUS: RESERVED"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
+    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(kvSettings, "Room Type", r.getRoomType().name(), true);
+    printKeyValue(kvSettings, "Arriving", formatArrival(r.getExpectedArrivalTime()), true);
+    printKeyValue(
+        kvSettings,
+        "Nights Booked",
+        String.valueOf((r.getStayDays() != null) ? r.getStayDays() : 1),
+        false);
+
+    System.out.println();
     ConsoleUtil.printContinueMessage();
   }
 
@@ -501,20 +506,57 @@ public class AdvanceBookingView {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK-IN COMPLETE", SCREEN_WIDTH);
-    printNoticeBox(
-        "STATUS: RESERVED -> CHECKED_IN",
+
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"STATUS: RESERVED -> CHECKED_IN"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
+    printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(
+        kvSettings,
         "Room Given",
         room.getRoomNumber() + "  (" + r.getRoomType().name() + ")",
-        ((g != null) ? g.getName() : "The guest")
-            + " holds room "
-            + room.getRoomNumber()
-            + " for "
-            + nights
-            + " night(s) under "
+        true);
+    printKeyValue(kvSettings, "Nights Booked", String.valueOf(nights), true);
+    printKeyValue(
+        kvSettings,
+        "Due To Check Out",
+        (checkOutDate != null) ? checkOutDate.format(DATE_FORMAT) : "N/A",
+        false);
+
+    System.out.println();
+    ConsoleUtil.printContinueMessage();
+  }
+
+  public void displayWrongArrivalDayScreen(
+      Reservation r, Guest g, LocalDate bookedFor, long daysOff) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("NOT THE BOOKED DATE", SCREEN_WIDTH);
+
+    String timing =
+        (daysOff > 0)
+            ? "arrives in " + daysOff + " day(s)"
+            : "was due " + Math.abs(daysOff) + " day(s) ago";
+
+    printNoticeBox(
+        "STATUS: [X] CHECK-IN REFUSED",
+        "Booked For",
+        ((bookedFor != null) ? bookedFor.format(DATE_FORMAT) : "N/A")
+            + "   (today is "
+            + LocalDate.now().format(DATE_FORMAT)
+            + ")",
+        ((g != null) ? g.getName() : "This guest")
+            + " holds "
             + r.getReservationId()
-            + ", due to check out on "
-            + ((checkOutDate != null) ? checkOutDate.format(DATE_FORMAT) : "N/A")
-            + ". The booking never entered a line, because the room was already promised to it.");
+            + " for a night that "
+            + timing
+            + ", so it cannot be checked in today. A booking reserves one specific night and only"
+            + " that night. Take this visit as an ordinary walk-in, or close the booking as a"
+            + " no-show if the guest never came.");
+
     ConsoleUtil.printContinueMessage();
   }
 

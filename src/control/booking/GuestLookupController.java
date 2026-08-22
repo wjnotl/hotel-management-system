@@ -25,93 +25,51 @@ public class GuestLookupController {
   }
 
   /**
-   * Runs the whole search loop.
+   * Runs the register browser until a guest is picked.
    *
    * @return the chosen guest, or null when the clerk backed out
    */
   public Guest findGuest(String title) {
+    int searchField = GuestLookupView.FIELD_ALL;
+    String searchTerm = null;
     boolean exactMatch = false;
-
-    while (true) {
-      try {
-        String matchMode = exactMatch ? "EXACT" : "CONTAINS";
-        int choice = lookupView.displayFieldMenu(title, matchMode);
-
-        if (choice == GuestLookupView.BACK) {
-          return null;
-        }
-
-        if (choice == GuestLookupView.TOGGLE_MATCH_MODE) {
-          exactMatch = !exactMatch;
-          continue;
-        }
-
-        Guest picked = runSearch(choice, exactMatch);
-        if (picked != null) return picked;
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  // Returns the guest once one is settled on, or null to fall back to the field menu.
-  private Guest runSearch(int field, boolean exactMatch) {
-    String fieldLabel = labelFor(field);
-    String matchMode = exactMatch ? "EXACT" : "CONTAINS";
-
-    while (true) {
-      try {
-        String term = lookupView.promptSearchTerm(fieldLabel, matchMode);
-
-        if ("E".equalsIgnoreCase(term.trim())) {
-          return null;
-        }
-
-        term = term.trim();
-        ListInterface<Guest> matches = search(field, term, exactMatch);
-
-        if (matches.isEmpty()) {
-          if (promptNotFound(fieldLabel, term) == GuestLookupView.BACK) {
-            return null;
-          }
-          continue;
-        }
-
-        // A single hit is not a choice, so the clerk is not made to confirm a list of one.
-        if (matches.getNumberOfEntries() == 1) {
-          return matches.getEntry(1);
-        }
-
-        Guest picked = pickFromMatches(fieldLabel, term, matchMode, matches);
-        if (picked != null) return picked;
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  private int promptNotFound(String fieldLabel, String term) {
-    while (true) {
-      try {
-        return lookupView.displayNotFoundScreen(fieldLabel, term);
-      } catch (Exception e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  private Guest pickFromMatches(
-      String fieldLabel, String term, String matchMode, ListInterface<Guest> matches) {
-
-    ListInterface<GuestLookupView.GuestRowDTO> rows = buildGuestRowDTO(matches);
     int page = 1;
 
     while (true) {
       try {
-        ConsoleUtil.GetMenuInputResult result =
-            lookupView.displayMatches(fieldLabel, term, matchMode, rows, page, MATCH_PAGE_SIZE);
+        // No term means the whole register, so a clerk who can already see the guest never has to
+        // invent a search to reach them.
+        ListInterface<Guest> matches =
+            (searchTerm == null)
+                ? guestRepo.getGuestList()
+                : search(searchField, searchTerm, exactMatch);
 
-        int totalPages = (int) Math.ceil((double) matches.getNumberOfEntries() / MATCH_PAGE_SIZE);
+        int total = matches.getNumberOfEntries();
+        int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / MATCH_PAGE_SIZE);
+        page = Math.min(Math.max(page, 1), Math.max(totalPages, 1));
+
+        ConsoleUtil.GetMenuInputResult result =
+            lookupView.renderRegisterScreen(
+                title,
+                buildGuestRowDTO(matches),
+                labelFor(searchField),
+                searchTerm,
+                exactMatch ? "EXACT" : "CONTAINS",
+                page,
+                MATCH_PAGE_SIZE);
+
+        if ("E".equalsIgnoreCase(result.input)) {
+          return null;
+        }
+
+        if ("S".equalsIgnoreCase(result.input)) {
+          Object[] filters = handleFilterMenu(searchField, searchTerm, exactMatch);
+          searchField = (Integer) filters[0];
+          searchTerm = (String) filters[1];
+          exactMatch = (Boolean) filters[2];
+          page = 1;
+          continue;
+        }
 
         if ("N".equalsIgnoreCase(result.input)) {
           if (page < totalPages) {
@@ -132,16 +90,71 @@ public class GuestLookupController {
         }
 
         if (result.isNumber) {
-          if (result.getAsInt() == GuestLookupView.BACK) {
-            return null;
-          }
-
           // The table renumbers from 1 on every page, so the row read off the screen is an offset
           // into the page and the page origin has to be added back.
-          int index = (page - 1) * MATCH_PAGE_SIZE + result.getAsInt();
-          Guest picked = matches.getEntry(index);
+          Guest picked = matches.getEntry((page - 1) * MATCH_PAGE_SIZE + result.getAsInt());
           if (picked != null) return picked;
         }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // Returns {field, term, exactMatch}, unchanged when the clerk discards.
+  private Object[] handleFilterMenu(int currentField, String currentTerm, boolean currentExact) {
+    int field = currentField;
+    String term = currentTerm;
+    boolean exactMatch = currentExact;
+
+    while (true) {
+      try {
+        int choice =
+            lookupView.displayFilterMainMenu(
+                labelFor(field), term, exactMatch ? "EXACT" : "CONTAINS");
+
+        if (choice == 1) {
+          int picked = promptSearchField(labelFor(field));
+          if (picked != GuestLookupView.BACK) field = picked;
+        } else if (choice == 2) {
+          String typed = promptSearchTerm(labelFor(field), term);
+          if (!"E".equalsIgnoreCase(typed)) {
+            term = "-".equals(typed) ? null : typed;
+          }
+        } else if (choice == 3) {
+          exactMatch = !exactMatch;
+        } else if (choice == 4) {
+          field = GuestLookupView.FIELD_ALL;
+          term = null;
+          exactMatch = false;
+        } else if (choice == 5) {
+          return new Object[] {field, term, exactMatch};
+        } else {
+          return new Object[] {currentField, currentTerm, currentExact};
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptSearchField(String current) {
+    while (true) {
+      try {
+        return lookupView.displaySearchFieldSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // Blank redraws instead of clearing, so a stray Enter never silently widens the search.
+  private String promptSearchTerm(String fieldLabel, String current) {
+    while (true) {
+      try {
+        String typed = lookupView.promptSearchTerm(fieldLabel, current);
+        if (typed == null || typed.trim().isEmpty()) continue;
+        return typed.trim();
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -171,7 +184,41 @@ public class GuestLookupController {
     if (field == GuestLookupView.FIELD_BOOKING_CODE) {
       return searchByBookingCode(term, exactMatch);
     }
+    if (field == GuestLookupView.FIELD_PHONE) {
+      return searchByPhoneDigits(term, exactMatch);
+    }
     return guestRepo.searchGuests(term, repoFieldFor(field), exactMatch);
+  }
+
+  // Phone numbers are stored as digits now, but files opened before that rule still carry hyphens
+  // and a clerk types them out of habit either way, so both sides are reduced to digits first.
+  private ListInterface<Guest> searchByPhoneDigits(String term, boolean exactMatch) {
+    ListInterface<Guest> matches = new ArrayList<>();
+    String query = digitsOnly(term);
+    if (query.isEmpty()) return matches;
+
+    ListInterface<Guest> guests = guestRepo.getGuestList();
+    for (int i = 1; i <= guests.getNumberOfEntries(); i++) {
+      Guest g = guests.getEntry(i);
+      if (g == null || g.getPhoneNumber() == null) continue;
+
+      String stored = digitsOnly(g.getPhoneNumber());
+      if (exactMatch ? stored.equals(query) : stored.contains(query)) {
+        matches.add(g);
+      }
+    }
+    return matches;
+  }
+
+  private String digitsOnly(String value) {
+    StringBuilder digits = new StringBuilder();
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      if (Character.isDigit(c)) {
+        digits.append(c);
+      }
+    }
+    return digits.toString();
   }
 
   // A guest who quotes a booking code rather than a document is still the guest this flow needs, so
@@ -223,7 +270,7 @@ public class GuestLookupController {
     if (field == GuestLookupView.FIELD_PHONE) return "Phone Number";
     if (field == GuestLookupView.FIELD_EMAIL) return "Email Address";
     if (field == GuestLookupView.FIELD_BOOKING_CODE) return "Reservation ID Or Code";
-    return "Any Field";
+    return "All Fields";
   }
 
   private String blankToNa(String value) {

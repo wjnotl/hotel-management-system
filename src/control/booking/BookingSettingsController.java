@@ -204,9 +204,9 @@ public class BookingSettingsController {
           Integer value =
               promptIntSetting(
                   "Initial Queue Capacity",
-                  "How many array slots each line owns when it is created. The circular array"
-                      + " doubles when it fills, so this is a starting size and not a limit on"
-                      + " how many guests may wait.",
+                  "How many slots each line owns when it is created. It is a hard stop unless"
+                      + " the growth rule below is switched on, in which case the circular array"
+                      + " doubles when it fills and this is only a starting size.",
                   config().getInitialQueueCapacity() + " slots",
                   MIN_QUEUE_CAPACITY,
                   MAX_QUEUE_CAPACITY,
@@ -333,7 +333,8 @@ public class BookingSettingsController {
                   "One Live Booking Per Guest",
                   "With this on, a guest who is already waiting in any line or already holding"
                       + " a room cannot be registered a second time. With it off, the same"
-                      + " person may stand in more than one line at once.",
+                      + " person may stand in more than one line at once, one place per line."
+                      + " Taking two places in the same line is refused either way.",
                   config().isBlockDuplicateAcrossLines(),
                   "One booking only",
                   "Allow several",

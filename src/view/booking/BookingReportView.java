@@ -155,7 +155,7 @@ public class BookingReportView {
       if (binarySearchAvailable) {
         System.out.println("[F] Find A Reservation ID (binary search on the sorted register)");
       } else {
-        System.out.println("[F] Find A Reservation ID (needs the RESERVATION ID sort order)");
+        System.out.println("[F] Find A Reservation ID (re-sorts the report first)");
       }
     }
     System.out.println("[V] View The Report On Screen");
@@ -165,6 +165,37 @@ public class BookingReportView {
         offerBinarySearch ? new char[] {'F', 'V', 'S', 'R', 'E'} : new char[] {'V', 'S', 'R', 'E'};
 
     return ConsoleUtil.getMenuInput("Enter a command: ", commands);
+  }
+
+  // Binary search only works on the key the list is ordered by, so rather than refusing the
+  // command the screen offers the re-sort that would make it legal.
+  public boolean displayResortForSearchScreen(String currentSortLabel) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("RE-SORT BEFORE SEARCHING", SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
+    TableUtil.TableSettings spanSettings =
+        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"STATUS: [!] WRONG ORDER FOR A BINARY SEARCH"}, spanSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Sorted By", currentSortLabel, true);
+    printKeyValue(
+        kvSettings,
+        "System Notice",
+        "A binary search halves the list at every step by comparing against the key it is ordered"
+            + " by, so it can only run on a register sorted by RESERVATION ID (ASCENDING). The"
+            + " report can be re-sorted and re-exported now, which changes nothing but the order"
+            + " of the rows.",
+        false);
+
+    System.out.println();
+    System.out.println("1. Re-Sort By Reservation ID And Search");
+    System.out.println("2. Keep The Current Order And Go Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public String promptReservationIdSearch() {

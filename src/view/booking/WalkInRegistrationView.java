@@ -169,7 +169,8 @@ public class WalkInRegistrationView {
     ConsoleUtil.printContinueMessage();
   }
 
-  public void displayAlreadyActiveScreen(Guest guest, Reservation existing, int position) {
+  public void displayAlreadyActiveScreen(
+      Guest guest, Reservation existing, int position, boolean acrossAllTypes) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST ALREADY BEING SERVED", SCREEN_WIDTH);
 
@@ -193,12 +194,15 @@ public class WalkInRegistrationView {
             + where
             + " under reservation "
             + existing.getReservationId()
-            + ". One person may hold only one live standard booking, across every room type."
+            + (acrossAllTypes
+                ? ". One person may hold only one live standard booking, across every room type."
+                : ". One person may take only one place in a given line, though they may wait in"
+                    + " another room type's line at the same time.")
             + " Serve or cancel that entry instead of opening a second one.");
     ConsoleUtil.printContinueMessage();
   }
 
-  public int displayHasAdvanceBookingScreen(Guest guest, Reservation booking) {
+  public int displayHasAdvanceBookingScreen(Guest guest, Reservation booking, boolean dueToday) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST BOOKED AHEAD", SCREEN_WIDTH);
 
@@ -222,12 +226,25 @@ public class WalkInRegistrationView {
     printKeyValue(
         kvSettings,
         "System Notice",
-        "This guest reserved a room in advance and has now arrived. Using that booking keeps"
-            + " one record for the stay. Opening a separate walk-in leaves the original booking"
-            + " unclaimed.",
+        dueToday
+            ? "This guest reserved a room in advance and has now arrived. Using that booking keeps"
+                + " one record for the stay. Opening a separate walk-in leaves the original"
+                + " booking unclaimed."
+            : "That booking is for a different night, and a booking may only be taken up on the"
+                + " night it reserves. It stays open and untouched. Serving this guest now means"
+                + " an ordinary walk-in against today's stock.",
         false);
 
     System.out.println();
+
+    // Offering a choice that would then be refused is worse than not offering it, so claiming the
+    // booking simply is not on the menu on the wrong day. The caller's codes do not move.
+    if (!dueToday) {
+      System.out.println("1. Register A Walk-In For Tonight");
+      System.out.println("2. Back\n");
+      return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() + 1;
+    }
+
     System.out.println("1. Use The Advance Booking (recommended)");
     System.out.println("2. Register A Separate Walk-In Anyway");
     System.out.println("3. Back\n");
@@ -331,12 +348,13 @@ public class WalkInRegistrationView {
     printNoticeBox(
         "STATUS: [X] WALK-IN REFUSED",
         "Line Length",
-        waiting + " waiting, house limit is " + maxQueueLength,
+        waiting + " waiting, the limit in force is " + maxQueueLength,
         "The "
             + roomType.name()
-            + " line has reached the maximum length set under Settings & Configuration, so no"
-            + " further walk-in can be taken for this type. Serve the front of the line, raise"
-            + " the limit, or offer the guest a different room type.");
+            + " line has reached a limit set under Settings & Configuration, either the house"
+            + " length rule or a queue array that is full and not allowed to grow, so no further"
+            + " walk-in can be taken for this type. Serve the front of the line, raise the limit,"
+            + " or offer the guest a different room type.");
     ConsoleUtil.printContinueMessage();
   }
 

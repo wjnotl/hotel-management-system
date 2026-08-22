@@ -1,5 +1,6 @@
 package control.booking;
 
+import adt.ListInterface;
 import entity.Guest;
 import repo.GuestRepo;
 import util.ConsoleUtil;
@@ -329,12 +330,12 @@ public class GuestRegistrationController {
       if (isExit(input)) return StepResult.cancel();
       if (isBack(input)) return StepResult.back();
 
-      String phoneNumber = input.trim();
-      if (phoneNumber.isEmpty() && !form.phoneNumber.isEmpty()) {
+      String typed = input.trim();
+      if (typed.isEmpty() && !form.phoneNumber.isEmpty()) {
         return StepResult.next(form.phoneNumber);
       }
 
-      if (countDigits(phoneNumber) < MIN_PHONE_DIGITS || !isPhoneShaped(phoneNumber)) {
+      if (countDigits(typed) < MIN_PHONE_DIGITS || !isPhoneShaped(typed)) {
         error =
             "A phone number must hold at least "
                 + MIN_PHONE_DIGITS
@@ -342,7 +343,11 @@ public class GuestRegistrationController {
         continue;
       }
 
-      Guest owner = guestRepo.findByPhoneNumber(phoneNumber);
+      String phoneNumber = typed;
+
+      // Compared digit by digit so the same number written with and without separators still
+      // collides, even though the record keeps whatever the clerk typed.
+      Guest owner = findByPhoneDigits(phoneNumber);
       if (owner != null) {
         error = duplicateMessage("phone number", phoneNumber, owner);
         continue;
@@ -479,6 +484,31 @@ public class GuestRegistrationController {
       }
     }
     return true;
+  }
+
+  private String digitsOnly(String value) {
+    StringBuilder digits = new StringBuilder();
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      if (Character.isDigit(c)) {
+        digits.append(c);
+      }
+    }
+    return digits.toString();
+  }
+
+  // Guest files written before the digits-only rule still carry hyphens and spaces, so the
+  // register is compared digit by digit rather than by the exact text a clerk once typed.
+  private Guest findByPhoneDigits(String digits) {
+    ListInterface<Guest> guests = guestRepo.getGuestList();
+    for (int i = 1; i <= guests.getNumberOfEntries(); i++) {
+      Guest g = guests.getEntry(i);
+      if (g == null || g.getPhoneNumber() == null) continue;
+      if (digitsOnly(g.getPhoneNumber()).equals(digits)) {
+        return g;
+      }
+    }
+    return null;
   }
 
   private int countDigits(String value) {

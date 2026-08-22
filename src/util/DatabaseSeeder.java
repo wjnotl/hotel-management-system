@@ -22,6 +22,8 @@ import repo.VipSystemConfigRepo;
 
 public class DatabaseSeeder {
 
+  private static final Reservation.Status WAITING = Reservation.Status.WAITING;
+
   private static int resCounter = 10001;
   private static int billingCounter = 1001;
 
@@ -768,14 +770,17 @@ public class DatabaseSeeder {
               "010-2244668",
               null,
               2);
+      // G-111 was a byte for byte copy of G-110's IC, passport and phone. The registration form
+      // refuses all three as duplicates, so the seed was creating a guest the app itself could not
+      // have created.
       Guest g11 =
           new Guest(
               "G-111",
               "John Doe",
-              "000118-10-2367",
-              "K12459876",
+              "930417-11-5508",
+              "L77553311",
               "john@mail.com",
-              "010-2244668",
+              "017-4455662",
               null,
               0);
 
@@ -785,172 +790,269 @@ public class DatabaseSeeder {
       guestRepo.addGuest(g10);
       guestRepo.addGuest(g11);
 
-      // ==========================================
-      // 9. SEED STANDARD RESERVATIONS (3 FIFO QUEUES)
-      // ==========================================
+      // Eight guests fill a line at the default capacity, and a line cannot be shown refusing the
+      // ninth without nine distinct people to put in it.
+      guestRepo.addGuest(
+          walkIn(
+              "G-112",
+              "Siti Rahman",
+              "960822-04-3376",
+              "M20114499",
+              "siti@mail.com",
+              "011-9080706",
+              0));
+      guestRepo.addGuest(
+          walkIn(
+              "G-113",
+              "Marcus Ooi",
+              "890130-12-9042",
+              "N65432198",
+              "marcus@mail.com",
+              "012-3311557",
+              0));
+      guestRepo.addGuest(
+          walkIn(
+              "G-114",
+              "Priya Nair",
+              "010506-08-2213",
+              "P30298471",
+              "priya@mail.com",
+              "016-7742093",
+              0));
+      guestRepo.addGuest(
+          walkIn(
+              "G-115",
+              "Daniel Yeoh",
+              "870919-02-6684",
+              "Q48120367",
+              "daniel@mail.com",
+              "019-2286134",
+              1));
+      guestRepo.addGuest(
+          walkIn(
+              "G-116",
+              "Aisyah Karim",
+              "990311-05-7128",
+              "R91038265",
+              "aisyah@mail.com",
+              "013-6650428",
+              0));
+      guestRepo.addGuest(
+          walkIn(
+              "G-117",
+              "Lim Kai Sheng",
+              "920724-01-4459",
+              "S57402913",
+              "kaisheng@mail.com",
+              "018-1194762",
+              0));
+      guestRepo.addGuest(
+          walkIn(
+              "G-118",
+              "Grace Anandan",
+              "950208-14-8830",
+              "T26719048",
+              "grace@mail.com",
+              "010-5583910",
+              0));
+      guestRepo.addGuest(
+          walkIn(
+              "G-119",
+              "Haziq Idris",
+              "031127-06-1195",
+              "U84306172",
+              "haziq@mail.com",
+              "014-9928375",
+              0));
+      guestRepo.addGuest(
+          walkIn(
+              "G-120",
+              "Wong Mei Ling",
+              "880605-10-3341",
+              "V13975860",
+              "meiling@mail.com",
+              "017-3348820",
+              0));
 
-      // --- STANDARD QUEUE (5 waiting, oldest arrival first) ---
-      addStandardRes(
+      // Carries nothing but one booking due today, so walking them in exercises the claim path on
+      // its own rather than tangled with a queue place or a second booking.
+      guestRepo.addGuest(
+          walkIn(
+              "G-121",
+              "Ravi Chandran",
+              "910413-07-2264",
+              "W60817253",
+              "ravi@mail.com",
+              "012-4407719",
+              0));
+
+      // ==========================================
+      // 9. SEED STANDARD RESERVATIONS (WALK-IN & BOOKING TEST BED)
+      // ==========================================
+      // Every state the module can be in is represented once, so a marker can reach each screen
+      // from a fresh seed without typing a setup first. Rooms L-801, L-802, S-501, S-502, ST-101
+      // and ST-102 belong to the billing history above, so nothing here touches them.
+
+      // --- STANDARD line: 7 waiting against a default capacity of 8 ---
+      // One slot left, so the next walk-in fills the line and the one after it is refused. Both
+      // halves of the fixed-capacity rule are reachable without editing anything first.
+      addStandardRes(standardRepo, "G-107", Room.RoomType.STANDARD, WAITING, now.minusMinutes(64));
+      addStandardRes(standardRepo, "G-108", Room.RoomType.STANDARD, WAITING, now.minusMinutes(55));
+      addStandardRes(standardRepo, "G-112", Room.RoomType.STANDARD, WAITING, now.minusMinutes(47));
+      addStandardRes(standardRepo, "G-113", Room.RoomType.STANDARD, WAITING, now.minusMinutes(38));
+      addStandardRes(standardRepo, "G-114", Room.RoomType.STANDARD, WAITING, now.minusMinutes(29));
+      addStandardRes(standardRepo, "G-115", Room.RoomType.STANDARD, WAITING, now.minusMinutes(21));
+      addStandardRes(standardRepo, "G-116", Room.RoomType.STANDARD, WAITING, now.minusMinutes(12));
+
+      // --- LUXURY line: 3 waiting, with room to take more ---
+      // G-112 is already in the STANDARD line. One guest may hold a place in several lines but
+      // only one place per line, so this row is what proves the first half of that rule.
+      addStandardRes(standardRepo, "G-109", Room.RoomType.LUXURY, WAITING, now.minusMinutes(41));
+      addStandardRes(standardRepo, "G-118", Room.RoomType.LUXURY, WAITING, now.minusMinutes(26));
+      addStandardRes(standardRepo, "G-112", Room.RoomType.LUXURY, WAITING, now.minusMinutes(9));
+
+      // --- SUITE line: 2 waiting ---
+      addStandardRes(standardRepo, "G-119", Room.RoomType.SUITE, WAITING, now.minusMinutes(33));
+      addStandardRes(standardRepo, "G-120", Room.RoomType.SUITE, WAITING, now.minusMinutes(7));
+
+      // --- HOLD past its grace window ---
+      // G-110 already carries 2 strikes and the house limit is 3, so sweeping this hold takes them
+      // to the limit and closes the booking as a no-show instead of returning them to the line.
+      hold(
           standardRepo,
-          vipRepo,
-          "G-107",
-          Room.RoomType.STANDARD,
-          Reservation.Status.WAITING,
-          now.minusMinutes(40));
-      addStandardRes(
-          standardRepo,
-          vipRepo,
-          "G-108",
-          Room.RoomType.STANDARD,
-          Reservation.Status.WAITING,
-          now.minusMinutes(31));
-      addStandardRes(
-          standardRepo,
-          vipRepo,
-          "G-106",
-          Room.RoomType.STANDARD,
-          Reservation.Status.WAITING,
-          now.minusMinutes(22));
-      addStandardRes(
-          standardRepo,
-          vipRepo,
-          "G-109",
-          Room.RoomType.STANDARD,
-          Reservation.Status.WAITING,
-          now.minusMinutes(11));
-      addStandardRes(
-          standardRepo,
-          vipRepo,
+          roomRepo,
           "G-110",
           Room.RoomType.STANDARD,
-          Reservation.Status.WAITING,
+          "ST-103",
+          now.minusMinutes(58),
+          now.minusMinutes(23));
+
+      // --- HOLD still inside its grace window ---
+      // Reachable from [C] Manage Holds, which offers check-in or a hand marked no-show.
+      hold(
+          standardRepo,
+          roomRepo,
+          "G-111",
+          Room.RoomType.LUXURY,
+          "L-803",
+          now.minusMinutes(37),
           now.minusMinutes(3));
 
-      // --- LUXURY QUEUE (3 waiting) ---
-      addStandardRes(
+      // --- ADVANCE BOOKINGS, one per outcome of the arrival date rule ---
+      // A booking may only be checked in on the night it reserves, so only the first of these
+      // five can be taken up with [M] today.
+      advance(standardRepo, "G-101", Room.RoomType.LUXURY, today.atTime(14, 0), 2);
+      advance(standardRepo, "G-102", Room.RoomType.STANDARD, today.plusDays(1).atTime(15, 0), 3);
+      advance(standardRepo, "G-103", Room.RoomType.LUXURY, today.plusDays(4).atTime(12, 0), 1);
+      advance(standardRepo, "G-104", Room.RoomType.STANDARD, today.plusDays(9).atTime(16, 0), 5);
+      advance(standardRepo, "G-105", Room.RoomType.SUITE, today.minusDays(2).atTime(13, 0), 2);
+      advance(standardRepo, "G-106", Room.RoomType.STANDARD, today.minusDays(1).atTime(13, 0), 1);
+
+      // Due today as well, and against the STANDARD line, so the queue screen has a room held back
+      // for an arrival and the walk-in flow has a booking it may actually claim.
+      advance(standardRepo, "G-121", Room.RoomType.STANDARD, today.atTime(16, 30), 2);
+
+      // --- A date with no SUITE left ---
+      // Twelve bookings against twelve SUITE rooms commit the type solid for two nights, which is
+      // what NO ROOMS ON THAT DATE, findFirstFullDate and findLongestBookableStay are for.
+      String[] suiteHolders = {
+        "G-107", "G-108", "G-109", "G-110", "G-111", "G-112",
+        "G-113", "G-114", "G-115", "G-116", "G-117", "G-118"
+      };
+      for (int i = 0; i < suiteHolders.length; i++) {
+        advance(
+            standardRepo,
+            suiteHolders[i],
+            Room.RoomType.SUITE,
+            today.plusDays(5).atTime(13 + (i % 4), 0),
+            2);
+      }
+
+      // --- CLOSED HISTORY ---
+      // The two reports aggregate outcomes, so they need finished records spread across enough
+      // days that TODAY, LAST 7 DAYS and a custom range each return a different set.
+      closed(
           standardRepo,
-          vipRepo,
-          "G-104",
+          "G-113",
+          Room.RoomType.STANDARD,
+          Reservation.Status.NO_SHOW,
+          now.minusHours(5),
+          now.minusHours(4));
+      closed(
+          standardRepo,
+          "G-114",
+          Room.RoomType.SUITE,
+          Reservation.Status.NO_SHOW,
+          now.minusHours(9),
+          now.minusHours(8));
+      closed(
+          standardRepo,
+          "G-119",
           Room.RoomType.LUXURY,
-          Reservation.Status.WAITING,
-          now.minusMinutes(27));
-      addStandardRes(
+          Reservation.Status.NO_SHOW,
+          now.minusDays(1).minusHours(3),
+          now.minusDays(1).minusHours(2));
+      closed(
           standardRepo,
-          vipRepo,
+          "G-120",
+          Room.RoomType.STANDARD,
+          Reservation.Status.NO_SHOW,
+          now.minusDays(3).minusHours(6),
+          now.minusDays(3).minusHours(5));
+
+      checkedOut(
+          standardRepo,
           "G-107",
-          Room.RoomType.LUXURY,
-          Reservation.Status.WAITING,
-          now.minusMinutes(16));
-      addStandardRes(
+          Room.RoomType.STANDARD,
+          "ST-104",
+          now.minusDays(2).minusHours(7),
+          now.minusDays(2).minusHours(6),
+          1);
+      checkedOut(
           standardRepo,
-          vipRepo,
           "G-108",
           Room.RoomType.LUXURY,
-          Reservation.Status.WAITING,
-          now.minusMinutes(6));
-
-      // --- SUITE QUEUE (2 waiting) ---
-      addStandardRes(
+          "L-804",
+          now.minusDays(3).minusHours(4),
+          now.minusDays(3).minusHours(4),
+          2);
+      checkedOut(
           standardRepo,
-          vipRepo,
-          "G-109",
+          "G-115",
           Room.RoomType.SUITE,
-          Reservation.Status.WAITING,
-          now.minusMinutes(19));
-      addStandardRes(
+          "S-503",
+          now.minusDays(5).minusHours(2),
+          now.minusDays(5).minusHours(1),
+          3);
+      checkedOut(
           standardRepo,
-          vipRepo,
-          "G-110",
-          Room.RoomType.SUITE,
-          Reservation.Status.WAITING,
-          now.minusMinutes(8));
-
-      // --- ADVANCE BOOKINGS (RESERVED, deliberately not queued) ---
-      addStandardRes(
-          standardRepo, vipRepo, "G-103", Room.RoomType.SUITE, Reservation.Status.RESERVED, null);
-      addStandardRes(
-          standardRepo,
-          vipRepo,
-          "G-107",
+          "G-116",
           Room.RoomType.STANDARD,
-          Reservation.Status.RESERVED,
-          null);
-      addStandardRes(
-          standardRepo, vipRepo, "G-110", Room.RoomType.LUXURY, Reservation.Status.RESERVED, null);
+          "ST-105",
+          now.minusDays(6).minusHours(8),
+          now.minusDays(6).minusHours(7),
+          1);
 
-      // --- LIVE HOLD, already past the 15 minute grace window ---
-      // Opening the walk-in screen sweeps this one: strike issued, guest returns to
-      // the rear.
-      Reservation lapsingHold =
-          addStandardRes(
-              standardRepo,
-              vipRepo,
-              "G-106",
-              Room.RoomType.STANDARD,
-              Reservation.Status.ALLOCATED,
-              now.minusMinutes(53));
-      lapsingHold.setAllocatedTime(now.minusMinutes(21));
-      lapsingHold.setRoomNumber("ST-101");
-      standardRepo.updateReservation(lapsingHold);
-
-      roomST101.setIsOccupied(true);
-      roomRepo.updateRoom(roomST101);
-
-      // --- LIVE HOLD, still inside the grace window ---
-      Reservation activeHold =
-          addStandardRes(
-              standardRepo,
-              vipRepo,
-              "G-105",
-              Room.RoomType.LUXURY,
-              Reservation.Status.ALLOCATED,
-              now.minusMinutes(34));
-      activeHold.setAllocatedTime(now.minusMinutes(4));
-      activeHold.setRoomNumber("L-802");
-      standardRepo.updateReservation(activeHold);
-
-      roomL802.setIsOccupied(true);
-      roomRepo.updateRoom(roomL802);
-
-      // --- CLOSED HISTORY, so the reports have completed outcomes to aggregate ---
-      addStandardRes(
+      // --- STAYS RUNNING RIGHT NOW ---
+      // These hold their rooms, which is what makes the queue screen's vacant count move.
+      staying(
           standardRepo,
-          vipRepo,
-          "G-109",
+          roomRepo,
+          "G-117",
           Room.RoomType.STANDARD,
-          Reservation.Status.NO_SHOW,
-          now.minusHours(6));
-      addStandardRes(
+          "ST-106",
+          now.minusHours(6),
+          now.minusHours(5),
+          2);
+      staying(
           standardRepo,
-          vipRepo,
-          "G-110",
-          Room.RoomType.SUITE,
-          Reservation.Status.NO_SHOW,
-          now.minusHours(4));
-
-      Reservation stayed1 =
-          addStandardRes(
-              standardRepo,
-              vipRepo,
-              "G-108",
-              Room.RoomType.STANDARD,
-              Reservation.Status.CHECKED_IN,
-              now.minusHours(9));
-      stayed1.setAllocatedTime(now.minusHours(8));
-      stayed1.setStayDays(2);
-      standardRepo.updateReservation(stayed1);
-
-      Reservation stayed2 =
-          addStandardRes(
-              standardRepo,
-              vipRepo,
-              "G-106",
-              Room.RoomType.LUXURY,
-              Reservation.Status.CHECKED_IN,
-              now.minusHours(7));
-      stayed2.setAllocatedTime(now.minusHours(5));
-      stayed2.setStayDays(3);
-      standardRepo.updateReservation(stayed2);
+          roomRepo,
+          "G-118",
+          Room.RoomType.LUXURY,
+          "L-805",
+          now.minusHours(4),
+          now.minusHours(3),
+          3);
 
       System.out.println("Mock database seeded successfully!");
     }
@@ -986,13 +1088,15 @@ public class DatabaseSeeder {
     return r;
   }
 
-  // Standard bookings carry no priority score: position in the line is earned by
-  // arrival
-  // order alone. A null arrival time means an advance booking that has not walked
-  // in yet.
+  private static Guest walkIn(
+      String id, String name, String ic, String passport, String email, String phone, int strikes) {
+    return new Guest(id, name, ic, passport, email, phone, null, strikes);
+  }
+
+  // Standard bookings carry no priority score: position in the line is earned by arrival order
+  // alone. A null arrival time means an advance booking that has not walked in yet.
   private static Reservation addStandardRes(
       StandardReservationRepo repo,
-      VipReservationRepo vipRepo,
       String guestId,
       Room.RoomType roomType,
       Reservation.Status status,
@@ -1016,6 +1120,107 @@ public class DatabaseSeeder {
 
     repo.addReservation(r);
     return r;
+  }
+
+  // A room called for a guest who has not taken it yet. The grace window is measured from
+  // allocatedTime, so how long ago that was decides whether the next screen sweeps it.
+  private static void hold(
+      StandardReservationRepo repo,
+      RoomRepo roomRepo,
+      String guestId,
+      Room.RoomType roomType,
+      String roomNumber,
+      LocalDateTime queuedAt,
+      LocalDateTime allocatedAt) {
+
+    Reservation r = addStandardRes(repo, guestId, roomType, Reservation.Status.ALLOCATED, queuedAt);
+    r.setAllocatedTime(allocatedAt);
+    r.setRoomNumber(roomNumber);
+    repo.updateReservation(r);
+
+    occupy(roomRepo, roomNumber);
+  }
+
+  // An advance booking never enters a line, so it carries no queue arrival time. It does carry the
+  // night it was sold for, which is the only night it may be checked in on.
+  private static void advance(
+      StandardReservationRepo repo,
+      String guestId,
+      Room.RoomType roomType,
+      LocalDateTime arrival,
+      int nights) {
+
+    Reservation r = addStandardRes(repo, guestId, roomType, Reservation.Status.RESERVED, null);
+    r.setReservationTime(arrival.minusDays(3));
+    r.setExpectedArrivalTime(arrival);
+    r.setStayDays(nights);
+    repo.updateReservation(r);
+  }
+
+  // A finished record the reports can count. Both timestamps are kept because the wait between
+  // them is exactly what the Queue Performance report measures.
+  private static void closed(
+      StandardReservationRepo repo,
+      String guestId,
+      Room.RoomType roomType,
+      Reservation.Status status,
+      LocalDateTime queuedAt,
+      LocalDateTime allocatedAt) {
+
+    Reservation r = addStandardRes(repo, guestId, roomType, status, queuedAt);
+    r.setAllocatedTime(allocatedAt);
+    repo.updateReservation(r);
+  }
+
+  // A stay that has already ended. getOccupancyEndDate collapses to the start date for a
+  // CHECKED_OUT record, so it consumes no room today and only shows up in history.
+  private static void checkedOut(
+      StandardReservationRepo repo,
+      String guestId,
+      Room.RoomType roomType,
+      String roomNumber,
+      LocalDateTime queuedAt,
+      LocalDateTime allocatedAt,
+      int nights) {
+
+    Reservation r =
+        addStandardRes(repo, guestId, roomType, Reservation.Status.CHECKED_OUT, queuedAt);
+    r.setAllocatedTime(allocatedAt);
+    r.setCheckInTime(allocatedAt);
+    r.setRoomNumber(roomNumber);
+    r.setStayDays(nights);
+    repo.updateReservation(r);
+  }
+
+  // A stay in progress. The room is marked taken, because a guest in it is what makes the vacant
+  // count on the queue screen smaller than the raw room list.
+  private static void staying(
+      StandardReservationRepo repo,
+      RoomRepo roomRepo,
+      String guestId,
+      Room.RoomType roomType,
+      String roomNumber,
+      LocalDateTime queuedAt,
+      LocalDateTime checkedInAt,
+      int nights) {
+
+    Reservation r =
+        addStandardRes(repo, guestId, roomType, Reservation.Status.CHECKED_IN, queuedAt);
+    r.setAllocatedTime(checkedInAt);
+    r.setCheckInTime(checkedInAt);
+    r.setRoomNumber(roomNumber);
+    r.setStayDays(nights);
+    repo.updateReservation(r);
+
+    occupy(roomRepo, roomNumber);
+  }
+
+  private static void occupy(RoomRepo roomRepo, String roomNumber) {
+    Room room = roomRepo.findByRoomNumber(roomNumber);
+    if (room != null && !room.getIsOccupied()) {
+      room.setIsOccupied(true);
+      roomRepo.updateRoom(room);
+    }
   }
 
   private static void addBilling(
