@@ -131,6 +131,22 @@ public class StandardReservationRepo {
     return queueFor(roomType).getNumberOfEntries() >= config.getMaxQueueLength(roomType);
   }
 
+  // A line closes to new guests two different ways: the house length rule above, or an array that
+  // is full and not allowed to grow. The clerk gets the same answer either way, so both are asked
+  // in one place rather than the second one surfacing as a failed enqueue further down.
+  public boolean isLineClosed(Room.RoomType roomType) {
+    if (isLineAtPolicyLimit(roomType)) return true;
+
+    CircularArrayQueue<Reservation> queue = queueFor(roomType);
+    return queue.isFull() && !queue.canExpand();
+  }
+
+  // The number that actually stopped the guest, so the refusal screen quotes the rule in force
+  // rather than whichever limit happens to be lower.
+  public int getClosedLineLimit(Room.RoomType roomType) {
+    return isLineAtPolicyLimit(roomType) ? getMaxQueueLength(roomType) : getQueueCapacity(roomType);
+  }
+
   public int getMaxQueueLength() {
     return settings().getMaxQueueLength();
   }
@@ -315,6 +331,21 @@ public class StandardReservationRepo {
     return updateReservation(reservation);
   }
 
+  // The desk closing a hold by hand is a decision, not a timeout, so the guest is not sent back to
+  // the line the way isRequeueOnLapse would send a hold that merely ran out of time. The room is
+  // released either way, because the person it was being kept for is not coming.
+  public boolean markHoldNoShow(Reservation reservation, RoomRepo roomRepo) {
+    if (reservation == null || reservation.getStatus() != Reservation.Status.ALLOCATED) {
+      return false;
+    }
+
+    releaseHeldRoom(reservation, roomRepo);
+
+    // allocatedTime is kept so the reports can still measure how long the room stood waiting.
+    reservation.setStatus(Reservation.Status.NO_SHOW);
+    return updateReservation(reservation);
+  }
+
   // End of business cycle: anyone still standing in the line is turned away.
   public int closeQueue(Room.RoomType roomType) {
     QueueInterface<Reservation> queue = getQueueByRoomType(roomType);
@@ -338,12 +369,20 @@ public class StandardReservationRepo {
   // rather than only the line being served is what stops one person occupying the LUXURY and
   // SUITE lines at once, or being queued again while a room is already held for them.
   public Reservation findLiveReservationForGuest(String guestId) {
+    return findLiveReservationForGuest(guestId, null);
+  }
+
+  // A null room type asks the wide question, any live booking at all. Naming a type asks the
+  // narrow one, which is the rule that always holds: the same person cannot occupy two places in
+  // one line, whatever the house says about standing in several lines at once.
+  public Reservation findLiveReservationForGuest(String guestId, Room.RoomType roomType) {
     if (guestId == null) return null;
 
     var masterList = reservationRepo.getAllReservations().filter(r -> !r.getIsVip());
     for (int i = 1; i <= masterList.getNumberOfEntries(); i++) {
       Reservation r = masterList.getEntry(i);
       if (r == null || !guestId.equalsIgnoreCase(r.getGuestId())) continue;
+      if (roomType != null && r.getRoomType() != roomType) continue;
 
       if (r.getStatus() == Reservation.Status.WAITING
           || r.getStatus() == Reservation.Status.ALLOCATED) {
@@ -351,6 +390,20 @@ public class StandardReservationRepo {
       }
     }
     return null;
+  }
+
+  // The night a booking was sold for, which is the only night it may be taken up on.
+  public LocalDate bookedArrivalDate(Reservation booking) {
+    if (booking == null || booking.getExpectedArrivalTime() == null) return null;
+    return booking.getExpectedArrivalTime().toLocalDate();
+  }
+
+  // A booking reserves one specific night, so checking in on any other day would either take a
+  // room nobody has held yet or claim one that has already moved on. A record with no arrival date
+  // recorded is let through, because there is nothing to contradict.
+  public boolean isArrivalDueToday(Reservation booking) {
+    LocalDate due = bookedArrivalDate(booking);
+    return due == null || due.equals(LocalDate.now());
   }
 
   // An advance booking is not a live queue entry, so it does not block a walk-in. It is
@@ -373,7 +426,6 @@ public class StandardReservationRepo {
 
   // A console app has no event loop, so a lapsed hold is resolved the next time a
   // screen asks for the data rather than by a background timer that dies with the process.
-  @SuppressWarnings("null")
   public int sweepLapsedHolds(RoomRepo roomRepo, GuestRepo guestRepo) {
     LocalDateTime now = LocalDateTime.now();
     BookingSettings config = settings();
@@ -405,7 +457,7 @@ public class StandardReservationRepo {
 
       Guest guest = (guestRepo != null) ? guestRepo.findById(r.getGuestId()) : null;
       int strikes = 0;
-      if (guest != null) {
+      if (guestRepo != null && guest != null) {
         strikes = guest.getStrikeCount() + 1;
         guest.setStrikeCount(strikes);
         guestRepo.updateGuest(guest);
@@ -452,8 +504,32 @@ public class StandardReservationRepo {
     Room room = findHeldRoom(reservation, roomRepo);
     if (room != null) {
       room.setStatus(Room.Status.VACANT_CLEAN);
+
+      // Room.Status has no constant meaning taken, so isOccupied is what actually marks a room as
+      // spoken for. Clearing the status without clearing the flag leaves the room unsellable.
+      room.setIsOccupied(false);
       roomRepo.updateRoom(room);
     }
+  }
+
+  // One counter for every screen that asks how many rooms of a type the desk may hand out right
+  // now. It lived privately in three controllers, and only one of them was updated when isOccupied
+  // arrived, so the queue screen kept counting rooms it had already given away.
+  public int countFreeRooms(RoomRepo roomRepo, Room.RoomType roomType) {
+    if (roomRepo == null || roomType == null) return 0;
+
+    ListInterface<Room> rooms = roomRepo.getRoomList();
+    int free = 0;
+    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
+      Room room = rooms.getEntry(i);
+      if (room != null
+          && room.getRoomType() == roomType
+          && room.getStatus() == Room.Status.VACANT_CLEAN
+          && !room.getIsOccupied()) {
+        free++;
+      }
+    }
+    return free;
   }
 
   // ===================== DATE AWARE AVAILABILITY =====================

@@ -4,15 +4,15 @@ import adt.ListInterface;
 import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
-import util.TextUtil;
 
 public class GuestLookupView {
 
-  private static final int[] SPAN_WIDTH = {93};
-  private static final int[] KV_WIDTHS = {22, 68};
-  // Column widths must sum to 96 - 3n to frame to the same width as the spanned heading above.
-  private static final int[] MATCH_WIDTHS = {4, 10, 20, 15, 13, 16};
-  private static final int SCREEN_WIDTH = 83;
+  private static final int[] SPAN_WIDTH = {106};
+  // Column widths must sum to SPAN_WIDTH - 3(n - 1) to frame to the same width as the spanned
+  // heading above. This table runs wider than its siblings because an email address is what a
+  // clerk reads to tell two similar records apart, and truncating it defeats the point.
+  private static final int[] MATCH_WIDTHS = {4, 10, 21, 16, 14, 26};
+  private static final int SCREEN_WIDTH = 93;
 
   public static final int FIELD_GUEST_ID = 1;
   public static final int FIELD_NAME = 2;
@@ -22,7 +22,6 @@ public class GuestLookupView {
   public static final int FIELD_EMAIL = 6;
   public static final int FIELD_BOOKING_CODE = 7;
   public static final int FIELD_ALL = 8;
-  public static final int TOGGLE_MATCH_MODE = 9;
   public static final int BACK = 0;
 
   public static class GuestRowDTO {
@@ -62,121 +61,105 @@ public class GuestLookupView {
     }
   }
 
-  // Returns one of the FIELD_ constants, TOGGLE_MATCH_MODE, or BACK. The fields fill 1 to 9, so
-  // back is 0 rather than a tenth entry the eye has to hunt for at the bottom of the list.
-  public int displayFieldMenu(String title, String matchMode) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
-
-        System.out.println("Pick the field you are searching on, then type the value.");
-        System.out.println("Part of a value is enough while the match mode is CONTAINS.\n");
-        System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
-
-        System.out.println("1. Guest ID");
-        System.out.println("2. Full Name");
-        System.out.println("3. IC Number");
-        System.out.println("4. Passport Number");
-        System.out.println("5. Phone Number");
-        System.out.println("6. Email Address");
-        System.out.println("7. Reservation ID or Confirmation Code");
-        System.out.println("8. All Of The Above");
-        System.out.println(
-            "9. Switch Match Mode To " + ("EXACT".equals(matchMode) ? "CONTAINS" : "EXACT"));
-        System.out.println("0. Back\n");
-
-        return ConsoleUtil.getMenuInput("Choose an option: ", 0, 9).getAsInt();
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  // "E" backs out of the prompt. A blank line is rejected rather than silently treated as a
-  // command, so an empty search reports itself instead of doing nothing.
-  public String promptSearchTerm(String fieldLabel, String matchMode) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("SEARCH BY " + fieldLabel.toUpperCase(), SCREEN_WIDTH);
-        System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
-        System.out.println("E - Exit back to the field list\n");
-
-        return requireText(fieldLabel + ": ", "Search term cannot be empty! Type 'E' to go back.");
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  public GetMenuInputResult displayMatches(
-      String fieldLabel,
-      String term,
+  /**
+   * The register itself is the landing screen, so a clerk who can see the guest just picks the row.
+   * Searching is a filter over that table rather than a gate in front of it, which is how every
+   * other list in this module behaves.
+   *
+   * @return a row number on the current page, or one of the S / P / N / E commands
+   */
+  public GetMenuInputResult renderRegisterScreen(
+      String title,
+      ListInterface<GuestRowDTO> rows,
+      String searchField,
+      String searchTerm,
       String matchMode,
-      ListInterface<GuestRowDTO> matches,
       int currentPage,
       int pageSize) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("MATCHING GUEST RECORDS", SCREEN_WIDTH);
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
 
-        System.out.println("FIELD      : [ " + fieldLabel + " ]");
-        System.out.println("TERM       : [ \"" + term + "\" ]");
-        System.out.println("MATCH MODE : [ " + matchMode + " ]\n");
+    System.out.println("SEARCH FIELD : [ " + searchField + " ]");
+    System.out.println(
+        "SEARCH TERM  : [ "
+            + ((searchTerm == null) ? "None, showing everyone" : searchTerm)
+            + " ]");
+    System.out.println("MATCH MODE   : [ " + matchMode + " ]\n");
 
-        int total = matches.getNumberOfEntries();
-        int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / pageSize);
+    int total = (rows == null) ? 0 : rows.getNumberOfEntries();
+    int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / pageSize);
 
-        printMatchTable(matches, currentPage, pageSize);
+    printMatchTable(rows, currentPage, pageSize);
 
-        int rowsOnPage = countRowsOnPage(total, currentPage, pageSize);
-        System.out.printf(
-            "%nPage %d / %d (Matches: %d)%n%n",
-            (totalPages == 0) ? 0 : currentPage, totalPages, total);
+    System.out.printf(
+        "%nPage %d / %d (Guests: %d)%n%n", (totalPages == 0) ? 0 : currentPage, totalPages, total);
 
-        System.out.println("[P] Prev Page   [N] Next Page   [0] Back\n");
+    System.out.println("[S] Search / Filter   [P] Prev Page   [N] Next Page   [E] Back");
+    System.out.println("Pick a row number to use that guest.\n");
 
-        char[] commands = {'P', 'N'};
+    char[] commands = {'S', 'P', 'N', 'E'};
 
-        if (rowsOnPage <= 0) {
-          return ConsoleUtil.getMenuInput("Enter a command: ", 0, 0, commands);
-        }
-
-        String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
-        return ConsoleUtil.getMenuInput(
-            "Pick the guest (" + range + ") or a command: ", 0, rowsOnPage, commands);
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
+    int rowsOnPage = countRowsOnPage(total, currentPage, pageSize);
+    if (rowsOnPage <= 0) {
+      return ConsoleUtil.getMenuInput("Enter a command: ", commands);
     }
+
+    String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
+    return ConsoleUtil.getMenuInput(
+        "Pick the guest (" + range + ") or a command: ", 1, rowsOnPage, commands);
   }
 
-  // Returns 1 to search again, or BACK. Opening a guest file is not offered here, because the mode
-  // menu at the head of the flow already asked whether this person is new.
-  public int displayNotFoundScreen(String fieldLabel, String term) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("GUEST NOT ON RECORD", SCREEN_WIDTH);
+  // Returns 1 to change the field, 2 the term, 3 the match mode, 4 to reset, 5 to apply, 6 to
+  // discard.
+  public int displayFilterMainMenu(String searchField, String searchTerm, String matchMode) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH & REGISTER FILTERS", SCREEN_WIDTH);
+    System.out.println("Search Field : [ " + searchField + " ]");
+    System.out.println("Search Term  : [ " + ((searchTerm == null) ? "None" : searchTerm) + " ]");
+    System.out.println("Match Mode   : [ " + matchMode + " ]\n");
 
-        printNoticeBox(
-            "STATUS: [!] NO MATCHING GUEST FILE",
-            "Searched " + fieldLabel,
-            term,
-            "Nothing in the guest register matches this term. A first-time arrival has no file yet,"
-                + " so back out to the previous screen and choose New Guest to open one.");
+    System.out.println("1. Change Search Field");
+    System.out.println("2. Change Search Term");
+    System.out.println(
+        "3. Switch Match Mode To " + ("EXACT".equals(matchMode) ? "CONTAINS" : "EXACT"));
+    System.out.println("4. Reset All Filters");
+    System.out.println("5. Apply And Return");
+    System.out.println("6. Back (discard these changes)\n");
 
-        System.out.println("1. Search Again");
-        System.out.println("0. Back\n");
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
+  }
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 0, 1).getAsInt();
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+  // Returns one of the FIELD_ constants, or BACK.
+  public int displaySearchFieldSubmenu(String current) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH FIELD", SCREEN_WIDTH);
+    System.out.println("Current: [ " + current + " ]\n");
+    System.out.println("Searching one field at a time keeps a partial phone number from");
+    System.out.println("pulling in every IC that happens to contain the same digits.\n");
+    System.out.println("1. Guest ID");
+    System.out.println("2. Full Name");
+    System.out.println("3. IC Number");
+    System.out.println("4. Passport Number");
+    System.out.println("5. Phone Number");
+    System.out.println("6. Email Address");
+    System.out.println("7. Reservation ID or Confirmation Code");
+    System.out.println("8. All Of The Above");
+    System.out.println("9. Back\n");
+
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 9).getAsInt();
+    return (choice == 9) ? BACK : choice;
+  }
+
+  public String promptSearchTerm(String fieldLabel, String current) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH TERM", SCREEN_WIDTH);
+    System.out.println("Field   : [ " + fieldLabel + " ]");
+    System.out.println("Current : [ " + ((current == null) ? "None" : current) + " ]\n");
+    System.out.println("Type '-' to clear the term and list every guest again.");
+    System.out.println("E - Exit and keep the current term\n");
+
+    return ConsoleUtil.getStringInput("Search term: ");
   }
 
   private void printMatchTable(ListInterface<GuestRowDTO> matches, int page, int pageSize) {
@@ -193,7 +176,7 @@ public class GuestLookupView {
     TableUtil.TableSettings spanSettings = spanSettings();
 
     TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"GUEST REGISTER MATCHES"}, spanSettings);
+    TableUtil.printTableRow(new String[] {"GUEST REGISTER"}, spanSettings);
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
     TableUtil.printTableRow(
         new String[] {"NO.", "GUEST ID", "NAME", "IC / PASSPORT", "PHONE", "EMAIL"},
@@ -248,40 +231,5 @@ public class GuestLookupView {
       settings.setHAlign(i, TableUtil.Align.CENTER);
     }
     return settings;
-  }
-
-  private void printNoticeBox(String heading, String key, String value, String notice) {
-    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
-
-    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {heading}, spanSettings());
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-    printKeyValue(kvSettings, key, value, true);
-    printKeyValue(kvSettings, "System Notice", notice, false);
-    System.out.println();
-  }
-
-  // TableUtil prints only width - 2 chars per cell, so long values are pre-wrapped here.
-  private void printKeyValue(
-      TableUtil.TableSettings settings, String key, String value, boolean moreRowsFollow) {
-    ListInterface<String> lines = TextUtil.wrapText(value, KV_WIDTHS[1] - 2);
-
-    for (int i = 1; i <= lines.getNumberOfEntries(); i++) {
-      TableUtil.printTableRow(new String[] {(i == 1) ? key : "", lines.getEntry(i)}, settings);
-    }
-
-    TableUtil.printTableBorder(
-        settings,
-        moreRowsFollow ? TableUtil.BorderPosition.MIDDLE : TableUtil.BorderPosition.BOTTOM);
-  }
-
-  // A blank line is rejected here rather than in the controller, so the error redraws this screen
-  // instead of the menu above it.
-  private String requireText(String prompt, String emptyMessage) {
-    String typed = ConsoleUtil.getStringInput(prompt);
-    if (typed == null || typed.trim().isEmpty()) {
-      throw new IllegalArgumentException(emptyMessage);
-    }
-    return typed;
   }
 }

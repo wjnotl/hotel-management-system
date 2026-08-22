@@ -70,7 +70,7 @@ public class WalkInRegistrationController {
         Reservation reserved =
             standardReservationRepo.findReservedBookingForGuest(guest.getGuestId());
         if (reserved != null) {
-          int choice = registrationView.displayHasAdvanceBookingScreen(guest, reserved);
+          int choice = promptHasAdvanceBooking(guest, reserved);
           if (choice == 1) {
             arriveOnExistingBooking(reserved, guest);
             return;
@@ -86,6 +86,8 @@ public class WalkInRegistrationController {
           roomType = promptRoomType(guest);
           if (roomType == null) continue;
         }
+
+        if (isBlockedBySameLine(guest, roomType)) continue;
 
         if (placeGuest(guest, roomType)) return;
       } catch (Exception e) {
@@ -117,10 +119,24 @@ public class WalkInRegistrationController {
     return true;
   }
 
+  // The house rule, asked before a room type has been picked because it does not depend on one.
   private boolean isBlockedByLiveBooking(Guest guest) {
     if (!settings().isBlockDuplicateAcrossLines()) return false;
+    return refuseSecondBooking(
+        guest, standardReservationRepo.findLiveReservationForGuest(guest.getGuestId()), true);
+  }
 
-    Reservation live = standardReservationRepo.findLiveReservationForGuest(guest.getGuestId());
+  // The rule that holds whatever the house setting says, asked once the line is known: nobody may
+  // take two places in the same line. Standing in the LUXURY and SUITE lines at once is a
+  // different thing and is allowed.
+  private boolean isBlockedBySameLine(Guest guest, Room.RoomType roomType) {
+    return refuseSecondBooking(
+        guest,
+        standardReservationRepo.findLiveReservationForGuest(guest.getGuestId(), roomType),
+        false);
+  }
+
+  private boolean refuseSecondBooking(Guest guest, Reservation live, boolean acrossAllTypes) {
     if (live == null) return false;
 
     int position = 0;
@@ -128,7 +144,7 @@ public class WalkInRegistrationController {
       position = standardReservationRepo.getQueueByRoomType(live.getRoomType()).getPosition(live);
     }
 
-    registrationView.displayAlreadyActiveScreen(guest, live, position);
+    registrationView.displayAlreadyActiveScreen(guest, live, position, acrossAllTypes);
     return true;
   }
 
@@ -147,14 +163,70 @@ public class WalkInRegistrationController {
       lineLength[i] = standardReservationRepo.getQueueByRoomType(types[i]).getNumberOfEntries();
     }
 
-    return registrationView.promptRoomType(
-        guest,
-        vacant,
-        arrivingToday,
-        vipWaiting,
-        lineLength,
-        settings().isEnforceVipBypass(),
-        settings().isAutoAssignWhenRoomFree());
+    while (true) {
+      try {
+        return registrationView.promptRoomType(
+            guest,
+            vacant,
+            arrivingToday,
+            vipWaiting,
+            lineLength,
+            settings().isEnforceVipBypass(),
+            settings().isAutoAssignWhenRoomFree());
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptHasAdvanceBooking(Guest guest, Reservation booking) {
+    while (true) {
+      try {
+        return registrationView.displayHasAdvanceBookingScreen(
+            guest, booking, standardReservationRepo.isArrivalDueToday(booking));
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptEnqueueConfirmation(
+      Guest guest,
+      Room.RoomType roomType,
+      int waiting,
+      int queueCapacity,
+      int vacant,
+      int arrivingToday,
+      int vipWaiting,
+      String reasonForWaiting) {
+    while (true) {
+      try {
+        return registrationView.displayEnqueueConfirmationScreen(
+            guest,
+            roomType,
+            waiting + 1,
+            waiting,
+            queueCapacity,
+            vacant,
+            arrivingToday,
+            vipWaiting,
+            reasonForWaiting);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean promptAssignConfirmation(
+      Guest guest, Room room, int graceMinutes, int vacant, int arrivingToday, int vipWaiting) {
+    while (true) {
+      try {
+        return registrationView.displayAssignConfirmationScreen(
+            guest, room, graceMinutes, vacant, arrivingToday, vipWaiting);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
   }
 
   // True when this walk-in is finished with, either served, queued or refused. False sends the
@@ -229,8 +301,7 @@ public class WalkInRegistrationController {
 
     int graceMinutes = standardReservationRepo.getHoldGraceMinutes(roomType);
 
-    if (!registrationView.displayAssignConfirmationScreen(
-        guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
+    if (!promptAssignConfirmation(guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
       return false;
     }
 
@@ -276,16 +347,15 @@ public class WalkInRegistrationController {
     QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
     int waiting = queue.getNumberOfEntries();
 
-    if (standardReservationRepo.isLineAtPolicyLimit(roomType)) {
+    if (standardReservationRepo.isLineClosed(roomType)) {
       registrationView.displayLineFullScreen(
-          roomType, waiting, standardReservationRepo.getMaxQueueLength(roomType));
+          roomType, waiting, standardReservationRepo.getClosedLineLimit(roomType));
       return true;
     }
 
-    if (!registrationView.displayEnqueueConfirmationScreen(
+    if (!promptEnqueueConfirmation(
         guest,
         roomType,
-        waiting + 1,
         waiting,
         standardReservationRepo.getQueueCapacity(roomType),
         vacant,
@@ -352,9 +422,9 @@ public class WalkInRegistrationController {
       return;
     }
 
-    if (standardReservationRepo.isLineAtPolicyLimit(roomType)) {
+    if (standardReservationRepo.isLineClosed(roomType)) {
       registrationView.displayLineFullScreen(
-          roomType, lineLength, standardReservationRepo.getMaxQueueLength(roomType));
+          roomType, lineLength, standardReservationRepo.getClosedLineLimit(roomType));
       return;
     }
 
@@ -383,8 +453,7 @@ public class WalkInRegistrationController {
 
     int graceMinutes = standardReservationRepo.getHoldGraceMinutes(roomType);
 
-    if (!registrationView.displayAssignConfirmationScreen(
-        guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
+    if (!promptAssignConfirmation(guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
       return;
     }
 
@@ -406,18 +475,7 @@ public class WalkInRegistrationController {
   }
 
   private int countVacantCleanRooms(Room.RoomType roomType) {
-    ListInterface<Room> rooms = roomRepo.getRoomList();
-    int count = 0;
-    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
-      Room room = rooms.getEntry(i);
-      if (room != null
-          && room.getRoomType() == roomType
-          && room.getStatus() == Room.Status.VACANT_CLEAN
-          && !room.getIsOccupied()) {
-        count++;
-      }
-    }
-    return count;
+    return standardReservationRepo.countFreeRooms(roomRepo, roomType);
   }
 
   private int countVipWaiting(Room.RoomType roomType) {

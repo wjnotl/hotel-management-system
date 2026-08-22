@@ -23,23 +23,17 @@ public class WalkInRegistrationView {
   // that answer is asked first. A returning guest goes to the search and a first-time arrival goes
   // straight to the form, rather than being made to search for a record that cannot exist.
   public int displayModeMenu() {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("REGISTER WALK-IN", SCREEN_WIDTH);
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("REGISTER WALK-IN", SCREEN_WIDTH);
 
-        System.out.println("Has this guest stayed here before?\n");
-        System.out.println("1. Existing Guest");
-        System.out.println("   Search the register by ID, name, IC, passport, phone or email.\n");
-        System.out.println("2. New Guest");
-        System.out.println("   Open a guest file now, then place them in a room or the line.\n");
-        System.out.println("3. Back to Walk-In & Booking Menu\n");
+    System.out.println("Has this guest stayed here before?\n");
+    System.out.println("1. Existing Guest");
+    System.out.println("   Search the register by ID, name, IC, passport, phone or email.\n");
+    System.out.println("2. New Guest");
+    System.out.println("   Open a guest file now, then place them in a room or the line.\n");
+    System.out.println("3. Back to Walk-In & Booking Menu\n");
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
   public Room.RoomType promptRoomType(
@@ -50,71 +44,63 @@ public class WalkInRegistrationView {
       int[] lineLengthByType,
       boolean enforceVipBypass,
       boolean autoAssignWhenRoomFree) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("REGISTER WALK-IN - ROOM TYPE", SCREEN_WIDTH);
-        System.out.println("Guest: " + guest.getName() + " (" + guest.getGuestId() + ")\n");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("REGISTER WALK-IN - ROOM TYPE", SCREEN_WIDTH);
+    System.out.println("Guest: " + guest.getName() + " (" + guest.getGuestId() + ")\n");
 
-        TableUtil.TableSettings settings =
-            new TableUtil.TableSettings(TYPE_WIDTHS)
-                .setHAlign(0, TableUtil.Align.CENTER)
-                .setHAlign(2, TableUtil.Align.CENTER)
-                .setHAlign(3, TableUtil.Align.CENTER)
-                .setHAlign(4, TableUtil.Align.CENTER)
-                .setHAlign(5, TableUtil.Align.CENTER);
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(TYPE_WIDTHS)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER);
 
-        TableUtil.TableSettings headerSettings = centeredHeader(TYPE_WIDTHS);
+    TableUtil.TableSettings headerSettings = centeredHeader(TYPE_WIDTHS);
 
-        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-        TableUtil.printTableRow(new String[] {"AVAILABILITY RIGHT NOW"}, spanSettings());
-        TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
-        TableUtil.printTableRow(
-            new String[] {
-              "NO.", "ROOM TYPE", "VACANT", "ADV HELD", "VIP WAIT", "IN LINE", "OUTCOME"
-            },
-            headerSettings);
-        TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"AVAILABILITY RIGHT NOW"}, spanSettings());
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
+    TableUtil.printTableRow(
+        new String[] {"NO.", "ROOM TYPE", "VACANT", "ADV HELD", "VIP WAIT", "IN LINE", "OUTCOME"},
+        headerSettings);
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-        Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
-        for (int i = 0; i < types.length; i++) {
-          TableUtil.printTableRow(
-              new String[] {
-                String.valueOf(i + 1),
-                types[i].name(),
-                String.valueOf(vacantByType[i]),
-                String.valueOf(arrivingTodayByType[i]),
-                String.valueOf(vipWaitingByType[i]),
-                String.valueOf(lineLengthByType[i]),
-                outcomeFor(
-                    vacantByType[i],
-                    arrivingTodayByType[i],
-                    vipWaitingByType[i],
-                    lineLengthByType[i],
-                    enforceVipBypass,
-                    autoAssignWhenRoomFree)
-              },
-              settings);
-        }
-
-        TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
-
-        System.out.println();
-        System.out.println("ADV HELD counts rooms already promised to advance bookings arriving");
-        System.out.println("today, so they are not handed to the counter by mistake.");
-        System.out.println();
-        System.out.println("4. Back To Guest Selection\n");
-
-        int choice = ConsoleUtil.getMenuInput("Choose a room type: ", 1, 4).getAsInt();
-        if (choice == 1) return Room.RoomType.LUXURY;
-        if (choice == 2) return Room.RoomType.SUITE;
-        if (choice == 3) return Room.RoomType.STANDARD;
-        return null;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
+    Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
+    for (int i = 0; i < types.length; i++) {
+      TableUtil.printTableRow(
+          new String[] {
+            String.valueOf(i + 1),
+            types[i].name(),
+            String.valueOf(vacantByType[i]),
+            String.valueOf(arrivingTodayByType[i]),
+            String.valueOf(vipWaitingByType[i]),
+            String.valueOf(lineLengthByType[i]),
+            outcomeFor(
+                vacantByType[i],
+                arrivingTodayByType[i],
+                vipWaitingByType[i],
+                lineLengthByType[i],
+                enforceVipBypass,
+                autoAssignWhenRoomFree)
+          },
+          settings);
     }
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+
+    System.out.println();
+    System.out.println("ADV HELD counts rooms already promised to advance bookings arriving");
+    System.out.println("today, so they are not handed to the counter by mistake.");
+    System.out.println();
+    System.out.println("4. Back To Guest Selection\n");
+
+    int choice = ConsoleUtil.getMenuInput("Choose a room type: ", 1, 4).getAsInt();
+    if (choice == 1) return Room.RoomType.LUXURY;
+    if (choice == 2) return Room.RoomType.SUITE;
+    if (choice == 3) return Room.RoomType.STANDARD;
+    return null;
   }
 
   // Mirrors the decision the controller is about to make, in the same order, so the column never
@@ -183,7 +169,8 @@ public class WalkInRegistrationView {
     ConsoleUtil.printContinueMessage();
   }
 
-  public void displayAlreadyActiveScreen(Guest guest, Reservation existing, int position) {
+  public void displayAlreadyActiveScreen(
+      Guest guest, Reservation existing, int position, boolean acrossAllTypes) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST ALREADY BEING SERVED", SCREEN_WIDTH);
 
@@ -207,52 +194,62 @@ public class WalkInRegistrationView {
             + where
             + " under reservation "
             + existing.getReservationId()
-            + ". One person may hold only one live standard booking, across every room type."
+            + (acrossAllTypes
+                ? ". One person may hold only one live standard booking, across every room type."
+                : ". One person may take only one place in a given line, though they may wait in"
+                    + " another room type's line at the same time.")
             + " Serve or cancel that entry instead of opening a second one.");
     ConsoleUtil.printContinueMessage();
   }
 
-  public int displayHasAdvanceBookingScreen(Guest guest, Reservation booking) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("GUEST BOOKED AHEAD", SCREEN_WIDTH);
+  public int displayHasAdvanceBookingScreen(Guest guest, Reservation booking, boolean dueToday) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("GUEST BOOKED AHEAD", SCREEN_WIDTH);
 
-        TableUtil.TableSettings kvSettings = kvSettings();
-        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-        TableUtil.printTableRow(
-            new String[] {"STATUS: [!] AN ADVANCE BOOKING ALREADY EXISTS"}, spanSettings());
-        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-        printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
-        printKeyValue(kvSettings, "Reservation ID", booking.getReservationId(), true);
-        printKeyValue(kvSettings, "Confirmation Code", booking.getConfirmationNumber(), true);
-        printKeyValue(kvSettings, "Room Type Booked", booking.getRoomType().name(), true);
-        printKeyValue(
-            kvSettings, "Expected Arrival", formatTime(booking.getExpectedArrivalTime()), true);
-        printKeyValue(
-            kvSettings,
-            "Nights Booked",
-            (booking.getStayDays() != null) ? booking.getStayDays() + " night(s)" : "Not stated",
-            true);
-        printKeyValue(kvSettings, "Booked At", formatTime(booking.getReservationTime()), true);
-        printKeyValue(
-            kvSettings,
-            "System Notice",
-            "This guest reserved a room in advance and has now arrived. Using that booking keeps"
-                + " one record for the stay. Opening a separate walk-in leaves the original booking"
-                + " unclaimed.",
-            false);
+    TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"STATUS: [!] AN ADVANCE BOOKING ALREADY EXISTS"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
+    printKeyValue(kvSettings, "Reservation ID", booking.getReservationId(), true);
+    printKeyValue(kvSettings, "Confirmation Code", booking.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Room Type Booked", booking.getRoomType().name(), true);
+    printKeyValue(
+        kvSettings, "Expected Arrival", formatBookedNight(booking.getExpectedArrivalTime()), true);
+    printKeyValue(
+        kvSettings,
+        "Nights Booked",
+        (booking.getStayDays() != null) ? booking.getStayDays() + " night(s)" : "Not stated",
+        true);
+    printKeyValue(kvSettings, "Booked At", formatTime(booking.getReservationTime()), true);
+    printKeyValue(
+        kvSettings,
+        "System Notice",
+        dueToday
+            ? "This guest reserved a room in advance and has now arrived. Using that booking keeps"
+                + " one record for the stay. Opening a separate walk-in leaves the original"
+                + " booking unclaimed."
+            : "That booking is for a different night, and a booking may only be taken up on the"
+                + " night it reserves. It stays open and untouched. Serving this guest now means"
+                + " an ordinary walk-in against today's stock.",
+        false);
 
-        System.out.println();
-        System.out.println("1. Use The Advance Booking (recommended)");
-        System.out.println("2. Register A Separate Walk-In Anyway");
-        System.out.println("3. Back\n");
+    System.out.println();
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
+    // Offering a choice that would then be refused is worse than not offering it, so claiming the
+    // booking simply is not on the menu on the wrong day. The caller's codes do not move.
+    if (!dueToday) {
+      System.out.println("1. Register A Walk-In For Tonight");
+      System.out.println("2. Back\n");
+      return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() + 1;
     }
+
+    System.out.println("1. Use The Advance Booking (recommended)");
+    System.out.println("2. Register A Separate Walk-In Anyway");
+    System.out.println("3. Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
   public boolean displayAssignConfirmationScreen(
@@ -262,45 +259,36 @@ public class WalkInRegistrationView {
       int vacantRooms,
       int arrivingToday,
       int vipWaiting) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CONFIRM IMMEDIATE ROOM ASSIGNMENT", SCREEN_WIDTH);
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM IMMEDIATE ROOM ASSIGNMENT", SCREEN_WIDTH);
 
-        TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.TableSettings kvSettings = kvSettings();
 
-        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-        TableUtil.printTableRow(new String[] {"ROOM HAND-OVER"}, spanSettings());
-        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-        printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
-        printKeyValue(kvSettings, "Room Number", room.getRoomNumber(), true);
-        printKeyValue(kvSettings, "Room Type", room.getRoomType().name(), true);
-        printKeyValue(
-            kvSettings, "Rate Per Night", String.format("RM %.2f", room.getPrice()), true);
-        printKeyValue(kvSettings, "Rooms Left After", String.valueOf(vacantRooms - 1), true);
-        printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
-        printKeyValue(kvSettings, "VIP Still Waiting", String.valueOf(vipWaiting), true);
-        printKeyValue(
-            kvSettings,
-            "Hold Window",
-            graceMinutes + " minutes before the room is released and a strike is recorded",
-            false);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"ROOM HAND-OVER"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
+    printKeyValue(kvSettings, "Room Number", room.getRoomNumber(), true);
+    printKeyValue(kvSettings, "Room Type", room.getRoomType().name(), true);
+    printKeyValue(kvSettings, "Rate Per Night", String.format("RM %.2f", room.getPrice()), true);
+    printKeyValue(kvSettings, "Rooms Left After", String.valueOf(vacantRooms - 1), true);
+    printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
+    printKeyValue(kvSettings, "VIP Still Waiting", String.valueOf(vipWaiting), true);
+    printKeyValue(
+        kvSettings,
+        "Hold Window",
+        graceMinutes + " minutes before the room is released and a strike is recorded",
+        false);
 
-        System.out.println();
-        System.out.println(
-            "A room of this type is free and nobody is entitled to it ahead of this");
-        System.out.println(
-            "guest, so they are served straight away rather than queuing for nothing.");
-        System.out.println();
-        System.out.println("1. Hand Room " + room.getRoomNumber() + " Over Now");
-        System.out.println("2. Do Not Assign (back to guest selection)\n");
+    System.out.println();
+    System.out.println("A room of this type is free and nobody is entitled to it ahead of this");
+    System.out.println("guest, so they are served straight away rather than queuing for nothing.");
+    System.out.println();
+    System.out.println("1. Hand Room " + room.getRoomNumber() + " Over Now");
+    System.out.println("2. Do Not Assign (back to guest selection)\n");
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public boolean displayEnqueueConfirmationScreen(
@@ -313,55 +301,45 @@ public class WalkInRegistrationView {
       int arrivingToday,
       int vipWaiting,
       String reasonForWaiting) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CONFIRM WALK-IN REGISTRATION", SCREEN_WIDTH);
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM WALK-IN REGISTRATION", SCREEN_WIDTH);
 
-        TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.TableSettings kvSettings = kvSettings();
 
-        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-        TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, spanSettings());
-        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-        printKeyValue(kvSettings, "Guest ID", guest.getGuestId(), true);
-        printKeyValue(kvSettings, "Guest Name", guest.getName(), true);
-        printKeyValue(
-            kvSettings,
-            "IC / Passport No",
-            (guest.getIcNumber() != null)
-                ? guest.getIcNumber()
-                : blankToNa(guest.getPassportNumber()),
-            true);
-        printKeyValue(kvSettings, "Phone Number", blankToNa(guest.getPhoneNumber()), true);
-        printKeyValue(kvSettings, "Email Address", blankToNa(guest.getEmail()), true);
-        printKeyValue(kvSettings, "Strike Count", String.valueOf(guest.getStrikeCount()), false);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"GUEST DETAILS"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest ID", guest.getGuestId(), true);
+    printKeyValue(kvSettings, "Guest Name", guest.getName(), true);
+    printKeyValue(
+        kvSettings,
+        "IC / Passport No",
+        (guest.getIcNumber() != null) ? guest.getIcNumber() : blankToNa(guest.getPassportNumber()),
+        true);
+    printKeyValue(kvSettings, "Phone Number", blankToNa(guest.getPhoneNumber()), true);
+    printKeyValue(kvSettings, "Email Address", blankToNa(guest.getEmail()), true);
+    printKeyValue(kvSettings, "Strike Count", String.valueOf(guest.getStrikeCount()), false);
 
-        System.out.println();
+    System.out.println();
 
-        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-        TableUtil.printTableRow(new String[] {"QUEUE PLACEMENT"}, spanSettings());
-        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-        printKeyValue(kvSettings, "Target Line", roomType.name(), true);
-        printKeyValue(kvSettings, "Vacant Clean Rooms", String.valueOf(vacantRooms), true);
-        printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
-        printKeyValue(kvSettings, "VIP Already Waiting", String.valueOf(vipWaiting), true);
-        printKeyValue(kvSettings, "Currently Waiting", String.valueOf(waiting), true);
-        printKeyValue(
-            kvSettings, "Array Capacity", waiting + " / " + capacity + " slots used", true);
-        printKeyValue(
-            kvSettings, "Position On Joining", projectedPosition + " (joins the back)", true);
-        printKeyValue(kvSettings, "Why They Wait", reasonForWaiting, false);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"QUEUE PLACEMENT"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Target Line", roomType.name(), true);
+    printKeyValue(kvSettings, "Vacant Clean Rooms", String.valueOf(vacantRooms), true);
+    printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
+    printKeyValue(kvSettings, "VIP Already Waiting", String.valueOf(vipWaiting), true);
+    printKeyValue(kvSettings, "Currently Waiting", String.valueOf(waiting), true);
+    printKeyValue(kvSettings, "Array Capacity", waiting + " / " + capacity + " slots used", true);
+    printKeyValue(kvSettings, "Position On Joining", projectedPosition + " (joins the back)", true);
+    printKeyValue(kvSettings, "Why They Wait", reasonForWaiting, false);
 
-        System.out.println();
-        System.out.println("1. Register This Walk-In Into The " + roomType.name() + " Line");
-        System.out.println("2. Do Not Register (back to guest selection)\n");
+    System.out.println();
+    System.out.println("1. Register This Walk-In Into The " + roomType.name() + " Line");
+    System.out.println("2. Do Not Register (back to guest selection)\n");
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public void displayLineFullScreen(Room.RoomType roomType, int waiting, int maxQueueLength) {
@@ -370,12 +348,13 @@ public class WalkInRegistrationView {
     printNoticeBox(
         "STATUS: [X] WALK-IN REFUSED",
         "Line Length",
-        waiting + " waiting, house limit is " + maxQueueLength,
+        waiting + " waiting, the limit in force is " + maxQueueLength,
         "The "
             + roomType.name()
-            + " line has reached the maximum length set under Settings & Configuration, so no"
-            + " further walk-in can be taken for this type. Serve the front of the line, raise"
-            + " the limit, or offer the guest a different room type.");
+            + " line has reached a limit set under Settings & Configuration, either the house"
+            + " length rule or a queue array that is full and not allowed to grow, so no further"
+            + " walk-in can be taken for this type. Serve the front of the line, raise the limit,"
+            + " or offer the guest a different room type.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -447,6 +426,13 @@ public class WalkInRegistrationView {
 
   private String blankToNa(String value) {
     return (value == null || value.isEmpty()) ? "N/A" : value;
+  }
+
+  // A booking reserves a night rather than a moment, and the desk never asks for a clock time, so
+  // showing one here would invent a promise the guest never made.
+  private String formatBookedNight(LocalDateTime dateTime) {
+    if (dateTime == null) return "Not set";
+    return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
   }
 
   private String formatTime(LocalDateTime dateTime) {

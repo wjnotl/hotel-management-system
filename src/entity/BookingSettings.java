@@ -23,7 +23,7 @@ public class BookingSettings implements Serializable {
   // so a settings file written before the advance booking rules existed would come back with all
   // of them switched off and look like a deliberate choice. The stamp is what makes the two
   // distinguishable: an older file carries 0 and gets the new fields filled in once.
-  private static final int CURRENT_SCHEMA = 2;
+  private static final int CURRENT_SCHEMA = 5;
   private int schemaVersion;
 
   // Hold & No-Show Rules
@@ -71,16 +71,16 @@ public class BookingSettings implements Serializable {
     this.requeueOnLapse = true;
 
     this.initialQueueCapacity = 8;
-    this.allowQueueExpansion = true;
+    this.allowQueueExpansion = false;
     this.maxQueueLength = UNLIMITED_QUEUE;
     this.autoAssignWhenRoomFree = true;
     this.enforceVipBypass = true;
     this.allowBypassOverride = true;
-    this.blockDuplicateAcrossLines = true;
+    this.blockDuplicateAcrossLines = false;
     this.allowNonFrontAllocation = true;
 
     this.advanceBookingLeadDays = 365;
-    this.allowSameDayAdvanceBooking = true;
+    this.allowSameDayAdvanceBooking = false;
     this.checkoutDayReusable = true;
     this.blockOverbooking = true;
 
@@ -109,7 +109,7 @@ public class BookingSettings implements Serializable {
   // straight into a screen, so the record is repaired once on load instead of every getter having
   // to defend itself.
   public void normalize() {
-    if (schemaVersion < CURRENT_SCHEMA) {
+    if (schemaVersion < 2) {
       this.allowNonFrontAllocation = true;
       this.allowSameDayAdvanceBooking = true;
       this.checkoutDayReusable = true;
@@ -117,6 +117,29 @@ public class BookingSettings implements Serializable {
       this.advanceBookingLeadDays = 365;
       this.defaultReportPeriod = "TODAY";
       this.defaultRecordLimit = 10;
+    }
+
+    // A line that doubled its array the moment it filled made the capacity figure decorative, so
+    // the house rule is now a hard stop and growth has to be switched on deliberately.
+    if (schemaVersion < 3) {
+      this.allowQueueExpansion = false;
+    }
+
+    // Wanting a LUXURY room and settling for a SUITE is one person making two enquiries, not one
+    // person cheating the line, so the wide rule is off by default and the same-line guard in the
+    // registration flow is what stops an actual double booking.
+    if (schemaVersion < 4) {
+      this.blockDuplicateAcrossLines = false;
+    }
+
+    // Somebody at the desk asking for a room tonight is a walk-in, and the walk-in flow hands them
+    // a key. Taking the same request as an advance booking parks a room they are already standing
+    // next to, so the bookable window opens tomorrow.
+    if (schemaVersion < 5) {
+      this.allowSameDayAdvanceBooking = false;
+    }
+
+    if (schemaVersion < CURRENT_SCHEMA) {
       this.schemaVersion = CURRENT_SCHEMA;
     }
 

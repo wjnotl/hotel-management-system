@@ -14,12 +14,11 @@ import util.TextUtil;
 public class WalkInQueueView {
 
   // Column widths must sum to 96 - 3n to frame to the same width as the spanned heading above.
-  private static final int[] LINE_WIDTHS = {5, 5, 12, 22, 12, 10, 9};
+  private static final int[] LINE_WIDTHS = {5, 5, 11, 21, 14, 10, 9};
   private static final int[] HOLD_WIDTHS = {5, 12, 24, 11, 12, 14};
   private static final int[] SPAN_WIDTH = {93};
   private static final int[] KV_WIDTHS = {22, 68};
   private static final int SCREEN_WIDTH = 83;
-  private static final String BLANK_INPUT = "Input cannot be empty!";
   private static final int HOLDS_PREVIEW_ROWS = 5;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -113,24 +112,18 @@ public class WalkInQueueView {
   }
 
   public Room.RoomType displayQueueSelectionMenu() {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("WALK-IN QUEUE - SELECT LINE", SCREEN_WIDTH);
-        System.out.println("1. Luxury Room Walk-In Queue");
-        System.out.println("2. Suite Room Walk-In Queue");
-        System.out.println("3. Standard Room Walk-In Queue");
-        System.out.println("4. Back to Walk-In & Booking Menu\n");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("WALK-IN QUEUE - SELECT LINE", SCREEN_WIDTH);
+    System.out.println("1. Luxury Room Walk-In Queue");
+    System.out.println("2. Suite Room Walk-In Queue");
+    System.out.println("3. Standard Room Walk-In Queue");
+    System.out.println("4. Back to Walk-In & Booking Menu\n");
 
-        int choice = ConsoleUtil.getMenuInput("Choose a line to manage: ", 1, 4).getAsInt();
-        if (choice == 1) return Room.RoomType.LUXURY;
-        if (choice == 2) return Room.RoomType.SUITE;
-        if (choice == 3) return Room.RoomType.STANDARD;
-        return null;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    int choice = ConsoleUtil.getMenuInput("Choose a line to manage: ", 1, 4).getAsInt();
+    if (choice == 1) return Room.RoomType.LUXURY;
+    if (choice == 2) return Room.RoomType.SUITE;
+    if (choice == 3) return Room.RoomType.STANDARD;
+    return null;
   }
 
   public GetMenuInputResult renderQueueScreen(
@@ -141,6 +134,7 @@ public class WalkInQueueView {
       int waiting,
       int queueCapacity,
       boolean queueFull,
+      boolean queueCanExpand,
       int vacantRooms,
       int arrivingToday,
       int vipWaiting,
@@ -153,76 +147,77 @@ public class WalkInQueueView {
       int currentPage,
       int pageSize,
       boolean enforceVipBypass) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("WALK-IN QUEUE - [" + roomType.name() + " ROOMS]", SCREEN_WIDTH);
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("WALK-IN QUEUE - [" + roomType.name() + " ROOMS]", SCREEN_WIDTH);
 
-        System.out.println(
-            "WAITING IN LINE   : "
-                + waiting
-                + " / "
-                + queueCapacity
-                + " array slots"
-                + (queueFull ? "   [FULL - next enqueue doubles the array]" : ""));
-        System.out.println("NEXT UP (peek)    : " + nextUp);
-        System.out.println(
-            "ROOMS             : "
-                + vacantRooms
-                + " vacant clean, "
-                + arrivingToday
-                + " held for arrivals today");
-        System.out.println(
-            "VIP AHEAD OF LINE : "
-                + vipWaiting
-                + "   ->  "
-                + verdictFor(vacantRooms - arrivingToday, vipWaiting, enforceVipBypass));
-        System.out.println(
-            "SEARCH            : "
-                + (searchTerm == null
-                    ? "[ None ]"
-                    : "[ " + searchField + " " + matchMode + " \"" + searchTerm + "\" ]"));
-        System.out.println(
-            "MIN WAIT FILTER   : [ "
-                + (minWaitMinutes == null ? "None" : minWaitMinutes + " minutes")
-                + " ]");
-        System.out.println("SORT CRITERIA     : [ " + sort + " ]\n");
+    System.out.println(
+        "WAITING IN LINE   : "
+            + waiting
+            + " / "
+            + queueCapacity
+            + fullNote(queueFull, queueCanExpand));
+    System.out.println("NEXT UP (peek)    : " + nextUp);
+    System.out.println(
+        "ROOMS             : "
+            + vacantRooms
+            + " vacant clean, "
+            + arrivingToday
+            + " held for arrivals today");
+    System.out.println(
+        "VIP AHEAD OF LINE : "
+            + vipWaiting
+            + "   ->  "
+            + verdictFor(vacantRooms - arrivingToday, vipWaiting, enforceVipBypass));
+    System.out.println(
+        "SEARCH            : "
+            + (searchTerm == null
+                ? "[ None ]"
+                : "[ " + searchField + " " + matchMode + " \"" + searchTerm + "\" ]"));
+    System.out.println(
+        "MIN WAIT FILTER   : [ "
+            + (minWaitMinutes == null ? "None" : minWaitMinutes + " minutes")
+            + " ]");
+    System.out.println("SORT CRITERIA     : [ " + sort + " ]\n");
 
-        printLineTable(lineRows, roomType, currentPage, pageSize);
-        System.out.println();
-        printHoldTable(holds, graceMinutes, 1, HOLDS_PREVIEW_ROWS, true);
+    printLineTable(lineRows, roomType, currentPage, pageSize);
+    System.out.println();
+    printHoldTable(holds, graceMinutes, 1, HOLDS_PREVIEW_ROWS, true);
 
-        int totalMatches = (lineRows == null) ? 0 : lineRows.getNumberOfEntries();
-        int totalPages =
-            (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
-        System.out.printf(
-            "%nPage %d / %d (Matches: %d)   Holds: %d%n%n",
-            (totalPages == 0) ? 0 : currentPage,
-            totalPages,
-            totalMatches,
-            (holds == null) ? 0 : holds.getNumberOfEntries());
+    int totalMatches = (lineRows == null) ? 0 : lineRows.getNumberOfEntries();
+    int totalPages = (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+    System.out.printf(
+        "%nPage %d / %d (Matches: %d)   Holds: %d%n%n",
+        (totalPages == 0) ? 0 : currentPage,
+        totalPages,
+        totalMatches,
+        (holds == null) ? 0 : holds.getNumberOfEntries());
 
-        System.out.println("[A] Add Walk-In        [G] Allocate Next       [C] Check In Hold");
-        System.out.println("[S] Search / Filter    [O] Change Sort Order   [R] Refresh");
-        System.out.println("[P] Prev Page          [N] Next Page           [X] Close Queue");
-        System.out.println("[E] Exit to Line Menu\n");
-        System.out.println("Pick a row number to view, allocate or cancel that booking.\n");
+    System.out.println("[A] Add Walk-In        [G] Serve Next In Line  [C] Manage Holds");
+    System.out.println("[S] Search / Filter    [O] Change Sort Order   [R] Refresh");
+    System.out.println("[P] Prev Page          [N] Next Page           [X] Close Queue");
+    System.out.println("[E] Exit to Line Menu\n");
+    System.out.println("Pick a row number to view, allocate or cancel that booking.\n");
 
-        char[] commands = {'A', 'G', 'C', 'S', 'O', 'X', 'P', 'N', 'R', 'E'};
+    char[] commands = {'A', 'G', 'C', 'S', 'O', 'X', 'P', 'N', 'R', 'E'};
 
-        int rowsOnPage = countRowsOnPage(totalMatches, currentPage, pageSize);
-        if (rowsOnPage <= 0) {
-          return ConsoleUtil.getMenuInput("Enter a command: ", commands);
-        }
-
-        String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
-        return ConsoleUtil.getMenuInput(
-            "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
+    int rowsOnPage = countRowsOnPage(totalMatches, currentPage, pageSize);
+    if (rowsOnPage <= 0) {
+      return ConsoleUtil.getMenuInput("Enter a command: ", commands);
     }
+
+    String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
+    return ConsoleUtil.getMenuInput(
+        "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
+  }
+
+  // Whether a full line refuses the next guest or quietly doubles its array is a house setting, so
+  // the badge has to name the outcome rather than assume the array grows.
+  private String fullNote(boolean queueFull, boolean queueCanExpand) {
+    if (!queueFull) return "";
+    return queueCanExpand
+        ? "   [FULL - the next join doubles the array]"
+        : "   [FULL - the next join is refused]";
   }
 
   // Rooms are held back one per waiting VIP rather than the whole type being frozen, so a line can
@@ -272,7 +267,7 @@ public class WalkInQueueView {
     TableUtil.TableSettings spanSettings = spanSettings();
 
     TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"THE LINE (FIFO ORDER)"}, spanSettings);
+    TableUtil.printTableRow(new String[] {"THE LINE"}, spanSettings);
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
     TableUtil.printTableRow(
         new String[] {"NO.", "POS", "RES ID", "GUEST NAME", "PHONE", "WAITED", "STRIKES"},
@@ -464,111 +459,97 @@ public class WalkInQueueView {
       int vipWaiting,
       boolean fifoSkip,
       boolean vipBypass) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("SUPERVISOR OVERRIDE", SCREEN_WIDTH);
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SUPERVISOR OVERRIDE", SCREEN_WIDTH);
 
-        TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.TableSettings kvSettings = kvSettings();
 
-        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-        TableUtil.printTableRow(
-            new String[] {"STATUS: [!] AUTHORISATION REQUIRED"}, spanSettings());
-        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-        printKeyValue(kvSettings, "Room Type", roomType.name(), true);
-        printKeyValue(
-            kvSettings,
-            "Guest To Be Served",
-            ((guest != null) ? guest.getName() : "N/A") + "  (" + target.getReservationId() + ")",
-            true);
-        printKeyValue(kvSettings, "Place In Line", position + " of " + lineLength, true);
-        printKeyValue(kvSettings, "Waited", formatWait(target.getQueueArrivalTime()), true);
-        printKeyValue(kvSettings, "Rooms Free To This Line", String.valueOf(freeToCounter), true);
-        printKeyValue(kvSettings, "High Tier Members Waiting", String.valueOf(vipWaiting), false);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"STATUS: [!] AUTHORISATION REQUIRED"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Room Type", roomType.name(), true);
+    printKeyValue(
+        kvSettings,
+        "Guest To Be Served",
+        ((guest != null) ? guest.getName() : "N/A") + "  (" + target.getReservationId() + ")",
+        true);
+    printKeyValue(kvSettings, "Place In Line", position + " of " + lineLength, true);
+    printKeyValue(kvSettings, "Waited", formatWait(target.getQueueArrivalTime()), true);
+    printKeyValue(kvSettings, "Rooms Free To This Line", String.valueOf(freeToCounter), true);
+    printKeyValue(kvSettings, "High Tier Members Waiting", String.valueOf(vipWaiting), false);
 
-        System.out.println();
+    System.out.println();
 
-        if (fifoSkip) {
-          printNoticeBox(
-              "REASON 1: FIFO ORDER WILL BE BROKEN",
-              "Guests Skipped",
-              String.valueOf(skippedCount),
-              "This guest is not at the front of the line. Serving them now takes the room ahead of"
-                  + " "
-                  + skippedNames
-                  + ", who all arrived earlier.");
-        }
-
-        if (vipBypass) {
-          printNoticeBox(
-              "REASON 2: VIP BYPASS WILL BE OVERRIDDEN",
-              "Vacant / VIP Waiting",
-              freeToCounter + " free  vs  " + vipWaiting + " VIP waiting",
-              "Every free room of this type is spoken for by a high tier member under the bypass"
-                  + " rule. One of those rooms will be given to the standard line instead.");
-        }
-
-        System.out.println("1. Authorise And Allocate The Room");
-        System.out.println("2. Do Not Allocate\n");
-
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
+    if (fifoSkip) {
+      printNoticeBox(
+          "REASON 1: FIFO ORDER WILL BE BROKEN",
+          "Guests Skipped",
+          String.valueOf(skippedCount),
+          "This guest is not at the front of the line. Serving them now takes the room ahead of"
+              + " "
+              + skippedNames
+              + ", who all arrived earlier.");
     }
+
+    if (vipBypass) {
+      printNoticeBox(
+          "REASON 2: VIP BYPASS WILL BE OVERRIDDEN",
+          "Vacant / VIP Waiting",
+          freeToCounter + " free  vs  " + vipWaiting + " VIP waiting",
+          "Every free room of this type is spoken for by a high tier member under the bypass"
+              + " rule. One of those rooms will be given to the standard line instead.");
+    }
+
+    System.out.println("1. Authorise And Allocate The Room");
+    System.out.println("2. Do Not Allocate\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public boolean displayAllocateConfirmationScreen(
       Reservation r, Guest g, Room room, int graceMinutes, int vipWaiting, int position) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CONFIRM ROOM ALLOCATION", SCREEN_WIDTH);
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM ROOM ALLOCATION", SCREEN_WIDTH);
 
-        TableUtil.TableSettings kvSettings = kvSettings();
+    TableUtil.TableSettings kvSettings = kvSettings();
 
-        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-        TableUtil.printTableRow(new String[] {"GUEST BEING SERVED"}, spanSettings());
-        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-        printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
-        printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
-        printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
-        printKeyValue(
-            kvSettings, "Phone Number", (g != null) ? blankToNa(g.getPhoneNumber()) : "N/A", true);
-        printKeyValue(kvSettings, "Place In Line", String.valueOf(position), true);
-        printKeyValue(kvSettings, "Joined Line At", formatTime(r.getQueueArrivalTime()), true);
-        printKeyValue(kvSettings, "Waited", formatWait(r.getQueueArrivalTime()), false);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"GUEST BEING SERVED"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
+    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(
+        kvSettings, "Phone Number", (g != null) ? blankToNa(g.getPhoneNumber()) : "N/A", true);
+    printKeyValue(kvSettings, "Place In Line", String.valueOf(position), true);
+    printKeyValue(kvSettings, "Joined Line At", formatTime(r.getQueueArrivalTime()), true);
+    printKeyValue(kvSettings, "Waited", formatWait(r.getQueueArrivalTime()), false);
 
-        System.out.println();
+    System.out.println();
 
-        TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-        TableUtil.printTableRow(new String[] {"ROOM & HOLD"}, spanSettings());
-        TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-        printKeyValue(
-            kvSettings,
-            "Room To Assign",
-            room.getRoomNumber() + " (" + room.getRoomType().name() + ")",
-            true);
-        printKeyValue(
-            kvSettings, "Rate Per Night", String.format("RM %.2f", room.getPrice()), true);
-        printKeyValue(kvSettings, "VIP Waiting", String.valueOf(vipWaiting), true);
-        printKeyValue(
-            kvSettings,
-            "Grace Window",
-            graceMinutes + " minutes, then the room is released and a strike is issued",
-            false);
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"ROOM & HOLD"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(
+        kvSettings,
+        "Room To Assign",
+        room.getRoomNumber() + " (" + room.getRoomType().name() + ")",
+        true);
+    printKeyValue(kvSettings, "Rate Per Night", String.format("RM %.2f", room.getPrice()), true);
+    printKeyValue(kvSettings, "VIP Waiting", String.valueOf(vipWaiting), true);
+    printKeyValue(
+        kvSettings,
+        "Grace Window",
+        graceMinutes + " minutes, then the room is released and a strike is issued",
+        false);
 
-        System.out.println();
-        System.out.println("1. Dequeue This Guest And Hold The Room");
-        System.out.println("2. Do Not Allocate\n");
+    System.out.println();
+    System.out.println("1. Dequeue This Guest And Hold The Room");
+    System.out.println("2. Do Not Allocate\n");
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public void displayAllocateSuccessScreen(
@@ -594,95 +575,149 @@ public class WalkInQueueView {
     ConsoleUtil.printContinueMessage();
   }
 
-  // Returns the 1-based index into the whole hold list, or null when the clerk backed out.
-  public Integer promptHoldSelection(
-      ListInterface<HoldRowDTO> holds, int graceMinutes, int pageSize) {
+  // One page of the hold list plus the command prompt. Paging is the controller's to drive.
+  public boolean displayCheckInNowScreen(Guest g, Room room) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CHECK IN RIGHT AWAY?", SCREEN_WIDTH);
+    printStatusBox(
+        "STATUS: ROOM HELD, NOT YET TAKEN",
+        "Room Held",
+        room.getRoomNumber() + "  for  " + ((g != null) ? g.getName() : "N/A"));
 
-    int page = 1;
+    System.out.println("1. Check In Now And State The Nights");
+    System.out.println("2. Leave It On Hold\n");
 
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CHECK IN A HELD ROOM", SCREEN_WIDTH);
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
+  }
 
-        int total = (holds == null) ? 0 : holds.getNumberOfEntries();
-        int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / pageSize);
-        page = Math.min(Math.max(page, 1), Math.max(totalPages, 1));
+  public GetMenuInputResult renderHoldPicker(
+      ListInterface<HoldRowDTO> holds, int graceMinutes, int page, int pageSize) {
 
-        printHoldTable(holds, graceMinutes, page, pageSize, false);
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("MANAGE A HELD ROOM", SCREEN_WIDTH);
 
-        int rowsOnPage = countRowsOnPage(total, page, pageSize);
-        System.out.printf(
-            "%nPage %d / %d (Holds: %d)%n%n", (totalPages == 0) ? 0 : page, totalPages, total);
-        System.out.println("[P] Prev Page   [N] Next Page   [E] Exit\n");
+    int total = (holds == null) ? 0 : holds.getNumberOfEntries();
+    int totalPages = (total == 0) ? 0 : (int) Math.ceil((double) total / pageSize);
 
-        char[] commands = {'P', 'N', 'E'};
+    printHoldTable(holds, graceMinutes, page, pageSize, false);
 
-        GetMenuInputResult result;
-        if (rowsOnPage <= 0) {
-          result = ConsoleUtil.getMenuInput("Enter a command: ", commands);
-        } else {
-          String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
-          result =
-              ConsoleUtil.getMenuInput(
-                  "Pick the hold to check in (" + range + "): ", 1, rowsOnPage, commands);
-        }
+    int rowsOnPage = countRowsOnPage(total, page, pageSize);
+    System.out.printf(
+        "%nPage %d / %d (Holds: %d)%n%n", (totalPages == 0) ? 0 : page, totalPages, total);
+    System.out.println("[P] Prev Page   [N] Next Page   [E] Exit\n");
 
-        if ("E".equalsIgnoreCase(result.input)) return null;
+    char[] commands = {'P', 'N', 'E'};
 
-        if ("N".equalsIgnoreCase(result.input)) {
-          if (page < totalPages) {
-            page++;
-          } else {
-            ConsoleUtil.printError("Already on the last page!");
-          }
-          continue;
-        }
-        if ("P".equalsIgnoreCase(result.input)) {
-          if (page > 1) {
-            page--;
-          } else {
-            ConsoleUtil.printError("Already on the first page!");
-          }
-          continue;
-        }
-
-        return (page - 1) * pageSize + result.getAsInt();
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
+    if (rowsOnPage <= 0) {
+      return ConsoleUtil.getMenuInput("Enter a command: ", commands);
     }
+
+    String range = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
+    return ConsoleUtil.getMenuInput(
+        "Pick the hold to manage (" + range + "): ", 1, rowsOnPage, commands);
+  }
+
+  /**
+   * A held room has two endings, so the clerk chooses between them in front of the same facts.
+   *
+   * @return 1 to check in, 2 to close it as a no-show, 3 to go back
+   */
+  public int displayHoldActionScreen(Reservation r, Guest g, Room room, int graceMinutes) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("HELD ROOM: " + r.getReservationId(), SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"THE HOLD"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(
+        kvSettings, "Phone Number", (g != null) ? blankToNa(g.getPhoneNumber()) : "N/A", true);
+    printKeyValue(
+        kvSettings, "Room Held", (room != null) ? room.getRoomNumber() : "UNLINKED", true);
+    printKeyValue(kvSettings, "Held Since", formatTime(r.getAllocatedTime()), true);
+    printKeyValue(kvSettings, "Waiting So Far", formatWait(r.getAllocatedTime()), true);
+    printKeyValue(kvSettings, "Grace Window", graceMinutes + " minute(s) from the hold", true);
+    printKeyValue(
+        kvSettings, "Strike Count", String.valueOf((g != null) ? g.getStrikeCount() : 0), false);
+
+    System.out.println();
+
+    System.out.println("1. Check In And State The Nights");
+    System.out.println("2. Mark No-Show (releases the room now)");
+    System.out.println("3. Back\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
+
+  public boolean displayHoldNoShowConfirmationScreen(
+      Reservation r, Guest g, Room room, int strikesNow, int maxStrikes) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM NO-SHOW", SCREEN_WIDTH);
+    printNoticeBox(
+        "STATUS: [!] CLOSE THE HOLD EARLY",
+        "Room Held",
+        ((room != null) ? room.getRoomNumber() : "UNLINKED")
+            + "  for  "
+            + ((g != null) ? g.getName() : "N/A"),
+        "The room goes back on sale immediately rather than at the end of the grace window, and"
+            + " the booking closes as NO_SHOW. A strike is recorded against the guest, taking them"
+            + " to "
+            + (strikesNow + 1)
+            + " of "
+            + maxStrikes
+            + " for today. The guest is not sent back to the line, because this is the desk"
+            + " deciding they are not coming rather than a hold that merely ran out of time.");
+
+    System.out.println("1. Mark No-Show And Release The Room");
+    System.out.println("2. Leave The Hold Running\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
+  }
+
+  public void displayHoldNoShowSuccessScreen(Reservation r, Guest g, Room room, int strikesAfter) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("HOLD CLOSED AS NO-SHOW", SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"STATUS: ROOM RELEASED"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
+    printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(
+        kvSettings, "Room Back On Sale", (room != null) ? room.getRoomNumber() : "UNLINKED", true);
+    printKeyValue(kvSettings, "Strikes Today", String.valueOf(strikesAfter), false);
+
+    System.out.println();
+    ConsoleUtil.printContinueMessage();
   }
 
   public Integer promptStayDays(
       Reservation r, Guest g, Room room, int maxStayNights, int availableNights) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CHECK IN - DURATION OF STAY", SCREEN_WIDTH);
-        System.out.println(" Reservation : " + r.getReservationId());
-        System.out.println(" Guest       : " + ((g != null) ? g.getName() : "N/A"));
-        System.out.println(" Room        : " + ((room != null) ? room.getRoomNumber() : "N/A"));
-        System.out.println("------------------------------------------------------");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CHECK IN - DURATION OF STAY", SCREEN_WIDTH);
+    System.out.println(" Reservation : " + r.getReservationId());
+    System.out.println(" Guest       : " + ((g != null) ? g.getName() : "N/A"));
+    System.out.println(" Room        : " + ((room != null) ? room.getRoomNumber() : "N/A"));
+    System.out.println("------------------------------------------------------");
 
-        if (availableNights < maxStayNights) {
-          System.out.println(
-              " The calendar allows "
-                  + availableNights
-                  + " night(s) from today before this room type is fully booked.");
-        }
-
-        System.out.println(" Type 'C' to cancel and return\n");
-
-        return requireInt(
-            " Enter duration of stay in nights [1 - " + availableNights + "]: ",
-            1,
-            availableNights);
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
+    if (availableNights < maxStayNights) {
+      System.out.println(
+          " The calendar allows "
+              + availableNights
+              + " night(s) from today before this room type is fully booked.");
     }
+
+    System.out.println(" Type 'C' to cancel and return\n");
+
+    return requireInt(
+        " Enter duration of stay in nights [1 - " + availableNights + "]: ", 1, availableNights);
   }
 
   public void displayCheckInSuccessScreen(
@@ -711,96 +746,62 @@ public class WalkInQueueView {
   }
 
   public boolean displayCloseQueueConfirmationScreen(Room.RoomType roomType, int waiting) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CLOSE THE LINE", SCREEN_WIDTH);
-        printNoticeBox(
-            "STATUS: [!] END OF BUSINESS CYCLE",
-            "Guests Still Waiting",
-            String.valueOf(waiting),
-            "Closing the "
-                + roomType.name()
-                + " line cancels every guest still standing in it and empties the queue in one"
-                + " operation. Completed and held bookings are not affected.");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CLOSE THE LINE", SCREEN_WIDTH);
+    printNoticeBox(
+        "STATUS: [!] END OF BUSINESS CYCLE",
+        "Guests Still Waiting",
+        String.valueOf(waiting),
+        "Closing the "
+            + roomType.name()
+            + " line cancels every guest still standing in it and empties the queue in one"
+            + " operation. Completed and held bookings are not affected.");
 
-        System.out.println("1. Cancel All " + waiting + " Waiting Guest(s) And Clear The Line");
-        System.out.println("2. Leave The Line Alone\n");
+    System.out.println("1. Cancel All " + waiting + " Waiting Guest(s) And Clear The Line");
+    System.out.println("2. Leave The Line Alone\n");
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public void displayCloseQueueSuccessScreen(Room.RoomType roomType, int closed) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("LINE CLOSED", SCREEN_WIDTH);
-    printNoticeBox(
+    printStatusBox(
         "STATUS: QUEUE CLEARED",
         "Bookings Cancelled",
-        String.valueOf(closed),
-        "The " + roomType.name() + " line is now empty and ready for the next business cycle.");
+        closed + " from the " + roomType.name() + " line");
     ConsoleUtil.printContinueMessage();
   }
 
-  public int displayRowActionSubmenu(Reservation r, Guest g, int position, int lineLength) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("QUEUE ACTION: " + r.getReservationId(), SCREEN_WIDTH);
+  /**
+   * The whole picture for one row: who they are, where they stand and what can be done about it.
+   *
+   * <p>Reading the record and acting on it were two screens, which meant the clerk had to leave the
+   * details behind before choosing. They are one screen now, so the decision is made in front of
+   * the facts it depends on.
+   *
+   * @return 1 to allocate, 2 to override and allocate, 3 to cancel, 4 to go back
+   */
+  public int displayAllocationDetailScreen(
+      Reservation r,
+      Guest g,
+      int position,
+      int lineLength,
+      String roomOnOffer,
+      int freeToCounter,
+      int vipWaiting,
+      boolean overrideNeeded) {
 
-        System.out.println("Guest    : " + ((g != null) ? g.getName() : "N/A"));
-        System.out.println("Position : " + position + " of " + lineLength);
-        System.out.println("Waited   : " + formatWait(r.getQueueArrivalTime()) + "\n");
-
-        System.out.println("1. View Booking Details");
-        System.out.println("2. Allocate A Room To This Guest");
-        System.out.println("3. Cancel Reservation (leaves the line)");
-        System.out.println("4. Back\n");
-
-        if (position > 1) {
-          System.out.println("Serving this row skips " + (position - 1) + " guest(s) who arrived");
-          System.out.println("earlier, so it has to be authorised.\n");
-        }
-
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
-  }
-
-  public void displayReservationDetailScreen(Reservation r, Guest g, int position, int lineLength) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("BOOKING DETAILS", SCREEN_WIDTH);
+    ConsoleUtil.printTitleBox("ALLOCATION DETAIL: " + r.getReservationId(), SCREEN_WIDTH);
 
     TableUtil.TableSettings kvSettings = kvSettings();
 
     TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"RESERVATION"}, spanSettings());
+    TableUtil.printTableRow(new String[] {"GUEST IN THE LINE"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-    printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
-    printKeyValue(kvSettings, "Room Type", r.getRoomType().name(), true);
-    printKeyValue(kvSettings, "Status", r.getStatus().name(), true);
-    printKeyValue(kvSettings, "Booked At", formatTime(r.getReservationTime()), true);
-    printKeyValue(kvSettings, "Joined Line At", formatTime(r.getQueueArrivalTime()), true);
-    printKeyValue(kvSettings, "Waited So Far", formatWait(r.getQueueArrivalTime()), true);
-    printKeyValue(
-        kvSettings,
-        "Place In Line",
-        (position == -1) ? "Not in the line" : position + " of " + lineLength,
-        false);
-
-    System.out.println();
-
-    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(new String[] {"GUEST"}, spanSettings());
-    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-    printKeyValue(kvSettings, "Guest ID", (g != null) ? g.getGuestId() : r.getGuestId(), true);
     printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
+    printKeyValue(kvSettings, "Guest ID", (g != null) ? g.getGuestId() : r.getGuestId(), true);
     printKeyValue(
         kvSettings,
         "IC / Passport No",
@@ -810,158 +811,151 @@ public class WalkInQueueView {
         true);
     printKeyValue(
         kvSettings, "Phone Number", (g != null) ? blankToNa(g.getPhoneNumber()) : "N/A", true);
-    printKeyValue(kvSettings, "Email Address", (g != null) ? blankToNa(g.getEmail()) : "N/A", true);
     printKeyValue(
         kvSettings, "Strike Count", String.valueOf((g != null) ? g.getStrikeCount() : 0), false);
 
     System.out.println();
-    ConsoleUtil.printContinueMessage();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {"THE BOOKING AND THE LINE"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Room Type", r.getRoomType().name(), true);
+    printKeyValue(
+        kvSettings,
+        "Place In Line",
+        (position == -1) ? "Not in the line" : position + " of " + lineLength,
+        true);
+    printKeyValue(kvSettings, "Joined Line At", formatTime(r.getQueueArrivalTime()), true);
+    printKeyValue(kvSettings, "Waited So Far", formatWait(r.getQueueArrivalTime()), true);
+    printKeyValue(kvSettings, "Room On Offer", blankToNa(roomOnOffer), true);
+    printKeyValue(
+        kvSettings,
+        "Rooms Free To Counter",
+        freeToCounter + " free now, " + vipWaiting + " held back for waiting VIP(s)",
+        false);
+
+    System.out.println();
+
+    System.out.println("1. Assign A Room Now");
+    System.out.println("2. Override And Assign Out Of Turn");
+    System.out.println("3. Cancel Reservation (leaves the line)");
+    System.out.println("4. Back\n");
+
+    if (overrideNeeded) {
+      System.out.println("Option 1 is blocked for this row. Serving it now either skips guests");
+      System.out.println("who arrived earlier or takes a room held back for a VIP, so it has to");
+      System.out.println("go through option 2 and be authorised.\n");
+    }
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   public boolean displayCancelConfirmationScreen(Reservation r, Guest g, int position) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CONFIRM CANCELLATION", SCREEN_WIDTH);
-        printNoticeBox(
-            "STATUS: [!] REMOVE FROM THE LINE",
-            "Target Booking",
-            r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-            "This guest is at position "
-                + position
-                + ". Removing them closes the gap, so everyone behind moves up one place.");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CONFIRM CANCELLATION", SCREEN_WIDTH);
+    printNoticeBox(
+        "STATUS: [!] REMOVE FROM THE LINE",
+        "Target Booking",
+        r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
+        "This guest is at position "
+            + position
+            + ". Removing them closes the gap, so everyone behind moves up one place.");
 
-        System.out.println("1. Cancel This Reservation And Remove It From The Line");
-        System.out.println("2. Keep The Reservation\n");
+    System.out.println("1. Cancel This Reservation And Remove It From The Line");
+    System.out.println("2. Keep The Reservation\n");
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
   }
 
   public int displayFilterMainMenu(
       String searchField, String searchTerm, String matchMode, Integer minWaitMinutes) {
-    while (true) {
-      try {
 
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("SEARCH & LINE FILTERS", SCREEN_WIDTH);
-        System.out.println("Search Field : [ " + searchField + " ]");
-        System.out.println("Search Term  : [ " + (searchTerm == null ? "None" : searchTerm) + " ]");
-        System.out.println("Match Mode   : [ " + matchMode + " ]");
-        System.out.println(
-            "Minimum Wait : [ "
-                + (minWaitMinutes == null ? "None" : minWaitMinutes + " minutes")
-                + " ]\n");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH & LINE FILTERS", SCREEN_WIDTH);
+    System.out.println("Search Field : [ " + searchField + " ]");
+    System.out.println("Search Term  : [ " + (searchTerm == null ? "None" : searchTerm) + " ]");
+    System.out.println("Match Mode   : [ " + matchMode + " ]");
+    System.out.println(
+        "Minimum Wait : [ "
+            + (minWaitMinutes == null ? "None" : minWaitMinutes + " minutes")
+            + " ]\n");
 
-        System.out.println("1. Change Search Field");
-        System.out.println("2. Change Search Term");
-        System.out.println(
-            "3. Switch Match Mode To " + ("EXACT".equals(matchMode) ? "CONTAINS" : "EXACT"));
-        System.out.println("4. Minimum Wait Threshold");
-        System.out.println("5. Reset All Filters");
-        System.out.println("6. Apply And Return");
-        System.out.println("7. Back (discard these changes)\n");
+    System.out.println("1. Change Search Field");
+    System.out.println("2. Change Search Term");
+    System.out.println(
+        "3. Switch Match Mode To " + ("EXACT".equals(matchMode) ? "CONTAINS" : "EXACT"));
+    System.out.println("4. Minimum Wait Threshold");
+    System.out.println("5. Reset All Filters");
+    System.out.println("6. Apply And Return");
+    System.out.println("7. Back (discard these changes)\n");
 
-        return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
   }
 
   public int displaySearchFieldSubmenu(String current) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("SEARCH FIELD", SCREEN_WIDTH);
-        System.out.println("Current: [ " + current + " ]\n");
-        System.out.println("Searching one field at a time keeps a partial phone number from");
-        System.out.println("pulling in every IC that happens to contain the same digits.\n");
-        System.out.println(" 1. Guest Name");
-        System.out.println(" 2. Guest ID");
-        System.out.println(" 3. IC Number");
-        System.out.println(" 4. Passport Number");
-        System.out.println(" 5. Phone Number");
-        System.out.println(" 6. Email Address");
-        System.out.println(" 7. Reservation ID");
-        System.out.println(" 8. Confirmation Code");
-        System.out.println(" 9. All Of The Above");
-        System.out.println("10. Back\n");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH FIELD", SCREEN_WIDTH);
+    System.out.println("Current: [ " + current + " ]\n");
+    System.out.println("Searching one field at a time keeps a partial phone number from");
+    System.out.println("pulling in every IC that happens to contain the same digits.\n");
+    System.out.println(" 1. Guest Name");
+    System.out.println(" 2. Guest ID");
+    System.out.println(" 3. IC Number");
+    System.out.println(" 4. Passport Number");
+    System.out.println(" 5. Phone Number");
+    System.out.println(" 6. Email Address");
+    System.out.println(" 7. Reservation ID");
+    System.out.println(" 8. Confirmation Code");
+    System.out.println(" 9. All Of The Above");
+    System.out.println("10. Back\n");
 
-        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 10).getAsInt();
-        return (choice == 10) ? 0 : choice;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 10).getAsInt();
+    return (choice == 10) ? 0 : choice;
   }
 
   public String promptSearchTerm(String fieldLabel, String current) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("SEARCH TERM", SCREEN_WIDTH);
-        System.out.println("Field   : [ " + fieldLabel + " ]");
-        System.out.println("Current : [ " + (current == null ? "None" : current) + " ]\n");
-        System.out.println("Type '-' to clear the term.");
-        System.out.println("E - Exit and keep the current term\n");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SEARCH TERM", SCREEN_WIDTH);
+    System.out.println("Field   : [ " + fieldLabel + " ]");
+    System.out.println("Current : [ " + (current == null ? "None" : current) + " ]\n");
+    System.out.println("Type '-' to clear the term.");
+    System.out.println("E - Exit and keep the current term\n");
 
-        String typed = ConsoleUtil.getStringInput("Search term: ");
-        if (typed.trim().isEmpty()) continue;
-        return typed;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return ConsoleUtil.getStringInput("Search term: ");
   }
 
   public Integer promptMinimumWait(Integer current) {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("MINIMUM WAIT THRESHOLD", SCREEN_WIDTH);
-        System.out.println(
-            "Current: [ " + (current == null ? "None" : current + " minutes") + " ]\n");
-        System.out.println("Only guests who have waited at least this long stay on the screen.");
-        System.out.println("Enter 0 to clear the threshold.");
-        System.out.println("Type 'C' to keep the current threshold\n");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("MINIMUM WAIT THRESHOLD", SCREEN_WIDTH);
+    System.out.println("Current: [ " + (current == null ? "None" : current + " minutes") + " ]\n");
+    System.out.println("Only guests who have waited at least this long stay on the screen.");
+    System.out.println("Enter 0 to clear the threshold.");
+    System.out.println("Type 'C' to keep the current threshold\n");
 
-        return requireInt("Minimum wait in minutes [0 - 1440]: ", 0, 1440);
-      } catch (IllegalArgumentException e) {
-        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    return requireInt("Minimum wait in minutes [0 - 1440]: ", 0, 1440);
   }
 
   public String displaySortMenu() {
-    while (true) {
-      try {
-        ConsoleUtil.clearScreen();
-        ConsoleUtil.printTitleBox("CHANGE SORT ORDER", SCREEN_WIDTH);
-        System.out.println("Sorting only reorders this table. The queue itself stays FIFO.\n");
-        System.out.println("1. Queue Position (FIFO, the real order)");
-        System.out.println("2. Wait Time (Longest -> Shortest)");
-        System.out.println("3. Wait Time (Shortest -> Longest)");
-        System.out.println("4. Guest Name (A -> Z)");
-        System.out.println("5. Guest Name (Z -> A)");
-        System.out.println("6. Strike Count (Highest -> Lowest)");
-        System.out.println("7. Back\n");
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("CHANGE SORT ORDER", SCREEN_WIDTH);
+    System.out.println("Sorting only reorders this table. The queue itself stays FIFO.\n");
+    System.out.println("1. Queue Position (FIFO, the real order)");
+    System.out.println("2. Wait Time (Longest -> Shortest)");
+    System.out.println("3. Wait Time (Shortest -> Longest)");
+    System.out.println("4. Guest Name (A -> Z)");
+    System.out.println("5. Guest Name (Z -> A)");
+    System.out.println("6. Strike Count (Highest -> Lowest)");
+    System.out.println("7. Back\n");
 
-        int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
-        if (choice == 1) return "QUEUE POSITION (FIFO)";
-        if (choice == 2) return "WAIT TIME (LONGEST -> SHORTEST)";
-        if (choice == 3) return "WAIT TIME (SHORTEST -> LONGEST)";
-        if (choice == 4) return "GUEST NAME (A -> Z)";
-        if (choice == 5) return "GUEST NAME (Z -> A)";
-        if (choice == 6) return "STRIKES (HIGHEST -> LOWEST)";
-        return null;
-      } catch (IllegalArgumentException e) {
-        ConsoleUtil.printError(e.getMessage());
-      }
-    }
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
+    if (choice == 1) return "QUEUE POSITION (FIFO)";
+    if (choice == 2) return "WAIT TIME (LONGEST -> SHORTEST)";
+    if (choice == 3) return "WAIT TIME (SHORTEST -> LONGEST)";
+    if (choice == 4) return "GUEST NAME (A -> Z)";
+    if (choice == 5) return "GUEST NAME (Z -> A)";
+    if (choice == 6) return "STRIKES (HIGHEST -> LOWEST)";
+    return null;
   }
 
   private String blankToNa(String value) {
@@ -982,6 +976,16 @@ public class WalkInQueueView {
       settings.setHAlign(i, TableUtil.Align.CENTER);
     }
     return settings;
+  }
+
+  private void printStatusBox(String heading, String key, String value) {
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(new String[] {heading}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, key, value, false);
+    System.out.println();
   }
 
   private void printNoticeBox(String heading, String key, String value, String notice) {

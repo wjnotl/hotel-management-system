@@ -10,10 +10,14 @@ import util.ConsoleUtil;
 import view.booking.BookingSettingsView;
 
 public class BookingSettingsController {
+  private static final String BLANK_INPUT = "Input cannot be empty!";
+
   private static final int MIN_GRACE_MINUTES = 1;
   private static final int MAX_GRACE_MINUTES = 240;
   private static final int MIN_STRIKES = 1;
   private static final int MAX_STRIKES = 10;
+
+  // Zero is a legal value for both: it switches the rule off rather than setting it to nothing.
   private static final int MIN_QUEUE_CAPACITY = 1;
   private static final int MAX_QUEUE_CAPACITY = 500;
   private static final int MIN_LINE_LENGTH = 0;
@@ -69,6 +73,53 @@ public class BookingSettingsController {
     return bookingSettingsRepo.getSettings();
   }
 
+  // Blank keeps the current value and redraws the same setting screen, so the swallowed message
+  // is the only one ConsoleUtil raises for an empty line.
+  private Integer promptIntSetting(
+      String title,
+      String explanation,
+      String currentLabel,
+      int min,
+      int max,
+      String unit,
+      String warning) {
+    while (true) {
+      try {
+        return settingsView.promptIntSetting(
+            title, explanation, currentLabel, min, max, unit, warning);
+      } catch (Exception e) {
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private Boolean promptToggleSetting(
+      String title,
+      String explanation,
+      boolean currentValue,
+      String onLabel,
+      String offLabel,
+      String warning) {
+    while (true) {
+      try {
+        return settingsView.promptToggleSetting(
+            title, explanation, currentValue, onLabel, offLabel, warning);
+      } catch (Exception e) {
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String promptSortSetting(String title, String current, ListInterface<String> options) {
+    while (true) {
+      try {
+        return settingsView.promptSortSetting(title, current, options);
+      } catch (Exception e) {
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
   // The screens edit the live settings object, so the write is forced here after each change.
   private void persist() {
     bookingSettingsRepo.updateSettings(config());
@@ -82,7 +133,7 @@ public class BookingSettingsController {
 
         if (choice == 1) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   "Hold Grace Window",
                   "How long a room stays held for a guest who has been called before it is"
                       + " released and a strike is recorded.",
@@ -102,7 +153,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 2) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   "Max Strikes Before No-Show",
                   "How many lapsed holds a guest may collect before the booking is closed as a"
                       + " no-show instead of being sent back to the line.",
@@ -119,7 +170,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 3) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Where A Lapsed Hold Goes",
                   "A guest who misses the grace window can be given another chance at the back"
                       + " of the line, or have the booking closed straight away. The strike is"
@@ -151,11 +202,11 @@ public class BookingSettingsController {
 
         if (choice == 1) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   "Initial Queue Capacity",
-                  "How many array slots each line owns when it is created. The circular array"
-                      + " doubles when it fills, so this is a starting size and not a limit on"
-                      + " how many guests may wait.",
+                  "How many slots each line owns when it is created. It is a hard stop unless"
+                      + " the growth rule below is switched on, in which case the circular array"
+                      + " doubles when it fills and this is only a starting size.",
                   config().getInitialQueueCapacity() + " slots",
                   MIN_QUEUE_CAPACITY,
                   MAX_QUEUE_CAPACITY,
@@ -168,7 +219,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 2) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Allow The Queue Array To Grow",
                   "With growth on, a full line doubles its array and keeps accepting guests."
                       + " With it off, the array is fixed and a full line refuses the next"
@@ -184,7 +235,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 3) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   "Maximum Line Length",
                   "The house limit on how many guests may stand in one line, checked before a"
                       + " reservation is created. Enter 0 for no limit.",
@@ -204,7 +255,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 4) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Auto-Assign When A Room Is Free",
                   "With this on, a walk-in is handed a room at once when one of that type is"
                       + " vacant and clean, not promised to an advance booking arriving today,"
@@ -224,7 +275,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 5) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Enforce VIP Bypass",
                   "With this on, one vacant room is reserved for each high tier member waiting"
                       + " for that type, so the standard line is only served from the surplus."
@@ -241,7 +292,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 6) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Allow Supervisor Bypass Override",
                   "Whether a row's Allocate A Room action may take a room the VIP bypass is"
                       + " holding back, on supervisor authority.",
@@ -259,7 +310,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 7) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Allow Serving Out Of FIFO Order",
                   "Whether a row other than the front of the line may be allocated a room. The"
                       + " screen still names every guest who would be skipped and asks for"
@@ -278,11 +329,12 @@ public class BookingSettingsController {
           }
         } else if (choice == 8) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "One Live Booking Per Guest",
                   "With this on, a guest who is already waiting in any line or already holding"
                       + " a room cannot be registered a second time. With it off, the same"
-                      + " person may stand in more than one line at once.",
+                      + " person may stand in more than one line at once, one place per line."
+                      + " Taking two places in the same line is refused either way.",
                   config().isBlockDuplicateAcrossLines(),
                   "One booking only",
                   "Allow several",
@@ -308,7 +360,7 @@ public class BookingSettingsController {
 
         if (choice == 1) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   "Booking Lead Time",
                   "How far ahead of today an advance booking may be taken. Enter 0 to remove the"
                       + " limit entirely.",
@@ -328,7 +380,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 2) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Allow Same Day Advance Bookings",
                   "Whether a booking may be taken for today. With it off, the earliest arrival"
                       + " date offered is tomorrow and someone arriving today is a walk-in.",
@@ -346,7 +398,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 3) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Checkout Day Is Reusable",
                   "With this on, a stay ending on the 5th does not block another guest arriving"
                       + " on the 5th, because the room is turned over the same day. With it off,"
@@ -366,7 +418,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 4) {
           Boolean value =
-              settingsView.promptToggleSetting(
+              promptToggleSetting(
                   "Refuse Bookings When Fully Booked",
                   "With this on, an advance booking is refused when every room of that type is"
                       + " already committed on one of the requested nights. With it off, the"
@@ -398,7 +450,7 @@ public class BookingSettingsController {
 
         if (choice == 1) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   "Rows Per Page",
                   "How many rows the walk-in queue and advance booking tables show before"
                       + " paging.",
@@ -414,7 +466,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 2) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   "Maximum Stay In Nights",
                   "The longest stay the check-in and advance booking screens will accept in one"
                       + " booking. The availability calendar may still allow fewer.",
@@ -430,7 +482,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 3) {
           String value =
-              settingsView.promptSortSetting(
+              promptSortSetting(
                   "Default Walk-In Queue Sort", config().getDefaultQueueSort(), queueSortOptions());
           if (value != null) {
             config().setDefaultQueueSort(value);
@@ -439,7 +491,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 4) {
           String value =
-              settingsView.promptSortSetting(
+              promptSortSetting(
                   "Default Advance Booking Sort",
                   config().getDefaultAdvanceSort(),
                   advanceSortOptions());
@@ -450,7 +502,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 5) {
           String value =
-              settingsView.promptSortSetting(
+              promptSortSetting(
                   "Default Report Period",
                   config().getDefaultReportPeriod(),
                   reportPeriodOptions());
@@ -461,7 +513,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 6) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   "Default Report Record Limit",
                   "How many rows a report writes to the .txt before it is truncated. Enter 0 to"
                       + " export every matching row by default.",
@@ -514,7 +566,7 @@ public class BookingSettingsController {
 
         if (choice == 1) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   roomType.name() + " Hold Grace Window",
                   "Overrides the house grace window for this line only. Enter "
                       + BookingSettings.USE_HOUSE_VALUE
@@ -536,7 +588,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 2) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   roomType.name() + " Initial Queue Capacity",
                   "Overrides the house starting array size for this line only. The line has to be"
                       + " rebuilt for a new capacity to reach it, which happens automatically"
@@ -556,7 +608,7 @@ public class BookingSettingsController {
           }
         } else if (choice == 3) {
           Integer value =
-              settingsView.promptIntSetting(
+              promptIntSetting(
                   roomType.name() + " Maximum Line Length",
                   "Overrides the house line limit for this line only. Enter 0 for no limit on"
                       + " this type.",
@@ -717,8 +769,18 @@ public class BookingSettingsController {
         standardReservationRepo.getQueueCapacity(Room.RoomType.STANDARD));
   }
 
+  private boolean promptResetConfirmation() {
+    while (true) {
+      try {
+        return settingsView.promptResetConfirmation();
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
   private void resetToDefaults() {
-    if (!settingsView.promptResetConfirmation()) return;
+    if (!promptResetConfirmation()) return;
 
     bookingSettingsRepo.resetToDefaults();
     standardReservationRepo.applySettings();
