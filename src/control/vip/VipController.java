@@ -263,6 +263,7 @@ public class VipController {
         Room room = roomRepo.findByRoomNumber(entry.getAssignedRoomNumber());
         if (room != null) {
           room.setStatus(Room.Status.VACANT_CLEAN);
+          room.setIsOccupied(false);
           roomRepo.updateRoom(room);
         }
 
@@ -338,6 +339,7 @@ public class VipController {
 
               if (room != null) {
                 room.setStatus(Room.Status.VACANT_CLEAN);
+                room.setIsOccupied(false);
                 roomRepo.updateRoom(room);
               }
 

@@ -94,8 +94,15 @@ public class VipReservationRepo {
     }
 
     if (reservation.getStatus() == Reservation.Status.WAITING) {
-      getListByRoomType(reservation.getRoomType()).add(reservation);
-      getHeapByRoomType(reservation.getRoomType()).enqueue(reservation);
+      ListInterface<Reservation> roomList = getListByRoomType(reservation.getRoomType());
+      if (!roomList.contains(reservation)) {
+        roomList.add(reservation);
+      }
+
+      PriorityQueueInterface<Reservation> roomHeap = getHeapByRoomType(reservation.getRoomType());
+      if (!roomHeap.contains(reservation)) {
+        roomHeap.enqueue(reservation);
+      }
     }
 
     reservationRepo.save();

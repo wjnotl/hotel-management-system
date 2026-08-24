@@ -460,6 +460,7 @@ public class VipManageAllocationController {
     Room room = roomRepo.findByRoomNumber(entry.getAssignedRoomNumber());
     if (room != null) {
       room.setStatus(Room.Status.VACANT_CLEAN);
+      room.setIsOccupied(false);
       roomRepo.updateRoom(room);
     }
   }
