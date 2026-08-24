@@ -9,6 +9,7 @@ import entity.HousekeepingTask;
 import entity.Member;
 import entity.Reservation;
 import entity.Room;
+import entity.VipSystemConfig;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -52,7 +53,7 @@ public class DatabaseSeeder {
       return;
     }
 
-    vipSystemConfigRepo.updateConfig(new entity.VipSystemConfig());
+    vipSystemConfigRepo.updateConfig(new VipSystemConfig());
 
     System.out.println("Seeding system-wide master dataset...");
     LocalDateTime now = LocalDateTime.now();
