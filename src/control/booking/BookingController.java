@@ -5,14 +5,12 @@ import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
-import repo.VipReservationRepo;
 import util.ConsoleUtil;
 import view.booking.BookingView;
 
 public class BookingController {
   private final BookingView bookingView = new BookingView();
   private final StandardReservationRepo standardReservationRepo;
-  private final VipReservationRepo vipReservationRepo;
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
@@ -20,13 +18,11 @@ public class BookingController {
 
   public BookingController(
       StandardReservationRepo standardReservationRepo,
-      VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       RoomRepo roomRepo,
       BookingSettingsRepo bookingSettingsRepo) {
     this.standardReservationRepo = standardReservationRepo;
-    this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
@@ -46,12 +42,7 @@ public class BookingController {
           newWalkInRegistrationController().registerWalkIn();
         } else if ("2".equals(choice)) {
           new WalkInQueueController(
-                  standardReservationRepo,
-                  vipReservationRepo,
-                  guestRepo,
-                  memberRepo,
-                  roomRepo,
-                  bookingSettingsRepo)
+                  standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsRepo)
               .startQueueManagement();
         } else if ("3".equals(choice)) {
           new AdvanceBookingController(
@@ -73,11 +64,6 @@ public class BookingController {
 
   private WalkInRegistrationController newWalkInRegistrationController() {
     return new WalkInRegistrationController(
-        standardReservationRepo,
-        vipReservationRepo,
-        guestRepo,
-        memberRepo,
-        roomRepo,
-        bookingSettingsRepo);
+        standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsRepo);
   }
 }

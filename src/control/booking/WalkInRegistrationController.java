@@ -1,6 +1,5 @@
 package control.booking;
 
-import adt.ListInterface;
 import adt.QueueInterface;
 import entity.BookingSettings;
 import entity.Guest;
@@ -14,7 +13,6 @@ import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
-import repo.VipReservationRepo;
 import util.ConsoleUtil;
 import view.booking.WalkInRegistrationView;
 
@@ -26,7 +24,6 @@ public class WalkInRegistrationController {
 
   private final WalkInRegistrationView registrationView = new WalkInRegistrationView();
   private final StandardReservationRepo standardReservationRepo;
-  private final VipReservationRepo vipReservationRepo;
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
@@ -34,13 +31,11 @@ public class WalkInRegistrationController {
 
   public WalkInRegistrationController(
       StandardReservationRepo standardReservationRepo,
-      VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       RoomRepo roomRepo,
       BookingSettingsRepo bookingSettingsRepo) {
     this.standardReservationRepo = standardReservationRepo;
-    this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
@@ -479,7 +474,6 @@ public class WalkInRegistrationController {
   }
 
   private int countVipWaiting(Room.RoomType roomType) {
-    ListInterface<Reservation> vipLine = vipReservationRepo.getListByRoomType(roomType);
-    return (vipLine == null) ? 0 : vipLine.getNumberOfEntries();
+    return standardReservationRepo.countVipWaiting(roomType);
   }
 }

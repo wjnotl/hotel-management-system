@@ -47,12 +47,7 @@ public class HotelManagementSystem {
 
         if ("1".equals(choice)) {
           new BookingController(
-                  standardReservationRepo,
-                  vipReservationRepo,
-                  guestRepo,
-                  memberRepo,
-                  roomRepo,
-                  bookingSettingsRepo)
+                  standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsRepo)
               .start();
         } else if ("2".equals(choice)) {
           new VipController(

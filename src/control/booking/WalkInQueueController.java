@@ -15,7 +15,6 @@ import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
-import repo.VipReservationRepo;
 import util.ConsoleUtil;
 import view.booking.WalkInQueueView;
 
@@ -34,7 +33,6 @@ public class WalkInQueueController {
 
   private final WalkInQueueView walkInQueueView = new WalkInQueueView();
   private final StandardReservationRepo standardReservationRepo;
-  private final VipReservationRepo vipReservationRepo;
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
@@ -42,13 +40,11 @@ public class WalkInQueueController {
 
   public WalkInQueueController(
       StandardReservationRepo standardReservationRepo,
-      VipReservationRepo vipReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       RoomRepo roomRepo,
       BookingSettingsRepo bookingSettingsRepo) {
     this.standardReservationRepo = standardReservationRepo;
-    this.vipReservationRepo = vipReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
@@ -241,12 +237,7 @@ public class WalkInQueueController {
 
   private void handleAddWalkIn(Room.RoomType roomType) {
     new WalkInRegistrationController(
-            standardReservationRepo,
-            vipReservationRepo,
-            guestRepo,
-            memberRepo,
-            roomRepo,
-            bookingSettingsRepo)
+            standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsRepo)
         .registerWalkIn(roomType);
   }
 
@@ -906,7 +897,6 @@ public class WalkInQueueController {
   }
 
   private int countVipWaiting(Room.RoomType roomType) {
-    ListInterface<Reservation> vipLine = vipReservationRepo.getListByRoomType(roomType);
-    return (vipLine == null) ? 0 : vipLine.getNumberOfEntries();
+    return standardReservationRepo.countVipWaiting(roomType);
   }
 }

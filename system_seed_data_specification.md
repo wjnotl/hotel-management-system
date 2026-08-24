@@ -128,6 +128,12 @@
 * **2 Silver no-show:**
   * 2 Strikes x 2 (Queue wait time range: 28m – 36m; Holding time used: 20m [Max Grace]; Allowed grace: 20m — Evicted: YES)
 
+### J. Standard No-Show Reservations (4 Reservations)
+* 2 Standard no-show (Non-member x 2)
+* 1 Suite no-show (Non-member x 1)
+* 1 Luxury no-show (Silver x 1)
+* Spread over today, yesterday and 3 days ago, so the report date filters return different sets.
+
 ---
 
 ## 5. Housekeeping Staff & Tasks
@@ -136,3 +142,15 @@
 * DIRTY room assignments x 2 (staff assigned to a task, hasn't started cleaning yet — task status ASSIGNED, room status DIRTY)
 * CLEANING room assignments x 2 (staff assigned AND cleaning started — task status IN_PROGRESS, room status CLEANING)
 
+---
+
+## 6. Booking Settings (booking_settings.dat)
+
+The seed writes no settings file, so the factory defaults apply and the counts above are calibrated
+to them.
+
+* Queue capacity 8 per room type, expansion off
+* Hold grace 15m, max strikes 3, requeue on lapse on
+* VIP bypass enforced, override allowed
+* Same day advance booking off, lead days 365
+* One place per line, but a guest may stand in several lines
