@@ -52,8 +52,22 @@ public class VipReservationRepo {
               return scoreComp;
             }
 
-            // Tie-breaker: earlier arrival time gets dequeued first
-            return b.getQueueArrivalTime().compareTo(a.getQueueArrivalTime());
+            // Tie-breaker: earlier arrival time gets dequeued first (max heap order)
+            LocalDateTime tA = a.getQueueArrivalTime();
+            LocalDateTime tB = b.getQueueArrivalTime();
+            int timeComp;
+            if (tA == null && tB == null) timeComp = 0;
+            else if (tA == null) timeComp = -1;
+            else if (tB == null) timeComp = 1;
+            else timeComp = tB.compareTo(tA);
+
+            if (timeComp != 0) {
+              return timeComp;
+            }
+
+            String idA = (a.getReservationId() != null) ? a.getReservationId() : "";
+            String idB = (b.getReservationId() != null) ? b.getReservationId() : "";
+            return idA.compareToIgnoreCase(idB);
           }
         };
 

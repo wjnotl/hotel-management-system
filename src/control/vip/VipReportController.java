@@ -696,46 +696,70 @@ public class VipReportController {
     if ("PRIORITY SCORE".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
           (r1, r2) -> {
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
             int cmp =
                 isAsc
                     ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
                     : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
             if (cmp != 0) return cmp;
-            return r1.getReservationId().compareTo(r2.getReservationId());
+            String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
+            String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
+            return id1.compareToIgnoreCase(id2);
           });
     } else if ("STRIKE COUNT".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
           (r1, r2) -> {
-            Guest g1 = guestRepo.findById(r1.getGuestId());
-            Guest g2 = guestRepo.findById(r2.getGuestId());
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            Guest g1 = (r1.getGuestId() != null) ? guestRepo.findById(r1.getGuestId()) : null;
+            Guest g2 = (r2.getGuestId() != null) ? guestRepo.findById(r2.getGuestId()) : null;
             int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
             int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
 
             int cmp = isAsc ? Integer.compare(s1, s2) : Integer.compare(s2, s1);
             if (cmp != 0) return cmp;
-            return r1.getReservationId().compareTo(r2.getReservationId());
+            String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
+            String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
+            return id1.compareToIgnoreCase(id2);
           });
     } else if ("GUEST NAME".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
           (r1, r2) -> {
-            Guest g1 = guestRepo.findById(r1.getGuestId());
-            Guest g2 = guestRepo.findById(r2.getGuestId());
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            Guest g1 = (r1.getGuestId() != null) ? guestRepo.findById(r1.getGuestId()) : null;
+            Guest g2 = (r2.getGuestId() != null) ? guestRepo.findById(r2.getGuestId()) : null;
             String n1 = (g1 != null && g1.getName() != null) ? g1.getName() : "";
             String n2 = (g2 != null && g2.getName() != null) ? g2.getName() : "";
 
             int cmp = isAsc ? n1.compareToIgnoreCase(n2) : n2.compareToIgnoreCase(n1);
             if (cmp != 0) return cmp;
-            return r1.getReservationId().compareTo(r2.getReservationId());
+            String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
+            String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
+            return id1.compareToIgnoreCase(id2);
           });
     } else {
       filtered.sort(
           (r1, r2) -> {
-            int cmp =
-                isAsc
-                    ? r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime())
-                    : r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime());
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            LocalDateTime t1 = r1.getQueueArrivalTime();
+            LocalDateTime t2 = r2.getQueueArrivalTime();
+            int cmp;
+            if (t1 == null && t2 == null) cmp = 0;
+            else if (t1 == null) cmp = 1;
+            else if (t2 == null) cmp = -1;
+            else cmp = isAsc ? t2.compareTo(t1) : t1.compareTo(t2);
+
             if (cmp != 0) return cmp;
-            return r1.getReservationId().compareTo(r2.getReservationId());
+            String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
+            String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
+            return id1.compareToIgnoreCase(id2);
           });
     }
 

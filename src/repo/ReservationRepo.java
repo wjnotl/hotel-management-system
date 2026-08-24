@@ -62,7 +62,8 @@ public class ReservationRepo {
 
     // Cache Miss: Scan list & populate LRU cache
     Reservation res =
-        reservationList.find(r -> reservationId.equalsIgnoreCase(r.getReservationId()));
+        reservationList.find(
+            r -> r != null && reservationId.equalsIgnoreCase(r.getReservationId()));
     if (res != null) {
       reservationLruCache.put(reservationId.toLowerCase(), res);
     }

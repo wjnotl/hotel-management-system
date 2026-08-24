@@ -278,12 +278,21 @@ public class Reservation implements Serializable, Comparable<Reservation> {
     int priorityCompare = Integer.compare(other.priorityScore, this.priorityScore);
     if (priorityCompare != 0) return priorityCompare;
 
-    // tie breaker
-    if (this.queueArrivalTime == null && other.queueArrivalTime == null) return 0;
-    if (this.queueArrivalTime == null) return -1;
-    if (other.queueArrivalTime == null) return 1;
+    // tie breaker: arrival time
+    LocalDateTime t1 = this.queueArrivalTime;
+    LocalDateTime t2 = other.queueArrivalTime;
+    int timeCompare;
+    if (t1 == null && t2 == null) timeCompare = 0;
+    else if (t1 == null) timeCompare = -1;
+    else if (t2 == null) timeCompare = 1;
+    else timeCompare = t1.compareTo(t2);
 
-    return this.queueArrivalTime.compareTo(other.queueArrivalTime);
+    if (timeCompare != 0) return timeCompare;
+
+    // final tie breaker: reservationId
+    String id1 = (this.reservationId != null) ? this.reservationId : "";
+    String id2 = (other.reservationId != null) ? other.reservationId : "";
+    return id1.compareToIgnoreCase(id2);
   }
 
   @Override
