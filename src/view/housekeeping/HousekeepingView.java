@@ -319,7 +319,10 @@ public class HousekeepingView {
 
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(i), s.getStaffId(), s.getName(), s.getShift().name(),
+            String.valueOf(i),
+            s.getStaffId(),
+            s.getName(),
+            s.getShift().name(),
             s.getAvailability().name()
           },
           settings);

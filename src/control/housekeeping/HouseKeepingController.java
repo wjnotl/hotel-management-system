@@ -429,7 +429,8 @@ public class HouseKeepingController {
   //   entirely rather than guess — no warning, no block.
   // - If it does parse, the user can still say "yes, assign anyway" (e.g. staff starting early,
   //   covering a shift, or just running/demoing the app at an odd hour).
-  private String getShiftScheduleText(HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
+  private String getShiftScheduleText(
+      HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
     if (shift == HousekeepingStaff.Shift.MORNING) return settings.getMorningShiftSchedule();
     if (shift == HousekeepingStaff.Shift.AFTERNOON) return settings.getAfternoonShiftSchedule();
     return settings.getNightShiftSchedule();
@@ -458,7 +459,8 @@ public class HouseKeepingController {
     return (hhmm.length() == 4 && hhmm.charAt(1) == ':') ? "0" + hhmm : hhmm;
   }
 
-  private boolean isWithinShiftWindow(HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
+  private boolean isWithinShiftWindow(
+      HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
     LocalTime[] window = parseShiftWindow(getShiftScheduleText(shift, settings));
     if (window == null) return true; // Unparseable — don't warn, don't block
 
