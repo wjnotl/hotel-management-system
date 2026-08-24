@@ -611,9 +611,7 @@ public class VipManageAllocationController {
                 (g2 != null && g2.getMemberId() != null)
                     ? memberRepo.findById(g2.getMemberId())
                     : null;
-            int rank1 = (m1 != null && m1.getTier() != null) ? m1.getTier().ordinal() : -1;
-            int rank2 = (m2 != null && m2.getTier() != null) ? m2.getTier().ordinal() : -1;
-            return Integer.compare(rank2, rank1);
+            return Integer.compare(getTierWeight(m2), getTierWeight(m1));
           });
     } else if ("TIER RANK (SILVER -> DIAMOND)".equalsIgnoreCase(sort)) {
       filtered.sort(
@@ -630,9 +628,7 @@ public class VipManageAllocationController {
                 (g2 != null && g2.getMemberId() != null)
                     ? memberRepo.findById(g2.getMemberId())
                     : null;
-            int rank1 = (m1 != null && m1.getTier() != null) ? m1.getTier().ordinal() : -1;
-            int rank2 = (m2 != null && m2.getTier() != null) ? m2.getTier().ordinal() : -1;
-            return Integer.compare(rank1, rank2);
+            return Integer.compare(getTierWeight(m1), getTierWeight(m2));
           });
     } else if ("GUEST NAME (A -> Z)".equalsIgnoreCase(sort)) {
       filtered.sort(
@@ -698,5 +694,19 @@ public class VipManageAllocationController {
           return new VipManageAllocationView.AllocationRowDTO(
               resId, guestName, tierStr, roomAssigned, entry.getExpirationTimestamp());
         });
+  }
+
+  private int getTierWeight(Member m) {
+    if (m == null || m.getTier() == null) return 0;
+    switch (m.getTier()) {
+      case DIAMOND:
+        return 3;
+      case GOLD:
+        return 2;
+      case SILVER:
+        return 1;
+      default:
+        return 0;
+    }
   }
 }
