@@ -111,92 +111,812 @@ public class DatabaseSeeder {
     // 2. SEED GUESTS (80 Guests: 10 Diamond, 15 Gold, 15 Silver, 40 Non-Member)
     // =========================================================================
     // Diamond Guests (G-101..G-110): 8 w/ 0 strikes, 2 w/ 1 strike
-    guestRepo.addGuest(makeGuest(1, "Diamond Guest 1", "M-1001", 0));
-    guestRepo.addGuest(makeGuest(2, "Diamond Guest 2", "M-1002", 0));
-    guestRepo.addGuest(makeGuest(3, "Diamond Guest 3", "M-1003", 0));
-    guestRepo.addGuest(makeGuest(4, "Diamond Guest 4", "M-1004", 0));
-    guestRepo.addGuest(makeGuest(5, "Diamond Guest 5", "M-1005", 0));
-    guestRepo.addGuest(makeGuest(6, "Diamond Guest 6", "M-1006", 0));
-    guestRepo.addGuest(makeGuest(7, "Diamond Guest 7", "M-1007", 0));
-    guestRepo.addGuest(makeGuest(8, "Diamond Guest 8", "M-1008", 0));
-    guestRepo.addGuest(makeGuest(9, "Diamond Guest 9", "M-1009", 1));
-    guestRepo.addGuest(makeGuest(10, "Diamond Guest 10", "M-1010", 1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-101",
+            "Tan Wei Meng",
+            "880512-14-5211",
+            "A5239102",
+            "tan.weimeng@gmail.com",
+            "012-3849102",
+            "M-1001",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-102",
+            "Siti Nurhaliza",
+            "910324-10-5842",
+            "A8492019",
+            "siti.nur91@yahoo.com",
+            "016-7281940",
+            "M-1002",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-103",
+            "Rajesh Kumar",
+            "851108-08-6123",
+            "A3920184",
+            "rajesh.kumar@outlook.com",
+            "019-4820193",
+            "M-1003",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-104",
+            "Alexander Wong",
+            "930715-14-5029",
+            "A9102834",
+            "alex.wong@hotmail.com",
+            "017-3920184",
+            "M-1004",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-105",
+            "Fatimah Ahmad",
+            "870902-03-5104",
+            "A7492018",
+            "fatimah.ahmad@gmail.com",
+            "013-8291048",
+            "M-1005",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-106",
+            "Chong Kah Wai",
+            "941230-07-5931",
+            "A1092837",
+            "kwchong@yahoo.com",
+            "014-9281039",
+            "M-1006",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-107",
+            "Priya Sundram",
+            "920418-05-5208",
+            "A4820193",
+            "priya.sundram@gmail.com",
+            "011-1029384",
+            "M-1007",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-108",
+            "Marcus Lee",
+            "890822-10-5397",
+            "A6029183",
+            "marcus.lee@icloud.com",
+            "012-9482019",
+            "M-1008",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-109",
+            "Noraini Zulkifli",
+            "900614-14-5612",
+            "A2938104",
+            "noraini.z@gmail.com",
+            "018-3029184",
+            "M-1009",
+            1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-110",
+            "Kevin Teoh",
+            "860105-08-5489",
+            "A7102938",
+            "kevin.teoh@gmail.com",
+            "019-2830194",
+            "M-1010",
+            1));
 
     // Gold Guests (G-111..G-125): 11 w/ 0 strikes, 2 w/ 1 strike, 2 w/ 2 strikes
-    guestRepo.addGuest(makeGuest(11, "Gold Guest 11", "M-1011", 0));
-    guestRepo.addGuest(makeGuest(12, "Gold Guest 12", "M-1012", 0));
-    guestRepo.addGuest(makeGuest(13, "Gold Guest 13", "M-1013", 0));
-    guestRepo.addGuest(makeGuest(14, "Gold Guest 14", "M-1014", 0));
-    guestRepo.addGuest(makeGuest(15, "Gold Guest 15", "M-1015", 0));
-    guestRepo.addGuest(makeGuest(16, "Gold Guest 16", "M-1016", 0));
-    guestRepo.addGuest(makeGuest(17, "Gold Guest 17", "M-1017", 0));
-    guestRepo.addGuest(makeGuest(18, "Gold Guest 18", "M-1018", 0));
-    guestRepo.addGuest(makeGuest(19, "Gold Guest 19", "M-1019", 0));
-    guestRepo.addGuest(makeGuest(20, "Gold Guest 20", "M-1020", 0));
-    guestRepo.addGuest(makeGuest(21, "Gold Guest 21", "M-1021", 0));
-    guestRepo.addGuest(makeGuest(22, "Gold Guest 22", "M-1022", 1));
-    guestRepo.addGuest(makeGuest(23, "Gold Guest 23", "M-1023", 1));
-    guestRepo.addGuest(makeGuest(24, "Gold Guest 24", "M-1024", 2));
-    guestRepo.addGuest(makeGuest(25, "Gold Guest 25", "M-1025", 2));
+    guestRepo.addGuest(
+        new Guest(
+            "G-111",
+            "Ahmad Ridzuan",
+            "910819-01-5233",
+            "A3820194",
+            "ridzuan.ahmad@gmail.com",
+            "012-7492018",
+            "M-1011",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-112",
+            "Grace Lim",
+            "950211-14-5820",
+            "A9281039",
+            "grace.lim95@yahoo.com",
+            "016-8302918",
+            "M-1012",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-113",
+            "Devi Annamalai",
+            "880429-08-5192",
+            "A4029183",
+            "devi.a@outlook.com",
+            "017-2930184",
+            "M-1013",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-114",
+            "Bernard Chen",
+            "921005-07-5381",
+            "A8192039",
+            "bchen@gmail.com",
+            "013-9482019",
+            "M-1014",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-115",
+            "Zainab Ibrahim",
+            "870617-10-5028",
+            "A1928374",
+            "zainab.ibrahim@hotmail.com",
+            "014-8392019",
+            "M-1015",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-116",
+            "Jason Khow",
+            "940912-14-5739",
+            "A6729104",
+            "jason.khow@gmail.com",
+            "011-2938401",
+            "M-1016",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-117",
+            "Kavitha Loganathan",
+            "900325-05-5910",
+            "A5829103",
+            "kavitha.l@yahoo.com",
+            "018-9283019",
+            "M-1017",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-118",
+            "Eric Leong",
+            "891114-08-5421",
+            "A3928104",
+            "eric.leong@gmail.com",
+            "019-3829104",
+            "M-1018",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-119",
+            "Nurul Huda",
+            "930130-03-5182",
+            "A9028193",
+            "nurul.huda93@gmail.com",
+            "012-6820194",
+            "M-1019",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-120",
+            "Dominic Yip",
+            "860722-14-5390",
+            "A2839104",
+            "dom.yip@outlook.com",
+            "016-9382019",
+            "M-1020",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-121",
+            "Subramaniam Naidu",
+            "850510-10-6012",
+            "A7392018",
+            "snaidu@gmail.com",
+            "017-8291049",
+            "M-1021",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-122",
+            "Vanessa Ong",
+            "960408-07-5291",
+            "A5019283",
+            "vong96@gmail.com",
+            "013-7281940",
+            "M-1022",
+            1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-123",
+            "Hafiz Razak",
+            "911203-01-5847",
+            "A1829304",
+            "hafiz.razak@yahoo.com",
+            "014-3920184",
+            "M-1023",
+            1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-124",
+            "Cynthia Yeoh",
+            "880918-14-5632",
+            "A8291049",
+            "cynthia.yeoh@gmail.com",
+            "011-3928104",
+            "M-1024",
+            2));
+    guestRepo.addGuest(
+        new Guest(
+            "G-125",
+            "Murali Krishnan",
+            "870228-08-5109",
+            "A4920183",
+            "murali.k@hotmail.com",
+            "018-7291048",
+            "M-1025",
+            2));
 
     // Silver Guests (G-126..G-140): 10 w/ 0 strikes, 2 w/ 1 strike, 3 w/ 2 strikes
-    guestRepo.addGuest(makeGuest(26, "Silver Guest 26", "M-1026", 0));
-    guestRepo.addGuest(makeGuest(27, "Silver Guest 27", "M-1027", 0));
-    guestRepo.addGuest(makeGuest(28, "Silver Guest 28", "M-1028", 0));
-    guestRepo.addGuest(makeGuest(29, "Silver Guest 29", "M-1029", 0));
-    guestRepo.addGuest(makeGuest(30, "Silver Guest 30", "M-1030", 0));
-    guestRepo.addGuest(makeGuest(31, "Silver Guest 31", "M-1031", 0));
-    guestRepo.addGuest(makeGuest(32, "Silver Guest 32", "M-1032", 0));
-    guestRepo.addGuest(makeGuest(33, "Silver Guest 33", "M-1033", 0));
-    guestRepo.addGuest(makeGuest(34, "Silver Guest 34", "M-1034", 0));
-    guestRepo.addGuest(makeGuest(35, "Silver Guest 35", "M-1035", 0));
-    guestRepo.addGuest(makeGuest(36, "Silver Guest 36", "M-1036", 1));
-    guestRepo.addGuest(makeGuest(37, "Silver Guest 37", "M-1037", 1));
-    guestRepo.addGuest(makeGuest(38, "Silver Guest 38", "M-1038", 2));
-    guestRepo.addGuest(makeGuest(39, "Silver Guest 39", "M-1039", 2));
-    guestRepo.addGuest(makeGuest(40, "Silver Guest 40", "M-1040", 2));
+    guestRepo.addGuest(
+        new Guest(
+            "G-126",
+            "Samantha Goh",
+            "970119-14-5402",
+            "A3029184",
+            "sammy.goh@gmail.com",
+            "019-7392018",
+            "M-1026",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-127",
+            "Farhan Yusof",
+            "930804-10-5193",
+            "A9182039",
+            "farhan.yusof@yahoo.com",
+            "012-4829104",
+            "M-1027",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-128",
+            "Mei Ling Chan",
+            "900516-08-5621",
+            "A6291048",
+            "meiling.chan@outlook.com",
+            "016-3920184",
+            "M-1028",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-129",
+            "Suresh Pillai",
+            "861211-05-5382",
+            "A2019384",
+            "spillai@gmail.com",
+            "017-7492018",
+            "M-1029",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-130",
+            "Chloe Fernandez",
+            "951023-14-5910",
+            "A8392019",
+            "chloe.f@gmail.com",
+            "013-8201948",
+            "M-1030",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-131",
+            "Azman Hashim",
+            "890407-03-5241",
+            "A4729103",
+            "azman.hashim@hotmail.com",
+            "014-9382019",
+            "M-1031",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-132",
+            "Karen Ho",
+            "920729-07-5098",
+            "A1029384",
+            "karen.ho92@gmail.com",
+            "011-8291048",
+            "M-1032",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-133",
+            "Deepak Sharma",
+            "880115-10-5731",
+            "A7491029",
+            "dsharma@yahoo.com",
+            "018-3920184",
+            "M-1033",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-134",
+            "Nadia Osman",
+            "940602-14-5129",
+            "A5291048",
+            "nadia.osman@gmail.com",
+            "019-8291048",
+            "M-1034",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-135",
+            "Timothy Koh",
+            "910911-08-5802",
+            "A3829104",
+            "tim.koh@outlook.com",
+            "012-9382019",
+            "M-1035",
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-136",
+            "Amirah Mansor",
+            "960318-01-5391",
+            "A9012938",
+            "amirah.m@gmail.com",
+            "016-7392018",
+            "M-1036",
+            1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-137",
+            "Bryan Low",
+            "871125-14-5610",
+            "A6102938",
+            "bryan.low@yahoo.com",
+            "017-8392019",
+            "M-1037",
+            1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-138",
+            "Saravanan Vello",
+            "850809-10-5283",
+            "A2930184",
+            "saravanan.v@gmail.com",
+            "013-3920184",
+            "M-1038",
+            2));
+    guestRepo.addGuest(
+        new Guest(
+            "G-139",
+            "Rachel Tan",
+            "931214-07-5749",
+            "A8491029",
+            "rachel.tan@hotmail.com",
+            "014-7291048",
+            "M-1039",
+            2));
+    guestRepo.addGuest(
+        new Guest(
+            "G-140",
+            "Kamal Mustaffa",
+            "900206-03-5102",
+            "A4102938",
+            "kamal.m@gmail.com",
+            "011-9283019",
+            "M-1040",
+            2));
 
     // Non-Member Guests (G-141..G-180): 35 w/ 0 strikes, 3 w/ 1 strike, 2 w/ 2 strikes
-    guestRepo.addGuest(makeGuest(41, "NonMember Guest 41", null, 0));
-    guestRepo.addGuest(makeGuest(42, "NonMember Guest 42", null, 0));
-    guestRepo.addGuest(makeGuest(43, "NonMember Guest 43", null, 0));
-    guestRepo.addGuest(makeGuest(44, "NonMember Guest 44", null, 0));
-    guestRepo.addGuest(makeGuest(45, "NonMember Guest 45", null, 0));
-    guestRepo.addGuest(makeGuest(46, "NonMember Guest 46", null, 0));
-    guestRepo.addGuest(makeGuest(47, "NonMember Guest 47", null, 0));
-    guestRepo.addGuest(makeGuest(48, "NonMember Guest 48", null, 0));
-    guestRepo.addGuest(makeGuest(49, "NonMember Guest 49", null, 0));
-    guestRepo.addGuest(makeGuest(50, "NonMember Guest 50", null, 0));
-    guestRepo.addGuest(makeGuest(51, "NonMember Guest 51", null, 0));
-    guestRepo.addGuest(makeGuest(52, "NonMember Guest 52", null, 0));
-    guestRepo.addGuest(makeGuest(53, "NonMember Guest 53", null, 0));
-    guestRepo.addGuest(makeGuest(54, "NonMember Guest 54", null, 0));
-    guestRepo.addGuest(makeGuest(55, "NonMember Guest 55", null, 0));
-    guestRepo.addGuest(makeGuest(56, "NonMember Guest 56", null, 0));
-    guestRepo.addGuest(makeGuest(57, "NonMember Guest 57", null, 0));
-    guestRepo.addGuest(makeGuest(58, "NonMember Guest 58", null, 0));
-    guestRepo.addGuest(makeGuest(59, "NonMember Guest 59", null, 0));
-    guestRepo.addGuest(makeGuest(60, "NonMember Guest 60", null, 0));
-    guestRepo.addGuest(makeGuest(61, "NonMember Guest 61", null, 0));
-    guestRepo.addGuest(makeGuest(62, "NonMember Guest 62", null, 0));
-    guestRepo.addGuest(makeGuest(63, "NonMember Guest 63", null, 0));
-    guestRepo.addGuest(makeGuest(64, "NonMember Guest 64", null, 0));
-    guestRepo.addGuest(makeGuest(65, "NonMember Guest 65", null, 0));
-    guestRepo.addGuest(makeGuest(66, "NonMember Guest 66", null, 0));
-    guestRepo.addGuest(makeGuest(67, "NonMember Guest 67", null, 0));
-    guestRepo.addGuest(makeGuest(68, "NonMember Guest 68", null, 0));
-    guestRepo.addGuest(makeGuest(69, "NonMember Guest 69", null, 0));
-    guestRepo.addGuest(makeGuest(70, "NonMember Guest 70", null, 0));
-    guestRepo.addGuest(makeGuest(71, "NonMember Guest 71", null, 0));
-    guestRepo.addGuest(makeGuest(72, "NonMember Guest 72", null, 0));
-    guestRepo.addGuest(makeGuest(73, "NonMember Guest 73", null, 0));
-    guestRepo.addGuest(makeGuest(74, "NonMember Guest 74", null, 0));
-    guestRepo.addGuest(makeGuest(75, "NonMember Guest 75", null, 0));
-    guestRepo.addGuest(makeGuest(76, "NonMember Guest 76", null, 1));
-    guestRepo.addGuest(makeGuest(77, "NonMember Guest 77", null, 1));
-    guestRepo.addGuest(makeGuest(78, "NonMember Guest 78", null, 1));
-    guestRepo.addGuest(makeGuest(79, "NonMember Guest 79", null, 2));
-    guestRepo.addGuest(makeGuest(80, "NonMember Guest 80", null, 2));
+    guestRepo.addGuest(
+        new Guest(
+            "G-141",
+            "Benjamin Scott",
+            "920512-14-6109",
+            "B1029384",
+            "ben.scott@gmail.com",
+            "012-3029184",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-142",
+            "Hannah Taylor",
+            "940827-14-6382",
+            "B9281039",
+            "hannah.t@yahoo.com",
+            "016-9281039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-143",
+            "Daniel Miller",
+            "891014-14-6521",
+            "B4820193",
+            "dmiller@outlook.com",
+            "017-3829104",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-144",
+            "Sophia Wilson",
+            "960103-14-6810",
+            "B7392018",
+            "sophia.w@gmail.com",
+            "013-9281048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-145",
+            "Lucas Anderson",
+            "910319-14-6047",
+            "B2938104",
+            "lucas.a@hotmail.com",
+            "014-8291048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-146",
+            "Olivia Thomas",
+            "930722-14-6298",
+            "B8192039",
+            "olivia.t@gmail.com",
+            "011-3029184",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-147",
+            "Ethan Jackson",
+            "880905-14-6731",
+            "B3920184",
+            "ethan.j@yahoo.com",
+            "018-9281039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-148",
+            "Ava White",
+            "951218-14-6182",
+            "B6019283",
+            "ava.white@outlook.com",
+            "019-3820194",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-149",
+            "Mason Harris",
+            "900411-14-6409",
+            "B1829304",
+            "mharris@gmail.com",
+            "012-8291048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-150",
+            "Isabella Martin",
+            "970630-14-6920",
+            "B7291048",
+            "isabella.m@gmail.com",
+            "016-3029184",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-151",
+            "James Thompson",
+            "870214-14-6310",
+            "B4102938",
+            "jthompson@yahoo.com",
+            "017-9281039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-152",
+            "Mia Garcia",
+            "941108-14-6842",
+            "B9028193",
+            "mia.garcia@hotmail.com",
+            "013-3829104",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-153",
+            "Alexander Martinez",
+            "910825-14-6019",
+            "B2839104",
+            "alex.m@gmail.com",
+            "014-9281048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-154",
+            "Charlotte Robinson",
+            "960517-14-6590",
+            "B6729104",
+            "charlotte.r@outlook.com",
+            "011-8291039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-155",
+            "Henry Clark",
+            "890129-14-6238",
+            "B1092837",
+            "henry.clark@gmail.com",
+            "018-3029184",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-156",
+            "Amelia Rodriguez",
+            "931006-14-6701",
+            "B8392019",
+            "amelia.r@yahoo.com",
+            "019-9281048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-157",
+            "Sebastian Lewis",
+            "900712-14-6429",
+            "B3928104",
+            "slewis@gmail.com",
+            "012-9281039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-158",
+            "Harper Lee",
+            "950403-14-6912",
+            "B7491029",
+            "harper.lee@hotmail.com",
+            "016-3829104",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-159",
+            "Jack Walker",
+            "881220-14-6150",
+            "B2019384",
+            "jack.walker@outlook.com",
+            "017-8291048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-160",
+            "Evelyn Hall",
+            "920915-14-6831",
+            "B9102834",
+            "evelyn.hall@gmail.com",
+            "013-3029184",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-161",
+            "Owen Allen",
+            "940301-14-6092",
+            "B4829103",
+            "oallen@yahoo.com",
+            "014-9281039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-162",
+            "Abigail Young",
+            "910619-14-6620",
+            "B8291049",
+            "abigail.y@gmail.com",
+            "011-3829104",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-163",
+            "Wyatt Hernandez",
+            "960811-14-6379",
+            "B3029184",
+            "wyatt.h@hotmail.com",
+            "018-8291048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-164",
+            "Emily King",
+            "891104-14-6702",
+            "B6102938",
+            "emily.king@outlook.com",
+            "019-3029184",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-165",
+            "Luke Wright",
+            "930228-14-6241",
+            "B1928374",
+            "luke.wright@gmail.com",
+            "012-9281048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-166",
+            "Ella Lopez",
+            "950716-14-6518",
+            "B9012938",
+            "ella.lopez@yahoo.com",
+            "016-3829104",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-167",
+            "Oliver Hill",
+            "880409-14-6930",
+            "B4102938",
+            "oliver.hill@gmail.com",
+            "017-8291039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-168",
+            "Avery Scott",
+            "921201-14-6172",
+            "B7392018",
+            "ascott@hotmail.com",
+            "013-3029184",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-169",
+            "Liam Green",
+            "901024-14-6640",
+            "B2839104",
+            "liam.green@outlook.com",
+            "014-9281048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-170",
+            "Scarlett Adams",
+            "960907-14-6309",
+            "B8392019",
+            "scarlett.a@gmail.com",
+            "011-3829104",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-171",
+            "Noah Baker",
+            "890615-14-6821",
+            "B3928104",
+            "noah.baker@yahoo.com",
+            "018-8291039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-172",
+            "Grace Gonzalez",
+            "930112-14-6098",
+            "B6729104",
+            "grace.g@gmail.com",
+            "019-3029184",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-173",
+            "William Nelson",
+            "910520-14-6481",
+            "B1092837",
+            "wnelson@hotmail.com",
+            "012-9281048",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-174",
+            "Chloe Carter",
+            "950803-14-6729",
+            "B8291049",
+            "chloe.carter@outlook.com",
+            "016-3829104",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-175",
+            "James Mitchell",
+            "880326-14-6201",
+            "B3029184",
+            "jmitchell@gmail.com",
+            "017-8291039",
+            null,
+            0));
+    guestRepo.addGuest(
+        new Guest(
+            "G-176",
+            "Victoria Perez",
+            "920218-14-6940",
+            "B7491029",
+            "v.perez@yahoo.com",
+            "013-3029184",
+            null,
+            1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-177",
+            "Benjamin Roberts",
+            "941129-14-6138",
+            "B2019384",
+            "broberts@gmail.com",
+            "014-9281048",
+            null,
+            1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-178",
+            "Zoe Turner",
+            "900705-14-6602",
+            "B9012938",
+            "zoe.turner@hotmail.com",
+            "011-3829104",
+            null,
+            1));
+    guestRepo.addGuest(
+        new Guest(
+            "G-179",
+            "Samuel Phillips",
+            "960414-14-6389",
+            "B4829103",
+            "sphillips@outlook.com",
+            "018-8291039",
+            null,
+            2));
+    guestRepo.addGuest(
+        new Guest(
+            "G-180",
+            "Lily Campbell",
+            "890921-14-6750",
+            "B8291049",
+            "lily.c@gmail.com",
+            "019-3029184",
+            null,
+            2));
 
     // =========================================================================
     // 3. SEED ROOMS (30 Rooms: 10 Luxury, 10 Suite, 10 Standard)
@@ -425,28 +1145,38 @@ public class DatabaseSeeder {
         now.minusDays(4));
 
     // 4.E VIP Priority Waiting Reservations (18 Reservations)
-    addVipWait(vipRepo, "G-102", Room.RoomType.LUXURY, 9500, false, now.minusMinutes(10));
-    addVipWait(vipRepo, "G-103", Room.RoomType.LUXURY, 9200, false, now.minusMinutes(8));
-    addVipWait(vipRepo, "G-104", Room.RoomType.LUXURY, 9000, false, now.minusMinutes(5));
-    addVipWait(vipRepo, "G-105", Room.RoomType.LUXURY, 12000, true, now.minusMinutes(40));
-    addVipWait(vipRepo, "G-113", Room.RoomType.LUXURY, 7500, false, now.minusMinutes(18));
-    addVipWait(vipRepo, "G-114", Room.RoomType.LUXURY, 7200, false, now.minusMinutes(15));
-    addVipWait(vipRepo, "G-115", Room.RoomType.SUITE, 7800, false, now.minusMinutes(20));
-    addVipWait(vipRepo, "G-116", Room.RoomType.SUITE, 7400, false, now.minusMinutes(12));
-    addVipWait(vipRepo, "G-117", Room.RoomType.SUITE, 10500, true, now.minusMinutes(45));
-    addVipWait(vipRepo, "G-129", Room.RoomType.SUITE, 4800, false, now.minusMinutes(35));
-    addVipWait(vipRepo, "G-130", Room.RoomType.SUITE, 4500, false, now.minusMinutes(28));
-    addVipWait(vipRepo, "G-131", Room.RoomType.SUITE, 4200, false, now.minusMinutes(22));
-    addVipWait(vipRepo, "G-132", Room.RoomType.SUITE, 4000, false, now.minusMinutes(16));
-    addVipWait(vipRepo, "G-118", Room.RoomType.STANDARD, 7600, false, now.minusMinutes(20));
-    addVipWait(vipRepo, "G-119", Room.RoomType.STANDARD, 10800, true, now.minusMinutes(45));
-    addVipWait(vipRepo, "G-133", Room.RoomType.STANDARD, 4900, false, now.minusMinutes(40));
-    addVipWait(vipRepo, "G-134", Room.RoomType.STANDARD, 4400, false, now.minusMinutes(30));
-    addVipWait(vipRepo, "G-135", Room.RoomType.STANDARD, 4100, false, now.minusMinutes(22));
+    addVipWait(
+        vipRepo, guestRepo, "G-102", Room.RoomType.LUXURY, 9500, false, now.minusMinutes(10));
+    addVipWait(vipRepo, guestRepo, "G-103", Room.RoomType.LUXURY, 9200, false, now.minusMinutes(8));
+    addVipWait(vipRepo, guestRepo, "G-104", Room.RoomType.LUXURY, 9000, false, now.minusMinutes(5));
+    addVipWait(
+        vipRepo, guestRepo, "G-105", Room.RoomType.LUXURY, 12000, true, now.minusMinutes(40));
+    addVipWait(
+        vipRepo, guestRepo, "G-113", Room.RoomType.LUXURY, 7500, false, now.minusMinutes(18));
+    addVipWait(
+        vipRepo, guestRepo, "G-114", Room.RoomType.LUXURY, 7200, false, now.minusMinutes(15));
+    addVipWait(vipRepo, guestRepo, "G-115", Room.RoomType.SUITE, 7800, false, now.minusMinutes(20));
+    addVipWait(vipRepo, guestRepo, "G-116", Room.RoomType.SUITE, 7400, false, now.minusMinutes(12));
+    addVipWait(vipRepo, guestRepo, "G-117", Room.RoomType.SUITE, 10500, true, now.minusMinutes(45));
+    addVipWait(vipRepo, guestRepo, "G-129", Room.RoomType.SUITE, 4800, false, now.minusMinutes(35));
+    addVipWait(vipRepo, guestRepo, "G-130", Room.RoomType.SUITE, 4500, false, now.minusMinutes(28));
+    addVipWait(vipRepo, guestRepo, "G-131", Room.RoomType.SUITE, 4200, false, now.minusMinutes(22));
+    addVipWait(vipRepo, guestRepo, "G-132", Room.RoomType.SUITE, 4000, false, now.minusMinutes(16));
+    addVipWait(
+        vipRepo, guestRepo, "G-118", Room.RoomType.STANDARD, 7600, false, now.minusMinutes(20));
+    addVipWait(
+        vipRepo, guestRepo, "G-119", Room.RoomType.STANDARD, 10800, true, now.minusMinutes(45));
+    addVipWait(
+        vipRepo, guestRepo, "G-133", Room.RoomType.STANDARD, 4900, false, now.minusMinutes(40));
+    addVipWait(
+        vipRepo, guestRepo, "G-134", Room.RoomType.STANDARD, 4400, false, now.minusMinutes(30));
+    addVipWait(
+        vipRepo, guestRepo, "G-135", Room.RoomType.STANDARD, 4100, false, now.minusMinutes(22));
 
     // 4.F VIP Room Holding Bay Allocated Reservations (8 Reservations)
     addVipAllocated(
         vipRepo,
+        guestRepo,
         allocationRepo,
         "G-106",
         Room.RoomType.LUXURY,
@@ -456,6 +1186,7 @@ public class DatabaseSeeder {
         10);
     addVipAllocated(
         vipRepo,
+        guestRepo,
         allocationRepo,
         "G-107",
         Room.RoomType.LUXURY,
@@ -465,6 +1196,7 @@ public class DatabaseSeeder {
         10);
     addVipAllocated(
         vipRepo,
+        guestRepo,
         allocationRepo,
         "G-120",
         Room.RoomType.LUXURY,
@@ -474,6 +1206,7 @@ public class DatabaseSeeder {
         15);
     addVipAllocated(
         vipRepo,
+        guestRepo,
         allocationRepo,
         "G-108",
         Room.RoomType.SUITE,
@@ -483,6 +1216,7 @@ public class DatabaseSeeder {
         10);
     addVipAllocated(
         vipRepo,
+        guestRepo,
         allocationRepo,
         "G-121",
         Room.RoomType.SUITE,
@@ -492,6 +1226,7 @@ public class DatabaseSeeder {
         15);
     addVipAllocated(
         vipRepo,
+        guestRepo,
         allocationRepo,
         "G-122",
         Room.RoomType.SUITE,
@@ -501,6 +1236,7 @@ public class DatabaseSeeder {
         15);
     addVipAllocated(
         vipRepo,
+        guestRepo,
         allocationRepo,
         "G-136",
         Room.RoomType.STANDARD,
@@ -510,6 +1246,7 @@ public class DatabaseSeeder {
         20);
     addVipAllocated(
         vipRepo,
+        guestRepo,
         allocationRepo,
         "G-137",
         Room.RoomType.STANDARD,
@@ -522,6 +1259,7 @@ public class DatabaseSeeder {
     Reservation vc1 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-101",
             Room.RoomType.LUXURY,
@@ -533,6 +1271,7 @@ public class DatabaseSeeder {
     Reservation vc2 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-109",
             Room.RoomType.LUXURY,
@@ -544,6 +1283,7 @@ public class DatabaseSeeder {
     Reservation vc3 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-110",
             Room.RoomType.LUXURY,
@@ -555,6 +1295,7 @@ public class DatabaseSeeder {
     Reservation vc4 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-123",
             Room.RoomType.LUXURY,
@@ -566,6 +1307,7 @@ public class DatabaseSeeder {
     Reservation vc5 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-124",
             Room.RoomType.SUITE,
@@ -577,6 +1319,7 @@ public class DatabaseSeeder {
     Reservation vc6 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-125",
             Room.RoomType.SUITE,
@@ -588,6 +1331,7 @@ public class DatabaseSeeder {
     Reservation vc7 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-126",
             Room.RoomType.SUITE,
@@ -599,6 +1343,7 @@ public class DatabaseSeeder {
     Reservation vc8 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-127",
             Room.RoomType.SUITE,
@@ -610,6 +1355,7 @@ public class DatabaseSeeder {
     Reservation vc9 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-128",
             Room.RoomType.SUITE,
@@ -621,6 +1367,7 @@ public class DatabaseSeeder {
     Reservation vc10 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-111",
             Room.RoomType.STANDARD,
@@ -632,6 +1379,7 @@ public class DatabaseSeeder {
     Reservation vc11 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-138",
             Room.RoomType.STANDARD,
@@ -643,6 +1391,7 @@ public class DatabaseSeeder {
     Reservation vc12 =
         addVipCheckedIn(
             vipRepo,
+            guestRepo,
             roomRepo,
             "G-139",
             Room.RoomType.STANDARD,
@@ -788,22 +1537,38 @@ public class DatabaseSeeder {
     // 4.H VIP Completed Checked-Out Stays (6 Reservations)
     Reservation vco1 =
         addVipCheckedOut(
-            vipRepo, "G-102", Room.RoomType.LUXURY, "L-801", now.minusDays(4), 5, 10, 2);
+            vipRepo, guestRepo, "G-102", Room.RoomType.LUXURY, "L-801", now.minusDays(4), 5, 10, 2);
     Reservation vco2 =
         addVipCheckedOut(
-            vipRepo, "G-103", Room.RoomType.LUXURY, "L-802", now.minusDays(2), 4, 10, 3);
+            vipRepo, guestRepo, "G-103", Room.RoomType.LUXURY, "L-802", now.minusDays(2), 4, 10, 3);
     Reservation vco3 =
         addVipCheckedOut(
-            vipRepo, "G-112", Room.RoomType.SUITE, "S-501", now.minusDays(5), 10, 15, 1);
+            vipRepo, guestRepo, "G-112", Room.RoomType.SUITE, "S-501", now.minusDays(5), 10, 15, 1);
     Reservation vco4 =
         addVipCheckedOut(
-            vipRepo, "G-130", Room.RoomType.SUITE, "S-502", now.minusDays(3), 15, 20, 2);
+            vipRepo, guestRepo, "G-130", Room.RoomType.SUITE, "S-502", now.minusDays(3), 15, 20, 2);
     Reservation vco5 =
         addVipCheckedOut(
-            vipRepo, "G-131", Room.RoomType.STANDARD, "ST-101", now.minusDays(6), 14, 20, 2);
+            vipRepo,
+            guestRepo,
+            "G-131",
+            Room.RoomType.STANDARD,
+            "ST-101",
+            now.minusDays(6),
+            14,
+            20,
+            2);
     Reservation vco6 =
         addVipCheckedOut(
-            vipRepo, "G-132", Room.RoomType.STANDARD, "ST-102", now.minusDays(1), 16, 20, 1);
+            vipRepo,
+            guestRepo,
+            "G-132",
+            Room.RoomType.STANDARD,
+            "ST-102",
+            now.minusDays(1),
+            16,
+            20,
+            1);
 
     addBilling(
         billingRepo,
@@ -873,12 +1638,12 @@ public class DatabaseSeeder {
         now.minusDays(1));
 
     // 4.I VIP Penalty No-Show Reservations (6 Reservations)
-    addVipNoShow(vipRepo, "G-109", Room.RoomType.LUXURY, now.minusHours(4), 10, 10);
-    addVipNoShow(vipRepo, "G-110", Room.RoomType.LUXURY, now.minusHours(2), 10, 10);
-    addVipNoShow(vipRepo, "G-124", Room.RoomType.SUITE, now.minusHours(5), 15, 15);
-    addVipNoShow(vipRepo, "G-125", Room.RoomType.SUITE, now.minusHours(3), 15, 15);
-    addVipNoShow(vipRepo, "G-139", Room.RoomType.STANDARD, now.minusHours(6), 20, 20);
-    addVipNoShow(vipRepo, "G-140", Room.RoomType.STANDARD, now.minusHours(1), 20, 20);
+    addVipNoShow(vipRepo, guestRepo, "G-109", Room.RoomType.LUXURY, now.minusHours(4), 10, 10);
+    addVipNoShow(vipRepo, guestRepo, "G-110", Room.RoomType.LUXURY, now.minusHours(2), 10, 10);
+    addVipNoShow(vipRepo, guestRepo, "G-124", Room.RoomType.SUITE, now.minusHours(5), 15, 15);
+    addVipNoShow(vipRepo, guestRepo, "G-125", Room.RoomType.SUITE, now.minusHours(3), 15, 15);
+    addVipNoShow(vipRepo, guestRepo, "G-139", Room.RoomType.STANDARD, now.minusHours(6), 20, 20);
+    addVipNoShow(vipRepo, guestRepo, "G-140", Room.RoomType.STANDARD, now.minusHours(1), 20, 20);
 
     // 4.J Standard No-Show Reservations (4 Reservations)
     addStdNoShow(standardRepo, "G-162", Room.RoomType.STANDARD, now.minusHours(3));
@@ -995,15 +1760,6 @@ public class DatabaseSeeder {
         vipSystemConfigRepo.getConfig(), guestRepo, memberRepo, false, true);
 
     System.out.println("Master mock database seeded successfully!");
-  }
-
-  private static Guest makeGuest(int index, String name, String memberId, int strikes) {
-    String gId = String.format("G-%03d", index);
-    String ic = String.format("9001%02d-14-%04d", index % 28 + 1, 5000 + index);
-    String passport = String.format("P%07d", 1000000 + index);
-    String email = String.format("guest%03d@mail.com", index);
-    String phone = String.format("012-%07d", 2000000 + index);
-    return new Guest(gId, name, ic, passport, email, phone, memberId, strikes);
   }
 
   private static void addRoom(
@@ -1137,11 +1893,15 @@ public class DatabaseSeeder {
 
   private static void addVipWait(
       VipReservationRepo repo,
+      GuestRepo guestRepo,
       String guestId,
       Room.RoomType roomType,
       int score,
       boolean boiling,
       LocalDateTime queuedAt) {
+    Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
+    if (guest == null || guest.getMemberId() == null) return;
+
     String resId = "RES-" + (resCounter++);
     Reservation r =
         new Reservation(
@@ -1160,6 +1920,7 @@ public class DatabaseSeeder {
 
   private static void addVipAllocated(
       VipReservationRepo repo,
+      GuestRepo guestRepo,
       AllocationRepo allocRepo,
       String guestId,
       Room.RoomType roomType,
@@ -1167,6 +1928,9 @@ public class DatabaseSeeder {
       LocalDateTime queuedAt,
       int holdingUsedMins,
       int graceMins) {
+    Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
+    if (guest == null || guest.getMemberId() == null) return;
+
     String resId = "RES-" + (resCounter++);
     LocalDateTime allocatedTime = LocalDateTime.now().minusMinutes(holdingUsedMins);
     Reservation r =
@@ -1194,6 +1958,7 @@ public class DatabaseSeeder {
 
   private static Reservation addVipCheckedIn(
       VipReservationRepo repo,
+      GuestRepo guestRepo,
       RoomRepo roomRepo,
       String guestId,
       Room.RoomType roomType,
@@ -1202,6 +1967,9 @@ public class DatabaseSeeder {
       int holdingUsedMins,
       int graceMins,
       int nights) {
+    Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
+    if (guest == null || guest.getMemberId() == null) return null;
+
     String resId = "RES-" + (resCounter++);
     LocalDateTime checkedInAt = LocalDateTime.now().minusMinutes(holdingUsedMins);
     Reservation r =
@@ -1228,6 +1996,7 @@ public class DatabaseSeeder {
 
   private static Reservation addVipCheckedOut(
       VipReservationRepo repo,
+      GuestRepo guestRepo,
       String guestId,
       Room.RoomType roomType,
       String roomNumber,
@@ -1235,6 +2004,9 @@ public class DatabaseSeeder {
       int holdingUsedMins,
       int graceMins,
       int nights) {
+    Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
+    if (guest == null || guest.getMemberId() == null) return null;
+
     String resId = "RES-" + (resCounter++);
     LocalDateTime checkedInAt = queuedAt.plusMinutes(holdingUsedMins);
     Reservation r =
@@ -1260,11 +2032,15 @@ public class DatabaseSeeder {
 
   private static void addVipNoShow(
       VipReservationRepo repo,
+      GuestRepo guestRepo,
       String guestId,
       Room.RoomType roomType,
       LocalDateTime queuedAt,
       int holdingUsedMins,
       int graceMins) {
+    Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
+    if (guest == null || guest.getMemberId() == null) return;
+
     String resId = "RES-" + (resCounter++);
     LocalDateTime allocatedTime = queuedAt.plusMinutes(10);
     Reservation r =
