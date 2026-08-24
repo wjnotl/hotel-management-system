@@ -716,8 +716,14 @@ public class VipReportController {
             if (r2 == null) return -1;
             Guest g1 = (r1.getGuestId() != null) ? guestRepo.findById(r1.getGuestId()) : null;
             Guest g2 = (r2.getGuestId() != null) ? guestRepo.findById(r2.getGuestId()) : null;
-            int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
-            int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
+            int s1 =
+                (r1.getStrikeCountSnapshot() != null)
+                    ? r1.getStrikeCountSnapshot()
+                    : ((g1 != null) ? g1.getStrikeCount() : 0);
+            int s2 =
+                (r2.getStrikeCountSnapshot() != null)
+                    ? r2.getStrikeCountSnapshot()
+                    : ((g2 != null) ? g2.getStrikeCount() : 0);
 
             int cmp = isAsc ? Integer.compare(s1, s2) : Integer.compare(s2, s1);
             if (cmp != 0) return cmp;
@@ -936,7 +942,11 @@ public class VipReportController {
               if (res == null) return sum;
               Guest g =
                   guestList.find(guest -> guest.getGuestId().equalsIgnoreCase(res.getGuestId()));
-              return sum + ((g != null) ? g.getStrikeCount() : 0);
+              int strikes =
+                  (res.getStrikeCountSnapshot() != null)
+                      ? res.getStrikeCountSnapshot()
+                      : ((g != null) ? g.getStrikeCount() : 0);
+              return sum + strikes;
             });
 
     int dTotal = 0, gTotal = 0, sTotal = 0;
@@ -952,7 +962,10 @@ public class VipReportController {
               : null;
       Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
-      int strikes = (guest != null) ? guest.getStrikeCount() : 0;
+      int strikes =
+          (reservation.getStrikeCountSnapshot() != null)
+              ? reservation.getStrikeCountSnapshot()
+              : ((guest != null) ? guest.getStrikeCount() : 0);
       boolean isEvicted = strikes > config.getMaxStrikes(tier);
 
       if (tier == Member.LoyaltyTier.DIAMOND) {
