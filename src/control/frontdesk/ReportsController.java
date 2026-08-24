@@ -35,10 +35,7 @@ public class ReportsController {
     this.roomRepo = roomRepo;
   }
 
-  // =========================================================================
-  // ENTRY POINT
-  // =========================================================================
-
+  // entry
   public void start() {
     while (true) {
       try {
@@ -53,10 +50,7 @@ public class ReportsController {
     }
   }
 
-  // =========================================================================
-  // REPORT 1 — GUEST CHECK-OUT REPORT
-  // =========================================================================
-
+  // report 1 - guest checkout report
   private void runCheckoutReport() {
     LocalDate fromDate = LocalDate.now();
     LocalDate toDate = LocalDate.now();
@@ -79,9 +73,13 @@ public class ReportsController {
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
         if (currentPage > totalPages) currentPage = totalPages;
 
+        ReportsView.CheckoutRowDTO[] pageRows =
+            toCheckoutPageArray(filtered, currentPage, PAGE_SIZE);
+
         GetMenuInputResult result =
             reportsView.renderCheckoutReport(
-                filtered,
+                pageRows,
+                total,
                 summary,
                 fromDate,
                 toDate,
@@ -123,10 +121,7 @@ public class ReportsController {
     }
   }
 
-  // =========================================================================
-  // REPORT 2 — ROOM PERFORMANCE & REVENUE REPORT (occupancy + revenue combined)
-  // =========================================================================
-
+  // report 2 - room performance & revenue report
   private void runRoomPerformanceReport() {
     LocalDate fromDate = LocalDate.now().withDayOfMonth(1);
     LocalDate toDate = LocalDate.now();
@@ -135,7 +130,7 @@ public class ReportsController {
 
     while (true) {
       try {
-        // Section 1: live occupancy snapshot (ignores date range — always current)
+        // Section 1: live occupancy snapshot
         ArrayList<ReportsView.OccupancyRowDTO> occupancyRows = buildOccupancyDTOs(roomTypeFilter);
         ReportsView.OccupancySummaryDTO occupancySummary = buildOccupancySummary(occupancyRows);
 
@@ -150,9 +145,9 @@ public class ReportsController {
 
         GetMenuInputResult result =
             reportsView.renderRoomPerformanceReport(
-                occupancyRows,
+                toOccupancyArray(occupancyRows),
                 occupancySummary,
-                revenueRows,
+                toCheckoutArray(revenueRows),
                 revenueSummary,
                 fromDate,
                 toDate,
@@ -162,7 +157,6 @@ public class ReportsController {
         String raw = result.input.trim();
         if ("E".equalsIgnoreCase(raw)) return;
         else if ("R".equalsIgnoreCase(raw)) {
-          /* re-fetched */
         } else if ("S".equalsIgnoreCase(raw)) {
           LocalDate[] dates = handleFilterMenu(fromDate, toDate, null, roomTypeFilter);
           fromDate = dates[0];
@@ -181,10 +175,7 @@ public class ReportsController {
     }
   }
 
-  // =========================================================================
-  // REPORT 3 — STAY DURATION ANALYSIS
-  // =========================================================================
-
+  // report 3 - stay duration analysis
   private void runStayDurationReport() {
     LocalDate fromDate = null;
     LocalDate toDate = null;
@@ -205,9 +196,12 @@ public class ReportsController {
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
         if (currentPage > totalPages) currentPage = totalPages;
 
+        ReportsView.StayRowDTO[] pageRows = toStayPageArray(filtered, currentPage, PAGE_SIZE);
+
         GetMenuInputResult result =
             reportsView.renderStayReport(
-                filtered,
+                pageRows,
+                total,
                 summary,
                 fromDate,
                 toDate,
@@ -219,7 +213,6 @@ public class ReportsController {
         String raw = result.input.trim();
         if ("E".equalsIgnoreCase(raw)) return;
         else if ("R".equalsIgnoreCase(raw)) {
-          /* re-fetched */
         } else if ("N".equalsIgnoreCase(raw)) {
           if (currentPage < totalPages) currentPage++;
           else ConsoleUtil.printError("Already on the last page!");
@@ -247,10 +240,7 @@ public class ReportsController {
     }
   }
 
-  // =========================================================================
-  // FILTER MENUS
-  // =========================================================================
-
+  // filter menus
   private LocalDate[] handleFilterMenu(
       LocalDate currentFrom, LocalDate currentTo, String currentPayment, String currentRoomType) {
     while (true) {
@@ -282,7 +272,7 @@ public class ReportsController {
     }
   }
 
-  /** Blank keeps the current value, '-' clears it, otherwise parses as YYYY-MM-DD. */
+  // if - clears it, otherwise parses as YYYY-MM-DD
   private LocalDate parseDateOrKeep(String raw, LocalDate current) {
     if (raw == null || raw.trim().isEmpty()) return current;
     if ("-".equals(raw.trim())) return null;
@@ -341,16 +331,7 @@ public class ReportsController {
     }
   }
 
-  // =========================================================================
-  // DATA PROCESSING
-  //
-  // ADT usage:
-  //   DoublyLinkedHashMap — O(1) guestId → name lookups
-  //   LinkedList          — sequential accumulation while building DTOs
-  //   ArrayList           — final indexed list for paged view rendering
-  // =========================================================================
-
-  /** Builds an O(1) lookup map: guestId (lowercase) → guest name. */
+  // filter and sort
   private DoublyLinkedHashMap<String, String> buildGuestNameMap() {
     DoublyLinkedHashMap<String, String> map = new DoublyLinkedHashMap<>();
     ListInterface<Guest> guests = guestRepo.getGuestList();
@@ -362,10 +343,7 @@ public class ReportsController {
     return map;
   }
 
-  /**
-   * Checkout DTOs — billings whose checkOutDate is strictly before today. (A checkout date of today
-   * means the guest may still be occupying the room.)
-   */
+  // checkout dto
   private ArrayList<ReportsView.CheckoutRowDTO> buildCheckoutDTOs(
       DoublyLinkedHashMap<String, String> guestNameMap) {
 
@@ -490,11 +468,7 @@ public class ReportsController {
         period);
   }
 
-  /**
-   * Builds one OccupancyRowDTO per room type. Tallies each room's status using its Room.Status
-   * enum; CLEANING and INSPECTED are handled defensively by name in case the enum variant is absent
-   * from an older local build.
-   */
+  // occupancy dto
   private ArrayList<ReportsView.OccupancyRowDTO> buildOccupancyDTOs(String roomTypeFilter) {
     ListInterface<Room> allRooms = roomRepo.getRoomList();
     int[] dirty = new int[3],
@@ -521,8 +495,7 @@ public class ReportsController {
             vacantClean[t]++;
             break;
           default:
-            // Guard CLEANING / INSPECTED by name — safe if enum is absent on older
-            // builds
+            // Guard CLEANING / INSPECTED by name
             String sName = r.getStatus().name();
             if ("CLEANING".equals(sName)) cleaning[t]++;
             else if ("INSPECTED".equals(sName)) inspected[t]++;
@@ -575,7 +548,7 @@ public class ReportsController {
         generated);
   }
 
-  /** Stay DTOs = all billing records (active and historical). */
+  // stay dto
   private ArrayList<ReportsView.StayRowDTO> buildStayDTOs(
       DoublyLinkedHashMap<String, String> guestNameMap) {
 
@@ -728,13 +701,7 @@ public class ReportsController {
         period);
   }
 
-  // =========================================================================
-  // EXPORT HELPERS
-  //
-  // All three exports use TxtExportUtil.export() which writes the string to a
-  // timestamped .txt file and returns the saved path for the success screen.
-  // =========================================================================
-
+  // export checkout report
   private void exportCheckoutReport(
       ArrayList<ReportsView.CheckoutRowDTO> filtered,
       ReportsView.CheckoutSummaryDTO summary,
@@ -764,10 +731,46 @@ public class ReportsController {
     reportsView.showExportSuccess(path, filtered.getNumberOfEntries());
   }
 
-  // =========================================================================
-  // UTILITY
-  // =========================================================================
+  // checkout dto
+  private ReportsView.CheckoutRowDTO[] toCheckoutPageArray(
+      ArrayList<ReportsView.CheckoutRowDTO> source, int currentPage, int pageSize) {
+    int total = source.getNumberOfEntries();
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+    int count = Math.max(0, endIndex - startIndex + 1);
+    ReportsView.CheckoutRowDTO[] page = new ReportsView.CheckoutRowDTO[count];
+    for (int i = 0; i < count; i++) page[i] = source.getEntry(startIndex + i);
+    return page;
+  }
 
+  private ReportsView.StayRowDTO[] toStayPageArray(
+      ArrayList<ReportsView.StayRowDTO> source, int currentPage, int pageSize) {
+    int total = source.getNumberOfEntries();
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+    int count = Math.max(0, endIndex - startIndex + 1);
+    ReportsView.StayRowDTO[] page = new ReportsView.StayRowDTO[count];
+    for (int i = 0; i < count; i++) page[i] = source.getEntry(startIndex + i);
+    return page;
+  }
+
+  private ReportsView.OccupancyRowDTO[] toOccupancyArray(
+      ArrayList<ReportsView.OccupancyRowDTO> source) {
+    int total = source.getNumberOfEntries();
+    ReportsView.OccupancyRowDTO[] arr = new ReportsView.OccupancyRowDTO[total];
+    for (int i = 0; i < total; i++) arr[i] = source.getEntry(i + 1);
+    return arr;
+  }
+
+  private ReportsView.CheckoutRowDTO[] toCheckoutArray(
+      ArrayList<ReportsView.CheckoutRowDTO> source) {
+    int total = source.getNumberOfEntries();
+    ReportsView.CheckoutRowDTO[] arr = new ReportsView.CheckoutRowDTO[total];
+    for (int i = 0; i < total; i++) arr[i] = source.getEntry(i + 1);
+    return arr;
+  }
+
+  // utility
   private int nullSafeCompare(String a, String b) {
     if (a == null && b == null) return 0;
     if (a == null) return -1;

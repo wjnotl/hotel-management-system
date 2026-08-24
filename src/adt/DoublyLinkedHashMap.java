@@ -256,13 +256,19 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
     Node<K, V>[] oldBuckets = buckets;
     buckets = (Node<K, V>[]) new Node[oldBuckets.length * 2];
 
-    // Preserve LRU access ordering across resize
-    Node<K, V> curr = head;
-    while (curr != null) {
-      int index = getBucketIndex(curr.key, buckets.length);
-      curr.next = buckets[index];
-      buckets[index] = curr;
-      curr = curr.accessNext;
+    // Walk the old bucket chains directly rather than the LRU access list — the access list is
+    // only populated when enableLru is true, so following it here dropped every entry silently
+    // for non-LRU maps once a resize fired. accessPrev/accessNext are untouched, so LRU order
+    // (when enabled) survives regardless of how the bucket chains are rebuilt.
+    for (int i = 0; i < oldBuckets.length; i++) {
+      Node<K, V> curr = oldBuckets[i];
+      while (curr != null) {
+        Node<K, V> next = curr.next;
+        int index = getBucketIndex(curr.key, buckets.length);
+        curr.next = buckets[index];
+        buckets[index] = curr;
+        curr = next;
+      }
     }
   }
 

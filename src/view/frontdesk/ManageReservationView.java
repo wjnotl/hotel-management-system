@@ -1,6 +1,5 @@
 package view.frontdesk;
 
-import adt.ArrayList;
 import entity.Billing;
 import entity.Guest;
 import entity.Room;
@@ -58,7 +57,8 @@ public class ManageReservationView {
 
   // manage reservation list
   public GetMenuInputResult renderReservationScreen(
-      ArrayList<ReservationRowDTO> list,
+      ReservationRowDTO[] pageRows,
+      int totalCount,
       String searchQuery,
       String roomTypeFilter,
       String paymentStatusFilter,
@@ -85,7 +85,7 @@ public class ManageReservationView {
     System.out.println("SORT CRITERIA   : [ " + sortCriteria + " ]");
     System.out.println();
 
-    int total = (list == null) ? 0 : list.getNumberOfEntries();
+    int total = totalCount;
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
     int[] colWidths = {4, 10, 10, 18, 8, 9, 12, 12, 9, 13};
@@ -111,7 +111,7 @@ public class ManageReservationView {
         },
         settings);
 
-    if (total == 0 || list == null) {
+    if (total == 0 || pageRows == null) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
           new TableUtil.TableSettings(new int[] {132}).setHAlign(0, TableUtil.Align.CENTER);
@@ -133,13 +133,10 @@ public class ManageReservationView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, total);
-
-    for (int i = startIndex; i <= endIndex; i++) {
-      ReservationRowDTO dto = list.getEntry(i);
+    for (int i = 0; i < pageRows.length; i++) {
+      ReservationRowDTO dto = pageRows[i];
       if (dto == null) continue;
-      int displayNum = i - startIndex + 1;
+      int displayNum = i + 1;
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(displayNum),
@@ -161,7 +158,7 @@ public class ManageReservationView {
     System.out.println("[S] Search & Filter     [O] Change Sort     [R] Refresh");
     System.out.println("[P] Prev Page           [N] Next Page       [E] Exit to Front Desk\n");
 
-    int maxDisplayNum = endIndex - startIndex + 1;
+    int maxDisplayNum = pageRows.length;
     String rangeStr = (maxDisplayNum == 1) ? "1" : "1-" + maxDisplayNum;
     return ConsoleUtil.getMenuInput(
         "Select row or command (" + rangeStr + "): ",
@@ -170,10 +167,7 @@ public class ManageReservationView {
         new char[] {'S', 'O', 'R', 'N', 'P', 'E'});
   }
 
-  // =========================================================================
-  // FILTER MENU
-  // =========================================================================
-
+  // filter menu
   public int displayFilterMenu(
       String search, String roomType, String paymentStatus, String stayStatus) {
     ConsoleUtil.clearScreen();
@@ -243,11 +237,7 @@ public class ManageReservationView {
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 3).getAsInt();
   }
 
-  // =========================================================================
-  // SORT MENU
-  // =========================================================================
-
-  /** Returns selected sort string, or null if cancelled. */
+  // sort menu
   public String displaySortMenu(String currentSort) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SORT ORDER", 60);
@@ -282,11 +272,7 @@ public class ManageReservationView {
     }
   }
 
-  // =========================================================================
-  // NO BILLING NOTICE — shown when room is OCCUPIED but has no billing record
-  // Returns: 1 = Create Billing, 2 = Back
-  // =========================================================================
-
+  // no billing notice
   public int displayNoBillingNotice(ReservationRowDTO dto) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NO BILLING RECORD — " + dto.roomNumber, 72);
@@ -313,11 +299,7 @@ public class ManageReservationView {
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 2).getAsInt();
   }
 
-  // =========================================================================
-  // CREATE BILLING PROMPTS
-  // =========================================================================
-
-  /** Returns the raw typed strings for [check-in, check-out]; the controller parses/validates. */
+  // create billing record
   public String[] promptCreateBillingDatesRaw(
       ReservationRowDTO dto, LocalDate defaultCheckIn, LocalDate defaultCheckOut, double rate) {
 
@@ -351,10 +333,7 @@ public class ManageReservationView {
     ConsoleUtil.printContinueMessage("Press Enter to continue...");
   }
 
-  // =========================================================================
-  // GUEST ACTIONS SUBMENU
-  // =========================================================================
-
+  // guest action submenu
   public int displayGuestActionsSubmenu(Guest guest, Billing billing) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
@@ -407,10 +386,7 @@ public class ManageReservationView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
   }
 
-  // =========================================================================
-  // ROOM CHARGES
-  // =========================================================================
-
+  // room change
   public void displayRoomCharges(Guest guest, Billing billing) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("ROOM CHARGES: " + billing.getBillingId(), 68);

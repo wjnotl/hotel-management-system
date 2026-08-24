@@ -53,10 +53,7 @@ public class ManageReservationController {
     this.housekeepingTaskRepo = housekeepingTaskRepo;
   }
 
-  // =========================================================================
-  // ENTRY POINT
-  // =========================================================================
-
+  // entry
   public void start() {
     int currentPage = 1;
     String searchQuery = null;
@@ -81,9 +78,13 @@ public class ManageReservationController {
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
         if (currentPage > totalPages) currentPage = totalPages;
 
+        ManageReservationView.ReservationRowDTO[] pageRows =
+            toPageArray(filtered, currentPage, PAGE_SIZE);
+
         ConsoleUtil.GetMenuInputResult result =
             view.renderReservationScreen(
-                filtered,
+                pageRows,
+                total,
                 searchQuery,
                 roomTypeFilter,
                 paymentStatusFilter,
@@ -132,30 +133,27 @@ public class ManageReservationController {
     }
   }
 
-  // =========================================================================
-  // GUEST ACTIONS SUBMENU
-  // =========================================================================
-
+  // guest action
   private void handleGuestActions(ManageReservationView.ReservationRowDTO dto) {
     while (true) {
       try {
-        // Always find the billing fresh — after creation dto.billingId may be stale
+        // find billing by id
         Billing billing = findBillingById(dto.billingId);
 
-        // If not found by ID, try finding by room number (covers post-creation case)
+        // If not found by ID, try finding by room number
         if (billing == null) {
           billing = findActiveBillingByRoom(dto.roomNumber);
         }
 
         Guest guest = guestRepo.findById(dto.guestId);
 
-        // No billing record — offer to create one
+        // No billing record, offer to create one
         if (billing == null) {
           int choice = view.displayNoBillingNotice(dto);
           if (choice == 1) {
             Billing created = handleCreateBilling(dto);
             if (created != null) {
-              // Update billingId in dto so next loop finds it directly
+              // update billing id in dto
               dto =
                   new ManageReservationView.ReservationRowDTO(
                       created.getBillingId(),
@@ -198,10 +196,7 @@ public class ManageReservationController {
     }
   }
 
-  // =========================================================================
-  // ACTION 1 — CALCULATE ROOM CHARGES
-  // =========================================================================
-
+  // action 1 - calculate room charges
   private void handleCalculateRoomCharges(Billing billing) {
     LocalDate today = LocalDate.now();
     if (billing.getCheckOutDate() == null || billing.getCheckOutDate().isBefore(today)) {
@@ -212,10 +207,7 @@ public class ManageReservationController {
     view.displayRoomCharges(guest, billing);
   }
 
-  // =========================================================================
-  // ACTION 2 — RECORD PAYMENT
-  // =========================================================================
-
+  // action 2 - record payment
   private void handleRecordPayment(Billing billing) {
     if (billing.getStatus() == Billing.Status.PAID) {
       ConsoleUtil.printError("Payment has already been recorded for this stay!");
@@ -228,11 +220,18 @@ public class ManageReservationController {
     view.displayPaymentRecorded(billing, amountDue);
   }
 
-  // =========================================================================
-  // ACTION 4 — STAY EXTENSION
-  // =========================================================================
-
+  //  action 4 - stay extension
   private void handleStayExtension(Billing billing, Guest guest) {
+    Reservation reservation = findReservationById(billing.getReservationId());
+    if (reservation != null && reservation.getStatus() == Reservation.Status.CHECKED_OUT) {
+      ConsoleUtil.printError("This guest has already checked out. Stay cannot be extended.");
+      return;
+    }
+    if (billing.getCheckOutDate() != null && billing.getCheckOutDate().isBefore(LocalDate.now())) {
+      ConsoleUtil.printError("Check-out date has already passed. Stay cannot be extended.");
+      return;
+    }
+
     if (billing.getStatus() == Billing.Status.PAID) {
       boolean confirm =
           ConsoleUtil.showConfirmMessage(
@@ -275,10 +274,7 @@ public class ManageReservationController {
     view.displayStayExtensionSuccess(guest, billing, extraDays);
   }
 
-  // =========================================================================
-  // ACTION 5 — COMPLETE CHECK-OUT
-  // =========================================================================
-
+  // action 5 - complete check-out
   private boolean handleCompleteCheckOut(Billing billing, Guest guest) {
     if (billing.getStatus() != Billing.Status.PAID) {
       ConsoleUtil.printError("Guest must settle payment before check-out can be completed!");
@@ -299,6 +295,7 @@ public class ManageReservationController {
     if (room != null) {
       Room.Status previous = room.getStatus();
       room.setStatus(Room.Status.DIRTY);
+      room.setIsOccupied(false);
       roomRepo.updateRoom(room);
       roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), previous, Room.Status.DIRTY);
     }
@@ -327,15 +324,12 @@ public class ManageReservationController {
     return true;
   }
 
-  // =========================================================================
-  // CREATE BILLING — for guests with no billing record
-  // =========================================================================
-
+  // create billing - for guests with no billing record
   private Billing handleCreateBilling(ManageReservationView.ReservationRowDTO dto) {
     Room room = roomRepo.findByRoomNumber(dto.roomNumber);
     double rate = (room != null) ? room.getPrice() : 0.0;
 
-    // Block re-billing same room if already paid
+    // A reservation may only ever have one billing record — block creating a second
     Billing existingBilling =
         billingRepo
             .getBillingList()
@@ -343,17 +337,17 @@ public class ManageReservationController {
                 b ->
                     b != null
                         && dto.reservationId != null
-                        && dto.reservationId.equalsIgnoreCase(b.getReservationId())
-                        && dto.roomNumber.equalsIgnoreCase(b.getRoomNumber()));
+                        && !"N/A".equalsIgnoreCase(dto.reservationId)
+                        && dto.reservationId.equalsIgnoreCase(b.getReservationId()));
 
-    if (existingBilling != null && existingBilling.getStatus() == Billing.Status.PAID) {
+    if (existingBilling != null) {
       ConsoleUtil.printError(
-          "A paid billing ("
+          "A billing ("
               + existingBilling.getBillingId()
               + ") already exists for this reservation.\n"
-              + "Original room: "
+              + "Room: "
               + existingBilling.getRoomNumber()
-              + " — use Stay Extension to extend the current stay instead.");
+              + " — use Stay Extension to modify the current stay instead.");
       return null;
     }
 
@@ -370,24 +364,6 @@ public class ManageReservationController {
         defaultCheckOut = defaultCheckIn.plusDays(1);
       }
     }
-
-    // ── If another room was already paid for this reservation,
-    //    default check-in to that billing's check-out (room change date) ──
-    Billing previousPaidBilling =
-        billingRepo
-            .getBillingList()
-            .find(
-                b ->
-                    b != null
-                        && dto.reservationId != null
-                        && dto.reservationId.equalsIgnoreCase(b.getReservationId())
-                        && b.getStatus() == Billing.Status.PAID);
-
-    if (previousPaidBilling != null && previousPaidBilling.getCheckOutDate() != null) {
-      defaultCheckIn = previousPaidBilling.getCheckOutDate(); // start from when L room ended
-      defaultCheckOut = defaultCheckIn.plusDays(1);
-    }
-    // ─────────────────────────────────────────────────────────────────────
 
     LocalDate[] dates = promptCreateBillingDates(dto, defaultCheckIn, defaultCheckOut, rate);
 
@@ -418,7 +394,7 @@ public class ManageReservationController {
     return billing;
   }
 
-  /** Prompts for check-in/check-out until valid, or returns null if the user cancels. */
+  // if - cancels, otherwise parses as YYYY-MM-DD
   private LocalDate[] promptCreateBillingDates(
       ManageReservationView.ReservationRowDTO dto,
       LocalDate defaultCheckIn,
@@ -445,7 +421,7 @@ public class ManageReservationController {
     return raw != null && "C".equalsIgnoreCase(raw.trim());
   }
 
-  /** Blank uses the suggested default, otherwise parses as YYYY-MM-DD. */
+  // blank uses the suggested default, otherwise parses as YYYY-MM-DD
   private LocalDate parseDateOrDefault(String raw, LocalDate defaultVal) {
     if (raw == null || raw.trim().isEmpty()) return defaultVal;
     try {
@@ -455,7 +431,7 @@ public class ManageReservationController {
     }
   }
 
-  /** Generates the next BILL-XXXX id by scanning existing billings. */
+  // generate next billing id
   private String generateBillingId() {
     ListInterface<Billing> all = billingRepo.getBillingList();
     int max = 1000;
@@ -474,10 +450,7 @@ public class ManageReservationController {
     return "BILL-" + max;
   }
 
-  // =========================================================================
-  // FILTER MENU
-  // =========================================================================
-
+  // filter menu
   private String[] handleFilterMenu(
       String search, String roomType, String paymentStatus, String stayStatus) {
     String s = search;
@@ -560,10 +533,7 @@ public class ManageReservationController {
     }
   }
 
-  // =========================================================================
-  // DATA PROCESSING — builds ALL reservation/billing records (active + history)
-  // =========================================================================
-
+  // data processing
   private ArrayList<ManageReservationView.ReservationRowDTO> buildAllReservationDTOs() {
 
     ListInterface<Room> allRooms = roomRepo.getRoomList();
@@ -630,8 +600,7 @@ public class ManageReservationController {
       if (best != null) addedBillingIds.add(best.getBillingId());
     }
 
-    // SECONDARY: all billings not yet added — includes history (CHECKED_OUT) and
-    // active billings whose room is not flagged OCCUPIED
+    // secondary: all billings not yet added
     for (int i = 1; i <= allBillings.getNumberOfEntries(); i++) {
       Billing b = allBillings.getEntry(i);
       if (b == null || b.getRoomNumber() == null || b.getBillingId() == null) continue;
@@ -662,9 +631,7 @@ public class ManageReservationController {
               stayStatus));
     }
 
-    // TERTIARY: CHECKED_IN / ALLOCATED reservations with no billing record yet.
-    // These fall through both passes above and would never appear in the table.
-    // Collect reservation IDs already represented in the buffer first.
+    // tertiary: checked_in / allocated reservations with no billing record yet
     LinkedList<String> addedResIds = new LinkedList<>();
     for (int i = 1; i <= dtoBuffer.getNumberOfEntries(); i++) {
       ManageReservationView.ReservationRowDTO d = dtoBuffer.getEntry(i);
@@ -697,14 +664,13 @@ public class ManageReservationController {
       Room room = roomRepo.findByRoomNumber(res.getRoomNumber());
       dtoBuffer.add(
           buildDTO(
-              res.getReservationId(), // use resId as billingId placeholder — no
-              // billing yet
+              res.getReservationId(),
               res.getGuestId(),
               guest,
               res.getRoomNumber(),
               room != null ? room.getRoomType() : null,
               res,
-              null, // no billing record
+              null,
               "CHECKED_IN"));
     }
 
@@ -713,7 +679,7 @@ public class ManageReservationController {
     return result;
   }
 
-  /** Derive stay status from room + reservation for OCCUPIED room entries. */
+  // derive stay status from room + reservation for occupied room entries
   private String deriveStayStatus(Reservation res, Room room) {
     if (res != null) {
       if (res.getStatus() == Reservation.Status.CHECKED_OUT) return "CHECKED_OUT";
@@ -723,7 +689,7 @@ public class ManageReservationController {
     return room != null && room.getIsOccupied() ? "CHECKED_IN" : "PENDING";
   }
 
-  /** Derive stay status from billing + reservation for historical entries. */
+  // derive stay status from billing + reservation for historical entries
   private String deriveStayStatusFromBillingRes(
       Billing b, Reservation res, java.time.LocalDate today) {
     if (res != null && res.getStatus() == Reservation.Status.CHECKED_OUT) return "CHECKED_OUT";
@@ -734,7 +700,7 @@ public class ManageReservationController {
     return "PENDING";
   }
 
-  /** Build a DTO row from raw data. */
+  // build a dto row from raw data
   private ManageReservationView.ReservationRowDTO buildDTO(
       String billingId,
       String guestId,
@@ -790,7 +756,7 @@ public class ManageReservationController {
         stayStatus);
   }
 
-  /** Finds a CHECKED_IN or ALLOCATED reservation for a given room number. */
+  // finds a checked_in or allocated reservation for a given room number
   private Reservation findActiveReservationForRoom(
       ListInterface<Reservation> all, String roomNumber) {
     if (roomNumber == null || all == null) return null;
@@ -854,7 +820,7 @@ public class ManageReservationController {
       }
     }
 
-    // Sort the LinkedList in-place (it implements ListInterface which has sort)
+    // sort
     if ("GUEST NAME (Z -> A)".equalsIgnoreCase(sort)) {
       filteredBuffer.sort((a, b) -> nullSafeCompare(b.guestName, a.guestName));
     } else if ("ROOM NUMBER (LOW -> HIGH)".equalsIgnoreCase(sort)) {
@@ -879,10 +845,20 @@ public class ManageReservationController {
     return result;
   }
 
-  // =========================================================================
-  // LOOKUP HELPERS
-  // =========================================================================
+  // adt list -> plain array
+  private ManageReservationView.ReservationRowDTO[] toPageArray(
+      ArrayList<ManageReservationView.ReservationRowDTO> source, int currentPage, int pageSize) {
+    int total = source.getNumberOfEntries();
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+    int count = Math.max(0, endIndex - startIndex + 1);
+    ManageReservationView.ReservationRowDTO[] page =
+        new ManageReservationView.ReservationRowDTO[count];
+    for (int i = 0; i < count; i++) page[i] = source.getEntry(startIndex + i);
+    return page;
+  }
 
+  // find active billing by room number
   private Billing findActiveBillingByRoom(String roomNumber) {
     if (roomNumber == null) return null;
     LocalDate today = LocalDate.now();
@@ -917,10 +893,7 @@ public class ManageReservationController {
     return null;
   }
 
-  // =========================================================================
-  // UTILITY
-  // =========================================================================
-
+  // uli
   private boolean containsIgnoreCase(String field, String query) {
     return field != null && field.toLowerCase().contains(query.toLowerCase());
   }
