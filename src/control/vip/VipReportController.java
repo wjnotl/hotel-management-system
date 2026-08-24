@@ -1,6 +1,6 @@
 package control.vip;
 
-import adt.ArrayList;
+import adt.LinkedList;
 import adt.ListInterface;
 import entity.Guest;
 import entity.Member;
@@ -608,7 +608,7 @@ public class VipReportController {
       String sortDir,
       int reportType) {
 
-    if (source == null || source.isEmpty()) return new ArrayList<>();
+    if (source == null || source.isEmpty()) return new LinkedList<>();
 
     ListInterface<Reservation> filtered =
         source.filter(
@@ -779,7 +779,7 @@ public class VipReportController {
       ListInterface<Reservation> filteredList, int recordLimit) {
     if (filteredList == null) {
       return new VipReportView.SlaReportDTO(
-          new ArrayList<>(),
+          new LinkedList<>(),
           new VipReportView.SlaReportSummaryDTO(
               0, 0, 0, 100.0, 100.0, 0, 0, 0, 100.0, 100.0, 0, 0, 0, 100.0, 100.0),
           0);
@@ -790,14 +790,14 @@ public class VipReportController {
     ListInterface<Guest> guestList = guestRepo.getGuestList();
     ListInterface<Member> memberList = memberRepo.getMemberList();
 
-    ListInterface<VipReportView.SlaReportRowDTO> rows = new ArrayList<>();
+    ListInterface<VipReportView.SlaReportRowDTO> rows = new LinkedList<>();
     int displayCount =
         (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
     ListInterface<Reservation> displayList =
         (totalMatches > 0 && displayCount > 0)
             ? filteredList.slice(1, displayCount)
-            : new ArrayList<>();
+            : new LinkedList<>();
 
     int diamondTotal = 0, goldTotal = 0, silverTotal = 0;
     int diamondSlaMet = 0, goldSlaMet = 0, silverSlaMet = 0;
@@ -884,7 +884,7 @@ public class VipReportController {
       ListInterface<Reservation> filteredList, int recordLimit) {
     if (filteredList == null) {
       return new VipReportView.PenaltyReportDTO(
-          new ArrayList<>(),
+          new LinkedList<>(),
           new VipReportView.PenaltyReportSummaryDTO(
               0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0),
           0);
@@ -895,14 +895,14 @@ public class VipReportController {
     ListInterface<Guest> guestList = guestRepo.getGuestList();
     ListInterface<Member> memberList = memberRepo.getMemberList();
 
-    ListInterface<VipReportView.PenaltyReportRowDTO> rows = new ArrayList<>();
+    ListInterface<VipReportView.PenaltyReportRowDTO> rows = new LinkedList<>();
     int displayCount =
         (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
     ListInterface<Reservation> displayList =
         (totalMatches > 0 && displayCount > 0)
             ? filteredList.slice(1, displayCount)
-            : new ArrayList<>();
+            : new LinkedList<>();
 
     int totalStrikes =
         filteredList.reduce(
@@ -1001,7 +1001,7 @@ public class VipReportController {
       ListInterface<Reservation> filteredList, int recordLimit) {
     if (filteredList == null) {
       return new VipReportView.HoldingReportDTO(
-          new ArrayList<>(),
+          new LinkedList<>(),
           new VipReportView.HoldingReportSummaryDTO(0, 0, 0.0, 0.0, 0, 0.0, 0.0, 0, 0.0, 0.0),
           0);
     }
@@ -1011,14 +1011,14 @@ public class VipReportController {
     ListInterface<Guest> guestList = guestRepo.getGuestList();
     ListInterface<Member> memberList = memberRepo.getMemberList();
 
-    ListInterface<VipReportView.HoldingReportRowDTO> rows = new ArrayList<>();
+    ListInterface<VipReportView.HoldingReportRowDTO> rows = new LinkedList<>();
     int displayCount =
         (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
     ListInterface<Reservation> displayList =
         (totalMatches > 0 && displayCount > 0)
             ? filteredList.slice(1, displayCount)
-            : new ArrayList<>();
+            : new LinkedList<>();
 
     int dCount = 0, gCount = 0, sCount = 0;
     double dUtilSum = 0.0, gUtilSum = 0.0, sUtilSum = 0.0;
