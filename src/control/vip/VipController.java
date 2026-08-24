@@ -202,11 +202,10 @@ public class VipController {
               if (heap != null) {
                 heap.updatePriority(targetRes);
               }
-
-              // Schedule for the NEXT earliest non-boiling reservation
-              scheduleNextBoilingTask(vipReservationRepo, guestRepo, memberRepo, configRepo);
             }
           } catch (Exception ignored) {
+          } finally {
+            scheduleNextBoilingTask(vipReservationRepo, guestRepo, memberRepo, configRepo);
           }
         });
   }
