@@ -1107,11 +1107,8 @@ public class VipReportView {
       TableUtil.printTableRow(
           new String[] {
             " REMEDIATION: Open Settings -> Tweak Operational Rules -> Lower Boiling Point Limit"
-                + " (Mins)"
+                + " (Mins) or increase Tier Base Values to accelerate queue."
           },
-          alertTextSettings);
-      TableUtil.printTableRow(
-          new String[] {"              or increase Tier Base Values to accelerate queue."},
           alertTextSettings);
     } else {
       TableUtil.printTableRow(
@@ -1210,11 +1207,9 @@ public class VipReportView {
           alertTextSettings);
       TableUtil.printTableRow(
           new String[] {
-            " REMEDIATION: Open Settings -> Tweak Operational Rules -> Increase Max Strike Limit"
+            " REMEDIATION: Open Settings -> Tweak Operational Rules -> Increase Max Strike Limit to"
+                + " grant high-value members more callout opportunities."
           },
-          alertTextSettings);
-      TableUtil.printTableRow(
-          new String[] {"              to grant high-value members more callout opportunities."},
           alertTextSettings);
     } else {
       TableUtil.printTableRow(
@@ -1302,11 +1297,9 @@ public class VipReportView {
           alertTextSettings);
       TableUtil.printTableRow(
           new String[] {
-            " REMEDIATION: Open Settings -> Tweak Operational Rules -> Reduce Grace Window"
+            " REMEDIATION: Open Settings -> Tweak Operational Rules -> Reduce Grace Window (Mins)"
+                + " to release unclaimed held rooms faster."
           },
-          alertTextSettings);
-      TableUtil.printTableRow(
-          new String[] {"              (Mins) to release unclaimed held rooms faster."},
           alertTextSettings);
     } else {
       TableUtil.printTableRow(

@@ -93,7 +93,7 @@ public class AllocationRepo {
           newExpiration = now + (newGraceMins * 60 * 1000L);
         }
 
-        entry.setExpirationTimestamp(Math.min(newExpiration, now));
+        entry.setExpirationTimestamp(newExpiration);
         updatedCount++;
       }
     }

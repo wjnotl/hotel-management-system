@@ -180,7 +180,7 @@ public class VipManageAllocationController {
     // Update Reservation state & store stay duration
     reservation.setRoomNumber(entry.getAssignedRoomNumber());
     reservation.setStatus(Reservation.Status.CHECKED_IN);
-    reservation.setAllocatedTime(now);
+    reservation.setCheckInTime(now);
     reservation.setStayDays(stayDays);
     vipReservationRepo.updateReservation(reservation);
 

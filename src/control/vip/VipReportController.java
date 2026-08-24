@@ -928,8 +928,7 @@ public class VipReportController {
       Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
       int strikes = (guest != null) ? guest.getStrikeCount() : 0;
-      int maxStrikes = config.getMaxStrikes(tier);
-      boolean isEvicted = (strikes >= maxStrikes);
+      boolean isEvicted = strikes > config.getMaxStrikes(tier);
 
       if (tier == Member.LoyaltyTier.DIAMOND) {
         dTotal++;
@@ -1132,7 +1131,7 @@ public class VipReportController {
     LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "N/A";
 
-    LocalDateTime endTime = LocalDateTime.now();
+    LocalDateTime endTime = resolveHoldingEndTime(r);
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 
@@ -1156,7 +1155,7 @@ public class VipReportController {
     LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "0.0";
 
-    LocalDateTime endTime = LocalDateTime.now();
+    LocalDateTime endTime = resolveHoldingEndTime(r);
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 
@@ -1164,5 +1163,16 @@ public class VipReportController {
     double pct = ((double) timeUsed / allowedGraceMins) * 100.0;
     pct = Math.min(100.0, Math.max(0.0, pct));
     return String.format("%.1f", pct);
+  }
+
+  private LocalDateTime resolveHoldingEndTime(Reservation r) {
+    if (r == null) return LocalDateTime.now();
+    if (r.getStatus() == Reservation.Status.CHECKED_IN
+        || r.getStatus() == Reservation.Status.CHECKED_OUT) {
+      if (r.getCheckInTime() != null) {
+        return r.getCheckInTime();
+      }
+    }
+    return LocalDateTime.now();
   }
 }
