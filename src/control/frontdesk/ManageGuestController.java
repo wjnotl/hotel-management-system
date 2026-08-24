@@ -38,10 +38,7 @@ public class ManageGuestController {
     this.memberRepo = memberRepo;
   }
 
-  // =========================================================================
-  // ENTRY POINT
-  // =========================================================================
-
+  // entry point
   public void start() {
     int currentPage = 1;
     String searchQuery = null;
@@ -58,18 +55,25 @@ public class ManageGuestController {
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
         if (currentPage > totalPages) currentPage = totalPages;
 
-        ListInterface<ManageGuestView.GuestRowDTO> displayDtos = buildGuestRowDTOs(filtered);
+        ManageGuestView.GuestRowDTO[] pageRows =
+            buildGuestRowPage(filtered, currentPage, PAGE_SIZE);
 
         ConsoleUtil.GetMenuInputResult result =
             manageGuestView.renderGuestTable(
-                displayDtos, searchQuery, memberLevelFilter, sortCriteria, currentPage, PAGE_SIZE);
+                pageRows,
+                total,
+                searchQuery,
+                memberLevelFilter,
+                sortCriteria,
+                currentPage,
+                PAGE_SIZE);
 
         String raw = result.input.trim();
 
         if ("E".equalsIgnoreCase(raw)) {
           return;
         } else if ("R".equalsIgnoreCase(raw)) {
-          // Refresh — data is re-fetched at top of loop
+          // Refresh
         } else if ("N".equalsIgnoreCase(raw)) {
           if (currentPage < totalPages) {
             currentPage++;
@@ -114,14 +118,7 @@ public class ManageGuestController {
     }
   }
 
-  // =========================================================================
-  // GUEST ACTION SUBMENU
-  // =========================================================================
-
-  /**
-   * Returns true to go back to manage guest list (option 4), false to exit to Front Desk Menu
-   * (option 5).
-   */
+  // guest action menu
   private boolean handleGuestActionSubmenu(Guest guest) {
     while (true) {
       try {
@@ -144,10 +141,7 @@ public class ManageGuestController {
     }
   }
 
-  // =========================================================================
-  // ACTION 1 — GUEST DETAILS
-  // =========================================================================
-
+  // action 1 — guest details
   private void handleViewGuestDetails(Guest guest) {
     Member member = (guest.getMemberId() != null) ? memberRepo.findById(guest.getMemberId()) : null;
     Reservation latestReservation = findLatestReservationForGuest(guest.getGuestId());
@@ -157,10 +151,7 @@ public class ManageGuestController {
         guest, member, latestReservation, latestBilling, totalBookings);
   }
 
-  // =========================================================================
-  // ACTION 2 — BILLING HISTORY
-  // =========================================================================
-
+  // action 2 - billing history
   private void handleViewBillingHistory(Guest guest) {
     int currentPage = 1;
     LocalDate fromDate = null;
@@ -174,9 +165,11 @@ public class ManageGuestController {
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
         if (currentPage > totalPages) currentPage = totalPages;
 
+        Billing[] pageRows = toBillingPageArray(billingHistory, currentPage, PAGE_SIZE);
+
         ConsoleUtil.GetMenuInputResult result =
             manageGuestView.displayBillingHistory(
-                guest, billingHistory, fromDate, toDate, currentPage, PAGE_SIZE);
+                guest, pageRows, total, fromDate, toDate, currentPage, PAGE_SIZE);
 
         String raw = result.input.trim();
 
@@ -217,10 +210,7 @@ public class ManageGuestController {
     }
   }
 
-  // =========================================================================
-  // ACTION 3 — RESERVATION + ASSIGNED ROOM HISTORY (COMBINED)
-  // =========================================================================
-
+  // action 3 — reservation and room history
   private void handleViewReservationAndRoomHistory(Guest guest) {
     int currentPage = 1;
 
@@ -232,9 +222,11 @@ public class ManageGuestController {
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
         if (currentPage > totalPages) currentPage = totalPages;
 
+        Reservation[] pageRows = toReservationPageArray(reservationHistory, currentPage, PAGE_SIZE);
+
         ConsoleUtil.GetMenuInputResult result =
             manageGuestView.displayReservationHistory(
-                guest, reservationHistory, currentPage, PAGE_SIZE);
+                guest, pageRows, total, currentPage, PAGE_SIZE);
 
         String raw = result.input.trim();
 
@@ -271,10 +263,7 @@ public class ManageGuestController {
     }
   }
 
-  // =========================================================================
-  // FILTER / SORT MENUS
-  // =========================================================================
-
+  //  filter  menus
   private String[] handleFilterMenu(String currentQuery, String currentMemberLevel) {
     String query = currentQuery;
     String level = currentMemberLevel;
@@ -314,10 +303,7 @@ public class ManageGuestController {
     }
   }
 
-  // =========================================================================
-  // SORT MENU
-  // =========================================================================
-
+  // sort menu
   private String handleSortMenu(String currentSort) {
     while (true) {
       try {
@@ -341,7 +327,7 @@ public class ManageGuestController {
     }
   }
 
-  /** Blank keeps the current value, '-' clears it, otherwise parses as YYYY-MM-DD. */
+  // if - clears it, otherwise parses as YYYY-MM-DD
   private LocalDate parseDateOrKeep(String raw, LocalDate current) {
     if (raw == null || raw.trim().isEmpty()) return current;
     if ("-".equals(raw.trim())) return null;
@@ -352,11 +338,7 @@ public class ManageGuestController {
     }
   }
 
-  // =========================================================================
-  // DATA PROCESSING — all logic lives here, not in the view
-  // =========================================================================
-
-  /** Filter by Guest ID, IC, name, passport, or phone + member level. Sort by chosen criteria. */
+  // filter and sort
   private ListInterface<Guest> filterAndSortGuests(
       ListInterface<Guest> source, String query, String memberLevel, String sort) {
     if (source == null) return new ArrayList<>();
@@ -406,30 +388,39 @@ public class ManageGuestController {
     return filtered;
   }
 
-  /** Build DTOs — view never touches entity-to-entity lookups. */
-  private ListInterface<ManageGuestView.GuestRowDTO> buildGuestRowDTOs(
-      ListInterface<Guest> guests) {
-    if (guests == null) return new ArrayList<>();
+  // guest row dto
+  private ManageGuestView.GuestRowDTO[] buildGuestRowPage(
+      ListInterface<Guest> guests, int currentPage, int pageSize) {
+    if (guests == null) return new ManageGuestView.GuestRowDTO[0];
 
-    return guests.map(
-        g -> {
-          Member member = (g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
-          String memberLevel =
-              (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
-          String icOrPassport =
-              (g.getIcNumber() != null
-                      && !g.getIcNumber().trim().isEmpty()
-                      && !"N/A".equalsIgnoreCase(g.getIcNumber().trim()))
-                  ? g.getIcNumber()
-                  : (g.getPassportNumber() != null && !g.getPassportNumber().trim().isEmpty()
-                      ? g.getPassportNumber()
-                      : "N/A");
-          return new ManageGuestView.GuestRowDTO(
+    int total = guests.getNumberOfEntries();
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+    int count = Math.max(0, endIndex - startIndex + 1);
+
+    ManageGuestView.GuestRowDTO[] page = new ManageGuestView.GuestRowDTO[count];
+    for (int i = 0; i < count; i++) {
+      Guest g = guests.getEntry(startIndex + i);
+      if (g == null) continue;
+      Member member = (g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+      String memberLevel =
+          (member != null && member.getTier() != null) ? member.getTier().name() : "NON-MEMBER";
+      String icOrPassport =
+          (g.getIcNumber() != null
+                  && !g.getIcNumber().trim().isEmpty()
+                  && !"N/A".equalsIgnoreCase(g.getIcNumber().trim()))
+              ? g.getIcNumber()
+              : (g.getPassportNumber() != null && !g.getPassportNumber().trim().isEmpty()
+                  ? g.getPassportNumber()
+                  : "N/A");
+      page[i] =
+          new ManageGuestView.GuestRowDTO(
               g.getGuestId(), g.getName(), icOrPassport, g.getPhoneNumber(), memberLevel);
-        });
+    }
+    return page;
   }
 
-  /** Billing sorted newest → oldest, with optional date-range filter on check-in. */
+  //  billing sorted newest → oldest
   private ListInterface<Billing> getGuestBillingSortedNewToOld(
       String guestId, LocalDate fromDate, LocalDate toDate) {
     ListInterface<Billing> matches =
@@ -458,7 +449,7 @@ public class ManageGuestController {
     return matches;
   }
 
-  /** Reservations sorted newest → oldest. */
+  // reservations sorted newest → oldest
   private ListInterface<Reservation> getGuestReservationsSortedNewToOld(String guestId) {
     ListInterface<Reservation> matches =
         reservationRepo
@@ -510,10 +501,30 @@ public class ManageGuestController {
         .find(b -> b != null && reservationId.equalsIgnoreCase(b.getReservationId()));
   }
 
-  // =========================================================================
-  // UTILITY
-  // =========================================================================
+  // adt list -> plain array
+  private Billing[] toBillingPageArray(
+      ListInterface<Billing> source, int currentPage, int pageSize) {
+    int total = source.getNumberOfEntries();
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+    int count = Math.max(0, endIndex - startIndex + 1);
+    Billing[] page = new Billing[count];
+    for (int i = 0; i < count; i++) page[i] = source.getEntry(startIndex + i);
+    return page;
+  }
 
+  private Reservation[] toReservationPageArray(
+      ListInterface<Reservation> source, int currentPage, int pageSize) {
+    int total = source.getNumberOfEntries();
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+    int count = Math.max(0, endIndex - startIndex + 1);
+    Reservation[] page = new Reservation[count];
+    for (int i = 0; i < count; i++) page[i] = source.getEntry(startIndex + i);
+    return page;
+  }
+
+  // uli
   private boolean containsIgnoreCase(String field, String query) {
     return field != null && field.toLowerCase().contains(query);
   }

@@ -42,9 +42,7 @@ public class ManageRoomStatusController {
     this.housekeepingTaskRepo = housekeepingTaskRepo;
   }
 
-  // Queues a task for a room that just went DIRTY outside of Housekeeping's own Add Task flow —
-  // e.g. front desk manually marking a room dirty, or vacating a room during a room change.
-  // No-ops if the room already has an active task, so this can never create a duplicate.
+  // auto queue cleaning task
   private void autoQueueCleaningTask(String roomNumber, HousekeepingTask.TaskType taskType) {
     if (housekeepingTaskRepo == null || housekeepingTaskRepo.hasActiveTask(roomNumber)) return;
     housekeepingTaskRepo.enqueueTask(
@@ -58,10 +56,7 @@ public class ManageRoomStatusController {
             LocalDateTime.now()));
   }
 
-  // =========================================================================
-  // ENTRY POINT
-  // =========================================================================
-
+  // entry
   public void start() {
     int currentPage = 1;
     String searchQuery = null;
@@ -79,9 +74,12 @@ public class ManageRoomStatusController {
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
         if (currentPage > totalPages) currentPage = totalPages;
 
+        ManageRoomStatusView.RoomRowDTO[] pageRows = toPageArray(filtered, currentPage, PAGE_SIZE);
+
         ConsoleUtil.GetMenuInputResult result =
             roomStatusView.renderRoomStatusScreen(
-                filtered,
+                pageRows,
+                total,
                 searchQuery,
                 roomTypeFilter,
                 roomStatusFilter,
@@ -128,10 +126,7 @@ public class ManageRoomStatusController {
     }
   }
 
-  // =========================================================================
-  // ROOM ACTION SUBMENU
-  // =========================================================================
-
+  // action submenu
   private void handleRoomAction(String roomNumber) {
     while (true) {
       try {
@@ -160,10 +155,7 @@ public class ManageRoomStatusController {
     }
   }
 
-  // =========================================================================
-  // ACTION 1 — CHANGE ROOM
-  // =========================================================================
-
+  // change room
   private void handleChangeRoom(Room room, Reservation linked) {
     if (linked == null) {
       ConsoleUtil.printError(
@@ -171,14 +163,15 @@ public class ManageRoomStatusController {
       return;
     }
 
-    // Build available rooms using LinkedList (sequential add during scan)
+    // available rooms
     LinkedList<ManageRoomStatusView.RoomRowDTO> availableBuffer = new LinkedList<>();
     ListInterface<Room> allRooms = roomRepo.getRoomList();
     for (int i = 1; i <= allRooms.getNumberOfEntries(); i++) {
       Room r = allRooms.getEntry(i);
       if (r == null
           || r.getStatus() != Room.Status.VACANT_CLEAN
-          || r.getRoomNumber().equalsIgnoreCase(room.getRoomNumber())) continue;
+          || r.getRoomNumber().equalsIgnoreCase(room.getRoomNumber())
+          || r.getRoomType() != room.getRoomType()) continue;
       availableBuffer.add(
           new ManageRoomStatusView.RoomRowDTO(
               r.getRoomNumber(),
@@ -192,7 +185,8 @@ public class ManageRoomStatusController {
     availableBuffer.sort((a, b) -> nullSafeCompare(a.roomNumber, b.roomNumber));
 
     if (availableBuffer.isEmpty()) {
-      ConsoleUtil.printError("No VACANT_CLEAN rooms available to move into.");
+      ConsoleUtil.printError(
+          "No VACANT_CLEAN " + room.getRoomType().name() + " rooms available to move into.");
       return;
     }
 
@@ -213,17 +207,6 @@ public class ManageRoomStatusController {
       return;
     }
 
-    if (targetRoom.getRoomType() != room.getRoomType()) {
-      boolean confirmMismatch =
-          ConsoleUtil.showConfirmMessage(
-              "Target room is "
-                  + targetRoom.getRoomType().name()
-                  + " but current room is "
-                  + room.getRoomType().name()
-                  + ". Move anyway?");
-      if (!confirmMismatch) return;
-    }
-
     boolean confirmed =
         ConsoleUtil.showConfirmMessage(
             "Move reservation "
@@ -238,6 +221,7 @@ public class ManageRoomStatusController {
     // Old room → DIRTY
     Room.Status oldPrev = room.getStatus();
     room.setStatus(Room.Status.DIRTY);
+    room.setIsOccupied(false);
     roomRepo.updateRoom(room);
     roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), oldPrev, Room.Status.DIRTY);
     autoQueueCleaningTask(room.getRoomNumber(), HousekeepingTask.TaskType.DEEP_CLEAN);
@@ -268,9 +252,12 @@ public class ManageRoomStatusController {
         int total = availableRooms.getNumberOfEntries();
         int totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
 
+        ManageRoomStatusView.RoomRowDTO[] pageRows =
+            toPageArray(availableRooms, currentPage, PAGE_SIZE);
+
         ConsoleUtil.GetMenuInputResult result =
             roomStatusView.renderAvailableRoomsTable(
-                availableRooms, currentRoom, currentPage, PAGE_SIZE);
+                pageRows, total, currentRoom, currentPage, PAGE_SIZE);
 
         String raw = result.input.trim();
         if ("C".equalsIgnoreCase(raw)) return null;
@@ -295,10 +282,7 @@ public class ManageRoomStatusController {
     }
   }
 
-  // =========================================================================
-  // ACTION 2 — MARK AVAILABLE (VACANT_CLEAN)
-  // =========================================================================
-
+  // action 2 - mark available (vacant_clean)
   private void handleMarkAvailable(Room room, Reservation linked) {
     if (room.getStatus() == Room.Status.VACANT_CLEAN) {
       ConsoleUtil.printError("Room is already VACANT_CLEAN (Available)!");
@@ -330,10 +314,7 @@ public class ManageRoomStatusController {
         room.getRoomNumber(), room.getRoomType().name(), "VACANT_CLEAN (Available)");
   }
 
-  // =========================================================================
-  // ACTION 3 — MARK OCCUPIED
-  // =========================================================================
-
+  // action 3 - mark occupied
   private void handleMarkOccupied(Room room) {
     if (room.getIsOccupied()) {
       ConsoleUtil.printError("Room is already OCCUPIED!");
@@ -351,10 +332,7 @@ public class ManageRoomStatusController {
         room.getRoomNumber(), room.getRoomType().name(), "OCCUPIED");
   }
 
-  // =========================================================================
-  // ACTION 4 — MARK DIRTY
-  // =========================================================================
-
+  // action 4 - mark dirty
   private void handleMarkDirty(Room room) {
     if (room.getStatus() == Room.Status.DIRTY) {
       ConsoleUtil.printError("Room is already DIRTY!");
@@ -373,10 +351,7 @@ public class ManageRoomStatusController {
         room.getRoomNumber(), room.getRoomType().name(), "DIRTY (Pending Housekeeping)");
   }
 
-  // =========================================================================
-  // FILTER MENU
-  // =========================================================================
-
+  // filter menu
   private String[] handleFilterMenu(String search, String roomType, String roomStatus) {
     String s = search;
     String rt = roomType;
@@ -422,10 +397,8 @@ public class ManageRoomStatusController {
         int choice = roomStatusView.displayRoomStatusSubmenu(current);
         if (choice == 1) return "DIRTY";
         if (choice == 2) return "CLEANING";
-        if (choice == 3) return "INSPECTED";
-        if (choice == 4) return "VACANT_CLEAN";
-        if (choice == 5) return "OCCUPIED";
-        if (choice == 6) return null;
+        if (choice == 3) return "VACANT_CLEAN";
+        if (choice == 4) return null;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -443,21 +416,12 @@ public class ManageRoomStatusController {
     }
   }
 
-  // =========================================================================
-  // DATA PROCESSING
-  //
-  // ADT usage:
-  //   DoublyLinkedHashMap  — O(1) lookup: roomNumber→Reservation (active), guestId→Guest
-  //   LinkedStack          — reverse-walk reservations to find latest active one per room
-  //   LinkedList           — sequential DTO accumulation during build (cheap add)
-  //   ArrayList            — final paged list for view (index-based access)
-  // =========================================================================
-
+  // filter and sort
   private ArrayList<ManageRoomStatusView.RoomRowDTO> buildRoomRowDTOs() {
 
     ListInterface<Reservation> allReservations = reservationRepo.getAllReservations();
 
-    // Build roomNumber → active Reservation map (O(1) lookup during room iteration)
+    // room number → active reservation map
     DoublyLinkedHashMap<String, Reservation> activeResMap = new DoublyLinkedHashMap<>();
     for (int i = 1; i <= allReservations.getNumberOfEntries(); i++) {
       Reservation r = allReservations.getEntry(i);
@@ -467,9 +431,7 @@ public class ManageRoomStatusController {
         activeResMap.put(r.getRoomNumber().toLowerCase(), r);
       }
     }
-
-    // Build guestId → Guest name map via LinkedStack (walk all guests, push each,
-    // then peek/pop to add to map — demonstrates stack usage for accumulation)
+    // guest id → guest name map
     ListInterface<Guest> allGuests = guestRepo.getGuestList();
     LinkedStack<Guest> guestStack = new LinkedStack<>();
     for (int i = 1; i <= allGuests.getNumberOfEntries(); i++) {
@@ -484,7 +446,7 @@ public class ManageRoomStatusController {
       }
     }
 
-    // Build DTOs using LinkedList (sequential add during iteration)
+    // room dto
     LinkedList<ManageRoomStatusView.RoomRowDTO> dtoBuffer = new LinkedList<>();
     ListInterface<Room> allRooms = roomRepo.getRoomList();
 
@@ -510,7 +472,7 @@ public class ManageRoomStatusController {
           new ManageRoomStatusView.RoomRowDTO(
               r.getRoomNumber(),
               r.getRoomType().name(),
-              r.getIsOccupied() ? "OCCUPIED" : r.getStatus().name(),
+              r.getStatus().name(),
               String.format("%.2f", r.getPrice()),
               guestName,
               confNum,
@@ -597,10 +559,19 @@ public class ManageRoomStatusController {
     return result;
   }
 
-  // =========================================================================
-  // LOOKUP HELPERS
-  // =========================================================================
+  // adt list -> plain array
+  private ManageRoomStatusView.RoomRowDTO[] toPageArray(
+      ArrayList<ManageRoomStatusView.RoomRowDTO> source, int currentPage, int pageSize) {
+    int total = source.getNumberOfEntries();
+    int startIndex = (currentPage - 1) * pageSize + 1;
+    int endIndex = Math.min(startIndex + pageSize - 1, total);
+    int count = Math.max(0, endIndex - startIndex + 1);
+    ManageRoomStatusView.RoomRowDTO[] page = new ManageRoomStatusView.RoomRowDTO[count];
+    for (int i = 0; i < count; i++) page[i] = source.getEntry(startIndex + i);
+    return page;
+  }
 
+  // find active reservation by room number
   private Reservation findActiveReservationByRoomNumber(String roomNumber) {
     if (roomNumber == null) return null;
     ListInterface<Reservation> all = reservationRepo.getAllReservations();
@@ -613,10 +584,7 @@ public class ManageRoomStatusController {
     return null;
   }
 
-  // =========================================================================
-  // UTILITY
-  // =========================================================================
-
+  // uli
   private boolean containsIgnoreCase(String field, String query) {
     return field != null && field.toLowerCase().contains(query.toLowerCase());
   }
