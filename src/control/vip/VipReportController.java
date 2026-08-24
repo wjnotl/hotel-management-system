@@ -1138,7 +1138,7 @@ public class VipReportController {
     LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "N/A";
 
-    LocalDateTime endTime = resolveHoldingEndTime(r, maxCutoff);
+    LocalDateTime endTime = resolveHoldingEndTime(r, m, config, maxCutoff);
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 
@@ -1163,7 +1163,7 @@ public class VipReportController {
     LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "0.0";
 
-    LocalDateTime endTime = resolveHoldingEndTime(r, maxCutoff);
+    LocalDateTime endTime = resolveHoldingEndTime(r, m, config, maxCutoff);
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 
@@ -1173,7 +1173,8 @@ public class VipReportController {
     return String.format("%.1f", pct);
   }
 
-  private LocalDateTime resolveHoldingEndTime(Reservation r, LocalDateTime maxCutoff) {
+  private LocalDateTime resolveHoldingEndTime(
+      Reservation r, Member m, VipSystemConfig config, LocalDateTime maxCutoff) {
     if (r == null) {
       return (maxCutoff != null && maxCutoff.isBefore(LocalDateTime.now()))
           ? maxCutoff
@@ -1185,8 +1186,24 @@ public class VipReportController {
         return r.getCheckInTime();
       }
     }
-    return (maxCutoff != null && maxCutoff.isBefore(LocalDateTime.now()))
-        ? maxCutoff
-        : LocalDateTime.now();
+
+    LocalDateTime startTime = r.getAllocatedTime();
+    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime cutoff = (maxCutoff != null && maxCutoff.isBefore(now)) ? maxCutoff : now;
+
+    if (startTime != null && config != null) {
+      int allowedGraceMins =
+          (r.getAllocatedGraceMins() != null && r.getAllocatedGraceMins() > 0)
+              ? r.getAllocatedGraceMins()
+              : config.getGraceWindowMins((m != null) ? m.getTier() : null);
+      if (allowedGraceMins > 0) {
+        LocalDateTime expireTime = startTime.plusMinutes(allowedGraceMins);
+        if (cutoff.isAfter(expireTime)) {
+          return expireTime;
+        }
+      }
+    }
+
+    return cutoff;
   }
 }
