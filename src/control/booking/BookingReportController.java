@@ -10,7 +10,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
@@ -61,21 +60,21 @@ public class BookingReportController {
   private final StandardReservationRepo standardReservationRepo;
   private final GuestRepo guestRepo;
   private final RoomRepo roomRepo;
-  private final BookingSettingsRepo bookingSettingsRepo;
+  private final BookingSettingsStore bookingSettingsStore;
 
   public BookingReportController(
       StandardReservationRepo standardReservationRepo,
       GuestRepo guestRepo,
       RoomRepo roomRepo,
-      BookingSettingsRepo bookingSettingsRepo) {
+      BookingSettingsStore bookingSettingsStore) {
     this.standardReservationRepo = standardReservationRepo;
     this.guestRepo = guestRepo;
     this.roomRepo = roomRepo;
-    this.bookingSettingsRepo = bookingSettingsRepo;
+    this.bookingSettingsStore = bookingSettingsStore;
   }
 
   private BookingSettings settings() {
-    return bookingSettingsRepo.getSettings();
+    return bookingSettingsStore.getSettings();
   }
 
   public void startReportManagement() {

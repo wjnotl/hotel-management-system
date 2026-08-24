@@ -10,7 +10,6 @@ import entity.Room;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
@@ -36,23 +35,23 @@ public class WalkInQueueController {
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
-  private final BookingSettingsRepo bookingSettingsRepo;
+  private final BookingSettingsStore bookingSettingsStore;
 
   public WalkInQueueController(
       StandardReservationRepo standardReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       RoomRepo roomRepo,
-      BookingSettingsRepo bookingSettingsRepo) {
+      BookingSettingsStore bookingSettingsStore) {
     this.standardReservationRepo = standardReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
-    this.bookingSettingsRepo = bookingSettingsRepo;
+    this.bookingSettingsStore = bookingSettingsStore;
   }
 
   private BookingSettings settings() {
-    return bookingSettingsRepo.getSettings();
+    return bookingSettingsStore.getSettings();
   }
 
   public void startQueueManagement() {
@@ -233,7 +232,7 @@ public class WalkInQueueController {
 
   private void handleAddWalkIn(Room.RoomType roomType) {
     new WalkInRegistrationController(
-            standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsRepo)
+            standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsStore)
         .registerWalkIn(roomType);
   }
 

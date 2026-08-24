@@ -12,10 +12,12 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Iterator;
+import java.util.function.Supplier;
 
 public class StandardReservationRepo {
   private final ReservationRepo reservationRepo;
-  private final BookingSettingsRepo bookingSettingsRepo;
+  // A supplier, not the store itself, so the repo layer never depends on a controller package.
+  private final Supplier<BookingSettings> settingsSource;
 
   // One WAITING line per type. Concrete because the repo owns the implementation and its capacity.
   private CircularArrayQueue<Reservation> luxuryQueue;
@@ -23,14 +25,14 @@ public class StandardReservationRepo {
   private CircularArrayQueue<Reservation> standardQueue;
 
   public StandardReservationRepo(
-      ReservationRepo reservationRepo, BookingSettingsRepo bookingSettingsRepo) {
+      ReservationRepo reservationRepo, Supplier<BookingSettings> settingsSource) {
     this.reservationRepo = reservationRepo;
-    this.bookingSettingsRepo = bookingSettingsRepo;
+    this.settingsSource = settingsSource;
     load();
   }
 
   private BookingSettings settings() {
-    return bookingSettingsRepo.getSettings();
+    return settingsSource.get();
   }
 
   public int getHoldGraceMinutes() {
