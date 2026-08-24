@@ -610,8 +610,11 @@ public class VipManageWaitlistController {
     } else if ("STRIKES (LOWEST -> HIGHEST)".equalsIgnoreCase(sort)) {
       filtered.sort(
           (r1, r2) -> {
-            Guest g1 = guestRepo.findById(r1.getGuestId());
-            Guest g2 = guestRepo.findById(r2.getGuestId());
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            Guest g1 = (r1.getGuestId() != null) ? guestRepo.findById(r1.getGuestId()) : null;
+            Guest g2 = (r2.getGuestId() != null) ? guestRepo.findById(r2.getGuestId()) : null;
             int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
             int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
             return Integer.compare(s1, s2);
@@ -619,8 +622,11 @@ public class VipManageWaitlistController {
     } else if ("STRIKES (HIGHEST -> LOWEST)".equalsIgnoreCase(sort)) {
       filtered.sort(
           (r1, r2) -> {
-            Guest g1 = guestRepo.findById(r1.getGuestId());
-            Guest g2 = guestRepo.findById(r2.getGuestId());
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            Guest g1 = (r1.getGuestId() != null) ? guestRepo.findById(r1.getGuestId()) : null;
+            Guest g2 = (r2.getGuestId() != null) ? guestRepo.findById(r2.getGuestId()) : null;
             int s1 = (g1 != null) ? g1.getStrikeCount() : 0;
             int s2 = (g2 != null) ? g2.getStrikeCount() : 0;
             return Integer.compare(s2, s1);
@@ -628,8 +634,11 @@ public class VipManageWaitlistController {
     } else if ("TIER RANK (DIAMOND -> SILVER)".equalsIgnoreCase(sort)) {
       filtered.sort(
           (r1, r2) -> {
-            Guest g1 = guestRepo.findById(r1.getGuestId());
-            Guest g2 = guestRepo.findById(r2.getGuestId());
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            Guest g1 = (r1.getGuestId() != null) ? guestRepo.findById(r1.getGuestId()) : null;
+            Guest g2 = (r2.getGuestId() != null) ? guestRepo.findById(r2.getGuestId()) : null;
             Member m1 =
                 (g1 != null && g1.getMemberId() != null)
                     ? memberRepo.findById(g1.getMemberId())
@@ -643,8 +652,11 @@ public class VipManageWaitlistController {
     } else if ("TIER RANK (SILVER -> DIAMOND)".equalsIgnoreCase(sort)) {
       filtered.sort(
           (r1, r2) -> {
-            Guest g1 = guestRepo.findById(r1.getGuestId());
-            Guest g2 = guestRepo.findById(r2.getGuestId());
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            Guest g1 = (r1.getGuestId() != null) ? guestRepo.findById(r1.getGuestId()) : null;
+            Guest g2 = (r2.getGuestId() != null) ? guestRepo.findById(r2.getGuestId()) : null;
             Member m1 =
                 (g1 != null && g1.getMemberId() != null)
                     ? memberRepo.findById(g1.getMemberId())
@@ -656,15 +668,59 @@ public class VipManageWaitlistController {
             return Integer.compare(getTierWeight(m1), getTierWeight(m2));
           });
     } else if ("WAIT TIME (LONGEST -> SHORTEST)".equalsIgnoreCase(sort)) {
-      filtered.sort((r1, r2) -> r1.getQueueArrivalTime().compareTo(r2.getQueueArrivalTime()));
+      filtered.sort(
+          (r1, r2) -> {
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            LocalDateTime t1 = r1.getQueueArrivalTime();
+            LocalDateTime t2 = r2.getQueueArrivalTime();
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t1.compareTo(t2);
+          });
     } else if ("WAIT TIME (SHORTEST -> LONGEST)".equalsIgnoreCase(sort)) {
-      filtered.sort((r1, r2) -> r2.getQueueArrivalTime().compareTo(r1.getQueueArrivalTime()));
+      filtered.sort(
+          (r1, r2) -> {
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            LocalDateTime t1 = r1.getQueueArrivalTime();
+            LocalDateTime t2 = r2.getQueueArrivalTime();
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t2.compareTo(t1);
+          });
     } else if ("RESERVATION ID (LOW -> HIGH)".equalsIgnoreCase(sort)) {
-      filtered.sort((r1, r2) -> r1.getReservationId().compareToIgnoreCase(r2.getReservationId()));
+      filtered.sort(
+          (r1, r2) -> {
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
+            String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
+            return id1.compareToIgnoreCase(id2);
+          });
     } else if ("RESERVATION ID (HIGH -> LOW)".equalsIgnoreCase(sort)) {
-      filtered.sort((r1, r2) -> r2.getReservationId().compareToIgnoreCase(r1.getReservationId()));
+      filtered.sort(
+          (r1, r2) -> {
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
+            String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
+            return id2.compareToIgnoreCase(id1);
+          });
     } else {
-      filtered.sort((r1, r2) -> Integer.compare(r2.getPriorityScore(), r1.getPriorityScore()));
+      filtered.sort(
+          (r1, r2) -> {
+            if (r1 == null && r2 == null) return 0;
+            if (r1 == null) return 1;
+            if (r2 == null) return -1;
+            return Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+          });
     }
 
     return filtered;

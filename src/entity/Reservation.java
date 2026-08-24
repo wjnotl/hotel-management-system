@@ -33,6 +33,7 @@ public class Reservation implements Serializable, Comparable<Reservation> {
   private LocalDateTime checkInTime; // Time when the guest actually took the room
   private LocalDateTime checkOutTime; // Time when the reservation was checked out
   private boolean isVip; // Check if the guest is a member
+  private Integer strikeCountSnapshot; // Snapshot of guest strike count when penalty event occurred
 
   // When an advance booking says the guest will turn up. A walk-in leaves this null because it is
   // already standing at the counter. Together with stayDays it is what lets the module answer
@@ -128,6 +129,10 @@ public class Reservation implements Serializable, Comparable<Reservation> {
 
   public boolean getIsVip() {
     return isVip;
+  }
+
+  public Integer getStrikeCountSnapshot() {
+    return strikeCountSnapshot;
   }
 
   // The first night this booking occupies a room. An advance booking is pinned to the date it was
@@ -249,6 +254,10 @@ public class Reservation implements Serializable, Comparable<Reservation> {
     this.isVip = isVip;
   }
 
+  public void setStrikeCountSnapshot(Integer strikeCountSnapshot) {
+    this.strikeCountSnapshot = strikeCountSnapshot;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
@@ -269,12 +278,21 @@ public class Reservation implements Serializable, Comparable<Reservation> {
     int priorityCompare = Integer.compare(other.priorityScore, this.priorityScore);
     if (priorityCompare != 0) return priorityCompare;
 
-    // tie breaker
-    if (this.queueArrivalTime == null && other.queueArrivalTime == null) return 0;
-    if (this.queueArrivalTime == null) return -1;
-    if (other.queueArrivalTime == null) return 1;
+    // tie breaker: arrival time
+    LocalDateTime t1 = this.queueArrivalTime;
+    LocalDateTime t2 = other.queueArrivalTime;
+    int timeCompare;
+    if (t1 == null && t2 == null) timeCompare = 0;
+    else if (t1 == null) timeCompare = -1;
+    else if (t2 == null) timeCompare = 1;
+    else timeCompare = t1.compareTo(t2);
 
-    return this.queueArrivalTime.compareTo(other.queueArrivalTime);
+    if (timeCompare != 0) return timeCompare;
+
+    // final tie breaker: reservationId
+    String id1 = (this.reservationId != null) ? this.reservationId : "";
+    String id2 = (other.reservationId != null) ? other.reservationId : "";
+    return id1.compareToIgnoreCase(id2);
   }
 
   @Override
@@ -302,6 +320,8 @@ public class Reservation implements Serializable, Comparable<Reservation> {
         + isBoiling
         + ", priorityScore="
         + priorityScore
+        + ", strikeCountSnapshot="
+        + strikeCountSnapshot
         + "}";
   }
 }

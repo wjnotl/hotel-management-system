@@ -62,7 +62,8 @@ public class ReservationRepo {
 
     // Cache Miss: Scan list & populate LRU cache
     Reservation res =
-        reservationList.find(r -> reservationId.equalsIgnoreCase(r.getReservationId()));
+        reservationList.find(
+            r -> r != null && reservationId.equalsIgnoreCase(r.getReservationId()));
     if (res != null) {
       reservationLruCache.put(reservationId.toLowerCase(), res);
     }
@@ -101,9 +102,9 @@ public class ReservationRepo {
     if (confirmationNumber == null || reservationList == null) return null;
     return reservationList.find(
         r ->
-            r.getConfirmationNumber() == null
-                ? false
-                : r.getConfirmationNumber().equalsIgnoreCase(confirmationNumber)
-                    && r.getStatus() == Reservation.Status.CHECKED_IN);
+            r != null
+                && r.getConfirmationNumber() != null
+                && r.getConfirmationNumber().equalsIgnoreCase(confirmationNumber)
+                && r.getStatus() == Reservation.Status.CHECKED_IN);
   }
 }

@@ -52,8 +52,22 @@ public class VipReservationRepo {
               return scoreComp;
             }
 
-            // Tie-breaker: earlier arrival time gets dequeued first
-            return b.getQueueArrivalTime().compareTo(a.getQueueArrivalTime());
+            // Tie-breaker: earlier arrival time gets dequeued first (max heap order)
+            LocalDateTime tA = a.getQueueArrivalTime();
+            LocalDateTime tB = b.getQueueArrivalTime();
+            int timeComp;
+            if (tA == null && tB == null) timeComp = 0;
+            else if (tA == null) timeComp = -1;
+            else if (tB == null) timeComp = 1;
+            else timeComp = tB.compareTo(tA);
+
+            if (timeComp != 0) {
+              return timeComp;
+            }
+
+            String idA = (a.getReservationId() != null) ? a.getReservationId() : "";
+            String idB = (b.getReservationId() != null) ? b.getReservationId() : "";
+            return idA.compareToIgnoreCase(idB);
           }
         };
 
@@ -94,8 +108,15 @@ public class VipReservationRepo {
     }
 
     if (reservation.getStatus() == Reservation.Status.WAITING) {
-      getListByRoomType(reservation.getRoomType()).add(reservation);
-      getHeapByRoomType(reservation.getRoomType()).enqueue(reservation);
+      ListInterface<Reservation> roomList = getListByRoomType(reservation.getRoomType());
+      if (!roomList.contains(reservation)) {
+        roomList.add(reservation);
+      }
+
+      PriorityQueueInterface<Reservation> roomHeap = getHeapByRoomType(reservation.getRoomType());
+      if (!roomHeap.contains(reservation)) {
+        roomHeap.enqueue(reservation);
+      }
     }
 
     reservationRepo.save();
