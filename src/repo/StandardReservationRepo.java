@@ -532,6 +532,27 @@ public class StandardReservationRepo {
     return free;
   }
 
+  // How many VIPs are standing ahead of the counter for this room type. Counted off the master
+  // list rather than VipReservationRepo's own lists, because those are a mirror the VIP module
+  // builds and rebuilds on its own schedule. reservations.dat is the record both modules write to,
+  // so it is the only count booking can stand behind.
+  public int countVipWaiting(Room.RoomType roomType) {
+    if (roomType == null) return 0;
+
+    ListInterface<Reservation> all = reservationRepo.getAllReservations();
+    int waiting = 0;
+    for (int i = 1; i <= all.getNumberOfEntries(); i++) {
+      Reservation r = all.getEntry(i);
+      if (r != null
+          && r.getIsVip()
+          && r.getRoomType() == roomType
+          && r.getStatus() == Reservation.Status.WAITING) {
+        waiting++;
+      }
+    }
+    return waiting;
+  }
+
   // ===================== DATE AWARE AVAILABILITY =====================
   // "Is a room free" used to mean "is one VACANT & CLEAN this second", which is the right question
   // for a walk-in and the wrong one for a booking three weeks out. These methods answer it per
