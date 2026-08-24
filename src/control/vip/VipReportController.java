@@ -154,7 +154,8 @@ public class VipReportController {
         ConsoleUtil.startRecording();
 
         if (reportType == 1) {
-          VipReportView.SlaReportDTO dto = buildSlaReportDTO(filteredList, state.recordLimit);
+          VipReportView.SlaReportDTO dto =
+              buildSlaReportDTO(filteredList, state.recordLimit, state.endDate);
           reportView.renderSlaReportBody(dto, scopeStr, sortStr, state.recordLimit);
         } else if (reportType == 2) {
           VipReportView.PenaltyReportDTO dto =
@@ -162,7 +163,7 @@ public class VipReportController {
           reportView.renderPenaltyReportBody(dto, scopeStr, sortStr, state.recordLimit);
         } else {
           VipReportView.HoldingReportDTO dto =
-              buildHoldingReportDTO(filteredList, state.recordLimit);
+              buildHoldingReportDTO(filteredList, state.recordLimit, state.endDate);
           reportView.renderHoldingReportBody(dto, scopeStr, sortStr, state.recordLimit);
         }
 
@@ -776,7 +777,7 @@ public class VipReportController {
   }
 
   private VipReportView.SlaReportDTO buildSlaReportDTO(
-      ListInterface<Reservation> filteredList, int recordLimit) {
+      ListInterface<Reservation> filteredList, int recordLimit, LocalDateTime maxCutoff) {
     if (filteredList == null) {
       return new VipReportView.SlaReportDTO(
           new LinkedList<>(),
@@ -812,7 +813,7 @@ public class VipReportController {
               : null;
       Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
-      long wait = calculateWaitMins(reservation);
+      long wait = calculateWaitMins(reservation, maxCutoff);
       int targetMins = config.getPatienceLimitMins(tier);
 
       if (tier == Member.LoyaltyTier.DIAMOND) {
@@ -837,7 +838,7 @@ public class VipReportController {
               ? memberList.find(m -> m.getMemberId().equalsIgnoreCase(guest.getMemberId()))
               : null;
 
-      long wait = calculateWaitMins(reservation);
+      long wait = calculateWaitMins(reservation, maxCutoff);
       String rankStr = rank + ".";
       String name = (guest != null) ? guest.getName() : "N/A";
       String tierStr =
@@ -996,7 +997,7 @@ public class VipReportController {
   }
 
   private VipReportView.HoldingReportDTO buildHoldingReportDTO(
-      ListInterface<Reservation> filteredList, int recordLimit) {
+      ListInterface<Reservation> filteredList, int recordLimit, LocalDateTime maxCutoff) {
     if (filteredList == null) {
       return new VipReportView.HoldingReportDTO(
           new LinkedList<>(),
@@ -1032,7 +1033,7 @@ public class VipReportController {
               : null;
       Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
-      String pctStr = calculateGraceUsedPctStr(reservation, member, config);
+      String pctStr = calculateGraceUsedPctStr(reservation, member, config, maxCutoff);
       double pct = 0.0;
       try {
         pct = Double.parseDouble(pctStr);
@@ -1062,7 +1063,7 @@ public class VipReportController {
               : null;
       Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
-      String pctStr = calculateGraceUsedPctStr(reservation, member, config);
+      String pctStr = calculateGraceUsedPctStr(reservation, member, config, maxCutoff);
       String rankStr = rank + ".";
       String name = (guest != null) ? guest.getName() : "N/A";
       String tierStr =
@@ -1073,7 +1074,7 @@ public class VipReportController {
               ? reservation.getAllocatedGraceMins()
               : config.getGraceWindowMins(tier);
 
-      String timeUsedStr = calculateTimeUsedStr(reservation, member, config);
+      String timeUsedStr = calculateTimeUsedStr(reservation, member, config, maxCutoff);
       String status = (reservation.getStatus() != null) ? reservation.getStatus().name() : "N/A";
 
       String resId =
@@ -1108,14 +1109,21 @@ public class VipReportController {
     return new VipReportView.HoldingReportDTO(rows, summary, totalMatches);
   }
 
-  private long calculateWaitMins(Reservation r) {
+  private long calculateWaitMins(Reservation r, LocalDateTime maxCutoff) {
     if (r == null || r.getQueueArrivalTime() == null) return 0;
-    LocalDateTime endTime =
-        (r.getAllocatedTime() != null) ? r.getAllocatedTime() : LocalDateTime.now();
-    return Duration.between(r.getQueueArrivalTime(), endTime).toMinutes();
+    LocalDateTime endTime = r.getAllocatedTime();
+    if (endTime == null) {
+      endTime =
+          (maxCutoff != null && maxCutoff.isBefore(LocalDateTime.now()))
+              ? maxCutoff
+              : LocalDateTime.now();
+    }
+    long mins = Duration.between(r.getQueueArrivalTime(), endTime).toMinutes();
+    return Math.max(0, mins);
   }
 
-  private String calculateTimeUsedStr(Reservation r, Member m, VipSystemConfig config) {
+  private String calculateTimeUsedStr(
+      Reservation r, Member m, VipSystemConfig config, LocalDateTime maxCutoff) {
     if (r == null) return "N/A";
 
     int allowedGraceMins =
@@ -1130,7 +1138,7 @@ public class VipReportController {
     LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "N/A";
 
-    LocalDateTime endTime = resolveHoldingEndTime(r);
+    LocalDateTime endTime = resolveHoldingEndTime(r, maxCutoff);
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 
@@ -1138,7 +1146,8 @@ public class VipReportController {
     return timeUsed + " Mins";
   }
 
-  private String calculateGraceUsedPctStr(Reservation r, Member m, VipSystemConfig config) {
+  private String calculateGraceUsedPctStr(
+      Reservation r, Member m, VipSystemConfig config, LocalDateTime maxCutoff) {
     if (r == null) return "0.0";
 
     int allowedGraceMins =
@@ -1154,7 +1163,7 @@ public class VipReportController {
     LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "0.0";
 
-    LocalDateTime endTime = resolveHoldingEndTime(r);
+    LocalDateTime endTime = resolveHoldingEndTime(r, maxCutoff);
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 
@@ -1164,14 +1173,20 @@ public class VipReportController {
     return String.format("%.1f", pct);
   }
 
-  private LocalDateTime resolveHoldingEndTime(Reservation r) {
-    if (r == null) return LocalDateTime.now();
+  private LocalDateTime resolveHoldingEndTime(Reservation r, LocalDateTime maxCutoff) {
+    if (r == null) {
+      return (maxCutoff != null && maxCutoff.isBefore(LocalDateTime.now()))
+          ? maxCutoff
+          : LocalDateTime.now();
+    }
     if (r.getStatus() == Reservation.Status.CHECKED_IN
         || r.getStatus() == Reservation.Status.CHECKED_OUT) {
       if (r.getCheckInTime() != null) {
         return r.getCheckInTime();
       }
     }
-    return LocalDateTime.now();
+    return (maxCutoff != null && maxCutoff.isBefore(LocalDateTime.now()))
+        ? maxCutoff
+        : LocalDateTime.now();
   }
 }
