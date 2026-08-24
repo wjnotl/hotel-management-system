@@ -10,6 +10,7 @@ import entity.Member;
 import entity.Reservation;
 import entity.Room;
 import entity.VipSystemConfig;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import repo.AllocationRepo;
 import repo.GuestRepo;
@@ -783,10 +784,9 @@ public class VipManageWaitlistController {
     }
   }
 
-  private String formatWaitTime(java.time.LocalDateTime arrivalTime) {
+  private String formatWaitTime(LocalDateTime arrivalTime) {
     if (arrivalTime == null) return "N/A";
-    long minutes =
-        java.time.Duration.between(arrivalTime, java.time.LocalDateTime.now()).toMinutes();
+    long minutes = Duration.between(arrivalTime, LocalDateTime.now()).toMinutes();
     if (minutes < 0) minutes = 0;
     return minutes + " Mins";
   }
