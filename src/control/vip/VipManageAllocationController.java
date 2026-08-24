@@ -314,7 +314,7 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
-            vipReservationRepo.cancelReservation(reservation);
+            vipReservationRepo.updateReservation(reservation);
             VipController.scheduleNextBoilingTask(
                 vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
@@ -388,7 +388,7 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
-            vipReservationRepo.cancelReservation(reservation);
+            vipReservationRepo.updateReservation(reservation);
             VipController.scheduleNextBoilingTask(
                 vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
           }
