@@ -13,6 +13,7 @@ import repo.RoomRepo;
 import repo.VipReservationRepo;
 import repo.VipSystemConfigRepo;
 import util.ConsoleUtil;
+import util.ExpressionEvaluator;
 import view.vip.VipSettingsView;
 
 public class VipSettingsController {
@@ -422,7 +423,7 @@ public class VipSettingsController {
               };
 
           try {
-            double result = util.ExpressionEvaluator.evaluateInfix(formulaInfix, resolver);
+            double result = ExpressionEvaluator.evaluateInfix(formulaInfix, resolver);
 
             if (Double.isInfinite(result) || Double.isNaN(result)) {
               throw new ArithmeticException("Division by zero");

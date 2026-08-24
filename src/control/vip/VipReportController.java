@@ -156,15 +156,15 @@ public class VipReportController {
         if (reportType == 1) {
           VipReportView.SlaReportDTO dto =
               buildSlaReportDTO(filteredList, state.recordLimit, state.endDate);
-          reportView.renderSlaReportBody(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderSlaReportBody(dto, scopeStr, sortStr);
         } else if (reportType == 2) {
           VipReportView.PenaltyReportDTO dto =
               buildPenaltyReportDTO(filteredList, state.recordLimit);
-          reportView.renderPenaltyReportBody(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderPenaltyReportBody(dto, scopeStr, sortStr);
         } else {
           VipReportView.HoldingReportDTO dto =
               buildHoldingReportDTO(filteredList, state.recordLimit, state.endDate);
-          reportView.renderHoldingReportBody(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderHoldingReportBody(dto, scopeStr, sortStr);
         }
 
         ConsoleUtil.stopRecording();
