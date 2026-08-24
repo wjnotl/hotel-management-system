@@ -73,8 +73,7 @@ public class BookingSettingsController {
     return bookingSettingsRepo.getSettings();
   }
 
-  // Blank keeps the current value and redraws the same setting screen, so the swallowed message
-  // is the only one ConsoleUtil raises for an empty line.
+  // Blank keeps the value and redraws, so this is the only empty-line message.
   private Integer promptIntSetting(
       String title,
       String explanation,
@@ -720,8 +719,7 @@ public class BookingSettingsController {
 
   // ================= HELPERS =================
 
-  // These have to match the strings the queue and advance controllers compare against, so they
-  // are listed once here rather than being retyped on each screen.
+  // Must match the strings the queue and advance controllers compare against.
   private ListInterface<String> queueSortOptions() {
     ListInterface<String> options = new ArrayList<>();
     options.add("QUEUE POSITION (FIFO)");
@@ -755,8 +753,7 @@ public class BookingSettingsController {
     return options;
   }
 
-  // Capacity and the expansion flag are read once when a CircularArrayQueue is constructed, so a
-  // changed value only reaches an existing line by rebuilding it from the master list.
+  // Capacity and expansion are read at queue construction, so a change needs a rebuild.
   private void applyToLiveLines() {
     standardReservationRepo.applySettings();
 

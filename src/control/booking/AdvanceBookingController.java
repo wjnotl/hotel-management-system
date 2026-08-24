@@ -159,13 +159,10 @@ public class AdvanceBookingController {
 
         Guest guest = (mode == MODE_NEW) ? registerNewGuest() : findExistingGuest();
 
-        // Backing out of either mode returns to the mode menu, so picking the wrong one costs a
-        // keystroke rather than the whole booking.
+        // Backing out returns to the mode menu, not out of the booking.
         if (guest == null) continue;
 
-        // Members book here on the same terms as anyone else. The tier is recorded on the
-        // reservation and shown on the screens, but it buys no priority, because a booking already
-        // holds a slot for the night and there is nothing left for a tier to jump ahead of.
+        // A tier buys no priority here, because the booking already holds the night.
         if (collectBooking(guest)) return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -173,8 +170,7 @@ public class AdvanceBookingController {
     }
   }
 
-  // The existing-guest search offers no registration of its own, because the mode menu already
-  // asked that question and the clerk answered it.
+  // No registration here; the mode menu already asked that.
   private Guest findExistingGuest() {
     return new GuestLookupController(guestRepo, standardReservationRepo)
         .findGuest("NEW ADVANCE BOOKING - EXISTING GUEST");
@@ -220,8 +216,7 @@ public class AdvanceBookingController {
 
           nights = picked;
 
-          // Re-checked at the last moment, because another booking may have taken the last room of
-          // this type while this one was being typed in.
+          // Re-checked late, because another booking may have taken the last room meanwhile.
           LocalDate firstFull =
               standardReservationRepo.findFirstFullDate(roomRepo, roomType, arrivalDate, nights);
           if (config.isBlockOverbooking() && firstFull != null) {
@@ -233,9 +228,7 @@ public class AdvanceBookingController {
             continue;
           }
 
-          // The desk never asks for a clock time, because a booking reserves a night rather than
-          // a moment and nothing in the module reads the hour. The field is a LocalDateTime, so
-          // the date is stored at the start of its own day.
+          // A booking reserves a night, not a moment, so the date is stored at start of day.
           LocalDateTime arrival = arrivalDate.atStartOfDay();
           int freeAcross =
               standardReservationRepo.countAvailableAcross(roomRepo, roomType, arrivalDate, nights);
@@ -256,9 +249,7 @@ public class AdvanceBookingController {
                   0,
                   LocalDateTime.now(),
                   null,
-                  // isVip marks which module owns the record, not whether the guest holds a
-                  // tier. StandardReservationRepo filters on it, so a booking taken here stays
-                  // false however senior the member is. The tier is read off the guest file.
+                  // isVip marks the owning module, not the tier, and the repo filters on it.
                   false);
 
           booking.setExpectedArrivalTime(arrival);
@@ -285,8 +276,7 @@ public class AdvanceBookingController {
     return LocalDate.now().plusDays(lead);
   }
 
-  // Null means the clerk left the form. The retry loop sits here so a mistyped date is retyped on
-  // the date screen instead of unwinding the steps around it.
+  // Null means the clerk left. Retrying here keeps a bad date on the date screen.
   private LocalDate promptArrivalDate(Guest guest, BookingSettings config, LocalDate current) {
     while (true) {
       try {
@@ -412,9 +402,7 @@ public class AdvanceBookingController {
       return;
     }
 
-    // The slot was promised months ago, but a physical room still has to be clean and empty this
-    // morning. When housekeeping is behind, that is what the clerk is told, because the booking
-    // is not at fault and must not be cancelled or pushed into a line over it.
+    // The slot was promised, but the room must still be clean. Never cancel over this.
     Room room = roomRepo.findVacantCleanRoom(booking.getRoomType());
     if (room == null) {
       advanceBookingView.displayNoRoomReadyScreen(
@@ -444,8 +432,7 @@ public class AdvanceBookingController {
         booking, guest, room, nights, booking.getOccupancyEndDate());
   }
 
-  // A no-show costs the house the night, so it carries the same strike a lapsed hold does. The
-  // count is the shared daily one that resets at midnight, not a running record.
+  // A no-show costs the night, so it carries the same strike a lapsed hold does.
   private boolean markNoShow(Reservation booking, Guest guest) {
     int strikes = strikesOf(guest);
 
@@ -606,7 +593,6 @@ public class AdvanceBookingController {
     return FIELD_ALL;
   }
 
-  // The view is handed finished strings, so it never has to look a guest up to draw a row.
   private ListInterface<AdvanceBookingView.BookingRowDTO> buildBookingRowDTO(
       ListInterface<Reservation> bookings) {
 
@@ -666,7 +652,7 @@ public class AdvanceBookingController {
     }
   }
 
-  // Blank keeps the current term and redraws, so a stray Enter never clears a filter.
+  // Blank redraws, so a stray Enter never clears the filter.
   private String promptSearchTerm(String fieldLabel, String current) {
     while (true) {
       try {

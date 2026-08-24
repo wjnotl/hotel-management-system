@@ -2,27 +2,19 @@ package entity;
 
 import java.io.Serializable;
 
-// One record for the whole Walk-In & Booking module, created with defaults on first run and edited
-// through Settings & Configuration. Every field below is read at runtime by the controllers and the
-// repository, so changing a value here changes how the desk actually behaves rather than only how a
-// screen reads.
+// One record for the whole module. Every field is read at runtime, so a value changes behaviour.
 public class BookingSettings implements Serializable {
   private static final long serialVersionUID = 1L;
 
   public static final int UNLIMITED_QUEUE = 0;
   public static final int UNLIMITED_LEAD_DAYS = 0;
 
-  // A per-room-type slot holding this value has no opinion of its own and defers to the house wide
-  // figure above it. One sentinel is enough because none of the overridden settings can legally be
-  // negative, so there is no value a clerk could type that would be mistaken for "no override".
+  // This value defers to the house wide figure. No overridable setting can be negative.
   public static final int USE_HOUSE_VALUE = -1;
 
   private static final int ROOM_TYPE_COUNT = 3;
 
-  // Java serialisation cannot tell "this field was not in the file" from "this field was false",
-  // so a settings file written before the advance booking rules existed would come back with all
-  // of them switched off and look like a deliberate choice. The stamp is what makes the two
-  // distinguishable: an older file carries 0 and gets the new fields filled in once.
+  // Serialisation cannot tell an absent field from a false one, so the stamp dates the file.
   private static final int CURRENT_SCHEMA = 5;
   private int schemaVersion;
 
@@ -104,10 +96,7 @@ public class BookingSettings implements Serializable {
     return overrides;
   }
 
-  // A settings file written before the override arrays existed deserialises them as null, and a
-  // file written before a sort option was renamed still names the old one. Both would be read
-  // straight into a screen, so the record is repaired once on load instead of every getter having
-  // to defend itself.
+  // Older files carry null override arrays and renamed sort options, so they are repaired on load.
   public void normalize() {
     if (schemaVersion < 2) {
       this.allowNonFrontAllocation = true;
@@ -119,22 +108,18 @@ public class BookingSettings implements Serializable {
       this.defaultRecordLimit = 10;
     }
 
-    // A line that doubled its array the moment it filled made the capacity figure decorative, so
-    // the house rule is now a hard stop and growth has to be switched on deliberately.
+    // An array that doubled on demand made the capacity figure decorative, so growth is opt-in.
     if (schemaVersion < 3) {
       this.allowQueueExpansion = false;
     }
 
-    // Wanting a LUXURY room and settling for a SUITE is one person making two enquiries, not one
-    // person cheating the line, so the wide rule is off by default and the same-line guard in the
-    // registration flow is what stops an actual double booking.
+    // Wanting LUXURY and settling for SUITE is two enquiries, not cheating, so the wide rule is
+    // off.
     if (schemaVersion < 4) {
       this.blockDuplicateAcrossLines = false;
     }
 
-    // Somebody at the desk asking for a room tonight is a walk-in, and the walk-in flow hands them
-    // a key. Taking the same request as an advance booking parks a room they are already standing
-    // next to, so the bookable window opens tomorrow.
+    // Someone asking for a room tonight is a walk-in, so the window opens tomorrow.
     if (schemaVersion < 5) {
       this.allowSameDayAdvanceBooking = false;
     }
@@ -420,8 +405,7 @@ public class BookingSettings implements Serializable {
     typeMaxQueueLength = blankOverrides();
   }
 
-  // An unlimited line is stored as 0 rather than as a separate flag, so the one field answers
-  // both "is there a cap" and "what is it" without the two ever disagreeing.
+  // Unlimited is 0 rather than a separate flag, so the two can never disagree.
   public boolean isQueueLengthCapped() {
     return maxQueueLength > UNLIMITED_QUEUE;
   }

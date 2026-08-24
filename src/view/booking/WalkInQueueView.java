@@ -211,8 +211,7 @@ public class WalkInQueueView {
         "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
   }
 
-  // Whether a full line refuses the next guest or quietly doubles its array is a house setting, so
-  // the badge has to name the outcome rather than assume the array grows.
+  // Growth is a house setting, so the badge names the outcome rather than assuming it.
   private String fullNote(boolean queueFull, boolean queueCanExpand) {
     if (!queueFull) return "";
     return queueCanExpand
@@ -220,8 +219,7 @@ public class WalkInQueueView {
         : "   [FULL - the next join is refused]";
   }
 
-  // Rooms are held back one per waiting VIP rather than the whole type being frozen, so a line can
-  // legitimately be servable while VIPs are still waiting.
+  // One room is held per waiting VIP, so a line can be servable while VIPs wait.
   private String verdictFor(int freeToCounter, int vipWaiting, boolean enforceVipBypass) {
     if (freeToCounter <= 0) {
       return "NO ROOM FREE FOR THIS LINE";
@@ -575,7 +573,6 @@ public class WalkInQueueView {
     ConsoleUtil.printContinueMessage();
   }
 
-  // One page of the hold list plus the command prompt. Paging is the controller's to drive.
   public boolean displayCheckInNowScreen(Guest g, Room room) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK IN RIGHT AWAY?", SCREEN_WIDTH);
@@ -1027,8 +1024,7 @@ public class WalkInQueueView {
     return (minutes / 60) + "h " + String.format("%02dm", minutes % 60);
   }
 
-  // Blank is an error rather than a silent cancel, so Enter never quietly discards what the clerk
-  // was part way through. 'C' stays the explicit way out.
+  // Blank is an error, so Enter never discards a part-finished entry. 'C' is the way out.
   private Integer requireInt(String prompt, int min, int max) {
     ConsoleUtil.GetMenuInputResult result =
         ConsoleUtil.getMenuInput(prompt, min, max, new char[] {'C'});

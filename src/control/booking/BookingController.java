@@ -37,8 +37,7 @@ public class BookingController {
         if ("6".equals(choice)) {
           return;
         } else if ("1".equals(choice)) {
-          // A walk-in is the one thing the desk does under time pressure, so it sits at the top
-          // of the module instead of three screens inside queue management.
+          // A walk-in is done under time pressure, so it sits at the top of the module.
           newWalkInRegistrationController().registerWalkIn();
         } else if ("2".equals(choice)) {
           new WalkInQueueController(
