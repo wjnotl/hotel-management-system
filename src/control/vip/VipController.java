@@ -285,8 +285,6 @@ public class VipController {
             vipReservationRepo.updateReservation(res);
 
             if (guest.getStrikeCount() <= maxStrikes) {
-              int newScore = vipReservationRepo.calculatePriorityScore(res, guest, member, config);
-
               String newResId = vipReservationRepo.generateReservationId();
               Reservation newRes =
                   new Reservation(
@@ -295,11 +293,15 @@ public class VipController {
                       null,
                       res.getRoomType(),
                       Reservation.Status.WAITING,
-                      res.getIsBoiling(),
-                      newScore,
+                      false,
+                      0,
                       LocalDateTime.now(),
                       LocalDateTime.now(),
                       true);
+
+              int newScore =
+                  vipReservationRepo.calculatePriorityScore(newRes, guest, member, config);
+              newRes.setPriorityScore(newScore);
 
               vipReservationRepo.addReservation(newRes);
               scheduleNextBoilingTask(vipReservationRepo, guestRepo, memberRepo, configRepo);

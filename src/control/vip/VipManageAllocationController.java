@@ -268,8 +268,6 @@ public class VipManageAllocationController {
             vipReservationRepo.updateReservation(reservation);
 
             // Create a NEW reservation ID for the re-queued entry
-            int newScore =
-                vipReservationRepo.calculatePriorityScore(reservation, guest, member, config);
             String newResId = vipReservationRepo.generateReservationId();
             Reservation newRes =
                 new Reservation(
@@ -278,11 +276,14 @@ public class VipManageAllocationController {
                     null,
                     reservation.getRoomType(),
                     Reservation.Status.WAITING,
-                    reservation.getIsBoiling(),
-                    newScore,
+                    false,
+                    0,
                     LocalDateTime.now(),
                     LocalDateTime.now(),
                     true);
+
+            int newScore = vipReservationRepo.calculatePriorityScore(newRes, guest, member, config);
+            newRes.setPriorityScore(newScore);
 
             vipReservationRepo.addReservation(newRes);
             VipController.scheduleNextBoilingTask(
@@ -347,8 +348,6 @@ public class VipManageAllocationController {
             vipReservationRepo.updateReservation(reservation);
 
             // Create a NEW reservation for the re-queued entry
-            int newScore =
-                vipReservationRepo.calculatePriorityScore(reservation, guest, member, config);
             String newResId = vipReservationRepo.generateReservationId();
             Reservation newRes =
                 new Reservation(
@@ -357,11 +356,14 @@ public class VipManageAllocationController {
                     null,
                     reservation.getRoomType(),
                     Reservation.Status.WAITING,
-                    reservation.getIsBoiling(),
-                    newScore,
+                    false,
+                    0,
                     LocalDateTime.now(),
                     LocalDateTime.now(),
                     true);
+
+            int newScore = vipReservationRepo.calculatePriorityScore(newRes, guest, member, config);
+            newRes.setPriorityScore(newScore);
 
             vipReservationRepo.addReservation(newRes);
             VipController.scheduleNextBoilingTask(
