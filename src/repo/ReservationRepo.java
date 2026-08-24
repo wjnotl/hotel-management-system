@@ -101,9 +101,9 @@ public class ReservationRepo {
     if (confirmationNumber == null || reservationList == null) return null;
     return reservationList.find(
         r ->
-            r.getConfirmationNumber() == null
-                ? false
-                : r.getConfirmationNumber().equalsIgnoreCase(confirmationNumber)
-                    && r.getStatus() == Reservation.Status.CHECKED_IN);
+            r != null
+                && r.getConfirmationNumber() != null
+                && r.getConfirmationNumber().equalsIgnoreCase(confirmationNumber)
+                && r.getStatus() == Reservation.Status.CHECKED_IN);
   }
 }
