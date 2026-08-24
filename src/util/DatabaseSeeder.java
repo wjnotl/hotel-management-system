@@ -59,10 +59,7 @@ public class DatabaseSeeder {
     LocalDateTime now = LocalDateTime.now();
     LocalDate today = LocalDate.now();
 
-    // =========================================================================
-    // 1. SEED MEMBERS (40 Members: 10 Diamond, 15 Gold, 15 Silver)
-    // =========================================================================
-    // Diamond Members (10)
+    // Seed members
     memberRepo.addMember(new Member("M-1001", Member.LoyaltyTier.DIAMOND, 15500));
     memberRepo.addMember(new Member("M-1002", Member.LoyaltyTier.DIAMOND, 16000));
     memberRepo.addMember(new Member("M-1003", Member.LoyaltyTier.DIAMOND, 16500));
@@ -74,7 +71,6 @@ public class DatabaseSeeder {
     memberRepo.addMember(new Member("M-1009", Member.LoyaltyTier.DIAMOND, 19500));
     memberRepo.addMember(new Member("M-1010", Member.LoyaltyTier.DIAMOND, 20000));
 
-    // Gold Members (15)
     memberRepo.addMember(new Member("M-1011", Member.LoyaltyTier.GOLD, 5300));
     memberRepo.addMember(new Member("M-1012", Member.LoyaltyTier.GOLD, 5600));
     memberRepo.addMember(new Member("M-1013", Member.LoyaltyTier.GOLD, 5900));
@@ -91,7 +87,6 @@ public class DatabaseSeeder {
     memberRepo.addMember(new Member("M-1024", Member.LoyaltyTier.GOLD, 9200));
     memberRepo.addMember(new Member("M-1025", Member.LoyaltyTier.GOLD, 9500));
 
-    // Silver Members (15)
     memberRepo.addMember(new Member("M-1026", Member.LoyaltyTier.SILVER, 1150));
     memberRepo.addMember(new Member("M-1027", Member.LoyaltyTier.SILVER, 1300));
     memberRepo.addMember(new Member("M-1028", Member.LoyaltyTier.SILVER, 1450));
@@ -108,10 +103,7 @@ public class DatabaseSeeder {
     memberRepo.addMember(new Member("M-1039", Member.LoyaltyTier.SILVER, 3100));
     memberRepo.addMember(new Member("M-1040", Member.LoyaltyTier.SILVER, 3250));
 
-    // =========================================================================
-    // 2. SEED GUESTS (80 Guests: 10 Diamond, 15 Gold, 15 Silver, 40 Non-Member)
-    // =========================================================================
-    // Diamond Guests (G-101..G-110): 8 w/ 0 strikes, 2 w/ 1 strike
+    // Seed guests
     guestRepo.addGuest(
         new Guest(
             "G-101",
@@ -919,10 +911,7 @@ public class DatabaseSeeder {
             null,
             2));
 
-    // =========================================================================
-    // 3. SEED ROOMS (30 Rooms: 10 Luxury, 10 Suite, 10 Standard)
-    // =========================================================================
-    // Luxury Rooms (L-801..L-810)
+    // Seed rooms
     addRoom(roomRepo, "L-801", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, false);
     addRoom(roomRepo, "L-802", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, false);
     addRoom(roomRepo, "L-803", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, false);
@@ -934,7 +923,6 @@ public class DatabaseSeeder {
     addRoom(roomRepo, "L-809", Room.RoomType.LUXURY, Room.Status.DIRTY, 850.00, false);
     addRoom(roomRepo, "L-810", Room.RoomType.LUXURY, Room.Status.CLEANING, 850.00, false);
 
-    // Suite Rooms (S-501..S-510)
     addRoom(roomRepo, "S-501", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, false);
     addRoom(roomRepo, "S-502", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, false);
     addRoom(roomRepo, "S-503", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, false);
@@ -946,7 +934,6 @@ public class DatabaseSeeder {
     addRoom(roomRepo, "S-509", Room.RoomType.SUITE, Room.Status.DIRTY, 550.00, false);
     addRoom(roomRepo, "S-510", Room.RoomType.SUITE, Room.Status.CLEANING, 550.00, false);
 
-    // Standard Rooms (ST-101..ST-110)
     addRoom(roomRepo, "ST-101", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
     addRoom(roomRepo, "ST-102", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
     addRoom(roomRepo, "ST-103", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
@@ -958,10 +945,7 @@ public class DatabaseSeeder {
     addRoom(roomRepo, "ST-109", Room.RoomType.STANDARD, Room.Status.DIRTY, 250.00, false);
     addRoom(roomRepo, "ST-110", Room.RoomType.STANDARD, Room.Status.CLEANING, 250.00, false);
 
-    // =========================================================================
-    // 4. SEED RESERVATIONS
-    // =========================================================================
-    // 4.A Standard Queue Waiting Reservations (10 Non-Members)
+    // Seed reservations
     addStdWait(standardRepo, "G-141", Room.RoomType.LUXURY, now.minusMinutes(25));
     addStdWait(standardRepo, "G-142", Room.RoomType.LUXURY, now.minusMinutes(20));
     addStdWait(standardRepo, "G-143", Room.RoomType.LUXURY, now.minusMinutes(15));
@@ -973,7 +957,6 @@ public class DatabaseSeeder {
     addStdWait(standardRepo, "G-149", Room.RoomType.STANDARD, now.minusMinutes(22));
     addStdWait(standardRepo, "G-150", Room.RoomType.STANDARD, now.minusMinutes(15));
 
-    // 4.B Advance Reserved Reservations (10 Reservations)
     addStdAdv(standardRepo, "G-101", Room.RoomType.LUXURY, today.atStartOfDay(), 2);
     addStdAdv(standardRepo, "G-111", Room.RoomType.LUXURY, today.plusDays(1).atStartOfDay(), 3);
     addStdAdv(standardRepo, "G-151", Room.RoomType.LUXURY, today.plusDays(2).atStartOfDay(), 1);
@@ -985,7 +968,6 @@ public class DatabaseSeeder {
     addStdAdv(standardRepo, "G-153", Room.RoomType.STANDARD, today.plusDays(2).atStartOfDay(), 2);
     addStdAdv(standardRepo, "G-154", Room.RoomType.STANDARD, today.plusDays(4).atStartOfDay(), 3);
 
-    // 4.C Standard Active Checked-In Stays (5 Non-Members)
     Reservation sc1 =
         addStdCheckedIn(
             standardRepo,
@@ -1076,7 +1058,6 @@ public class DatabaseSeeder {
         Billing.Status.UNPAID,
         now.minusMinutes(22));
 
-    // 4.D Standard Completed Checked-Out Stays (5 Non-Members)
     Reservation co1 =
         addStdCheckedOut(standardRepo, "G-160", Room.RoomType.LUXURY, "L-801", now.minusDays(5), 2);
     Reservation co2 =
@@ -1145,7 +1126,6 @@ public class DatabaseSeeder {
         Billing.Status.PAID,
         now.minusDays(4));
 
-    // 4.E VIP Priority Waiting Reservations (18 Reservations)
     addVipWait(
         vipRepo, guestRepo, "G-102", Room.RoomType.LUXURY, 9500, false, now.minusMinutes(10));
     addVipWait(vipRepo, guestRepo, "G-103", Room.RoomType.LUXURY, 9200, false, now.minusMinutes(8));
@@ -1174,7 +1154,6 @@ public class DatabaseSeeder {
     addVipWait(
         vipRepo, guestRepo, "G-135", Room.RoomType.STANDARD, 4100, false, now.minusMinutes(22));
 
-    // 4.F VIP Room Holding Bay Allocated Reservations (8 Reservations)
     addVipAllocated(
         vipRepo,
         guestRepo,
@@ -1256,7 +1235,6 @@ public class DatabaseSeeder {
         16,
         20);
 
-    // 4.G VIP Active Checked-In Stays (12 Reservations)
     Reservation vc1 =
         addVipCheckedIn(
             vipRepo,
@@ -1535,7 +1513,6 @@ public class DatabaseSeeder {
         Billing.Status.UNPAID,
         now.minusMinutes(40));
 
-    // 4.H VIP Completed Checked-Out Stays (6 Reservations)
     Reservation vco1 =
         addVipCheckedOut(
             vipRepo, guestRepo, "G-102", Room.RoomType.LUXURY, "L-801", now.minusDays(4), 5, 10, 2);
@@ -1638,7 +1615,6 @@ public class DatabaseSeeder {
         Billing.Status.PAID,
         now.minusDays(1));
 
-    // 4.I VIP Penalty No-Show Reservations (6 Reservations)
     addVipNoShow(vipRepo, guestRepo, "G-109", Room.RoomType.LUXURY, now.minusHours(4), 10, 10);
     addVipNoShow(vipRepo, guestRepo, "G-110", Room.RoomType.LUXURY, now.minusHours(2), 10, 10);
     addVipNoShow(vipRepo, guestRepo, "G-124", Room.RoomType.SUITE, now.minusHours(5), 15, 15);
@@ -1646,15 +1622,12 @@ public class DatabaseSeeder {
     addVipNoShow(vipRepo, guestRepo, "G-139", Room.RoomType.STANDARD, now.minusHours(6), 20, 20);
     addVipNoShow(vipRepo, guestRepo, "G-140", Room.RoomType.STANDARD, now.minusHours(1), 20, 20);
 
-    // 4.J Standard No-Show Reservations (4 Reservations)
     addStdNoShow(standardRepo, "G-162", Room.RoomType.STANDARD, now.minusHours(3));
     addStdNoShow(standardRepo, "G-163", Room.RoomType.STANDARD, now.minusDays(1).minusHours(2));
     addStdNoShow(standardRepo, "G-164", Room.RoomType.SUITE, now.minusDays(3).minusHours(4));
     addStdNoShow(standardRepo, "G-137", Room.RoomType.LUXURY, now.minusHours(1));
 
-    // =========================================================================
-    // 5. SEED HOUSEKEEPING STAFF & TASKS
-    // =========================================================================
+    // Seed housekeeping staff and tasks
     HousekeepingStaff s1 =
         new HousekeepingStaff(
             "EMP-001",
@@ -1704,7 +1677,6 @@ public class DatabaseSeeder {
     staffRepo.addStaff(s5);
     staffRepo.addStaff(s6);
 
-    // DIRTY room assignments (2 Tasks: ASSIGNED)
     HousekeepingTask t1 =
         new HousekeepingTask(
             "T-1001",
@@ -1729,7 +1701,6 @@ public class DatabaseSeeder {
     t2.setAssignedAt(now.minusMinutes(30));
     taskRepo.enqueueTask(t2);
 
-    // CLEANING room assignments (2 Tasks: IN_PROGRESS)
     HousekeepingTask t3 =
         new HousekeepingTask(
             "T-1003",
@@ -1756,7 +1727,6 @@ public class DatabaseSeeder {
     t4.setStartedAt(now.minusMinutes(15));
     taskRepo.enqueueTask(t4);
 
-    // Synchronize VIP queues and calculate priority scores via VipSystemConfig
     vipRepo.applySettingsToQueue(
         vipSystemConfigRepo.getConfig(), guestRepo, memberRepo, false, true);
 
