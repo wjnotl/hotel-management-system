@@ -1002,7 +1002,8 @@ public class VipReportController {
     if (filteredList == null) {
       return new VipReportView.HoldingReportDTO(
           new LinkedList<>(),
-          new VipReportView.HoldingReportSummaryDTO(0, 0, 0.0, 0.0, 0, 0.0, 0.0, 0, 0.0, 0.0),
+          new VipReportView.HoldingReportSummaryDTO(
+              0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0),
           0);
     }
 
@@ -1093,12 +1094,15 @@ public class VipReportController {
     VipReportView.HoldingReportSummaryDTO summary =
         new VipReportView.HoldingReportSummaryDTO(
             totalMatches,
+            dCount,
             config.getDiamondGraceWindowMins(),
             dAvgUtil,
             config.getDiamondGraceUtilTargetPct(),
+            gCount,
             config.getGoldGraceWindowMins(),
             gAvgUtil,
             config.getGoldGraceUtilTargetPct(),
+            sCount,
             config.getSilverGraceWindowMins(),
             sAvgUtil,
             config.getSilverGraceUtilTargetPct());
