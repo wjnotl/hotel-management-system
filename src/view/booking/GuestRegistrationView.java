@@ -170,8 +170,7 @@ public class GuestRegistrationView {
     printKeyValue(kvSettings, "Passport Number", blankToNa(passportNumber), true);
     printKeyValue(kvSettings, "Phone Number", phoneNumber, true);
     printKeyValue(kvSettings, "Email Address", blankToNa(email), true);
-    // Stated rather than asked. A person with no guest file has never stayed here, so there is
-    // no card to find and none is issued at the desk.
+    // Stated, not asked: a person with no guest file has never stayed here.
     printKeyValue(kvSettings, "Loyalty Status", "NON-MEMBER (new guest file)", true);
     printKeyValue(kvSettings, "Strike Count", "0 (new file)", false);
 

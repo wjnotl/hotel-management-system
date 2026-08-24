@@ -19,9 +19,7 @@ public class WalkInRegistrationView {
   private static final int[] TYPE_WIDTHS = {4, 10, 7, 9, 9, 8, 28};
   private static final int SCREEN_WIDTH = 83;
 
-  // The clerk knows before touching the keyboard whether this person has stayed here before, so
-  // that answer is asked first. A returning guest goes to the search and a first-time arrival goes
-  // straight to the form, rather than being made to search for a record that cannot exist.
+  // The clerk already knows, so a first-time arrival is not made to search for nothing.
   public int displayModeMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("REGISTER WALK-IN", SCREEN_WIDTH);
@@ -103,8 +101,7 @@ public class WalkInRegistrationView {
     return null;
   }
 
-  // Mirrors the decision the controller is about to make, in the same order, so the column never
-  // promises an immediate room the placement rule would not actually hand over.
+  // Mirrors the controller's decision in order, so the column never over-promises.
   private String outcomeFor(
       int vacant,
       int arrivingToday,
@@ -237,8 +234,7 @@ public class WalkInRegistrationView {
 
     System.out.println();
 
-    // Offering a choice that would then be refused is worse than not offering it, so claiming the
-    // booking simply is not on the menu on the wrong day. The caller's codes do not move.
+    // Offering a choice that would then be refused is worse than not offering it.
     if (!dueToday) {
       System.out.println("1. Register A Walk-In For Tonight");
       System.out.println("2. Back\n");
@@ -428,8 +424,7 @@ public class WalkInRegistrationView {
     return (value == null || value.isEmpty()) ? "N/A" : value;
   }
 
-  // A booking reserves a night rather than a moment, and the desk never asks for a clock time, so
-  // showing one here would invent a promise the guest never made.
+  // A booking reserves a night, not a moment, so a clock would invent a promise.
   private String formatBookedNight(LocalDateTime dateTime) {
     if (dateTime == null) return "Not set";
     return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));

@@ -12,28 +12,27 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Iterator;
+import java.util.function.Supplier;
 
 public class StandardReservationRepo {
   private final ReservationRepo reservationRepo;
-  private final BookingSettingsRepo bookingSettingsRepo;
+  // A supplier, not the store itself, so the repo layer never depends on a controller package.
+  private final Supplier<BookingSettings> settingsSource;
 
-  // One waiting line per room type. Only WAITING reservations live here.
-  // Held as the concrete type because the repository is what chooses the
-  // implementation and reports its capacity. Every caller outside this class only
-  // ever sees QueueInterface.
+  // One WAITING line per type. Concrete because the repo owns the implementation and its capacity.
   private CircularArrayQueue<Reservation> luxuryQueue;
   private CircularArrayQueue<Reservation> suiteQueue;
   private CircularArrayQueue<Reservation> standardQueue;
 
   public StandardReservationRepo(
-      ReservationRepo reservationRepo, BookingSettingsRepo bookingSettingsRepo) {
+      ReservationRepo reservationRepo, Supplier<BookingSettings> settingsSource) {
     this.reservationRepo = reservationRepo;
-    this.bookingSettingsRepo = bookingSettingsRepo;
+    this.settingsSource = settingsSource;
     load();
   }
 
   private BookingSettings settings() {
-    return bookingSettingsRepo.getSettings();
+    return settingsSource.get();
   }
 
   public int getHoldGraceMinutes() {
@@ -58,8 +57,7 @@ public class StandardReservationRepo {
       }
     }
 
-    // A guest sent back to the rear keeps its original slot in masterList but gets
-    // a fresh queueArrivalTime, so replaying masterList order would rebuild the line wrong.
+    // A requeued guest keeps its masterList slot but gets a fresh time, so that order is wrong.
     waiting.sort(
         (a, b) -> {
           LocalDateTime first = a.getQueueArrivalTime();
@@ -80,9 +78,7 @@ public class StandardReservationRepo {
     }
   }
 
-  // The configured capacity is a starting size, not a licence to drop people already in line.
-  // With expansion switched off a smaller configured value would make enqueue refuse the
-  // guests being restored, so the array is opened wide enough to hold them first.
+  // With expansion off a smaller capacity would refuse guests already in line.
   private CircularArrayQueue<Reservation> buildQueue(
       ListInterface<Reservation> waiting, Room.RoomType roomType) {
     int alreadyWaiting = 0;
@@ -97,8 +93,7 @@ public class StandardReservationRepo {
     return new CircularArrayQueue<>(capacity, settings().isAllowQueueExpansion());
   }
 
-  // Capacity and the expansion flag are fixed at construction, so a settings change only
-  // reaches the live lines by rebuilding them from the master list.
+  // Capacity and expansion are fixed at construction, so a change needs a rebuild.
   public void applySettings() {
     load();
   }
@@ -113,8 +108,7 @@ public class StandardReservationRepo {
     return queueFor(roomType);
   }
 
-  // Capacity belongs to the array implementation, not to the queue contract, so
-  // the interface deliberately does not carry it and the repository reports it instead.
+  // Capacity belongs to the array, not the queue contract, so the repo reports it.
   public int getQueueCapacity(Room.RoomType roomType) {
     return queueFor(roomType).getCapacity();
   }
@@ -123,17 +117,14 @@ public class StandardReservationRepo {
     return queueFor(roomType).canExpand();
   }
 
-  // The house rule about how long a line may get, which is separate from how many array slots
-  // the queue currently owns. A capped line refuses the guest before any record is created.
+  // The house rule on line length, separate from array slots. Checked before any record.
   public boolean isLineAtPolicyLimit(Room.RoomType roomType) {
     BookingSettings config = settings();
     if (!config.isQueueLengthCapped(roomType)) return false;
     return queueFor(roomType).getNumberOfEntries() >= config.getMaxQueueLength(roomType);
   }
 
-  // A line closes to new guests two different ways: the house length rule above, or an array that
-  // is full and not allowed to grow. The clerk gets the same answer either way, so both are asked
-  // in one place rather than the second one surfacing as a failed enqueue further down.
+  // A line closes two ways: the length rule, or a full array that may not grow.
   public boolean isLineClosed(Room.RoomType roomType) {
     if (isLineAtPolicyLimit(roomType)) return true;
 
@@ -141,8 +132,7 @@ public class StandardReservationRepo {
     return queue.isFull() && !queue.canExpand();
   }
 
-  // The number that actually stopped the guest, so the refusal screen quotes the rule in force
-  // rather than whichever limit happens to be lower.
+  // The limit that actually stopped the guest, so the refusal quotes the rule in force.
   public int getClosedLineLimit(Room.RoomType roomType) {
     return isLineAtPolicyLimit(roomType) ? getMaxQueueLength(roomType) : getQueueCapacity(roomType);
   }
@@ -155,8 +145,7 @@ public class StandardReservationRepo {
     return settings().getMaxQueueLength(roomType);
   }
 
-  // Walks the queue front to back without disturbing it, so screens and reports
-  // can page through the line while the queue itself stays a queue.
+  // Walks the queue without disturbing it, so screens can page a line that stays a queue.
   public ListInterface<Reservation> snapshotQueue(Room.RoomType roomType) {
     ListInterface<Reservation> snapshot = new ArrayList<>();
     Iterator<Reservation> iterator = getQueueByRoomType(roomType).getIterator();
@@ -193,8 +182,7 @@ public class StandardReservationRepo {
     return holds;
   }
 
-  // The queue is the only part that can refuse the entry, so it is asked first. Adding to the
-  // master list before that would leave a WAITING record that is in no line at all.
+  // The queue is the only part that can refuse, so it is asked before the master list.
   public boolean addReservation(Reservation reservation) {
     if (reservation == null || reservation.getRoomType() == null) return false;
 
@@ -241,17 +229,13 @@ public class StandardReservationRepo {
     return true;
   }
 
-  // A loyalty member standing at the desk is served without ever joining the
-  // line, so the record jumps straight to ALLOCATED. Routing this through joinQueue then
-  // allocateFront would be wrong: allocateFront serves whoever is at the front, not this guest.
+  // A member skips the line, so the record goes straight to ALLOCATED, not through the front.
   public boolean allocateDirect(Reservation reservation) {
     if (reservation == null || reservation.getRoomType() == null) return false;
 
     LocalDateTime now = LocalDateTime.now();
 
-    // An advance booking that was already marked as arrived is standing in the
-    // line, so it has to leave the queue before it can be held, or the same record would be
-    // served twice.
+    // An arrived booking is standing in the line, so it must leave before it can be held.
     getQueueByRoomType(reservation.getRoomType()).remove(reservation);
 
     if (reservation.getQueueArrivalTime() == null) {
@@ -270,19 +254,15 @@ public class StandardReservationRepo {
     return updateReservation(reservation);
   }
 
-  // Serving the front is the O(1) dequeue the FIFO queue exists for, so the ordinary path never
-  // degrades into a scan.
+  // Serving the front is the O(1) dequeue the FIFO queue exists for.
   public Reservation allocateFront(Room.RoomType roomType) {
     Reservation front = getQueueByRoomType(roomType).dequeue();
     if (front == null) return null;
     return stampAsHold(front);
   }
 
-  // Serving a row other than the front is a deliberate act the screens make the clerk authorise,
-  // so the repository does not police the position. It only guarantees that whoever is served
-  // leaves the line and is stamped as a hold, because a queue entry must not survive being
-  // allocated. Skipping ahead costs the O(n) removal that reaching into the middle of a queue
-  // always costs; the front is still taken by the O(1) dequeue.
+  // The screens authorise the skip, so the repo only guarantees the entry leaves the line. Reaching
+  // into the middle costs O(n); the front stays O(1).
   public Reservation allocateQueued(Reservation reservation) {
     if (reservation == null || reservation.getRoomType() == null) return null;
 
@@ -301,9 +281,7 @@ public class StandardReservationRepo {
     reservation.setStatus(Reservation.Status.ALLOCATED);
     reservation.setAllocatedTime(LocalDateTime.now());
 
-    // The grace window in force at the moment of allocation is stamped on the record, so a
-    // later settings change re-times only the holds created after it rather than silently
-    // expiring one that is already running.
+    // The window in force at allocation is stamped, so a later edit cannot expire a live hold.
     reservation.setAllocatedGraceMins(settings().getHoldGraceMinutes(reservation.getRoomType()));
 
     updateReservation(reservation);
@@ -316,9 +294,7 @@ public class StandardReservationRepo {
     reservation.setStatus(Reservation.Status.CHECKED_IN);
     reservation.setStayDays(stayDays);
 
-    // Stamped so the availability calendar knows which night this stay actually began on. Reading
-    // it off allocatedTime instead would date a stay to the moment the room was called, which is
-    // the previous day for anybody checked in just after midnight.
+    // allocatedTime would date the stay to when the room was called, a day early after midnight.
     reservation.setCheckInTime(LocalDateTime.now());
     return updateReservation(reservation);
   }
@@ -331,9 +307,7 @@ public class StandardReservationRepo {
     return updateReservation(reservation);
   }
 
-  // The desk closing a hold by hand is a decision, not a timeout, so the guest is not sent back to
-  // the line the way isRequeueOnLapse would send a hold that merely ran out of time. The room is
-  // released either way, because the person it was being kept for is not coming.
+  // A hold closed by hand is a decision, not a timeout, so the guest is never requeued.
   public boolean markHoldNoShow(Reservation reservation, RoomRepo roomRepo) {
     if (reservation == null || reservation.getStatus() != Reservation.Status.ALLOCATED) {
       return false;
@@ -346,7 +320,6 @@ public class StandardReservationRepo {
     return updateReservation(reservation);
   }
 
-  // End of business cycle: anyone still standing in the line is turned away.
   public int closeQueue(Room.RoomType roomType) {
     QueueInterface<Reservation> queue = getQueueByRoomType(roomType);
 
@@ -365,16 +338,12 @@ public class StandardReservationRepo {
     return closed;
   }
 
-  // A guest may hold only one live standard booking at a time. Checking every room type
-  // rather than only the line being served is what stops one person occupying the LUXURY and
-  // SUITE lines at once, or being queued again while a room is already held for them.
+  // One live booking per guest across all types, so nobody occupies two lines at once.
   public Reservation findLiveReservationForGuest(String guestId) {
     return findLiveReservationForGuest(guestId, null);
   }
 
-  // A null room type asks the wide question, any live booking at all. Naming a type asks the
-  // narrow one, which is the rule that always holds: the same person cannot occupy two places in
-  // one line, whatever the house says about standing in several lines at once.
+  // A null type asks the wide question. A named type asks the rule that always holds.
   public Reservation findLiveReservationForGuest(String guestId, Room.RoomType roomType) {
     if (guestId == null) return null;
 
@@ -392,23 +361,18 @@ public class StandardReservationRepo {
     return null;
   }
 
-  // The night a booking was sold for, which is the only night it may be taken up on.
   public LocalDate bookedArrivalDate(Reservation booking) {
     if (booking == null || booking.getExpectedArrivalTime() == null) return null;
     return booking.getExpectedArrivalTime().toLocalDate();
   }
 
-  // A booking reserves one specific night, so checking in on any other day would either take a
-  // room nobody has held yet or claim one that has already moved on. A record with no arrival date
-  // recorded is let through, because there is nothing to contradict.
+  // A booking reserves one night, so any other day takes an unheld room. No date is let through.
   public boolean isArrivalDueToday(Reservation booking) {
     LocalDate due = bookedArrivalDate(booking);
     return due == null || due.equals(LocalDate.now());
   }
 
-  // An advance booking is not a live queue entry, so it does not block a walk-in. It is
-  // surfaced instead, because marking that booking as arrived is almost always what the desk
-  // meant to do rather than opening a second reservation for the same person.
+  // A booking is not a queue entry, so it does not block a walk-in; it is surfaced to be claimed.
   public Reservation findReservedBookingForGuest(String guestId) {
     if (guestId == null) return null;
 
@@ -424,8 +388,7 @@ public class StandardReservationRepo {
     return null;
   }
 
-  // A console app has no event loop, so a lapsed hold is resolved the next time a
-  // screen asks for the data rather than by a background timer that dies with the process.
+  // No event loop here, so a lapsed hold is resolved the next time a screen asks.
   public int sweepLapsedHolds(RoomRepo roomRepo, GuestRepo guestRepo) {
     LocalDateTime now = LocalDateTime.now();
     BookingSettings config = settings();
@@ -442,8 +405,7 @@ public class StandardReservationRepo {
         continue;
       }
 
-      // The window this hold was created under wins over the current setting, so editing the
-      // grace period never retroactively expires a room a guest is still walking towards.
+      // The window this hold was created under wins, so an edit never expires it early.
       int graceMinutes =
           (r.getAllocatedGraceMins() != null)
               ? r.getAllocatedGraceMins()
@@ -473,14 +435,12 @@ public class StandardReservationRepo {
         r.setAllocatedGraceMins(null);
         r.setRoomNumber(null);
 
-        // A line that refuses the re-entry would otherwise leave a WAITING record standing in
-        // no queue at all, so the booking is closed as a no-show instead.
+        // A refused re-entry would leave a WAITING record in no queue, so it is a no-show.
         if (!getQueueByRoomType(r.getRoomType()).enqueue(r)) {
           r.setStatus(Reservation.Status.NO_SHOW);
         }
       } else {
-        // allocatedTime is kept so the reports can still measure how long this guest waited
-        // before the room was called for them.
+        // allocatedTime is kept so the reports can still measure how long this guest waited.
         r.setStatus(Reservation.Status.NO_SHOW);
       }
 
@@ -505,16 +465,13 @@ public class StandardReservationRepo {
     if (room != null) {
       room.setStatus(Room.Status.VACANT_CLEAN);
 
-      // Room.Status has no constant meaning taken, so isOccupied is what actually marks a room as
-      // spoken for. Clearing the status without clearing the flag leaves the room unsellable.
+      // isOccupied is what marks a room taken, so clearing only the status leaves it unsellable.
       room.setIsOccupied(false);
       roomRepo.updateRoom(room);
     }
   }
 
-  // One counter for every screen that asks how many rooms of a type the desk may hand out right
-  // now. It lived privately in three controllers, and only one of them was updated when isOccupied
-  // arrived, so the queue screen kept counting rooms it had already given away.
+  // One counter for every screen. Three private copies drifted, and only one knew isOccupied.
   public int countFreeRooms(RoomRepo roomRepo, Room.RoomType roomType) {
     if (roomRepo == null || roomType == null) return 0;
 
@@ -532,10 +489,7 @@ public class StandardReservationRepo {
     return free;
   }
 
-  // How many VIPs are standing ahead of the counter for this room type. Counted off the master
-  // list rather than VipReservationRepo's own lists, because those are a mirror the VIP module
-  // builds and rebuilds on its own schedule. reservations.dat is the record both modules write to,
-  // so it is the only count booking can stand behind.
+  // Counted off the master list, because the VIP module keeps a mirror it rebuilds itself.
   public int countVipWaiting(Room.RoomType roomType) {
     if (roomType == null) return 0;
 
@@ -554,11 +508,7 @@ public class StandardReservationRepo {
   }
 
   // ===================== DATE AWARE AVAILABILITY =====================
-  // "Is a room free" used to mean "is one VACANT & CLEAN this second", which is the right question
-  // for a walk-in and the wrong one for a booking three weeks out. These methods answer it per
-  // date instead, over one shared calendar: an advance booking, a guest already in a room and a
-  // hold that has been called all consume the same physical stock, so all three are counted. VIP
-  // reservations are counted too, because a VIP in room 801 makes 801 just as unavailable.
+  // Per date, not free right now. Bookings, occupied rooms, holds and VIP records share one stock.
 
   public int getTotalRoomsOfType(RoomRepo roomRepo, Room.RoomType roomType) {
     if (roomRepo == null || roomType == null) return 0;
@@ -574,7 +524,6 @@ public class StandardReservationRepo {
     return total;
   }
 
-  // How many rooms of this type are spoken for on one calendar date.
   public int countCommittedOn(Room.RoomType roomType, LocalDate date) {
     if (roomType == null || date == null) return 0;
 
@@ -590,8 +539,7 @@ public class StandardReservationRepo {
       LocalDate end = r.getOccupancyEndDate();
       if (start == null || end == null || !start.isBefore(end)) continue;
 
-      // With same day turnover switched off the room is not resold on the day it is vacated, so
-      // every stay is padded by the extra night the housekeeping rule reserves for it.
+      // With same day turnover off the room is not resold that day, so stays pad by a night.
       if (!turnover) {
         end = end.plusDays(1);
       }
@@ -608,8 +556,7 @@ public class StandardReservationRepo {
     return Math.max(0, free);
   }
 
-  // The tightest night in the requested span decides whether the whole stay can be promised, so
-  // the worst date is what comes back rather than the first or the average.
+  // The tightest night decides the whole stay, so the worst date is what comes back.
   public int countAvailableAcross(
       RoomRepo roomRepo, Room.RoomType roomType, LocalDate arrival, int nights) {
     if (arrival == null || nights <= 0) return 0;
@@ -629,8 +576,7 @@ public class StandardReservationRepo {
     return countAvailableAcross(roomRepo, roomType, arrival, nights) > 0;
   }
 
-  // The first night in the span that has nothing left, so a refusal can name the date that caused
-  // it instead of only saying the stay does not fit.
+  // The first night with nothing left, so a refusal can name the date that caused it.
   public LocalDate findFirstFullDate(
       RoomRepo roomRepo, Room.RoomType roomType, LocalDate arrival, int nights) {
     if (arrival == null || nights <= 0) return null;
@@ -644,7 +590,6 @@ public class StandardReservationRepo {
     return null;
   }
 
-  // The longest stay that can still be promised from this arrival date, capped by the house limit.
   public int findLongestBookableStay(
       RoomRepo roomRepo, Room.RoomType roomType, LocalDate arrival, int cap) {
     if (arrival == null || cap <= 0) return 0;
@@ -656,9 +601,7 @@ public class StandardReservationRepo {
     return nights;
   }
 
-  // Advance bookings for a date that has not arrived yet still hold stock back from the counter,
-  // so the walk-in screens subtract them from what they offer rather than handing out a room that
-  // was already promised to somebody driving in this evening.
+  // Future bookings still hold stock back, so walk-in screens subtract them.
   public int countReservedArrivingOn(Room.RoomType roomType, LocalDate date) {
     if (roomType == null || date == null) return 0;
 

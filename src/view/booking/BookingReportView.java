@@ -6,8 +6,7 @@ import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 import util.TextUtil;
 
-// The report bodies are not drawn here. Generating a report writes a .txt file, so this view only
-// collects the scope and confirms what was written.
+// Report bodies go to a .txt, so this view only collects the scope and confirms it.
 public class BookingReportView {
 
   private static final int[] SPAN_WIDTH = {90};
@@ -167,8 +166,7 @@ public class BookingReportView {
     return ConsoleUtil.getMenuInput("Enter a command: ", commands);
   }
 
-  // Binary search only works on the key the list is ordered by, so rather than refusing the
-  // command the screen offers the re-sort that would make it legal.
+  // Binary search needs the sorted key, so the screen offers the re-sort, not a refusal.
   public boolean displayResortForSearchScreen(String currentSortLabel) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("RE-SORT BEFORE SEARCHING", SCREEN_WIDTH);
@@ -491,8 +489,7 @@ public class BookingReportView {
     return result.getAsInt();
   }
 
-  // Every submenu in this view is the same shape: a heading, some context lines, a numbered list
-  // and a trailing Back option. Returning 0 means the clerk backed out.
+  // Every submenu here is the same shape. Returning 0 means the clerk backed out.
   private int numberedMenu(String title, String[] contextLines, String[] options) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(title, SCREEN_WIDTH);
@@ -526,16 +523,14 @@ public class BookingReportView {
         moreRowsFollow ? TableUtil.BorderPosition.MIDDLE : TableUtil.BorderPosition.BOTTOM);
   }
 
-  // Blank is an error rather than a silent cancel, so Enter never quietly discards what the clerk
-  // was part way through. 'C' stays the explicit way out.
+  // Blank is an error, so Enter never discards a part-finished entry. 'C' is the way out.
   private Integer requireInt(String prompt, int min, int max) {
     ConsoleUtil.GetMenuInputResult result =
         ConsoleUtil.getMenuInput(prompt, min, max, new char[] {'C'});
     return result.isNumber ? Integer.valueOf(result.getAsInt()) : null;
   }
 
-  // A blank line is rejected here rather than in the controller, so the error redraws this screen
-  // instead of the menu above it.
+  // A blank line is rejected here so the error redraws this screen instead of the menu above it.
   private String requireText(String prompt, String emptyMessage) {
     String typed = ConsoleUtil.getStringInput(prompt);
     if (typed == null || typed.trim().isEmpty()) {

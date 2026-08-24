@@ -219,8 +219,7 @@ public class AdvanceBookingView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
   }
 
-  // Asked first for the same reason as the walk-in flow: the clerk already knows whether this
-  // person has a file, so a first-time caller is not made to search for a record that cannot exist.
+  // Asked first as in the walk-in flow: a first-time caller has no record to search for.
   public int displayModeMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING", SCREEN_WIDTH);
@@ -235,8 +234,7 @@ public class AdvanceBookingView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
   }
 
-  // Availability is shown before the type is picked, so a booking is never started against a type
-  // that the calendar was always going to refuse.
+  // Availability is shown first, so a booking never starts against a refused type.
   public Room.RoomType promptRoomType(
       Guest guest, LocalDate arrival, int[] totalByType, int[] freeByType) {
 
@@ -288,8 +286,7 @@ public class AdvanceBookingView {
     return null;
   }
 
-  // The raw text comes back for the controller to parse, so the rule about what a date may be
-  // lives with the rest of the booking rules rather than in the screen.
+  // Raw text comes back, so the rule about what a date may be lives with the controller.
   public String promptArrivalDate(
       Guest guest, LocalDate earliest, LocalDate latest, LocalDate current) {
 
@@ -465,8 +462,7 @@ public class AdvanceBookingView {
     printKeyValue(kvSettings, "Room To Give", room.getRoomNumber(), true);
     printKeyValue(kvSettings, "Expected Arrival", formatArrival(r.getExpectedArrivalTime()), true);
     printKeyValue(kvSettings, "Booked Days", stayRangeLabel(r, nights), true);
-    // Checking in re-anchors the stay to the night the guest actually takes the room, so an early
-    // or late arrival is given its real checkout date rather than the one that was sold.
+    // Check-in re-anchors the stay, so an early or late arrival gets its real checkout.
     printKeyValue(
         kvSettings,
         "Checking Out On",
@@ -859,23 +855,20 @@ public class AdvanceBookingView {
     return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
   }
 
-  // A booking reserves a night, not a moment, so the hour is never shown even though the field
-  // that carries it is a LocalDateTime.
+  // A booking reserves a night, not a moment, so the hour is never shown.
   private String formatArrival(LocalDateTime dateTime) {
     if (dateTime == null) return "Not set";
     return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
   }
 
-  // Blank is an error rather than a silent cancel, so Enter never quietly discards what the clerk
-  // was part way through. 'C' stays the explicit way out.
+  // Blank is an error, so Enter never discards a part-finished entry. 'C' is the way out.
   private Integer requireInt(String prompt, int min, int max) {
     ConsoleUtil.GetMenuInputResult result =
         ConsoleUtil.getMenuInput(prompt, min, max, new char[] {'C'});
     return result.isNumber ? Integer.valueOf(result.getAsInt()) : null;
   }
 
-  // A blank line is rejected here rather than in the controller, so the error redraws this screen
-  // instead of the menu above it.
+  // A blank line is rejected here so the error redraws this screen instead of the menu above it.
   private String requireText(String prompt, String emptyMessage) {
     String typed = ConsoleUtil.getStringInput(prompt);
     if (typed == null || typed.trim().isEmpty()) {

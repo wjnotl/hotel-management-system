@@ -8,7 +8,6 @@ import entity.Reservation;
 import entity.Room;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
@@ -16,8 +15,7 @@ import repo.StandardReservationRepo;
 import util.ConsoleUtil;
 import view.booking.WalkInRegistrationView;
 
-// Both the top-level Register Walk-In item and the [A] command inside a line come through here, so
-// the assign-or-enqueue rule, the duplicate guard and the member block cannot drift apart.
+// The menu item and the [A] command both come through here, so the rules cannot drift.
 public class WalkInRegistrationController {
   private static final int MODE_NEW = 2;
   private static final int MODE_BACK = 3;
@@ -27,19 +25,19 @@ public class WalkInRegistrationController {
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
-  private final BookingSettingsRepo bookingSettingsRepo;
+  private final BookingSettingsStore bookingSettingsStore;
 
   public WalkInRegistrationController(
       StandardReservationRepo standardReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       RoomRepo roomRepo,
-      BookingSettingsRepo bookingSettingsRepo) {
+      BookingSettingsStore bookingSettingsStore) {
     this.standardReservationRepo = standardReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
-    this.bookingSettingsRepo = bookingSettingsRepo;
+    this.bookingSettingsStore = bookingSettingsStore;
   }
 
   public void registerWalkIn() {
@@ -54,14 +52,12 @@ public class WalkInRegistrationController {
 
         Guest guest = (mode == MODE_NEW) ? registerNewGuest() : findExistingGuest();
 
-        // Backing out of either mode returns to the mode menu, so picking the wrong one costs a
-        // keystroke rather than the whole flow.
+        // Backing out returns to the mode menu, not out of the walk-in.
         if (guest == null) continue;
 
         if (isBlockedByLiveBooking(guest)) continue;
 
-        // Checked before membership, because this module is the only place a standard booking can
-        // be claimed and blocking a member first would strand the booking forever.
+        // Checked before membership, or a member with a booking would be stranded.
         Reservation reserved =
             standardReservationRepo.findReservedBookingForGuest(guest.getGuestId());
         if (reserved != null) {
@@ -91,8 +87,7 @@ public class WalkInRegistrationController {
     }
   }
 
-  // The existing-guest search offers no registration of its own, because the mode menu already
-  // asked that question and the clerk answered it.
+  // No registration here; the mode menu already asked that.
   private Guest findExistingGuest() {
     return new GuestLookupController(guestRepo, standardReservationRepo)
         .findGuest("REGISTER WALK-IN - EXISTING GUEST");
@@ -103,7 +98,7 @@ public class WalkInRegistrationController {
   }
 
   private BookingSettings settings() {
-    return bookingSettingsRepo.getSettings();
+    return bookingSettingsStore.getSettings();
   }
 
   private boolean isMemberBlocked(Guest guest) {
@@ -114,16 +109,14 @@ public class WalkInRegistrationController {
     return true;
   }
 
-  // The house rule, asked before a room type has been picked because it does not depend on one.
+  // The house rule, asked before a room type is picked because it does not need one.
   private boolean isBlockedByLiveBooking(Guest guest) {
     if (!settings().isBlockDuplicateAcrossLines()) return false;
     return refuseSecondBooking(
         guest, standardReservationRepo.findLiveReservationForGuest(guest.getGuestId()), true);
   }
 
-  // The rule that holds whatever the house setting says, asked once the line is known: nobody may
-  // take two places in the same line. Standing in the LUXURY and SUITE lines at once is a
-  // different thing and is allowed.
+  // The rule that always holds: no two places in one line. Two different lines are fine.
   private boolean isBlockedBySameLine(Guest guest, Room.RoomType roomType) {
     return refuseSecondBooking(
         guest,
@@ -224,8 +217,7 @@ public class WalkInRegistrationController {
     }
   }
 
-  // True when this walk-in is finished with, either served, queued or refused. False sends the
-  // clerk back to the guest search.
+  // True when the walk-in is finished with. False returns to the guest search.
   private boolean placeGuest(Guest guest, Room.RoomType roomType) {
     BookingSettings config = settings();
 
@@ -238,8 +230,7 @@ public class WalkInRegistrationController {
 
     boolean bypassClear = !config.isEnforceVipBypass() || freeToCounter > vipWaiting;
 
-    // Serve at once only when a room of this type is genuinely free to give: not promised to an
-    // advance booking arriving today, not owed to a waiting VIP, and with nobody already in line.
+    // Serve now only when a room is truly free: none promised today, none owed to a VIP, no line.
     if (config.isAutoAssignWhenRoomFree() && freeToCounter > 0 && bypassClear && lineLength == 0) {
       return assignRoomNow(guest, roomType, vacant, arrivingToday, vipWaiting);
     }
@@ -302,8 +293,7 @@ public class WalkInRegistrationController {
 
     LocalDateTime now = LocalDateTime.now();
 
-    // queueArrivalTime is stamped even though the guest never queues, so the wait-time report
-    // still counts this arrival and records it as the zero-wait case it actually was.
+    // Stamped though nobody queued, so the wait report counts this as a zero wait.
     Reservation direct =
         new Reservation(
             standardReservationRepo.generateReservationId(),
@@ -391,8 +381,7 @@ public class WalkInRegistrationController {
     return true;
   }
 
-  // The guest booked ahead and has now turned up, so their own booking is claimed rather than a
-  // second one being opened alongside it.
+  // The guest booked ahead and turned up, so that booking is claimed, not a second one.
   private void arriveOnExistingBooking(Reservation booking, Guest guest) {
     Room.RoomType roomType = booking.getRoomType();
 
@@ -404,8 +393,7 @@ public class WalkInRegistrationController {
 
     BookingSettings config = settings();
 
-    // The room this guest is claiming is one of the ones held back for today's arrivals, so it is
-    // not subtracted from what they may be given.
+    // This guest is claiming one of today's held-back rooms, so it is not subtracted twice.
     int freeToThisGuest = Math.max(0, vacant - Math.max(0, arrivingToday - 1));
     boolean bypassClear = !config.isEnforceVipBypass() || freeToThisGuest > vipWaiting;
 

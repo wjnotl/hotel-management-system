@@ -10,7 +10,6 @@ import entity.Room;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
 import repo.RoomRepo;
@@ -36,23 +35,23 @@ public class WalkInQueueController {
   private final GuestRepo guestRepo;
   private final MemberRepo memberRepo;
   private final RoomRepo roomRepo;
-  private final BookingSettingsRepo bookingSettingsRepo;
+  private final BookingSettingsStore bookingSettingsStore;
 
   public WalkInQueueController(
       StandardReservationRepo standardReservationRepo,
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       RoomRepo roomRepo,
-      BookingSettingsRepo bookingSettingsRepo) {
+      BookingSettingsStore bookingSettingsStore) {
     this.standardReservationRepo = standardReservationRepo;
     this.guestRepo = guestRepo;
     this.memberRepo = memberRepo;
     this.roomRepo = roomRepo;
-    this.bookingSettingsRepo = bookingSettingsRepo;
+    this.bookingSettingsStore = bookingSettingsStore;
   }
 
   private BookingSettings settings() {
-    return bookingSettingsRepo.getSettings();
+    return bookingSettingsStore.getSettings();
   }
 
   public void startQueueManagement() {
@@ -80,8 +79,7 @@ public class WalkInQueueController {
 
     while (true) {
       try {
-        // Read fresh each pass, so a page size or override rule changed under Settings takes
-        // effect the moment the clerk comes back to this screen.
+        // Read fresh each pass, so a setting changed under Settings takes effect at once.
         BookingSettings config = settings();
         int pageSize = config.getPageSize();
         int graceMinutes = standardReservationRepo.getHoldGraceMinutes(roomType);
@@ -176,8 +174,6 @@ public class WalkInQueueController {
     }
   }
 
-  // The view is handed finished strings rather than entities and repositories, so it never has to
-  // look a guest up to draw a row.
   private ListInterface<WalkInQueueView.LineRowDTO> buildLineRowDTO(
       ListInterface<Reservation> lineRows, QueueInterface<Reservation> queue) {
 
@@ -189,8 +185,7 @@ public class WalkInQueueController {
 
       Guest g = guestRepo.findById(r.getGuestId());
 
-      // Read straight off the queue so the true place in line shows even when the table is
-      // sorted by something else.
+      // Read off the queue, so the true place in line shows under any table sort.
       int position = queue.getPosition(r);
 
       rows.add(
@@ -237,7 +232,7 @@ public class WalkInQueueController {
 
   private void handleAddWalkIn(Room.RoomType roomType) {
     new WalkInRegistrationController(
-            standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsRepo)
+            standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsStore)
         .registerWalkIn(roomType);
   }
 
@@ -251,8 +246,7 @@ public class WalkInQueueController {
     allocateToGuest(front, roomType);
   }
 
-  // One path for both [G] Allocate Next and the row submenu, so the front of the line and a
-  // deliberate skip cannot end up with different rules.
+  // One path for [G] and the row submenu, so front and skip share the same rules.
   private void allocateToGuest(Reservation target, Room.RoomType roomType) {
     QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
 
@@ -280,8 +274,7 @@ public class WalkInQueueController {
       return;
     }
 
-    // High tier members bypass this line, so a free room only reaches the standard queue once
-    // every waiting VIP for that room type could already have been given one.
+    // A free room reaches this line only once every waiting VIP could have had one.
     boolean vipBypass = config.isEnforceVipBypass() && freeToCounter <= vipWaiting;
     if (vipBypass && !config.isAllowBypassOverride()) {
       walkInQueueView.displayBypassBlockedScreen(roomType, freeToCounter, vipWaiting);
@@ -337,9 +330,7 @@ public class WalkInQueueController {
     walkInQueueView.displayAllocateSuccessScreen(
         allocated, guest, room, queue.getNumberOfEntries(), overridden);
 
-    // The guest is standing right there, so the hold usually turns into a check-in seconds later.
-    // Offering it here saves walking back out to the line screen and into [C] to find the same
-    // record again. Declining leaves the hold running on its grace window as before.
+    // The guest is standing there, so the hold usually becomes a check-in at once.
     if (promptCheckInNow(guest, room)) {
       checkInHold(allocated, guest, room, roomType);
     }
@@ -355,8 +346,7 @@ public class WalkInQueueController {
     }
   }
 
-  // One check-in path for both the offer above and the [C] hold list, so a room taken straight
-  // after allocation is stamped exactly like one taken later.
+  // One check-in path for the offer above and the [C] hold list, so both stamp alike.
   private void checkInHold(Reservation hold, Guest guest, Room room, Room.RoomType roomType) {
     Integer stayDays =
         promptStayDays(hold, guest, room, settings().getMaxStayNights(), maxNightsFrom(roomType));
@@ -398,7 +388,7 @@ public class WalkInQueueController {
     }
   }
 
-  // Blank keeps the current term and redraws, so a stray Enter never clears a filter.
+  // Blank redraws, so a stray Enter never clears the filter.
   private String promptSearchTerm(String fieldLabel, String current) {
     while (true) {
       try {
@@ -565,8 +555,7 @@ public class WalkInQueueController {
     }
   }
 
-  // The strike is the shared daily counter the VIP module clears at midnight, so this only ever
-  // adds one, exactly as a hold that lapses on its own does.
+  // The strike is the shared daily counter, so this only ever adds one.
   private void markHoldNoShow(Reservation hold, Guest guest, Room room) {
     int strikes = (guest != null) ? guest.getStrikeCount() : 0;
 
@@ -601,8 +590,7 @@ public class WalkInQueueController {
     }
   }
 
-  // The first night is always available because this guest is already holding the room. Only the
-  // nights after it have to be checked against what else the calendar has promised.
+  // The first night is already held, so only the later nights are checked.
   private int maxNightsFrom(Room.RoomType roomType) {
     int cap = settings().getMaxStayNights();
     int extra =
@@ -654,8 +642,7 @@ public class WalkInQueueController {
         int vipWaiting = countVipWaiting(roomType);
         Room onOffer = roomRepo.findVacantCleanRoom(roomType);
 
-        // Shown before the choice is made, so the clerk knows which of the two assign options
-        // will actually go through rather than finding out after picking the wrong one.
+        // Shown before the choice, so the clerk knows which assign option will go through.
         boolean fifoSkip = position > 1;
         boolean vipBypass = settings().isEnforceVipBypass() && freeToCounter <= vipWaiting;
 
@@ -697,8 +684,7 @@ public class WalkInQueueController {
     }
   }
 
-  // Returns {field, term, matchMode, minWait}. minWait travels as a string so the whole filter set
-  // moves as one array rather than four out-parameters.
+  // Returns {field, term, matchMode, minWait}, so the filter set moves as one array.
   private String[] handleFilterMenu(
       String currentField, String currentTerm, String currentMode, Integer currentMinWait) {
 
