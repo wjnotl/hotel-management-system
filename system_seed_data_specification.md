@@ -130,7 +130,9 @@
 
 ---
 
-## 5. Housekeeping Staff
-* DIRTY room assignments x 2
-* CLEANING room assignments x 2
-* INSPECTED room assignments x 1
+## 5. Housekeeping Staff & Tasks
+
+* 6 Housekeeping Staff (2 per shift: MORNING, AFTERNOON, NIGHT)
+* DIRTY room assignments x 2 (staff assigned to a task, hasn't started cleaning yet — task status ASSIGNED, room status DIRTY)
+* CLEANING room assignments x 2 (staff assigned AND cleaning started — task status IN_PROGRESS, room status CLEANING)
+
