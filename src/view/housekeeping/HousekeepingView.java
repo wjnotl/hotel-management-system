@@ -165,9 +165,10 @@ public class HousekeepingView {
     ConsoleUtil.printTitleBox("SELECT TASK TYPE");
     System.out.println(" 1. Standard Clean");
     System.out.println(" 2. Deep Clean");
-    System.out.println(" 3. Maintenance Check\n");
+    System.out.println(" 3. Maintenance Check");
+    System.out.println(" 4. Cancel and Return to Task Board\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   // --- FILTER SUBMENUS WITH EXITS ---
@@ -282,9 +283,59 @@ public class HousekeepingView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 6).getAsInt();
   }
 
-  public String promptStaffIdInput() {
-    System.out.println("\n [Leave blank or type 'C' to Cancel]");
-    return ConsoleUtil.getStringInput("Enter Staff ID to assign: ");
+  // --- STAFF PICKER (REPLACES MANUAL STAFF ID ENTRY) ---
+  // Used anywhere the app previously asked the user to type a Staff ID by hand (Dequeue Next,
+  // Assign to Staff, Reassign Room). Shows the live roster (or a pre-filtered subset of it,
+  // e.g. everyone except the staff member being reassigned away from) and lets the user pick a
+  // row number instead of memorizing/typing an ID.
+  public GetMenuInputResult displayStaffPicker(
+      ListInterface<HousekeepingStaff> staffList, String title) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox(title);
+
+    if (staffList == null || staffList.isEmpty()) {
+      System.out.println(" *** NO STAFF AVAILABLE TO SELECT ***\n");
+      System.out.println(" [Enter 'C' to Cancel]\n");
+      return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'C'});
+    }
+
+    // Columns: NO.(5), STAFF ID(10), NAME(16), SHIFT(12), AVAILABILITY(13)
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(new int[] {5, 10, 16, 12, 13})
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"NO.", "STAFF ID", "NAME", "SHIFT", "AVAILABILITY"}, settings);
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+
+    int total = staffList.getNumberOfEntries();
+    for (int i = 1; i <= total; i++) {
+      HousekeepingStaff s = staffList.getEntry(i);
+      if (s == null) continue;
+
+      TableUtil.printTableRow(
+          new String[] {
+            String.valueOf(i),
+            s.getStaffId(),
+            s.getName(),
+            s.getShift().name(),
+            s.getAvailability().name()
+          },
+          settings);
+    }
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    System.out.println("\n [Enter 'C' to Cancel]\n");
+
+    String promptText =
+        (total == 1)
+            ? "Select staff by number (1) or 'C' to cancel: "
+            : "Select staff by number (1-" + total + ") or 'C' to cancel: ";
+
+    return ConsoleUtil.getMenuInput(promptText, 1, total, new char[] {'C'});
   }
 
   // --- SCREEN 2: STAFF ASSIGNMENTS ---
@@ -519,11 +570,6 @@ public class HousekeepingView {
     return ConsoleUtil.getStringInput("Enter Room Number to reassign: ");
   }
 
-  public String promptTargetStaffIdInput() {
-    System.out.println("\n [Leave blank or type 'C' to Cancel]");
-    return ConsoleUtil.getStringInput("Enter Staff ID to reassign to: ");
-  }
-
   public void renderStaffTaskHistoryScreen(
       HousekeepingStaff staff, ListInterface<HousekeepingTask> history) {
     ConsoleUtil.clearScreen();
@@ -686,9 +732,10 @@ public class HousekeepingView {
     ConsoleUtil.printTitleBox("SELECT NEW ROOM STATUS");
     System.out.println(" 1. Dirty");
     System.out.println(" 2. Cleaning");
-    System.out.println(" 3. Vacant / Clean\n");
+    System.out.println(" 3. Vacant / Clean");
+    System.out.println(" 4. Cancel and Return\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
   public void renderRoomHistoryScreen(

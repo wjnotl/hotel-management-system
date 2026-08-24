@@ -9,6 +9,7 @@ import entity.Room;
 import entity.RoomStatusLogEntry;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Iterator;
 import repo.HousekeepingSettingsRepo;
 import repo.HousekeepingStaffRepo;
@@ -189,6 +190,9 @@ public class HouseKeepingController {
         }
 
         int typeChoice = houseKeepingView.promptTaskTypeInput();
+        if (typeChoice == 4) {
+          return; // Cancel action, back to Task Board
+        }
         HousekeepingTask.TaskType taskType = mapTaskType(typeChoice);
 
         // Reference info only — pulled straight from Settings, doesn't block or alter anything.
@@ -301,18 +305,11 @@ public class HouseKeepingController {
         return;
       }
 
-      String staffId = houseKeepingView.promptStaffIdInput();
-      if (staffId == null || staffId.trim().isEmpty() || "C".equalsIgnoreCase(staffId.trim())) {
+      HousekeepingStaff staff = pickStaff("SELECT STAFF TO ASSIGN");
+      if (staff == null) {
         // No staff picked — put it back at the front (it's still in the master list; only
         // re-insert into the deque, don't re-add it, or it'd be duplicated).
         taskRepo.getTaskDeque().addFirst(top);
-        return;
-      }
-
-      HousekeepingStaff staff = staffRepo.findById(staffId.trim());
-      if (staff == null) {
-        ConsoleUtil.printError("No staff found with ID: " + staffId.trim());
-        taskRepo.getTaskDeque().addFirst(top); // put it back, don't drop it
         return;
       }
 
@@ -322,6 +319,11 @@ public class HouseKeepingController {
                 + " is already at the max room count for their "
                 + staff.getShift().name()
                 + " shift. Pick another staff member.");
+        taskRepo.getTaskDeque().addFirst(top); // put it back, don't drop it
+        return;
+      }
+
+      if (!confirmShiftAssignment(staff)) {
         taskRepo.getTaskDeque().addFirst(top); // put it back, don't drop it
         return;
       }
@@ -418,6 +420,79 @@ public class HouseKeepingController {
     return current >= max;
   }
 
+  // --- SHIFT WINDOW CHECK (WARNING + CONFIRM, NOT A HARD BLOCK) ---
+  // Shift schedules are stored as free text purely for display (e.g. "07:00 - 15:00" or
+  // whatever a manager types into Staff Configuration). This does a best-effort parse of that
+  // text into an actual time window and, if the current system time falls outside it, warns and
+  // asks for confirmation before letting the assignment go through. It never hard-blocks:
+  // - If the schedule text doesn't parse (free text can be anything), we skip the check
+  //   entirely rather than guess — no warning, no block.
+  // - If it does parse, the user can still say "yes, assign anyway" (e.g. staff starting early,
+  //   covering a shift, or just running/demoing the app at an odd hour).
+  private String getShiftScheduleText(
+      HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
+    if (shift == HousekeepingStaff.Shift.MORNING) return settings.getMorningShiftSchedule();
+    if (shift == HousekeepingStaff.Shift.AFTERNOON) return settings.getAfternoonShiftSchedule();
+    return settings.getNightShiftSchedule();
+  }
+
+  // Expects "H:mm - H:mm" / "HH:mm - HH:mm" (hyphen-separated, each side parseable as a time).
+  // Returns null if the text doesn't match that shape — callers must treat null as "can't tell,
+  // don't warn."
+  private LocalTime[] parseShiftWindow(String schedule) {
+    if (schedule == null) return null;
+    String[] parts = schedule.split("-");
+    if (parts.length != 2) return null;
+
+    try {
+      LocalTime start = LocalTime.parse(zeroPadHour(parts[0].trim()));
+      LocalTime end = LocalTime.parse(zeroPadHour(parts[1].trim()));
+      return new LocalTime[] {start, end};
+    } catch (Exception e) {
+      return null; // Not a recognizable "H:mm" time on one or both sides
+    }
+  }
+
+  // LocalTime.parse requires a zero-padded hour ("07:00"); shift text may have been typed as
+  // "7:00" instead — pad it so a perfectly reasonable entry doesn't silently fail to parse.
+  private String zeroPadHour(String hhmm) {
+    return (hhmm.length() == 4 && hhmm.charAt(1) == ':') ? "0" + hhmm : hhmm;
+  }
+
+  private boolean isWithinShiftWindow(
+      HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
+    LocalTime[] window = parseShiftWindow(getShiftScheduleText(shift, settings));
+    if (window == null) return true; // Unparseable — don't warn, don't block
+
+    LocalTime now = LocalTime.now();
+    LocalTime start = window[0];
+    LocalTime end = window[1];
+
+    if (start.equals(end)) return true; // Degenerate/24h window — always "in shift"
+    if (start.isBefore(end)) {
+      return !now.isBefore(start) && now.isBefore(end);
+    }
+    // Wraps past midnight (e.g. NIGHT: "23:00 - 07:00")
+    return !now.isBefore(start) || now.isBefore(end);
+  }
+
+  // Returns true if it's fine to proceed with assigning `staff` right now — either they're
+  // within their shift window, or the caller confirmed the override. Returns false if the
+  // caller should back out of the assignment.
+  private boolean confirmShiftAssignment(HousekeepingStaff staff) {
+    HousekeepingSettings settings = settingsRepo.getSettings();
+    if (isWithinShiftWindow(staff.getShift(), settings)) return true;
+
+    return ConsoleUtil.showConfirmMessage(
+        "Warning: it's currently outside "
+            + staff.getName()
+            + "'s "
+            + staff.getShift().name()
+            + " shift window ("
+            + getShiftScheduleText(staff.getShift(), settings)
+            + "). Assign anyway?");
+  }
+
   // Assigns a task to a staff member and keeps the roster in sync: the room lands on the
   // staff's assigned-rooms list and their availability flips to ON_TASK.
   private void assignTaskToStaff(HousekeepingTask task, HousekeepingStaff staff) {
@@ -432,6 +507,38 @@ public class HouseKeepingController {
   private void reassignTaskToStaff(HousekeepingTask task, HousekeepingStaff staff) {
     taskRepo.reassignTask(task, staff.getStaffId());
     staffRepo.assignRoomToStaff(staff, task.getRoomNumber());
+  }
+
+  // --- STAFF PICKER HELPERS (replace manual Staff ID entry) ---
+  // Picks off the live roster, minus anyone OFF_DUTY — an off-duty staff member shouldn't be
+  // assignable at all, so they're kept out of the picker rather than being pickable and then
+  // rejected afterwards. Returns null if the user cancelled.
+  private HousekeepingStaff pickStaff(String title) {
+    return pickStaff(assignableStaffList(), title);
+  }
+
+  // Picks off a caller-supplied candidate list (e.g. the roster minus one staff member). Callers
+  // that build their own candidate list are responsible for filtering OFF_DUTY out too if that
+  // list didn't already come from assignableStaffList(). Returns null if the user cancelled.
+  private HousekeepingStaff pickStaff(ListInterface<HousekeepingStaff> candidates, String title) {
+    ConsoleUtil.GetMenuInputResult result = houseKeepingView.displayStaffPicker(candidates, title);
+    if (result == null || !result.isNumber) {
+      return null;
+    }
+    return candidates.getEntry(result.getAsInt());
+  }
+
+  // Full roster minus anyone currently OFF_DUTY — the shared "who can actually take a task right
+  // now" pool for every manual assignment/reassignment picker.
+  private ListInterface<HousekeepingStaff> assignableStaffList() {
+    return staffRepo
+        .getStaffList()
+        .filter(s -> s != null && s.getAvailability() != HousekeepingStaff.Availability.OFF_DUTY);
+  }
+
+  private ListInterface<HousekeepingStaff> excludeStaff(
+      ListInterface<HousekeepingStaff> source, HousekeepingStaff exclude) {
+    return source.filter(s -> s != null && !s.getStaffId().equals(exclude.getStaffId()));
   }
 
   // Moves a task to a terminal status (Completed/Skipped) and releases the assigned staff
@@ -757,6 +864,11 @@ public class HouseKeepingController {
       return;
     }
 
+    // Checked before dequeuing so a declined override never pulls a task off the queue.
+    if (!confirmShiftAssignment(staff)) {
+      return;
+    }
+
     HousekeepingTask next = taskRepo.dequeueNextTask();
     if (next == null) {
       ConsoleUtil.printError("Task queue is currently empty — nothing to assign!");
@@ -795,20 +907,9 @@ public class HouseKeepingController {
       return;
     }
 
-    String targetStaffIdInput = houseKeepingView.promptTargetStaffIdInput();
-    if (targetStaffIdInput == null
-        || targetStaffIdInput.trim().isEmpty()
-        || "C".equalsIgnoreCase(targetStaffIdInput.trim())) {
-      return;
-    }
-
-    HousekeepingStaff toStaff = staffRepo.findById(targetStaffIdInput.trim());
+    ListInterface<HousekeepingStaff> candidates = excludeStaff(assignableStaffList(), fromStaff);
+    HousekeepingStaff toStaff = pickStaff(candidates, "SELECT STAFF TO REASSIGN TO");
     if (toStaff == null) {
-      ConsoleUtil.printError("No staff found with ID: " + targetStaffIdInput.trim());
-      return;
-    }
-    if (toStaff.getStaffId().equals(fromStaff.getStaffId())) {
-      ConsoleUtil.printError("Pick a different staff member to reassign to!");
       return;
     }
 
@@ -818,6 +919,10 @@ public class HouseKeepingController {
               + " is already at the max room count for their "
               + toStaff.getShift().name()
               + " shift. Pick another staff member.");
+      return;
+    }
+
+    if (!confirmShiftAssignment(toStaff)) {
       return;
     }
 
@@ -1009,24 +1114,27 @@ public class HouseKeepingController {
 
         if (action == 1) {
           int statusChoice = houseKeepingView.promptNewStatusInput();
-          Room.Status newStatus = mapRoomStatus(statusChoice);
-          Room.Status oldStatus = selected.getStatus();
+          if (statusChoice != 4) {
+            Room.Status newStatus = mapRoomStatus(statusChoice);
+            Room.Status oldStatus = selected.getStatus();
 
-          if (newStatus != oldStatus) {
-            boolean okToProceed = true;
+            if (newStatus != oldStatus) {
+              boolean okToProceed = true;
 
-            if (newStatus == Room.Status.VACANT_CLEAN) {
-              okToProceed = resolveStaleTasksBeforeStatusChange(selected.getRoomNumber());
-            }
+              if (newStatus == Room.Status.VACANT_CLEAN) {
+                okToProceed = resolveStaleTasksBeforeStatusChange(selected.getRoomNumber());
+              }
 
-            if (okToProceed) {
-              selected.setStatus(newStatus);
-              roomRepo.updateRoom(selected);
-              roomStatusHistoryRepo.recordStatusChange(
-                  selected.getRoomNumber(), oldStatus, newStatus);
-            } else {
-              ConsoleUtil.printError(
-                  "Status change cancelled — resolve the pending task(s) via Task Board first.");
+              if (okToProceed) {
+                selected.setStatus(newStatus);
+                roomRepo.updateRoom(selected);
+                roomStatusHistoryRepo.recordStatusChange(
+                    selected.getRoomNumber(), oldStatus, newStatus);
+              } else {
+                ConsoleUtil.printError(
+                    "Status change cancelled — resolve the pending task(s) via Task Board"
+                        + " first.");
+              }
             }
           }
         } else if (action == 2) {
@@ -1246,14 +1354,10 @@ public class HouseKeepingController {
         }
 
         if (action == 1) {
-          String staffId = houseKeepingView.promptStaffIdInput();
-          if (staffId != null
-              && !staffId.trim().isEmpty()
-              && !"C".equalsIgnoreCase(staffId.trim())) {
-            HousekeepingStaff staff = staffRepo.findById(staffId.trim());
-            if (staff == null) {
-              ConsoleUtil.printError("No staff found with ID: " + staffId.trim());
-              continue;
+          HousekeepingStaff staff = pickStaff("SELECT STAFF TO ASSIGN");
+          if (staff != null) {
+            if (!confirmShiftAssignment(staff)) {
+              continue; // Declined the override — back to the task action menu
             }
             assignTaskToStaff(selected, staff);
           }
