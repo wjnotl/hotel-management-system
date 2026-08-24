@@ -265,6 +265,7 @@ public class VipManageAllocationController {
           if (reservation != null) {
             // Mark existing reservation as NO_SHOW
             reservation.setStatus(Reservation.Status.NO_SHOW);
+            if (guest != null) reservation.setStrikeCountSnapshot(guest.getStrikeCount());
             vipReservationRepo.updateReservation(reservation);
 
             // Create a NEW reservation ID for the re-queued entry
@@ -315,6 +316,7 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
+            if (guest != null) reservation.setStrikeCountSnapshot(guest.getStrikeCount());
             vipReservationRepo.updateReservation(reservation);
             VipController.scheduleNextBoilingTask(
                 vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);
@@ -390,6 +392,7 @@ public class VipManageAllocationController {
 
           if (reservation != null) {
             reservation.setStatus(Reservation.Status.NO_SHOW);
+            if (guest != null) reservation.setStrikeCountSnapshot(guest.getStrikeCount());
             vipReservationRepo.updateReservation(reservation);
             VipController.scheduleNextBoilingTask(
                 vipReservationRepo, guestRepo, memberRepo, vipSystemConfigRepo);

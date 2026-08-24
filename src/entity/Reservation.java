@@ -33,6 +33,7 @@ public class Reservation implements Serializable, Comparable<Reservation> {
   private LocalDateTime checkInTime; // Time when the guest actually took the room
   private LocalDateTime checkOutTime; // Time when the reservation was checked out
   private boolean isVip; // Check if the guest is a member
+  private Integer strikeCountSnapshot; // Snapshot of guest strike count when penalty event occurred
 
   // When an advance booking says the guest will turn up. A walk-in leaves this null because it is
   // already standing at the counter. Together with stayDays it is what lets the module answer
@@ -128,6 +129,10 @@ public class Reservation implements Serializable, Comparable<Reservation> {
 
   public boolean getIsVip() {
     return isVip;
+  }
+
+  public Integer getStrikeCountSnapshot() {
+    return strikeCountSnapshot;
   }
 
   // The first night this booking occupies a room. An advance booking is pinned to the date it was
@@ -249,6 +254,10 @@ public class Reservation implements Serializable, Comparable<Reservation> {
     this.isVip = isVip;
   }
 
+  public void setStrikeCountSnapshot(Integer strikeCountSnapshot) {
+    this.strikeCountSnapshot = strikeCountSnapshot;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
@@ -302,6 +311,8 @@ public class Reservation implements Serializable, Comparable<Reservation> {
         + isBoiling
         + ", priorityScore="
         + priorityScore
+        + ", strikeCountSnapshot="
+        + strikeCountSnapshot
         + "}";
   }
 }

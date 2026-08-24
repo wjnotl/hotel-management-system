@@ -296,6 +296,7 @@ public class VipController {
             guestRepo.updateGuest(guest);
 
             res.setStatus(Reservation.Status.NO_SHOW);
+            res.setStrikeCountSnapshot(guest.getStrikeCount());
             vipReservationRepo.updateReservation(res);
 
             if (guest.getStrikeCount() <= maxStrikes) {
@@ -377,6 +378,7 @@ public class VipController {
                       guestRepo.updateGuest(guest);
 
                       res.setStatus(Reservation.Status.NO_SHOW);
+                      res.setStrikeCountSnapshot(guest.getStrikeCount());
                       vipReservationRepo.updateReservation(res);
 
                       if (guest.getStrikeCount() <= maxStrikes) {

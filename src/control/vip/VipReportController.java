@@ -954,7 +954,10 @@ public class VipReportController {
               : null;
       Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
-      int strikes = (guest != null) ? guest.getStrikeCount() : 0;
+      int strikes =
+          (reservation.getStrikeCountSnapshot() != null)
+              ? reservation.getStrikeCountSnapshot()
+              : ((guest != null) ? guest.getStrikeCount() : 0);
       boolean isEvicted = strikes > config.getMaxStrikes(tier);
 
       String rankStr = rank + ".";
