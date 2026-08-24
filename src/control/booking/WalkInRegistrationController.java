@@ -298,7 +298,8 @@ public class WalkInRegistrationController {
         new Reservation(
             standardReservationRepo.generateReservationId(),
             guest.getGuestId(),
-            standardReservationRepo.generateConfirmationNumber(),
+            // The confirmation code is minted at check-in, so the record carries none yet.
+            null,
             roomType,
             Reservation.Status.ALLOCATED,
             false,
@@ -355,7 +356,8 @@ public class WalkInRegistrationController {
         new Reservation(
             standardReservationRepo.generateReservationId(),
             guest.getGuestId(),
-            standardReservationRepo.generateConfirmationNumber(),
+            // The confirmation code is minted at check-in, so the record carries none yet.
+            null,
             roomType,
             Reservation.Status.WAITING,
             false,

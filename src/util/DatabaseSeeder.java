@@ -1027,7 +1027,7 @@ public class DatabaseSeeder {
         new Reservation(
             repo.generateReservationId(),
             guestId,
-            repo.generateConfirmationNumber(),
+            null,
             roomType,
             Reservation.Status.WAITING,
             false,
@@ -1048,7 +1048,7 @@ public class DatabaseSeeder {
         new Reservation(
             repo.generateReservationId(),
             guestId,
-            repo.generateConfirmationNumber(),
+            null,
             roomType,
             Reservation.Status.RESERVED,
             false,
@@ -1123,7 +1123,7 @@ public class DatabaseSeeder {
         new Reservation(
             repo.generateReservationId(),
             guestId,
-            repo.generateConfirmationNumber(),
+            null,
             roomType,
             Reservation.Status.NO_SHOW,
             false,
