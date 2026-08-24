@@ -79,16 +79,37 @@ public class VipManageWaitlistController {
         ListInterface<VipManageWaitlistView.WaitlistRowDTO> displayDtos =
             buildWaitlistRowDTO(filteredList);
 
+        if (displayDtos == null) {
+          ConsoleUtil.printError("Error: Failed to build waitlist screen.");
+          return;
+        }
+
+        int totalMatches = displayDtos.getNumberOfEntries();
+        int totalPages =
+            (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+        if (currentPage > totalPages && totalPages > 0) {
+          currentPage = totalPages;
+        }
+
+        int startIndex = (currentPage - 1) * pageSize + 1;
+        int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+        int rowsOnPage = (totalMatches == 0) ? 0 : (endIndex - startIndex + 1);
+
+        ListInterface<VipManageWaitlistView.WaitlistRowDTO> pageSlice =
+            (totalMatches > 0) ? displayDtos.slice(startIndex, endIndex) : new LinkedList<>();
+
         ConsoleUtil.GetMenuInputResult result =
             waitlistView.renderWaitlistScreen(
-                displayDtos,
+                pageSlice,
                 roomType,
                 searchQuery,
                 tierFilter,
                 boilingFilter,
                 sortCriteria,
                 currentPage,
-                pageSize);
+                totalPages,
+                totalMatches,
+                rowsOnPage);
 
         if ("E".equalsIgnoreCase(result.input)) {
           break;
@@ -109,8 +130,6 @@ public class VipManageWaitlistController {
         } else if ("Q".equalsIgnoreCase(result.input)) {
           handleQuickAssignTop(roomType);
         } else if ("N".equalsIgnoreCase(result.input)) {
-          int totalMatches = filteredList.getNumberOfEntries();
-          int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
           if (currentPage < totalPages) {
             currentPage++;
           } else {
@@ -257,9 +276,34 @@ public class VipManageWaitlistController {
 
     while (true) {
       try {
+        int startIndex = (currentPage - 1) * pageSize + 1;
+        int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+        int rowsOnPage = endIndex - startIndex + 1;
+
+        ListInterface<Guest> rawSlice = matches.slice(startIndex, endIndex);
+        ListInterface<VipManageWaitlistView.GuestDisambiguationRowDTO> pageSlice =
+            new LinkedList<>();
+
+        for (int i = 1; i <= rawSlice.getNumberOfEntries(); i++) {
+          Guest g = rawSlice.getEntry(i);
+          if (g == null) continue;
+
+          Member m = (g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+          String icOrPass =
+              (g.getIcNumber() != null && !g.getIcNumber().isEmpty())
+                  ? g.getIcNumber()
+                  : (g.getPassportNumber() != null ? g.getPassportNumber() : "N/A");
+          String phone = (g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
+          String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+
+          pageSlice.add(
+              new VipManageWaitlistView.GuestDisambiguationRowDTO(
+                  String.valueOf(i), g.getGuestId(), g.getName(), icOrPass, phone, tierStr));
+        }
+
         ConsoleUtil.GetMenuInputResult input =
             waitlistView.displayGuestDisambiguationScreen(
-                matches, memberRepo.getMemberList(), searchId, currentPage, pageSize);
+                pageSlice, searchId, currentPage, totalPages, totalMatches, rowsOnPage);
 
         if (input == null) return null;
 
@@ -281,7 +325,6 @@ public class VipManageWaitlistController {
             return null;
           }
         } else {
-          int startIndex = (currentPage - 1) * pageSize + 1;
           int rowIdx = input.getAsInt();
           return matches.getEntry(startIndex + rowIdx - 1);
         }
