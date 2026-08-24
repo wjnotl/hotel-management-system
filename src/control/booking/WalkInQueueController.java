@@ -27,7 +27,6 @@ public class WalkInQueueController {
   private static final String FIELD_PHONE = "PHONE NUMBER";
   private static final String FIELD_EMAIL = "EMAIL ADDRESS";
   private static final String FIELD_RES_ID = "RESERVATION ID";
-  private static final String FIELD_CODE = "CONFIRMATION CODE";
   private static final String FIELD_ALL = "ALL FIELDS";
 
   private final WalkInQueueView walkInQueueView = new WalkInQueueView();
@@ -743,7 +742,6 @@ public class WalkInQueueController {
     if (choice == 5) return FIELD_PHONE;
     if (choice == 6) return FIELD_EMAIL;
     if (choice == 7) return FIELD_RES_ID;
-    if (choice == 8) return FIELD_CODE;
     return FIELD_ALL;
   }
 
@@ -809,10 +807,8 @@ public class WalkInQueueController {
     }
     if (FIELD_EMAIL.equals(field)) return hit(g == null ? null : g.getEmail(), query, exactMatch);
     if (FIELD_RES_ID.equals(field)) return hit(r.getReservationId(), query, exactMatch);
-    if (FIELD_CODE.equals(field)) return hit(r.getConfirmationNumber(), query, exactMatch);
 
     return hit(r.getReservationId(), query, exactMatch)
-        || hit(r.getConfirmationNumber(), query, exactMatch)
         || (g != null
             && (hit(g.getGuestId(), query, exactMatch)
                 || hit(g.getName(), query, exactMatch)

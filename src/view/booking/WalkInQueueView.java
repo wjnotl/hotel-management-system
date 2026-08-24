@@ -517,7 +517,7 @@ public class WalkInQueueView {
     TableUtil.printTableRow(new String[] {"GUEST BEING SERVED"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(r), true);
     printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
     printKeyValue(
         kvSettings, "Phone Number", (g != null) ? blankToNa(g.getPhoneNumber()) : "N/A", true);
@@ -728,7 +728,7 @@ public class WalkInQueueView {
     TableUtil.printTableRow(new String[] {"STATUS: CHECKED IN"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(r), true);
     printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
     printKeyValue(kvSettings, "Room", (room != null) ? room.getRoomNumber() : "N/A", true);
     printKeyValue(kvSettings, "Nights Booked", String.valueOf(stayDays), true);
@@ -816,7 +816,7 @@ public class WalkInQueueView {
     TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"THE BOOKING AND THE LINE"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(r), true);
     printKeyValue(kvSettings, "Room Type", r.getRoomType().name(), true);
     printKeyValue(
         kvSettings,
@@ -896,19 +896,18 @@ public class WalkInQueueView {
     System.out.println("Current: [ " + current + " ]\n");
     System.out.println("Searching one field at a time keeps a partial phone number from");
     System.out.println("pulling in every IC that happens to contain the same digits.\n");
-    System.out.println(" 1. Guest Name");
-    System.out.println(" 2. Guest ID");
-    System.out.println(" 3. IC Number");
-    System.out.println(" 4. Passport Number");
-    System.out.println(" 5. Phone Number");
-    System.out.println(" 6. Email Address");
-    System.out.println(" 7. Reservation ID");
-    System.out.println(" 8. Confirmation Code");
-    System.out.println(" 9. All Of The Above");
-    System.out.println("10. Back\n");
+    System.out.println("1. Guest Name");
+    System.out.println("2. Guest ID");
+    System.out.println("3. IC Number");
+    System.out.println("4. Passport Number");
+    System.out.println("5. Phone Number");
+    System.out.println("6. Email Address");
+    System.out.println("7. Reservation ID");
+    System.out.println("8. All Of The Above");
+    System.out.println("9. Back\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 10).getAsInt();
-    return (choice == 10) ? 0 : choice;
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 9).getAsInt();
+    return (choice == 9) ? 0 : choice;
   }
 
   public String promptSearchTerm(String fieldLabel, String current) {
@@ -957,6 +956,12 @@ public class WalkInQueueView {
 
   private String blankToNa(String value) {
     return (value == null || value.isEmpty()) ? "N/A" : value;
+  }
+
+  // A code names a stay in progress, so every screen before check-in says where it comes from.
+  private String confirmationOf(Reservation reservation) {
+    String code = reservation.getConfirmationNumber();
+    return (code == null || code.trim().isEmpty()) ? "Issued at check-in" : code;
   }
 
   private TableUtil.TableSettings kvSettings() {

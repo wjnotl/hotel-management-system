@@ -210,7 +210,7 @@ public class WalkInRegistrationView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
     printKeyValue(kvSettings, "Reservation ID", booking.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", booking.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(booking), true);
     printKeyValue(kvSettings, "Room Type Booked", booking.getRoomType().name(), true);
     printKeyValue(
         kvSettings, "Expected Arrival", formatBookedNight(booking.getExpectedArrivalTime()), true);
@@ -366,7 +366,7 @@ public class WalkInRegistrationView {
     TableUtil.printTableRow(new String[] {"STATUS: ALLOCATED WITHOUT QUEUING"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", reservation.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", reservation.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(reservation), true);
     printKeyValue(kvSettings, "Guest Name", guest.getName(), true);
     printKeyValue(kvSettings, "Room Number", room.getRoomNumber(), true);
     printKeyValue(kvSettings, "Room Status", room.getStatus().name(), true);
@@ -389,7 +389,7 @@ public class WalkInRegistrationView {
     TableUtil.printTableRow(new String[] {"STATUS: ENQUEUED"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", reservation.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", reservation.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(reservation), true);
     printKeyValue(kvSettings, "Guest Name", (guest != null) ? guest.getName() : "N/A", true);
     printKeyValue(kvSettings, "Room Type", reservation.getRoomType().name(), true);
     printKeyValue(kvSettings, "Place In Line", String.valueOf(position), true);
@@ -410,7 +410,7 @@ public class WalkInRegistrationView {
     TableUtil.printTableRow(new String[] {"STATUS: RESERVED -> WAITING"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", reservation.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", reservation.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(reservation), true);
     printKeyValue(kvSettings, "Guest Name", (guest != null) ? guest.getName() : "N/A", true);
     printKeyValue(kvSettings, "Room Type", reservation.getRoomType().name(), true);
     printKeyValue(kvSettings, "Place In Line", String.valueOf(position), true);
@@ -422,6 +422,12 @@ public class WalkInRegistrationView {
 
   private String blankToNa(String value) {
     return (value == null || value.isEmpty()) ? "N/A" : value;
+  }
+
+  // A code names a stay in progress, so every screen before check-in says where it comes from.
+  private String confirmationOf(Reservation reservation) {
+    String code = reservation.getConfirmationNumber();
+    return (code == null || code.trim().isEmpty()) ? "Issued at check-in" : code;
   }
 
   // A booking reserves a night, not a moment, so a clock would invent a promise.

@@ -291,6 +291,11 @@ public class StandardReservationRepo {
   public boolean checkIn(Reservation reservation, int stayDays) {
     if (reservation == null) return false;
 
+    String code = reservation.getConfirmationNumber();
+    if (code == null || code.trim().isEmpty()) {
+      reservation.setConfirmationNumber(generateConfirmationNumber());
+    }
+
     reservation.setStatus(Reservation.Status.CHECKED_IN);
     reservation.setStayDays(stayDays);
 
@@ -465,7 +470,6 @@ public class StandardReservationRepo {
     if (room != null) {
       room.setStatus(Room.Status.VACANT_CLEAN);
 
-      // isOccupied is what marks a room taken, so clearing only the status leaves it unsellable.
       room.setIsOccupied(false);
       roomRepo.updateRoom(room);
     }
