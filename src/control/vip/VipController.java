@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.concurrent.ScheduledExecutorService;
 import repo.AllocationRepo;
 import repo.GuestRepo;
 import repo.MemberRepo;
@@ -22,6 +23,9 @@ import util.TaskSchedulerUtil;
 import view.vip.VipView;
 
 public class VipController {
+  private static ScheduledExecutorService boilingScheduler = null;
+  private static ScheduledExecutorService expirationScheduler = null;
+
   private final VipView vipView = new VipView();
   private final AllocationRepo allocationRepo;
   private final GuestRepo guestRepo;
@@ -94,6 +98,11 @@ public class VipController {
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
+    if (boilingScheduler != null && !boilingScheduler.isShutdown()) {
+      boilingScheduler.shutdownNow();
+      boilingScheduler = null;
+    }
+
     if (vipReservationRepo == null || configRepo == null) return;
     VipSystemConfig config = configRepo.getConfig();
     var vipReservationList = vipReservationRepo.getAllReservations();
@@ -180,34 +189,36 @@ public class VipController {
     final Reservation targetRes = earliestFutureRes;
     long delayMs = Math.max(1, earliestFutureTargetMs - now);
 
-    TaskSchedulerUtil.scheduleOnce(
-        delayMs,
-        () -> {
-          try {
-            if (targetRes.getStatus() == Reservation.Status.WAITING && !targetRes.getIsBoiling()) {
-              targetRes.setBoiling(true);
+    boilingScheduler =
+        TaskSchedulerUtil.scheduleOnce(
+            delayMs,
+            () -> {
+              try {
+                if (targetRes.getStatus() == Reservation.Status.WAITING
+                    && !targetRes.getIsBoiling()) {
+                  targetRes.setBoiling(true);
 
-              Guest g = (guestRepo != null) ? guestRepo.findById(targetRes.getGuestId()) : null;
-              Member m =
-                  (g != null && g.getMemberId() != null && memberRepo != null)
-                      ? memberRepo.findById(g.getMemberId())
-                      : null;
+                  Guest g = (guestRepo != null) ? guestRepo.findById(targetRes.getGuestId()) : null;
+                  Member m =
+                      (g != null && g.getMemberId() != null && memberRepo != null)
+                          ? memberRepo.findById(g.getMemberId())
+                          : null;
 
-              int newScore = vipReservationRepo.calculatePriorityScore(targetRes, g, m, config);
-              targetRes.setPriorityScore(newScore);
-              vipReservationRepo.updateReservation(targetRes);
+                  int newScore = vipReservationRepo.calculatePriorityScore(targetRes, g, m, config);
+                  targetRes.setPriorityScore(newScore);
+                  vipReservationRepo.updateReservation(targetRes);
 
-              PriorityQueueInterface<Reservation> heap =
-                  vipReservationRepo.getHeapByRoomType(targetRes.getRoomType());
-              if (heap != null) {
-                heap.updatePriority(targetRes);
+                  PriorityQueueInterface<Reservation> heap =
+                      vipReservationRepo.getHeapByRoomType(targetRes.getRoomType());
+                  if (heap != null) {
+                    heap.updatePriority(targetRes);
+                  }
+                }
+              } catch (Exception ignored) {
+              } finally {
+                scheduleNextBoilingTask(vipReservationRepo, guestRepo, memberRepo, configRepo);
               }
-            }
-          } catch (Exception ignored) {
-          } finally {
-            scheduleNextBoilingTask(vipReservationRepo, guestRepo, memberRepo, configRepo);
-          }
-        });
+            });
   }
 
   public static void startMidnightStrikeResetScheduler(
@@ -246,6 +257,10 @@ public class VipController {
       GuestRepo guestRepo,
       MemberRepo memberRepo,
       VipSystemConfigRepo configRepo) {
+    if (expirationScheduler != null && !expirationScheduler.isShutdown()) {
+      expirationScheduler.shutdownNow();
+      expirationScheduler = null;
+    }
 
     if (allocationRepo == null) return;
     var allocationList = allocationRepo.getAllocationList();
@@ -329,70 +344,78 @@ public class VipController {
     final AllocationEntry targetEntry = earliestFutureEntry;
     long remainingMs = Math.max(1, earliestFutureTime - now);
 
-    TaskSchedulerUtil.scheduleOnce(
-        remainingMs,
-        () -> {
-          try {
-            if (allocationList.contains(targetEntry)) {
-              allocationRepo.removeAllocationEntry(targetEntry);
+    expirationScheduler =
+        TaskSchedulerUtil.scheduleOnce(
+            remainingMs,
+            () -> {
+              try {
+                if (allocationList.contains(targetEntry)) {
+                  allocationRepo.removeAllocationEntry(targetEntry);
 
-              Room room = roomRepo.findByRoomNumber(targetEntry.getAssignedRoomNumber());
+                  Room room = roomRepo.findByRoomNumber(targetEntry.getAssignedRoomNumber());
 
-              if (room != null) {
-                room.setStatus(Room.Status.VACANT_CLEAN);
-                room.setIsOccupied(false);
-                roomRepo.updateRoom(room);
-              }
+                  if (room != null) {
+                    room.setStatus(Room.Status.VACANT_CLEAN);
+                    room.setIsOccupied(false);
+                    roomRepo.updateRoom(room);
+                  }
 
-              Reservation res = vipReservationRepo.findById(targetEntry.getReservationId());
-              if (res != null) {
-                Guest guest = guestRepo.findById(res.getGuestId());
-                if (guest != null) {
-                  Member member =
-                      (guest.getMemberId() != null)
-                          ? memberRepo.findById(guest.getMemberId())
-                          : null;
+                  Reservation res = vipReservationRepo.findById(targetEntry.getReservationId());
+                  if (res != null) {
+                    Guest guest = guestRepo.findById(res.getGuestId());
+                    if (guest != null) {
+                      Member member =
+                          (guest.getMemberId() != null)
+                              ? memberRepo.findById(guest.getMemberId())
+                              : null;
 
-                  VipSystemConfig config = configRepo.getConfig();
-                  Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
-                  int maxStrikes = config.getMaxStrikes(tier);
+                      VipSystemConfig config = configRepo.getConfig();
+                      Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
+                      int maxStrikes = config.getMaxStrikes(tier);
 
-                  guest.setStrikeCount(guest.getStrikeCount() + 1);
-                  guestRepo.updateGuest(guest);
+                      guest.setStrikeCount(guest.getStrikeCount() + 1);
+                      guestRepo.updateGuest(guest);
 
-                  res.setStatus(Reservation.Status.NO_SHOW);
-                  vipReservationRepo.updateReservation(res);
+                      res.setStatus(Reservation.Status.NO_SHOW);
+                      vipReservationRepo.updateReservation(res);
 
-                  if (guest.getStrikeCount() <= maxStrikes) {
-                    int newScore =
-                        vipReservationRepo.calculatePriorityScore(
-                            res, guest, member, configRepo.getConfig());
+                      if (guest.getStrikeCount() <= maxStrikes) {
+                        String newResId = vipReservationRepo.generateReservationId();
+                        Reservation newRes =
+                            new Reservation(
+                                newResId,
+                                guest.getGuestId(),
+                                null,
+                                res.getRoomType(),
+                                Reservation.Status.WAITING,
+                                false,
+                                0,
+                                LocalDateTime.now(),
+                                LocalDateTime.now(),
+                                true);
 
-                    String newResId = vipReservationRepo.generateReservationId();
-                    Reservation newRes =
-                        new Reservation(
-                            newResId,
-                            guest.getGuestId(),
-                            null,
-                            res.getRoomType(),
-                            Reservation.Status.WAITING,
-                            res.getIsBoiling(),
-                            newScore,
-                            LocalDateTime.now(),
-                            LocalDateTime.now(),
-                            true);
+                        int newScore =
+                            vipReservationRepo.calculatePriorityScore(
+                                newRes, guest, member, config);
+                        newRes.setPriorityScore(newScore);
 
-                    vipReservationRepo.addReservation(newRes);
-                    scheduleNextBoilingTask(vipReservationRepo, guestRepo, memberRepo, configRepo);
+                        vipReservationRepo.addReservation(newRes);
+                        scheduleNextBoilingTask(
+                            vipReservationRepo, guestRepo, memberRepo, configRepo);
+                      }
+                    }
                   }
                 }
+              } catch (Exception ignored) {
+              } finally {
+                scheduleNextAutoExpirationTask(
+                    allocationRepo,
+                    roomRepo,
+                    vipReservationRepo,
+                    guestRepo,
+                    memberRepo,
+                    configRepo);
               }
-            }
-          } catch (Exception ignored) {
-          } finally {
-            scheduleNextAutoExpirationTask(
-                allocationRepo, roomRepo, vipReservationRepo, guestRepo, memberRepo, configRepo);
-          }
-        });
+            });
   }
 }
