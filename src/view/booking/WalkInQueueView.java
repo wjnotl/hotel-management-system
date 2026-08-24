@@ -211,8 +211,7 @@ public class WalkInQueueView {
         "Enter a command or select a row (" + range + "): ", 1, rowsOnPage, commands);
   }
 
-  // Whether a full line refuses the next guest or quietly doubles its array is a house setting, so
-  // the badge has to name the outcome rather than assume the array grows.
+  // Growth is a house setting, so the badge names the outcome rather than assuming it.
   private String fullNote(boolean queueFull, boolean queueCanExpand) {
     if (!queueFull) return "";
     return queueCanExpand
@@ -220,8 +219,7 @@ public class WalkInQueueView {
         : "   [FULL - the next join is refused]";
   }
 
-  // Rooms are held back one per waiting VIP rather than the whole type being frozen, so a line can
-  // legitimately be servable while VIPs are still waiting.
+  // One room is held per waiting VIP, so a line can be servable while VIPs wait.
   private String verdictFor(int freeToCounter, int vipWaiting, boolean enforceVipBypass) {
     if (freeToCounter <= 0) {
       return "NO ROOM FREE FOR THIS LINE";
@@ -519,7 +517,7 @@ public class WalkInQueueView {
     TableUtil.printTableRow(new String[] {"GUEST BEING SERVED"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(r), true);
     printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
     printKeyValue(
         kvSettings, "Phone Number", (g != null) ? blankToNa(g.getPhoneNumber()) : "N/A", true);
@@ -575,7 +573,6 @@ public class WalkInQueueView {
     ConsoleUtil.printContinueMessage();
   }
 
-  // One page of the hold list plus the command prompt. Paging is the controller's to drive.
   public boolean displayCheckInNowScreen(Guest g, Room room) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHECK IN RIGHT AWAY?", SCREEN_WIDTH);
@@ -731,7 +728,7 @@ public class WalkInQueueView {
     TableUtil.printTableRow(new String[] {"STATUS: CHECKED IN"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", r.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(r), true);
     printKeyValue(kvSettings, "Guest Name", (g != null) ? g.getName() : "N/A", true);
     printKeyValue(kvSettings, "Room", (room != null) ? room.getRoomNumber() : "N/A", true);
     printKeyValue(kvSettings, "Nights Booked", String.valueOf(stayDays), true);
@@ -819,7 +816,7 @@ public class WalkInQueueView {
     TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(new String[] {"THE BOOKING AND THE LINE"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
-    printKeyValue(kvSettings, "Confirmation Code", r.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(r), true);
     printKeyValue(kvSettings, "Room Type", r.getRoomType().name(), true);
     printKeyValue(
         kvSettings,
@@ -899,19 +896,18 @@ public class WalkInQueueView {
     System.out.println("Current: [ " + current + " ]\n");
     System.out.println("Searching one field at a time keeps a partial phone number from");
     System.out.println("pulling in every IC that happens to contain the same digits.\n");
-    System.out.println(" 1. Guest Name");
-    System.out.println(" 2. Guest ID");
-    System.out.println(" 3. IC Number");
-    System.out.println(" 4. Passport Number");
-    System.out.println(" 5. Phone Number");
-    System.out.println(" 6. Email Address");
-    System.out.println(" 7. Reservation ID");
-    System.out.println(" 8. Confirmation Code");
-    System.out.println(" 9. All Of The Above");
-    System.out.println("10. Back\n");
+    System.out.println("1. Guest Name");
+    System.out.println("2. Guest ID");
+    System.out.println("3. IC Number");
+    System.out.println("4. Passport Number");
+    System.out.println("5. Phone Number");
+    System.out.println("6. Email Address");
+    System.out.println("7. Reservation ID");
+    System.out.println("8. All Of The Above");
+    System.out.println("9. Back\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 10).getAsInt();
-    return (choice == 10) ? 0 : choice;
+    int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 9).getAsInt();
+    return (choice == 9) ? 0 : choice;
   }
 
   public String promptSearchTerm(String fieldLabel, String current) {
@@ -960,6 +956,12 @@ public class WalkInQueueView {
 
   private String blankToNa(String value) {
     return (value == null || value.isEmpty()) ? "N/A" : value;
+  }
+
+  // A code names a stay in progress, so every screen before check-in says where it comes from.
+  private String confirmationOf(Reservation reservation) {
+    String code = reservation.getConfirmationNumber();
+    return (code == null || code.trim().isEmpty()) ? "Issued at check-in" : code;
   }
 
   private TableUtil.TableSettings kvSettings() {
@@ -1027,8 +1029,7 @@ public class WalkInQueueView {
     return (minutes / 60) + "h " + String.format("%02dm", minutes % 60);
   }
 
-  // Blank is an error rather than a silent cancel, so Enter never quietly discards what the clerk
-  // was part way through. 'C' stays the explicit way out.
+  // Blank is an error, so Enter never discards a part-finished entry. 'C' is the way out.
   private Integer requireInt(String prompt, int min, int max) {
     ConsoleUtil.GetMenuInputResult result =
         ConsoleUtil.getMenuInput(prompt, min, max, new char[] {'C'});

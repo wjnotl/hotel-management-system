@@ -8,9 +8,7 @@ import util.TableUtil;
 public class GuestLookupView {
 
   private static final int[] SPAN_WIDTH = {106};
-  // Column widths must sum to SPAN_WIDTH - 3(n - 1) to frame to the same width as the spanned
-  // heading above. This table runs wider than its siblings because an email address is what a
-  // clerk reads to tell two similar records apart, and truncating it defeats the point.
+  // Widths must sum to SPAN_WIDTH - 3(n - 1). Wider than its siblings so the email is whole.
   private static final int[] MATCH_WIDTHS = {4, 10, 21, 16, 14, 26};
   private static final int SCREEN_WIDTH = 93;
 
@@ -110,8 +108,7 @@ public class GuestLookupView {
         "Pick the guest (" + range + ") or a command: ", 1, rowsOnPage, commands);
   }
 
-  // Returns 1 to change the field, 2 the term, 3 the match mode, 4 to reset, 5 to apply, 6 to
-  // discard.
+  // Returns 1 field, 2 term, 3 match mode, 4 reset, 5 apply, 6 discard.
   public int displayFilterMainMenu(String searchField, String searchTerm, String matchMode) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SEARCH & REGISTER FILTERS", SCREEN_WIDTH);

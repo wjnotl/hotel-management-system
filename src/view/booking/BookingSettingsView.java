@@ -18,8 +18,7 @@ public class BookingSettingsView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("WALK-IN & BOOKING SETTINGS", SCREEN_WIDTH);
 
-    // Each number carries the values it edits. A separate summary block above the menu made the
-    // clerk map one list onto the other, and the two lists did not even run in the same order.
+    // Each number carries the values it edits, so the clerk never maps two lists together.
     printCard(
         1,
         "HOLD & NO-SHOW RULES",
@@ -192,7 +191,6 @@ public class BookingSettingsView {
         });
   }
 
-  // Shows what each line is actually running on, so an override is never edited blind.
   public int displayPerTypeMenu(BookingSettings config) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("PER-ROOM-TYPE OVERRIDES", SCREEN_WIDTH);

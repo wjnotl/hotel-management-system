@@ -10,7 +10,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.RoomRepo;
 import repo.StandardReservationRepo;
@@ -61,21 +60,21 @@ public class BookingReportController {
   private final StandardReservationRepo standardReservationRepo;
   private final GuestRepo guestRepo;
   private final RoomRepo roomRepo;
-  private final BookingSettingsRepo bookingSettingsRepo;
+  private final BookingSettingsStore bookingSettingsStore;
 
   public BookingReportController(
       StandardReservationRepo standardReservationRepo,
       GuestRepo guestRepo,
       RoomRepo roomRepo,
-      BookingSettingsRepo bookingSettingsRepo) {
+      BookingSettingsStore bookingSettingsStore) {
     this.standardReservationRepo = standardReservationRepo;
     this.guestRepo = guestRepo;
     this.roomRepo = roomRepo;
-    this.bookingSettingsRepo = bookingSettingsRepo;
+    this.bookingSettingsStore = bookingSettingsStore;
   }
 
   private BookingSettings settings() {
-    return bookingSettingsRepo.getSettings();
+    return bookingSettingsStore.getSettings();
   }
 
   public void startReportManagement() {
@@ -95,9 +94,7 @@ public class BookingReportController {
     }
   }
 
-  // Everything the clerk can narrow, order or reshape before the file is written. Held in one
-  // object so a reset is a single assignment and the whole scope travels to the export in one
-  // piece rather than as a dozen parameters.
+  // One object, so a reset is one assignment and the export gets the whole scope.
   private static class ReportScope {
     private String searchField = FIELD_NAME;
     private String searchTerm;
@@ -375,7 +372,7 @@ public class BookingReportController {
     }
   }
 
-  // Blank keeps the current term and redraws, so a stray Enter never clears a filter.
+  // Blank redraws, so a stray Enter never clears the filter.
   private String promptSearchTerm(String fieldLabel, String current) {
     while (true) {
       try {
@@ -405,7 +402,7 @@ public class BookingReportController {
         try {
           String[] typed = reportView.promptDateRange(periodLabel(scope));
           String from = (typed[0] == null) ? "" : typed[0].trim();
-          // Blank keeps the current range and redraws, so a stray Enter never clears a filter.
+          // Blank redraws, so a stray Enter never clears the range.
           if (from.isEmpty()) continue;
           if ("E".equalsIgnoreCase(from)) return;
           if (typed[1] == null || typed[1].trim().isEmpty()) continue;
@@ -457,9 +454,7 @@ public class BookingReportController {
     }
   }
 
-  // The report body goes to a .txt file, so the sort runs once here and the same ordered list
-  // backs both the file and the binary search offered afterwards. Returns true to leave the
-  // report, false to go back to the scope screen.
+  // Sorted once, so the .txt and the binary search share one ordered list.
   private boolean exportReport(
       int reportType, ListInterface<Reservation> matched, ReportScope scope) {
 
@@ -472,8 +467,7 @@ public class BookingReportController {
     String content = buildReportText(isRegister, sorted, title, scopeLabel, sortLabel, scope);
     String path = TxtExportUtil.export(reportFileName(isRegister), content);
 
-    // Generating a report means producing it, so it is put on the screen at once. The receipt and
-    // the saved .txt follow, rather than being the only thing the clerk ever sees.
+    // Generating a report means producing it, so it is shown before the .txt is written.
     showReportOnScreen(title, content, path);
 
     while (true) {
@@ -500,8 +494,7 @@ public class BookingReportController {
         } else if ("V".equalsIgnoreCase(result.input)) {
           showReportOnScreen(title, content, path);
         } else if ("F".equalsIgnoreCase(result.input)) {
-          // Refusing the command and making the clerk hunt for the sort menu taught them nothing
-          // about why the order matters, so the screen offers the re-sort that makes it legal.
+          // Refusing would teach nothing, so the screen offers the re-sort that makes it legal.
           if (!isBinarySearchable(scope) && promptResortForSearch(sortLabel)) {
             scope.sortAttribute = "RESERVATION ID";
             scope.sortDirection = "ASCENDING";
@@ -538,8 +531,7 @@ public class BookingReportController {
     return isRegister ? "booking/daily_arrival_register" : "booking/queue_performance_report";
   }
 
-  // The report is one long string, so it is split into lines once and paged from the list. The
-  // page counter lives here because a view may draw a page but must not own where the reader is.
+  // Split into lines once and paged here, because a view must not own the position.
   private void showReportOnScreen(String title, String content, String path) {
     ListInterface<String> lines = new ArrayList<>();
     for (String line : content.split("\\R", -1)) {
@@ -580,7 +572,6 @@ public class BookingReportController {
     return scope.sortAttribute + " (" + scope.sortDirection + ")";
   }
 
-  // Binary search is only valid on the key the list is actually ordered by.
   private boolean isBinarySearchable(ReportScope scope) {
     return "RESERVATION ID".equalsIgnoreCase(scope.sortAttribute)
         && "ASCENDING".equalsIgnoreCase(scope.sortDirection);
@@ -624,8 +615,7 @@ public class BookingReportController {
       comparisons++;
 
       Reservation candidate = sorted.getEntry(mid);
-      // Every id is "RES-" plus a five digit number, so alphabetical order and numeric order are
-      // the same and a plain string comparison is safe here.
+      // Every id is RES- plus five digits, so string order and numeric order agree.
       int comparison = candidate.getReservationId().compareToIgnoreCase(needle);
 
       if (comparison == 0) {
@@ -828,7 +818,6 @@ public class BookingReportController {
     return sb.toString();
   }
 
-  // Grouping splits the limited rows into one titled section per value, each with its own count.
   private void appendGroupedRows(
       StringBuilder sb, ListInterface<Reservation> sorted, int shown, ReportScope scope) {
 
@@ -957,10 +946,7 @@ public class BookingReportController {
     return row;
   }
 
-  // When this booking actually turned up. A walk-in arrives by joining the line, an advance
-  // booking arrives by being checked in, and one still awaited is dated by the time it is due.
-  // Reading only the queue stamp would date every reservation to the day it was booked for and
-  // drop guests who checked straight in out of today's register.
+  // A walk-in arrives by queueing, a booking by check-in, one still due by its date.
   private LocalDateTime arrivalStampOf(Reservation r) {
     if (r.getQueueArrivalTime() != null) return r.getQueueArrivalTime();
     if (r.getCheckInTime() != null) return r.getCheckInTime();
@@ -1019,9 +1005,7 @@ public class BookingReportController {
     return summariseRows(rows, null, "ALL TYPES");
   }
 
-  // A booking counts once it has reached its moment of truth: it stood in a line, it was checked
-  // in, or it was closed as a no-show. Bookings still awaited are left out, because they have not
-  // yet succeeded or failed and would only dilute the rate.
+  // Counted once it queued, checked in or no-showed. Still-awaited would dilute the rate.
   private String[] summariseRows(
       ListInterface<Reservation> rows, Room.RoomType roomType, String label) {
 
@@ -1139,7 +1123,6 @@ public class BookingReportController {
     return (recordLimit == 0) ? matched : Math.min(recordLimit, matched);
   }
 
-  // Pads every column to the widest value it holds so the file lines up in a plain text editor.
   private String buildTxtTable(String[] headers, String[][] rows) {
     final String gap = "   ";
     if (headers == null) return "";
@@ -1393,8 +1376,7 @@ public class BookingReportController {
     return (minutes / 60) + "h " + String.format("%02dm", minutes % 60);
   }
 
-  // A walk-in and a checked-in guest both turned up at a knowable minute. A booking still awaited
-  // has only the night it is due, so printing a clock against it would invent one.
+  // Only an actual arrival has a knowable minute, so an awaited one shows no clock.
   private boolean hasArrived(Reservation r) {
     return r.getQueueArrivalTime() != null || r.getCheckInTime() != null;
   }

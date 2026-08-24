@@ -19,9 +19,7 @@ public class WalkInRegistrationView {
   private static final int[] TYPE_WIDTHS = {4, 10, 7, 9, 9, 8, 28};
   private static final int SCREEN_WIDTH = 83;
 
-  // The clerk knows before touching the keyboard whether this person has stayed here before, so
-  // that answer is asked first. A returning guest goes to the search and a first-time arrival goes
-  // straight to the form, rather than being made to search for a record that cannot exist.
+  // The clerk already knows, so a first-time arrival is not made to search for nothing.
   public int displayModeMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("REGISTER WALK-IN", SCREEN_WIDTH);
@@ -103,8 +101,7 @@ public class WalkInRegistrationView {
     return null;
   }
 
-  // Mirrors the decision the controller is about to make, in the same order, so the column never
-  // promises an immediate room the placement rule would not actually hand over.
+  // Mirrors the controller's decision in order, so the column never over-promises.
   private String outcomeFor(
       int vacant,
       int arrivingToday,
@@ -213,7 +210,7 @@ public class WalkInRegistrationView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Guest", guest.getName() + " (" + guest.getGuestId() + ")", true);
     printKeyValue(kvSettings, "Reservation ID", booking.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", booking.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(booking), true);
     printKeyValue(kvSettings, "Room Type Booked", booking.getRoomType().name(), true);
     printKeyValue(
         kvSettings, "Expected Arrival", formatBookedNight(booking.getExpectedArrivalTime()), true);
@@ -237,8 +234,7 @@ public class WalkInRegistrationView {
 
     System.out.println();
 
-    // Offering a choice that would then be refused is worse than not offering it, so claiming the
-    // booking simply is not on the menu on the wrong day. The caller's codes do not move.
+    // Offering a choice that would then be refused is worse than not offering it.
     if (!dueToday) {
       System.out.println("1. Register A Walk-In For Tonight");
       System.out.println("2. Back\n");
@@ -370,7 +366,7 @@ public class WalkInRegistrationView {
     TableUtil.printTableRow(new String[] {"STATUS: ALLOCATED WITHOUT QUEUING"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", reservation.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", reservation.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(reservation), true);
     printKeyValue(kvSettings, "Guest Name", guest.getName(), true);
     printKeyValue(kvSettings, "Room Number", room.getRoomNumber(), true);
     printKeyValue(kvSettings, "Room Status", room.getStatus().name(), true);
@@ -393,7 +389,7 @@ public class WalkInRegistrationView {
     TableUtil.printTableRow(new String[] {"STATUS: ENQUEUED"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", reservation.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", reservation.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(reservation), true);
     printKeyValue(kvSettings, "Guest Name", (guest != null) ? guest.getName() : "N/A", true);
     printKeyValue(kvSettings, "Room Type", reservation.getRoomType().name(), true);
     printKeyValue(kvSettings, "Place In Line", String.valueOf(position), true);
@@ -414,7 +410,7 @@ public class WalkInRegistrationView {
     TableUtil.printTableRow(new String[] {"STATUS: RESERVED -> WAITING"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Reservation ID", reservation.getReservationId(), true);
-    printKeyValue(kvSettings, "Confirmation Code", reservation.getConfirmationNumber(), true);
+    printKeyValue(kvSettings, "Confirmation Code", confirmationOf(reservation), true);
     printKeyValue(kvSettings, "Guest Name", (guest != null) ? guest.getName() : "N/A", true);
     printKeyValue(kvSettings, "Room Type", reservation.getRoomType().name(), true);
     printKeyValue(kvSettings, "Place In Line", String.valueOf(position), true);
@@ -428,8 +424,13 @@ public class WalkInRegistrationView {
     return (value == null || value.isEmpty()) ? "N/A" : value;
   }
 
-  // A booking reserves a night rather than a moment, and the desk never asks for a clock time, so
-  // showing one here would invent a promise the guest never made.
+  // A code names a stay in progress, so every screen before check-in says where it comes from.
+  private String confirmationOf(Reservation reservation) {
+    String code = reservation.getConfirmationNumber();
+    return (code == null || code.trim().isEmpty()) ? "Issued at check-in" : code;
+  }
+
+  // A booking reserves a night, not a moment, so a clock would invent a promise.
   private String formatBookedNight(LocalDateTime dateTime) {
     if (dateTime == null) return "Not set";
     return dateTime.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));

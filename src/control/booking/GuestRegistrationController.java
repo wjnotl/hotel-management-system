@@ -53,9 +53,7 @@ public class GuestRegistrationController {
     }
   }
 
-  // Returns the saved guest, or null if the clerk cancelled or walked back out of the form.
-  // A suggested name pre-fills the first field; both booking flows open the form from their mode
-  // menu with nothing typed yet, so they pass null.
+  // Returns the saved guest, or null if the clerk left. Both flows pass no suggested name.
   public Guest registerNewGuest(String suggestedName) {
     FormState form = new FormState();
     form.name = (suggestedName == null) ? "" : suggestedName.trim();
@@ -63,8 +61,7 @@ public class GuestRegistrationController {
     while (true) {
       StepResult nameStep = collectName(form);
       if (nameStep.outcome == StepResult.CANCEL) return null;
-      // Stepping back off the first field leaves the form, which returns the clerk to the
-      // guest search they came from rather than trapping them in the registration screens.
+      // Stepping back off the first field leaves the form for the search that opened it.
       if (nameStep.outcome == StepResult.BACK) return null;
       form.name = nameStep.value;
 
@@ -80,9 +77,7 @@ public class GuestRegistrationController {
           if (passportStep.outcome == StepResult.BACK) break;
           form.passportNumber = passportStep.value;
 
-          // Checked on the way out of the passport step rather than at the summary, so the clerk
-          // is not asked for three more fields before being told the file has no document on it.
-          // Leaving this loop re-opens the IC step, which is where the message is read.
+          // Checked leaving the passport step, not at the summary, so the refusal comes early.
           if (form.icNumber.isEmpty() && form.passportNumber.isEmpty()) {
             form.pendingError =
                 "A guest file needs at least one identity document. Capture either the IC number or"
@@ -102,8 +97,7 @@ public class GuestRegistrationController {
               if (emailStep.outcome == StepResult.BACK) break;
               form.email = emailStep.value;
 
-              // The id is minted only once the clerk is looking at the summary, so a cancelled or
-              // reopened form never burns a number that the next guest would then skip over.
+              // The id is minted at the summary, so a cancelled form never burns a number.
               String guestId = guestRepo.generateGuestId();
 
               int choice =
@@ -115,8 +109,7 @@ public class GuestRegistrationController {
                       form.phoneNumber,
                       form.email);
 
-              // Amending from the summary re-opens the email field, which is the step this loop
-              // already owns.
+              // Amending re-opens the email step, which this loop already owns.
               if (choice == 2) continue;
               if (choice != 1) return null;
 
@@ -141,8 +134,7 @@ public class GuestRegistrationController {
     }
   }
 
-  // The form is walked field by field, so every screen has to redraw everything captured so far.
-  // Holding the five values together keeps that from being five parameters on every call.
+  // Every screen redraws all captured values, so they travel together, not as five params.
   private static class FormState {
     private String name = "";
     private String icNumber = "";
@@ -224,8 +216,7 @@ public class GuestRegistrationController {
         continue;
       }
 
-      // findByName returns the first match, so a second guest under the same name would be
-      // unreachable by name at every booking screen. The clerk is told before that happens.
+      // findByName returns the first match, so a duplicate name would be unreachable.
       Guest sameName = guestRepo.findByName(name);
       if (sameName != null && !promptSameNameWarning(name, sameName)) {
         continue;
@@ -250,9 +241,7 @@ public class GuestRegistrationController {
       if (typed.isEmpty()) return StepResult.next(form.icNumber);
       if (CLEAR.equals(typed)) return StepResult.next("");
 
-      // Storing the hyphens is what lets findByIdentityDocument match at all, so a clerk
-      // who reads the 12 digits straight off the card still ends up with the same value as
-      // one who typed the mask.
+      // The hyphens are stored because findByIdentityDocument matches on the masked form.
       String icNumber = applyIcMask(typed);
 
       if (!isValidMalaysianIc(icNumber)) {
@@ -338,8 +327,7 @@ public class GuestRegistrationController {
 
       String phoneNumber = typed;
 
-      // Compared digit by digit so the same number written with and without separators still
-      // collides, even though the record keeps whatever the clerk typed.
+      // Compared digit by digit, so the same number written two ways still collides.
       Guest owner = findByPhoneDigits(phoneNumber);
       if (owner != null) {
         error = duplicateMessage("phone number", phoneNumber, owner);
@@ -397,9 +385,7 @@ public class GuestRegistrationController {
     return input != null && "B".equalsIgnoreCase(input.trim());
   }
 
-  // 12 bare digits are the same identity as the masked form, so the hyphens are inserted
-  // rather than the entry being rejected. Anything else is handed back untouched so the
-  // format check reports what the clerk actually typed.
+  // 12 bare digits are the same identity, so the mask is inserted rather than rejected.
   private String applyIcMask(String value) {
     if (value.length() != IC_DIGIT_COUNT) return value;
 
@@ -414,10 +400,8 @@ public class GuestRegistrationController {
         + value.substring(8);
   }
 
-  // A Malaysian IC is a fixed mask, not a free-form string: YYMMDD-PB-###G. Checking the
-  // shape alone would still admit 999999-99-9999, so the birth-date block is range checked
-  // too. The place-of-birth block is deliberately left open because the assigned code list
-  // has gaps, and rejecting an unlisted code would turn away a real guest at the counter.
+  // The mask alone would admit 999999-99-9999, so the birth-date block is range checked. The place-
+  // of-birth block is left open because the assigned code list has gaps.
   private boolean isValidMalaysianIc(String value) {
     if (value.length() != IC_LENGTH) return false;
 
@@ -441,8 +425,7 @@ public class GuestRegistrationController {
     return day <= daysInMonth(month);
   }
 
-  // The year is only two digits so the century is unknown, which means 29 February can never
-  // be ruled out from the IC alone and is allowed.
+  // The two digit year hides the century, so 29 February can never be ruled out.
   private int daysInMonth(int month) {
     if (month == 2) return 29;
     if (month == 4 || month == 6 || month == 9 || month == 11) return 30;
@@ -490,8 +473,7 @@ public class GuestRegistrationController {
     return digits.toString();
   }
 
-  // Guest files written before the digits-only rule still carry hyphens and spaces, so the
-  // register is compared digit by digit rather than by the exact text a clerk once typed.
+  // Older files still carry hyphens and spaces, so the register compares digits.
   private Guest findByPhoneDigits(String digits) {
     ListInterface<Guest> guests = guestRepo.getGuestList();
     for (int i = 1; i <= guests.getNumberOfEntries(); i++) {

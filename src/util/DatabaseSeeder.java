@@ -1,5 +1,6 @@
 package util;
 
+import control.booking.BookingSettingsStore;
 import entity.AllocationEntry;
 import entity.Billing;
 import entity.Guest;
@@ -13,7 +14,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import repo.AllocationRepo;
 import repo.BillingRepo;
-import repo.BookingSettingsRepo;
 import repo.GuestRepo;
 import repo.HousekeepingStaffRepo;
 import repo.HousekeepingTaskRepo;
@@ -44,9 +44,9 @@ public class DatabaseSeeder {
     HousekeepingTaskRepo taskRepo = new HousekeepingTaskRepo();
     AllocationRepo allocationRepo = new AllocationRepo();
     VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
-    BookingSettingsRepo bookingSettingsRepo = new BookingSettingsRepo();
+    BookingSettingsStore bookingSettingsStore = new BookingSettingsStore();
     StandardReservationRepo standardRepo =
-        new StandardReservationRepo(reservationRepo, bookingSettingsRepo);
+        new StandardReservationRepo(reservationRepo, bookingSettingsStore::getSettings);
 
     if (!guestRepo.getGuestList().isEmpty()) {
       return;
@@ -1783,7 +1783,7 @@ public class DatabaseSeeder {
         new Reservation(
             repo.generateReservationId(),
             guestId,
-            repo.generateConfirmationNumber(),
+            null,
             roomType,
             Reservation.Status.WAITING,
             false,
@@ -1804,7 +1804,7 @@ public class DatabaseSeeder {
         new Reservation(
             repo.generateReservationId(),
             guestId,
-            repo.generateConfirmationNumber(),
+            null,
             roomType,
             Reservation.Status.RESERVED,
             false,
@@ -1879,7 +1879,7 @@ public class DatabaseSeeder {
         new Reservation(
             repo.generateReservationId(),
             guestId,
-            repo.generateConfirmationNumber(),
+            null,
             roomType,
             Reservation.Status.NO_SHOW,
             false,

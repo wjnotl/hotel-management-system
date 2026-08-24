@@ -4,7 +4,6 @@ import adt.ArrayList;
 import adt.ListInterface;
 import entity.BookingSettings;
 import entity.Room;
-import repo.BookingSettingsRepo;
 import repo.StandardReservationRepo;
 import util.ConsoleUtil;
 import view.booking.BookingSettingsView;
@@ -32,12 +31,12 @@ public class BookingSettingsController {
   private static final int MAX_RECORD_LIMIT = 500;
 
   private final BookingSettingsView settingsView = new BookingSettingsView();
-  private final BookingSettingsRepo bookingSettingsRepo;
+  private final BookingSettingsStore bookingSettingsStore;
   private final StandardReservationRepo standardReservationRepo;
 
   public BookingSettingsController(
-      BookingSettingsRepo bookingSettingsRepo, StandardReservationRepo standardReservationRepo) {
-    this.bookingSettingsRepo = bookingSettingsRepo;
+      BookingSettingsStore bookingSettingsStore, StandardReservationRepo standardReservationRepo) {
+    this.bookingSettingsStore = bookingSettingsStore;
     this.standardReservationRepo = standardReservationRepo;
   }
 
@@ -70,11 +69,10 @@ public class BookingSettingsController {
   }
 
   private BookingSettings config() {
-    return bookingSettingsRepo.getSettings();
+    return bookingSettingsStore.getSettings();
   }
 
-  // Blank keeps the current value and redraws the same setting screen, so the swallowed message
-  // is the only one ConsoleUtil raises for an empty line.
+  // Blank keeps the value and redraws, so this is the only empty-line message.
   private Integer promptIntSetting(
       String title,
       String explanation,
@@ -122,7 +120,7 @@ public class BookingSettingsController {
 
   // The screens edit the live settings object, so the write is forced here after each change.
   private void persist() {
-    bookingSettingsRepo.updateSettings(config());
+    bookingSettingsStore.updateSettings(config());
   }
 
   private void manageHoldRules() {
@@ -720,8 +718,7 @@ public class BookingSettingsController {
 
   // ================= HELPERS =================
 
-  // These have to match the strings the queue and advance controllers compare against, so they
-  // are listed once here rather than being retyped on each screen.
+  // Must match the strings the queue and advance controllers compare against.
   private ListInterface<String> queueSortOptions() {
     ListInterface<String> options = new ArrayList<>();
     options.add("QUEUE POSITION (FIFO)");
@@ -755,8 +752,7 @@ public class BookingSettingsController {
     return options;
   }
 
-  // Capacity and the expansion flag are read once when a CircularArrayQueue is constructed, so a
-  // changed value only reaches an existing line by rebuilding it from the master list.
+  // Capacity and expansion are read at queue construction, so a change needs a rebuild.
   private void applyToLiveLines() {
     standardReservationRepo.applySettings();
 
@@ -782,7 +778,7 @@ public class BookingSettingsController {
   private void resetToDefaults() {
     if (!promptResetConfirmation()) return;
 
-    bookingSettingsRepo.resetToDefaults();
+    bookingSettingsStore.resetToDefaults();
     standardReservationRepo.applySettings();
     settingsView.displayResetSuccessScreen();
   }

@@ -1,13 +1,14 @@
-package repo;
+package control.booking;
 
 import entity.BookingSettings;
 import util.BinaryFileUtil;
 
-public class BookingSettingsRepo {
+// One serialised object rather than a collection, so it is a store and not a repository.
+public class BookingSettingsStore {
   private final BinaryFileUtil<BookingSettings> fileUtil;
   private BookingSettings settings;
 
-  public BookingSettingsRepo() {
+  public BookingSettingsStore() {
     this.fileUtil = new BinaryFileUtil<>("booking_settings.dat");
     load();
   }
@@ -20,9 +21,7 @@ public class BookingSettingsRepo {
       return;
     }
 
-    // A file written before a field existed comes back with that field null or zero, so the record
-    // is repaired the moment it is read rather than reaching a screen half filled in, and the
-    // repair is written back so the migration only ever runs once.
+    // An older file returns new fields null or zero, so it is repaired on read and saved once.
     this.settings.normalize();
     save();
   }
@@ -35,8 +34,7 @@ public class BookingSettingsRepo {
     return settings;
   }
 
-  // The screens edit the live object in place, so this exists to force the write once a whole
-  // group of fields has been changed rather than saving after every keystroke.
+  // The screens edit the live object, so the write is forced once a group has changed.
   public boolean updateSettings(BookingSettings updatedSettings) {
     if (updatedSettings == null) return false;
     this.settings = updatedSettings;

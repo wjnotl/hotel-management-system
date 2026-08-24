@@ -1,6 +1,7 @@
 package control;
 
 import control.booking.BookingController;
+import control.booking.BookingSettingsStore;
 import control.frontdesk.FrontDeskController;
 import control.housekeeping.HouseKeepingController;
 import control.vip.VipController;
@@ -21,9 +22,9 @@ public class HotelManagementSystem {
   private static RoomRepo roomRepo = new RoomRepo();
   private static RoomStatusHistoryRepo roomStatusHistoryRepo = new RoomStatusHistoryRepo();
   private static ReservationRepo reservationRepo = new ReservationRepo();
-  private static BookingSettingsRepo bookingSettingsRepo = new BookingSettingsRepo();
+  private static BookingSettingsStore bookingSettingsStore = new BookingSettingsStore();
   private static StandardReservationRepo standardReservationRepo =
-      new StandardReservationRepo(reservationRepo, bookingSettingsRepo);
+      new StandardReservationRepo(reservationRepo, bookingSettingsStore::getSettings);
   private static VipReservationRepo vipReservationRepo = new VipReservationRepo(reservationRepo);
   private static VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
   private static BillingRepo billingRepo = new BillingRepo();
@@ -47,7 +48,7 @@ public class HotelManagementSystem {
 
         if ("1".equals(choice)) {
           new BookingController(
-                  standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsRepo)
+                  standardReservationRepo, guestRepo, memberRepo, roomRepo, bookingSettingsStore)
               .start();
         } else if ("2".equals(choice)) {
           new VipController(

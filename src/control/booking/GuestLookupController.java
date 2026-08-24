@@ -9,8 +9,7 @@ import repo.StandardReservationRepo;
 import util.ConsoleUtil;
 import view.booking.GuestLookupView;
 
-// Putting a name to the person at the counter is the first thing every booking flow does, so it is
-// written once here rather than three times with three sets of rules.
+// Every booking flow starts by naming the person at the counter, so it lives here once.
 public class GuestLookupController {
   private static final int MATCH_PAGE_SIZE = 10;
 
@@ -37,8 +36,7 @@ public class GuestLookupController {
 
     while (true) {
       try {
-        // No term means the whole register, so a clerk who can already see the guest never has to
-        // invent a search to reach them.
+        // No term means the whole register, so a visible guest needs no invented search.
         ListInterface<Guest> matches =
             (searchTerm == null)
                 ? guestRepo.getGuestList()
@@ -90,8 +88,7 @@ public class GuestLookupController {
         }
 
         if (result.isNumber) {
-          // The table renumbers from 1 on every page, so the row read off the screen is an offset
-          // into the page and the page origin has to be added back.
+          // The table renumbers per page, so the page origin is added back to the row read.
           Guest picked = matches.getEntry((page - 1) * MATCH_PAGE_SIZE + result.getAsInt());
           if (picked != null) return picked;
         }
@@ -190,8 +187,7 @@ public class GuestLookupController {
     return guestRepo.searchGuests(term, repoFieldFor(field), exactMatch);
   }
 
-  // Phone numbers are stored as digits now, but files opened before that rule still carry hyphens
-  // and a clerk types them out of habit either way, so both sides are reduced to digits first.
+  // Both stored and typed numbers carry stray hyphens, so both reduce to digits.
   private ListInterface<Guest> searchByPhoneDigits(String term, boolean exactMatch) {
     ListInterface<Guest> matches = new ArrayList<>();
     String query = digitsOnly(term);
@@ -221,8 +217,7 @@ public class GuestLookupController {
     return digits.toString();
   }
 
-  // A guest who quotes a booking code rather than a document is still the guest this flow needs, so
-  // the code is resolved to its reservation first and the reservation back to its guest file.
+  // A booking code names the guest too, so it resolves through the reservation.
   private ListInterface<Guest> searchByBookingCode(String term, boolean exactMatch) {
     ListInterface<Guest> matches = new ArrayList<>();
     ListInterface<Reservation> all = standardReservationRepo.getAllReservations();
