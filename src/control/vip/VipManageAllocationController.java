@@ -1,6 +1,7 @@
 package control.vip;
 
 import adt.ArrayList;
+import adt.LinkedList;
 import adt.ListInterface;
 import entity.AllocationEntry;
 import entity.Guest;
@@ -179,7 +180,7 @@ public class VipManageAllocationController {
     // Update Reservation state & store stay duration
     reservation.setRoomNumber(entry.getAssignedRoomNumber());
     reservation.setStatus(Reservation.Status.CHECKED_IN);
-    reservation.setAllocatedTime(now);
+    reservation.setCheckInTime(now);
     reservation.setStayDays(stayDays);
     vipReservationRepo.updateReservation(reservation);
 
@@ -672,7 +673,7 @@ public class VipManageAllocationController {
 
   private ListInterface<VipManageAllocationView.AllocationRowDTO> buildAllocationRowDTO(
       ListInterface<AllocationEntry> entries) {
-    if (entries == null) return new ArrayList<>();
+    if (entries == null) return new LinkedList<>();
     ListInterface<Reservation> reservationList = vipReservationRepo.getAllReservations();
 
     return entries.map(

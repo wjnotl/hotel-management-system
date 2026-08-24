@@ -1,6 +1,6 @@
 package control.vip;
 
-import adt.ArrayList;
+import adt.LinkedList;
 import adt.ListInterface;
 import entity.Guest;
 import entity.Member;
@@ -608,7 +608,7 @@ public class VipReportController {
       String sortDir,
       int reportType) {
 
-    if (source == null || source.isEmpty()) return new ArrayList<>();
+    if (source == null || source.isEmpty()) return new LinkedList<>();
 
     ListInterface<Reservation> filtered =
         source.filter(
@@ -779,7 +779,7 @@ public class VipReportController {
       ListInterface<Reservation> filteredList, int recordLimit) {
     if (filteredList == null) {
       return new VipReportView.SlaReportDTO(
-          new ArrayList<>(),
+          new LinkedList<>(),
           new VipReportView.SlaReportSummaryDTO(
               0, 0, 0, 100.0, 100.0, 0, 0, 0, 100.0, 100.0, 0, 0, 0, 100.0, 100.0),
           0);
@@ -790,14 +790,14 @@ public class VipReportController {
     ListInterface<Guest> guestList = guestRepo.getGuestList();
     ListInterface<Member> memberList = memberRepo.getMemberList();
 
-    ListInterface<VipReportView.SlaReportRowDTO> rows = new ArrayList<>();
+    ListInterface<VipReportView.SlaReportRowDTO> rows = new LinkedList<>();
     int displayCount =
         (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
     ListInterface<Reservation> displayList =
         (totalMatches > 0 && displayCount > 0)
             ? filteredList.slice(1, displayCount)
-            : new ArrayList<>();
+            : new LinkedList<>();
 
     int diamondTotal = 0, goldTotal = 0, silverTotal = 0;
     int diamondSlaMet = 0, goldSlaMet = 0, silverSlaMet = 0;
@@ -884,7 +884,7 @@ public class VipReportController {
       ListInterface<Reservation> filteredList, int recordLimit) {
     if (filteredList == null) {
       return new VipReportView.PenaltyReportDTO(
-          new ArrayList<>(),
+          new LinkedList<>(),
           new VipReportView.PenaltyReportSummaryDTO(
               0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0),
           0);
@@ -895,14 +895,14 @@ public class VipReportController {
     ListInterface<Guest> guestList = guestRepo.getGuestList();
     ListInterface<Member> memberList = memberRepo.getMemberList();
 
-    ListInterface<VipReportView.PenaltyReportRowDTO> rows = new ArrayList<>();
+    ListInterface<VipReportView.PenaltyReportRowDTO> rows = new LinkedList<>();
     int displayCount =
         (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
     ListInterface<Reservation> displayList =
         (totalMatches > 0 && displayCount > 0)
             ? filteredList.slice(1, displayCount)
-            : new ArrayList<>();
+            : new LinkedList<>();
 
     int totalStrikes =
         filteredList.reduce(
@@ -928,8 +928,7 @@ public class VipReportController {
       Member.LoyaltyTier tier = (member != null) ? member.getTier() : null;
 
       int strikes = (guest != null) ? guest.getStrikeCount() : 0;
-      int maxStrikes = config.getMaxStrikes(tier);
-      boolean isEvicted = (strikes >= maxStrikes);
+      boolean isEvicted = strikes > config.getMaxStrikes(tier);
 
       if (tier == Member.LoyaltyTier.DIAMOND) {
         dTotal++;
@@ -1001,8 +1000,9 @@ public class VipReportController {
       ListInterface<Reservation> filteredList, int recordLimit) {
     if (filteredList == null) {
       return new VipReportView.HoldingReportDTO(
-          new ArrayList<>(),
-          new VipReportView.HoldingReportSummaryDTO(0, 0, 0.0, 0.0, 0, 0.0, 0.0, 0, 0.0, 0.0),
+          new LinkedList<>(),
+          new VipReportView.HoldingReportSummaryDTO(
+              0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0),
           0);
     }
 
@@ -1011,14 +1011,14 @@ public class VipReportController {
     ListInterface<Guest> guestList = guestRepo.getGuestList();
     ListInterface<Member> memberList = memberRepo.getMemberList();
 
-    ListInterface<VipReportView.HoldingReportRowDTO> rows = new ArrayList<>();
+    ListInterface<VipReportView.HoldingReportRowDTO> rows = new LinkedList<>();
     int displayCount =
         (recordLimit == 0 || recordLimit >= totalMatches) ? totalMatches : recordLimit;
 
     ListInterface<Reservation> displayList =
         (totalMatches > 0 && displayCount > 0)
             ? filteredList.slice(1, displayCount)
-            : new ArrayList<>();
+            : new LinkedList<>();
 
     int dCount = 0, gCount = 0, sCount = 0;
     double dUtilSum = 0.0, gUtilSum = 0.0, sUtilSum = 0.0;
@@ -1093,12 +1093,15 @@ public class VipReportController {
     VipReportView.HoldingReportSummaryDTO summary =
         new VipReportView.HoldingReportSummaryDTO(
             totalMatches,
+            dCount,
             config.getDiamondGraceWindowMins(),
             dAvgUtil,
             config.getDiamondGraceUtilTargetPct(),
+            gCount,
             config.getGoldGraceWindowMins(),
             gAvgUtil,
             config.getGoldGraceUtilTargetPct(),
+            sCount,
             config.getSilverGraceWindowMins(),
             sAvgUtil,
             config.getSilverGraceUtilTargetPct());
@@ -1128,7 +1131,7 @@ public class VipReportController {
     LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "N/A";
 
-    LocalDateTime endTime = LocalDateTime.now();
+    LocalDateTime endTime = resolveHoldingEndTime(r);
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 
@@ -1152,7 +1155,7 @@ public class VipReportController {
     LocalDateTime startTime = r.getAllocatedTime();
     if (startTime == null) return "0.0";
 
-    LocalDateTime endTime = LocalDateTime.now();
+    LocalDateTime endTime = resolveHoldingEndTime(r);
     long elapsedMins = Duration.between(startTime, endTime).toMinutes();
     if (elapsedMins < 0) elapsedMins = 0;
 
@@ -1160,5 +1163,16 @@ public class VipReportController {
     double pct = ((double) timeUsed / allowedGraceMins) * 100.0;
     pct = Math.min(100.0, Math.max(0.0, pct));
     return String.format("%.1f", pct);
+  }
+
+  private LocalDateTime resolveHoldingEndTime(Reservation r) {
+    if (r == null) return LocalDateTime.now();
+    if (r.getStatus() == Reservation.Status.CHECKED_IN
+        || r.getStatus() == Reservation.Status.CHECKED_OUT) {
+      if (r.getCheckInTime() != null) {
+        return r.getCheckInTime();
+      }
+    }
+    return LocalDateTime.now();
   }
 }

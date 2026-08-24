@@ -641,28 +641,35 @@ public class VipReportView {
 
   public static class HoldingReportSummaryDTO {
     private final int totalHeld;
+    private final int diamondCount, goldCount, silverCount;
     private final int diamondLimitMins, goldLimitMins, silverLimitMins;
     private final double diamondUtilPct, goldUtilPct, silverUtilPct;
     private final double diamondTargetPct, goldTargetPct, silverTargetPct;
 
     public HoldingReportSummaryDTO(
         int totalHeld,
+        int diamondCount,
         int diamondLimitMins,
         double diamondUtilPct,
         double diamondTargetPct,
+        int goldCount,
         int goldLimitMins,
         double goldUtilPct,
         double goldTargetPct,
+        int silverCount,
         int silverLimitMins,
         double silverUtilPct,
         double silverTargetPct) {
       this.totalHeld = totalHeld;
+      this.diamondCount = diamondCount;
       this.diamondLimitMins = diamondLimitMins;
       this.diamondUtilPct = diamondUtilPct;
       this.diamondTargetPct = diamondTargetPct;
+      this.goldCount = goldCount;
       this.goldLimitMins = goldLimitMins;
       this.goldUtilPct = goldUtilPct;
       this.goldTargetPct = goldTargetPct;
+      this.silverCount = silverCount;
       this.silverLimitMins = silverLimitMins;
       this.silverUtilPct = silverUtilPct;
       this.silverTargetPct = silverTargetPct;
@@ -670,6 +677,18 @@ public class VipReportView {
 
     public int getTotalHeld() {
       return totalHeld;
+    }
+
+    public int getDiamondCount() {
+      return diamondCount;
+    }
+
+    public int getGoldCount() {
+      return goldCount;
+    }
+
+    public int getSilverCount() {
+      return silverCount;
     }
 
     public int getDiamondLimitMins() {
@@ -990,143 +1009,324 @@ public class VipReportView {
   }
 
   private void printSlaSummaryBlock(SlaReportSummaryDTO summary) {
-    System.out.println(
-        "\n--------------------------------------------------------------------------\n");
-    System.out.println("ALGORITHM SUMMARY METRICS (SLA PERFORMANCE):\n");
-    System.out.printf(
-        " DIAMOND TIER (Limit: <= %d Mins) : %d / %d Met SLA (Actual: %.1f%%  |  Target: %.1f%%) ->"
-            + " %s\n",
-        summary.getDiamondLimitMins(),
-        summary.getDiamondSlaMet(),
-        summary.getDiamondTotal(),
-        summary.getDiamondSlaPct(),
-        summary.getDiamondSlaTargetPct(),
-        (summary.getDiamondSlaPct() >= summary.getDiamondSlaTargetPct()
-            ? "[OK]"
-            : "[!] SLA BREACH"));
-    System.out.printf(
-        " GOLD TIER    (Limit: <= %d Mins) : %d / %d Met SLA (Actual: %.1f%%  |  Target: %.1f%%) ->"
-            + " %s\n",
-        summary.getGoldLimitMins(),
-        summary.getGoldSlaMet(),
-        summary.getGoldTotal(),
-        summary.getGoldSlaPct(),
-        summary.getGoldSlaTargetPct(),
-        (summary.getGoldSlaPct() >= summary.getGoldSlaTargetPct() ? "[OK]" : "[!] SLA BREACH"));
-    System.out.printf(
-        " SILVER TIER  (Limit: <= %d Mins) : %d / %d Met SLA (Actual: %.1f%%  |  Target: %.1f%%) ->"
-            + " %s\n\n",
-        summary.getSilverLimitMins(),
-        summary.getSilverSlaMet(),
-        summary.getSilverTotal(),
-        summary.getSilverSlaPct(),
-        summary.getSilverSlaTargetPct(),
-        (summary.getSilverSlaPct() >= summary.getSilverSlaTargetPct() ? "[OK]" : "[!] SLA BREACH"));
-    System.out.println(
-        "--------------------------------------------------------------------------\n");
+    System.out.println();
 
-    if (summary.getDiamondSlaPct() < summary.getDiamondSlaTargetPct()
+    int boxWidth = 103;
+    TableUtil.TableSettings titleSettings =
+        new TableUtil.TableSettings(new int[] {boxWidth}).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings alertTextSettings =
+        new TableUtil.TableSettings(new int[] {boxWidth}).setHAlign(0, TableUtil.Align.LEFT);
+
+    int[] columnWidths = {14, 14, 14, 13, 13, 20};
+    TableUtil.TableSettings gridSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.LEFT)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"ALGORITHM SUMMARY METRICS (SLA PERFORMANCE)"}, titleSettings);
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    TableUtil.printTableRow(
+        new String[] {
+          "MEMBER TIER",
+          "TARGET LIMIT",
+          "RECORDS MET",
+          "ACTUAL RATE",
+          "TARGET RATE",
+          "COMPLIANCE STATUS"
+        },
+        headerSettings);
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.MIDDLE);
+
+    TableUtil.printTableRow(
+        new String[] {
+          "DIAMOND TIER",
+          "<= " + summary.getDiamondLimitMins() + " Mins",
+          summary.getDiamondSlaMet() + " / " + summary.getDiamondTotal(),
+          formatPctOrNA(summary.getDiamondTotal(), summary.getDiamondSlaPct()),
+          String.format("%.1f%%", summary.getDiamondSlaTargetPct()),
+          formatSlaStatus(
+              summary.getDiamondTotal(),
+              summary.getDiamondSlaPct(),
+              summary.getDiamondSlaTargetPct())
+        },
+        gridSettings);
+    TableUtil.printTableRow(
+        new String[] {
+          "GOLD TIER",
+          "<= " + summary.getGoldLimitMins() + " Mins",
+          summary.getGoldSlaMet() + " / " + summary.getGoldTotal(),
+          formatPctOrNA(summary.getGoldTotal(), summary.getGoldSlaPct()),
+          String.format("%.1f%%", summary.getGoldSlaTargetPct()),
+          formatSlaStatus(
+              summary.getGoldTotal(), summary.getGoldSlaPct(), summary.getGoldSlaTargetPct())
+        },
+        gridSettings);
+    TableUtil.printTableRow(
+        new String[] {
+          "SILVER TIER",
+          "<= " + summary.getSilverLimitMins() + " Mins",
+          summary.getSilverSlaMet() + " / " + summary.getSilverTotal(),
+          formatPctOrNA(summary.getSilverTotal(), summary.getSilverSlaPct()),
+          String.format("%.1f%%", summary.getSilverSlaTargetPct()),
+          formatSlaStatus(
+              summary.getSilverTotal(), summary.getSilverSlaPct(), summary.getSilverSlaTargetPct())
+        },
+        gridSettings);
+
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+    int totalRecords =
+        summary.getDiamondTotal() + summary.getGoldTotal() + summary.getSilverTotal();
+    if (totalRecords == 0) {
+      TableUtil.printTableRow(
+          new String[] {"EXECUTIVE STATUS: No evaluated records within active scope filter."},
+          titleSettings);
+    } else if (summary.getDiamondSlaPct() < summary.getDiamondSlaTargetPct()
         || summary.getGoldSlaPct() < summary.getGoldSlaTargetPct()
         || summary.getSilverSlaPct() < summary.getSilverSlaTargetPct()) {
-      System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
-      System.out.println(" [!] Critical SLA breach detected in one or more member tiers!");
-      System.out.println(" REMEDIATION: Open Settings -> Tweak Operational Rules -> Lower Boiling");
-      System.out.println(" Point Limit (Mins) or increase Tier Base Values to accelerate queue.\n");
+      TableUtil.printTableRow(new String[] {"EXECUTIVE DECISION REMEDIATION ALERT"}, titleSettings);
+      TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.PLAIN_ROW);
+      TableUtil.printTableRow(
+          new String[] {" Critical SLA breach detected in one or more member tiers!"},
+          alertTextSettings);
+      TableUtil.printTableRow(
+          new String[] {
+            " REMEDIATION: Open Settings -> Tweak Operational Rules -> Lower Boiling Point Limit"
+                + " (Mins) or increase Tier Base Values to accelerate queue."
+          },
+          alertTextSettings);
     } else {
-      System.out.println(
-          "EXECUTIVE STATUS: All VIP tiers are operating within SLA attainment targets.\n");
+      TableUtil.printTableRow(
+          new String[] {
+            "EXECUTIVE STATUS: All VIP tiers are operating within SLA attainment targets."
+          },
+          titleSettings);
     }
-    System.out.println(
-        "--------------------------------------------------------------------------");
+
+    TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
   }
 
   private void printPenaltySummaryBlock(PenaltyReportSummaryDTO summary) {
-    System.out.println(
-        "\n--------------------------------------------------------------------------\n");
-    System.out.println("ALGORITHM SUMMARY METRICS (EVICTION AUDIT):\n");
-    System.out.printf(" - Total Strikes Logged: %d Penalty Strikes\n\n", summary.getTotalStrikes());
-    System.out.printf(
-        " DIAMOND EVICTIONS : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n",
-        summary.getDiamondEvicted(),
-        summary.getDiamondTotal(),
-        summary.getDiamondRate(),
-        summary.getDiamondMaxTarget(),
-        (summary.getDiamondRate() <= summary.getDiamondMaxTarget() ? "[OK]" : "[!] HIGH EVICTION"));
-    System.out.printf(
-        " GOLD EVICTIONS    : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n",
-        summary.getGoldEvicted(),
-        summary.getGoldTotal(),
-        summary.getGoldRate(),
-        summary.getGoldMaxTarget(),
-        (summary.getGoldRate() <= summary.getGoldMaxTarget() ? "[OK]" : "[!] HIGH EVICTION"));
-    System.out.printf(
-        " SILVER EVICTIONS  : %d / %d (Eviction Rate: %.1f%%  |  Max Limit: %.1f%%) -> %s\n\n",
-        summary.getSilverEvicted(),
-        summary.getSilverTotal(),
-        summary.getSilverRate(),
-        summary.getSilverMaxTarget(),
-        (summary.getSilverRate() <= summary.getSilverMaxTarget() ? "[OK]" : "[!] HIGH EVICTION"));
-    System.out.println(
-        "--------------------------------------------------------------------------\n");
+    System.out.println();
 
-    if (summary.getDiamondRate() > summary.getDiamondMaxTarget()
+    int boxWidth = 91;
+    TableUtil.TableSettings titleSettings =
+        new TableUtil.TableSettings(new int[] {boxWidth}).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings alertTextSettings =
+        new TableUtil.TableSettings(new int[] {boxWidth}).setHAlign(0, TableUtil.Align.LEFT);
+
+    int[] columnWidths = {14, 17, 15, 13, 20};
+    TableUtil.TableSettings gridSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.LEFT)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"ALGORITHM SUMMARY METRICS (EVICTION AUDIT)"}, titleSettings);
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    TableUtil.printTableRow(
+        new String[] {
+          "MEMBER TIER", "EVICTED / TOTAL", "EVICTION RATE", "MAX LIMIT", "COMPLIANCE STATUS"
+        },
+        headerSettings);
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.MIDDLE);
+
+    TableUtil.printTableRow(
+        new String[] {
+          "DIAMOND TIER",
+          summary.getDiamondEvicted() + " / " + summary.getDiamondTotal(),
+          formatPctOrNA(summary.getDiamondTotal(), summary.getDiamondRate()),
+          String.format("%.1f%%", summary.getDiamondMaxTarget()),
+          formatEvictionStatus(
+              summary.getDiamondTotal(), summary.getDiamondRate(), summary.getDiamondMaxTarget())
+        },
+        gridSettings);
+    TableUtil.printTableRow(
+        new String[] {
+          "GOLD TIER",
+          summary.getGoldEvicted() + " / " + summary.getGoldTotal(),
+          formatPctOrNA(summary.getGoldTotal(), summary.getGoldRate()),
+          String.format("%.1f%%", summary.getGoldMaxTarget()),
+          formatEvictionStatus(
+              summary.getGoldTotal(), summary.getGoldRate(), summary.getGoldMaxTarget())
+        },
+        gridSettings);
+    TableUtil.printTableRow(
+        new String[] {
+          "SILVER TIER",
+          summary.getSilverEvicted() + " / " + summary.getSilverTotal(),
+          formatPctOrNA(summary.getSilverTotal(), summary.getSilverRate()),
+          String.format("%.1f%%", summary.getSilverMaxTarget()),
+          formatEvictionStatus(
+              summary.getSilverTotal(), summary.getSilverRate(), summary.getSilverMaxTarget())
+        },
+        gridSettings);
+
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+    int totalRecords =
+        summary.getDiamondTotal() + summary.getGoldTotal() + summary.getSilverTotal();
+    if (totalRecords == 0) {
+      TableUtil.printTableRow(
+          new String[] {"EXECUTIVE STATUS: No evaluated records within active scope filter."},
+          titleSettings);
+    } else if (summary.getDiamondRate() > summary.getDiamondMaxTarget()
         || summary.getGoldRate() > summary.getGoldMaxTarget()
         || summary.getSilverRate() > summary.getSilverMaxTarget()) {
-      System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
-      System.out.println(" [!] VIP EVICTION ALERT: Eviction rate exceeds tier target threshold!");
-      System.out.println(
-          " REMEDIATION: Open Settings -> Tweak Operational Rules -> Increase Max Strike");
-      System.out.println(" Limit to grant high-value members more callout opportunities.\n");
+      TableUtil.printTableRow(new String[] {"EXECUTIVE DECISION REMEDIATION ALERT"}, titleSettings);
+      TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.PLAIN_ROW);
+      TableUtil.printTableRow(
+          new String[] {" VIP EVICTION ALERT: Eviction rate exceeds tier target threshold!"},
+          alertTextSettings);
+      TableUtil.printTableRow(
+          new String[] {
+            " REMEDIATION: Open Settings -> Tweak Operational Rules -> Increase Max Strike Limit to"
+                + " grant high-value members more callout opportunities."
+          },
+          alertTextSettings);
     } else {
-      System.out.println(
-          "EXECUTIVE STATUS: Penalty eviction rates are within acceptable limits.\n");
+      TableUtil.printTableRow(
+          new String[] {"EXECUTIVE STATUS: Penalty eviction rates are within acceptable limits."},
+          titleSettings);
     }
-    System.out.println(
-        "--------------------------------------------------------------------------");
+
+    TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
   }
 
   private void printHoldingSummaryBlock(HoldingReportSummaryDTO summary) {
-    System.out.println(
-        "\n--------------------------------------------------------------------------\n");
-    System.out.println("ALGORITHM SUMMARY METRICS (HOLDING BAY AUDIT):\n");
-    System.out.printf(" - Total Holding Bay Entries : %d Rooms Held\n\n", summary.getTotalHeld());
-    System.out.printf(
-        " DIAMOND GRACE USAGE : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
-        summary.getDiamondUtilPct(),
-        summary.getDiamondTargetPct(),
-        (summary.getDiamondUtilPct() <= summary.getDiamondTargetPct()
-            ? "[OK]"
-            : "[!] HIGH GRACE USAGE"));
-    System.out.printf(
-        " GOLD GRACE USAGE    : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n",
-        summary.getGoldUtilPct(),
-        summary.getGoldTargetPct(),
-        (summary.getGoldUtilPct() <= summary.getGoldTargetPct() ? "[OK]" : "[!] HIGH GRACE USAGE"));
-    System.out.printf(
-        " SILVER GRACE USAGE  : Actual: %.1f%%  |  Max Target: %.1f%% -> %s\n\n",
-        summary.getSilverUtilPct(),
-        summary.getSilverTargetPct(),
-        (summary.getSilverUtilPct() <= summary.getSilverTargetPct()
-            ? "[OK]"
-            : "[!] HIGH GRACE USAGE"));
-    System.out.println(
-        "--------------------------------------------------------------------------\n");
+    System.out.println();
 
-    if (summary.getDiamondUtilPct() > summary.getDiamondTargetPct()
+    int boxWidth = 73;
+    TableUtil.TableSettings titleSettings =
+        new TableUtil.TableSettings(new int[] {boxWidth}).setHAlign(0, TableUtil.Align.CENTER);
+    TableUtil.TableSettings alertTextSettings =
+        new TableUtil.TableSettings(new int[] {boxWidth}).setHAlign(0, TableUtil.Align.LEFT);
+
+    int[] columnWidths = {14, 14, 14, 22};
+    TableUtil.TableSettings gridSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.LEFT)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER);
+
+    TableUtil.TableSettings headerSettings =
+        new TableUtil.TableSettings(columnWidths)
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(2, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {"ALGORITHM SUMMARY METRICS (HOLDING BAY AUDIT)"}, titleSettings);
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    TableUtil.printTableRow(
+        new String[] {"MEMBER TIER", "MAX TARGET", "ACTUAL USAGE", "COMPLIANCE STATUS"},
+        headerSettings);
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.MIDDLE);
+
+    TableUtil.printTableRow(
+        new String[] {
+          "DIAMOND TIER",
+          String.format("%.1f%%", summary.getDiamondTargetPct()),
+          formatPctOrNA(summary.getDiamondCount(), summary.getDiamondUtilPct()),
+          formatGraceStatus(
+              summary.getDiamondCount(), summary.getDiamondUtilPct(), summary.getDiamondTargetPct())
+        },
+        gridSettings);
+    TableUtil.printTableRow(
+        new String[] {
+          "GOLD TIER",
+          String.format("%.1f%%", summary.getGoldTargetPct()),
+          formatPctOrNA(summary.getGoldCount(), summary.getGoldUtilPct()),
+          formatGraceStatus(
+              summary.getGoldCount(), summary.getGoldUtilPct(), summary.getGoldTargetPct())
+        },
+        gridSettings);
+    TableUtil.printTableRow(
+        new String[] {
+          "SILVER TIER",
+          String.format("%.1f%%", summary.getSilverTargetPct()),
+          formatPctOrNA(summary.getSilverCount(), summary.getSilverUtilPct()),
+          formatGraceStatus(
+              summary.getSilverCount(), summary.getSilverUtilPct(), summary.getSilverTargetPct())
+        },
+        gridSettings);
+
+    TableUtil.printTableBorder(gridSettings, TableUtil.BorderPosition.HEADER_CLOSE);
+
+    if (summary.getTotalHeld() == 0) {
+      TableUtil.printTableRow(
+          new String[] {"EXECUTIVE STATUS: No holding bay records in active scope filter."},
+          titleSettings);
+    } else if (summary.getDiamondUtilPct() > summary.getDiamondTargetPct()
         || summary.getGoldUtilPct() > summary.getGoldTargetPct()
         || summary.getSilverUtilPct() > summary.getSilverTargetPct()) {
-      System.out.println("EXECUTIVE DECISION REMEDIATION ALERT:");
-      System.out.println(
-          " [!] VIP GRACE UTILIZATION ALERT: Grace window usage exceeds target threshold!");
-      System.out.println(
-          " REMEDIATION: Open Settings -> Tweak Operational Rules -> Reduce Grace Window (Mins)");
-      System.out.println(" to release unclaimed held rooms faster.\n");
+      TableUtil.printTableRow(new String[] {"EXECUTIVE DECISION REMEDIATION ALERT"}, titleSettings);
+      TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.PLAIN_ROW);
+      TableUtil.printTableRow(
+          new String[] {" VIP GRACE UTILIZATION ALERT: Usage exceeds target threshold!"},
+          alertTextSettings);
+      TableUtil.printTableRow(
+          new String[] {
+            " REMEDIATION: Open Settings -> Tweak Operational Rules -> Reduce Grace Window (Mins)"
+                + " to release unclaimed held rooms faster."
+          },
+          alertTextSettings);
     } else {
-      System.out.println(
-          "EXECUTIVE STATUS: Holding bay grace window utilization is within acceptable targets.\n");
+      TableUtil.printTableRow(
+          new String[] {"EXECUTIVE STATUS: Holding bay grace utilization is within targets."},
+          titleSettings);
     }
-    System.out.println(
-        "--------------------------------------------------------------------------");
+
+    TableUtil.printTableBorder(titleSettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+  }
+
+  private String formatPctOrNA(int count, double pct) {
+    return (count == 0) ? "N/A" : String.format("%.1f%%", pct);
+  }
+
+  private String formatSlaStatus(int count, double actual, double target) {
+    if (count == 0) return "NO DATA";
+    return (actual >= target) ? "PASS" : "SLA BREACH";
+  }
+
+  private String formatEvictionStatus(int count, double actual, double target) {
+    if (count == 0) return "NO DATA";
+    return (actual <= target) ? "PASS" : "HIGH EVICTION";
+  }
+
+  private String formatGraceStatus(int count, double actual, double target) {
+    if (count == 0) return "NO DATA";
+    return (actual <= target) ? "PASS" : "HIGH GRACE USAGE";
   }
 
   public void displayExportSuccessScreen(String filePath) {

@@ -1,6 +1,7 @@
 package control.vip;
 
 import adt.ArrayList;
+import adt.LinkedList;
 import adt.ListInterface;
 import adt.PriorityQueueInterface;
 import entity.AllocationEntry;
@@ -693,7 +694,7 @@ public class VipManageWaitlistController {
 
   private ListInterface<VipManageWaitlistView.WaitlistRowDTO> buildWaitlistRowDTO(
       ListInterface<Reservation> list) {
-    if (list == null) return new ArrayList<>();
+    if (list == null) return new LinkedList<>();
     return list.map(
         r -> {
           Guest g = guestRepo.findById(r.getGuestId());
