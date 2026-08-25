@@ -20,13 +20,16 @@ import view.booking.BookingReportView;
 public class BookingReportController {
   private static final int ARRIVAL_REGISTER = 1;
   private static final int QUEUE_PERFORMANCE = 2;
+  private static final int OCCUPANCY_FORECAST = 3;
 
   private static final String REGISTER_TITLE = "DAILY ARRIVAL REGISTER";
   private static final String PERFORMANCE_TITLE = "QUEUE PERFORMANCE & NO-SHOW ANALYSIS";
+  private static final String FORECAST_TITLE = "FORWARD OCCUPANCY & AVAILABILITY FORECAST";
+
+  private static final int DEFAULT_FORECAST_NIGHTS = 14;
   private static final String NEW_LINE = System.lineSeparator();
   private static final String BLANK_INPUT = "Input cannot be empty!";
 
-  // Leaves room for the title box and the command line on an 80 by 25 console.
   private static final int REPORT_PAGE_LINES = 18;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -54,6 +57,10 @@ public class BookingReportController {
     "Arrived",
     "Nights",
     "Strikes"
+  };
+
+  private static final String[] FORECAST_COLUMN_NAMES = {
+    "Date", "Day", "Room Type", "Rooms", "Committed", "Free", "Occupancy", "Arrivals Due", "State"
   };
 
   private final BookingReportView reportView = new BookingReportView();
@@ -87,6 +94,8 @@ public class BookingReportController {
 
         if (choice == ARRIVAL_REGISTER || choice == QUEUE_PERFORMANCE) {
           runReportPipeline(choice);
+        } else if (choice == OCCUPANCY_FORECAST) {
+          runForecastPipeline();
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -481,6 +490,7 @@ public class BookingReportController {
                 sorted.getNumberOfEntries(),
                 exportedRowCount(sorted.getNumberOfEntries(), scope.recordLimit),
                 path,
+                "A Reservation ID",
                 isRegister,
                 isBinarySearchable(scope));
 
@@ -495,7 +505,8 @@ public class BookingReportController {
           showReportOnScreen(title, content, path);
         } else if ("F".equalsIgnoreCase(result.input)) {
           // Refusing would teach nothing, so the screen offers the re-sort that makes it legal.
-          if (!isBinarySearchable(scope) && promptResortForSearch(sortLabel)) {
+          if (!isBinarySearchable(scope)
+              && promptResortForSearch(sortLabel, "Reservation ID", "RESERVATION ID (ASCENDING)")) {
             scope.sortAttribute = "RESERVATION ID";
             scope.sortDirection = "ASCENDING";
             sortLabel = sortLabelOf(scope);
@@ -577,10 +588,11 @@ public class BookingReportController {
         && "ASCENDING".equalsIgnoreCase(scope.sortDirection);
   }
 
-  private boolean promptResortForSearch(String currentSortLabel) {
+  private boolean promptResortForSearch(
+      String currentSortLabel, String keyLabel, String requiredOrder) {
     while (true) {
       try {
-        return reportView.displayResortForSearchScreen(currentSortLabel);
+        return reportView.displayResortForSearchScreen(currentSortLabel, keyLabel, requiredOrder);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -1389,6 +1401,788 @@ public class BookingReportController {
   private String formatClock(LocalDateTime dateTime) {
     if (dateTime == null) return "-";
     return dateTime.format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
+  }
+
+  // ================= OCCUPANCY FORECAST =================
+
+  // A row here is a night of one room type rather than a reservation, so nothing in the scope,
+  // the filters or the comparators of the two reservation reports transfers. It carries its own
+  // pipeline and shares only the layout, the pagination and the export beneath it.
+  private static class ForecastScope {
+    private LocalDate startDate = LocalDate.now();
+    private int horizonNights = DEFAULT_FORECAST_NIGHTS;
+    private String roomTypeFilter;
+    private String stateFilter = "ALL NIGHTS";
+    private int minOccupancy = -1;
+    private int maxOccupancy = -1;
+    private boolean arrivalsDueOnly;
+    private String sortAttribute = "DATE";
+    private String sortDirection = "ASCENDING";
+    private String groupBy = "NO GROUPING";
+    private int recordLimit;
+    private boolean[] columns;
+  }
+
+  private static class ForecastRow {
+    private final LocalDate date;
+    private final Room.RoomType roomType;
+    private final int totalRooms;
+    private final int committed;
+    private final int arrivalsDue;
+
+    private ForecastRow(
+        LocalDate date, Room.RoomType roomType, int totalRooms, int committed, int arrivalsDue) {
+      this.date = date;
+      this.roomType = roomType;
+      this.totalRooms = totalRooms;
+      this.committed = committed;
+      this.arrivalsDue = arrivalsDue;
+    }
+
+    private int free() {
+      return Math.max(0, totalRooms - committed);
+    }
+
+    private double occupancy() {
+      return (totalRooms == 0) ? 0.0 : (committed * 100.0) / totalRooms;
+    }
+
+    // Overbooking is reachable whenever the block overbooking setting is off, so the forecast
+    // names it instead of hiding it behind a night that merely reads as full.
+    private String state() {
+      if (committed > totalRooms) return "OVERBOOKED";
+      return (free() == 0) ? "FULL" : "OPEN";
+    }
+  }
+
+  private ForecastScope defaultForecastScope() {
+    ForecastScope scope = new ForecastScope();
+    scope.startDate = LocalDate.now();
+    scope.horizonNights = Math.min(DEFAULT_FORECAST_NIGHTS, maxForecastNights());
+    scope.recordLimit = settings().getDefaultRecordLimit();
+    scope.columns = new boolean[FORECAST_COLUMN_NAMES.length];
+
+    int[] defaults = {0, 1, 2, 3, 5, 6, 8};
+    for (int index : defaults) {
+      scope.columns[index] = true;
+    }
+    return scope;
+  }
+
+  // Forecasting past the last night the desk may sell would describe nights nobody can book.
+  private int maxForecastNights() {
+    return Math.max(1, settings().getAdvanceBookingLeadDays());
+  }
+
+  private void runForecastPipeline() {
+    ForecastScope scope = defaultForecastScope();
+
+    while (true) {
+      try {
+        standardReservationRepo.sweepLapsedHolds(roomRepo, guestRepo);
+
+        ListInterface<ForecastRow> matched = filterForecast(buildForecast(scope), scope);
+
+        String command =
+            reportView.displayForecastControlPanel(
+                "OCCUPANCY FORECAST - SCOPE",
+                forecastWindowLabel(scope),
+                scope.roomTypeFilter,
+                scope.stateFilter,
+                occupancyBandLabel(scope),
+                scope.arrivalsDueOnly,
+                scope.sortAttribute,
+                scope.sortDirection,
+                scope.groupBy,
+                forecastColumnsLabel(scope),
+                scope.recordLimit,
+                matched.getNumberOfEntries());
+
+        if ("E".equals(command)) {
+          return;
+        } else if ("R".equals(command)) {
+          scope = defaultForecastScope();
+        } else if ("X".equals(command)) {
+          if (exportForecast(matched, scope)) {
+            return;
+          }
+        } else if ("1".equals(command)) {
+          handleForecastWindow(scope);
+        } else if ("2".equals(command)) {
+          int picked = promptRoomTypeFilter(scope.roomTypeFilter);
+          if (picked > 0) scope.roomTypeFilter = roomTypeNameFor(picked);
+        } else if ("3".equals(command)) {
+          int picked = promptForecastState(scope.stateFilter);
+          if (picked > 0) scope.stateFilter = forecastStateFor(picked);
+        } else if ("4".equals(command)) {
+          int[] band = promptOccupancyBand(scope.minOccupancy, scope.maxOccupancy);
+          scope.minOccupancy = band[0];
+          scope.maxOccupancy = band[1];
+        } else if ("5".equals(command)) {
+          scope.arrivalsDueOnly = !scope.arrivalsDueOnly;
+        } else if ("6".equals(command)) {
+          int attribute = promptForecastSort(scope.sortAttribute);
+          if (attribute > 0) {
+            int direction = promptSortDirection(scope.sortDirection);
+            if (direction == 1 || direction == 2) {
+              scope.sortAttribute = forecastSortFor(attribute);
+              scope.sortDirection = (direction == 1) ? "DESCENDING" : "ASCENDING";
+            }
+          }
+        } else if ("7".equals(command)) {
+          int picked = promptForecastGroupBy(scope.groupBy);
+          if (picked == 1) scope.groupBy = "NO GROUPING";
+          else if (picked == 2) scope.groupBy = "ROOM TYPE";
+          else if (picked == 3) scope.groupBy = "NIGHT";
+        } else if ("8".equals(command)) {
+          handleForecastColumns(scope);
+        } else if ("9".equals(command)) {
+          int picked = promptRecordLimit(scope.recordLimit);
+          if (picked == 1) scope.recordLimit = 5;
+          else if (picked == 2) scope.recordLimit = 10;
+          else if (picked == 3) scope.recordLimit = 25;
+          else if (picked == 4) scope.recordLimit = 50;
+          else if (picked == 5) scope.recordLimit = 0;
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // Two sweeps of the master list per room type, not one per night, because the repo answers a
+  // whole window at a time.
+  private ListInterface<ForecastRow> buildForecast(ForecastScope scope) {
+    ListInterface<ForecastRow> rows = new ArrayList<>();
+
+    for (Room.RoomType type : Room.RoomType.values()) {
+      if (scope.roomTypeFilter != null && !scope.roomTypeFilter.equalsIgnoreCase(type.name())) {
+        continue;
+      }
+
+      int totalRooms = standardReservationRepo.getTotalRoomsOfType(roomRepo, type);
+      int[] committed =
+          standardReservationRepo.countCommittedOverWindow(
+              type, scope.startDate, scope.horizonNights);
+      int[] arrivals =
+          standardReservationRepo.countArrivalsOverWindow(
+              type, scope.startDate, scope.horizonNights);
+
+      for (int night = 0; night < scope.horizonNights; night++) {
+        rows.add(
+            new ForecastRow(
+                scope.startDate.plusDays(night),
+                type,
+                totalRooms,
+                committed[night],
+                arrivals[night]));
+      }
+    }
+    return rows;
+  }
+
+  private ListInterface<ForecastRow> filterForecast(
+      ListInterface<ForecastRow> source, ForecastScope scope) {
+
+    ListInterface<ForecastRow> matched = new ArrayList<>();
+
+    for (int i = 1; i <= source.getNumberOfEntries(); i++) {
+      ForecastRow row = source.getEntry(i);
+      if (row == null) continue;
+
+      if (!matchesForecastState(row, scope.stateFilter)) continue;
+
+      // Rounded once, so what the band compares is what the Occupancy column prints.
+      int occupancy = (int) Math.round(row.occupancy());
+      if (scope.minOccupancy >= 0 && occupancy < scope.minOccupancy) continue;
+      if (scope.maxOccupancy >= 0 && occupancy > scope.maxOccupancy) continue;
+      if (scope.arrivalsDueOnly && row.arrivalsDue == 0) continue;
+
+      matched.add(row);
+    }
+    return matched;
+  }
+
+  private boolean matchesForecastState(ForecastRow row, String stateFilter) {
+    if (stateFilter == null || "ALL NIGHTS".equalsIgnoreCase(stateFilter)) return true;
+    if ("OPEN ONLY".equalsIgnoreCase(stateFilter)) return "OPEN".equals(row.state());
+    if ("OVERBOOKED ONLY".equalsIgnoreCase(stateFilter)) return "OVERBOOKED".equals(row.state());
+    return !"OPEN".equals(row.state());
+  }
+
+  private ListInterface<ForecastRow> sortForecast(
+      ListInterface<ForecastRow> source, ForecastScope scope) {
+
+    ListInterface<ForecastRow> sorted = new ArrayList<>();
+    for (int i = 1; i <= source.getNumberOfEntries(); i++) {
+      sorted.add(source.getEntry(i));
+    }
+
+    boolean ascending = "ASCENDING".equalsIgnoreCase(scope.sortDirection);
+    String attribute = scope.sortAttribute;
+
+    if ("OCCUPANCY".equalsIgnoreCase(attribute)) {
+      sorted.sort((a, b) -> ascending ? compareOccupancy(a, b) : compareOccupancy(b, a));
+    } else if ("FREE ROOMS".equalsIgnoreCase(attribute)) {
+      sorted.sort((a, b) -> ascending ? compareFreeRooms(a, b) : compareFreeRooms(b, a));
+    } else if ("ARRIVALS DUE".equalsIgnoreCase(attribute)) {
+      sorted.sort((a, b) -> ascending ? compareArrivalsDue(a, b) : compareArrivalsDue(b, a));
+    } else if ("ROOM TYPE".equalsIgnoreCase(attribute)) {
+      sorted.sort((a, b) -> ascending ? compareRoomType(a, b) : compareRoomType(b, a));
+    } else {
+      sorted.sort((a, b) -> ascending ? compareNight(a, b) : compareNight(b, a));
+    }
+
+    return sorted;
+  }
+
+  // Every comparator settles ties on the night then the room type, so two exports of one scope
+  // never come back in a different order.
+  private int compareNight(ForecastRow a, ForecastRow b) {
+    int byDate = a.date.compareTo(b.date);
+    return (byDate != 0) ? byDate : a.roomType.compareTo(b.roomType);
+  }
+
+  private int compareOccupancy(ForecastRow a, ForecastRow b) {
+    int byOccupancy = Double.compare(a.occupancy(), b.occupancy());
+    return (byOccupancy != 0) ? byOccupancy : compareNight(a, b);
+  }
+
+  private int compareFreeRooms(ForecastRow a, ForecastRow b) {
+    int byFree = Integer.compare(a.free(), b.free());
+    return (byFree != 0) ? byFree : compareNight(a, b);
+  }
+
+  private int compareArrivalsDue(ForecastRow a, ForecastRow b) {
+    int byArrivals = Integer.compare(a.arrivalsDue, b.arrivalsDue);
+    return (byArrivals != 0) ? byArrivals : compareNight(a, b);
+  }
+
+  private int compareRoomType(ForecastRow a, ForecastRow b) {
+    int byType = a.roomType.compareTo(b.roomType);
+    return (byType != 0) ? byType : a.date.compareTo(b.date);
+  }
+
+  // Sorted once, so the .txt and the binary search share one ordered list.
+  private boolean exportForecast(ListInterface<ForecastRow> matched, ForecastScope scope) {
+    String sortLabel = scope.sortAttribute + " (" + scope.sortDirection + ")";
+    String scopeLabel = buildForecastScopeLabel(scope);
+
+    ListInterface<ForecastRow> sorted = sortForecast(matched, scope);
+    String content = buildForecastTxt(sorted, scopeLabel, sortLabel, scope);
+    String path = TxtExportUtil.export("booking/occupancy_forecast", content);
+
+    showReportOnScreen(FORECAST_TITLE, content, path);
+
+    while (true) {
+      try {
+        ConsoleUtil.GetMenuInputResult result =
+            reportView.showExportReceipt(
+                FORECAST_TITLE,
+                scopeLabel,
+                sortLabel,
+                scope.groupBy,
+                sorted.getNumberOfEntries(),
+                exportedRowCount(sorted.getNumberOfEntries(), scope.recordLimit),
+                path,
+                "A Night",
+                true,
+                isForecastBinarySearchable(scope));
+
+        if ("E".equalsIgnoreCase(result.input)) {
+          return true;
+        } else if ("S".equalsIgnoreCase(result.input)) {
+          return false;
+        } else if ("R".equalsIgnoreCase(result.input)) {
+          content = buildForecastTxt(sorted, scopeLabel, sortLabel, scope);
+          path = TxtExportUtil.export("booking/occupancy_forecast", content);
+        } else if ("V".equalsIgnoreCase(result.input)) {
+          showReportOnScreen(FORECAST_TITLE, content, path);
+        } else if ("F".equalsIgnoreCase(result.input)) {
+          // Refusing would teach nothing, so the screen offers the re-sort that makes it legal.
+          if (!isForecastBinarySearchable(scope)
+              && promptResortForSearch(sortLabel, "Date", "DATE (ASCENDING)")) {
+            scope.sortAttribute = "DATE";
+            scope.sortDirection = "ASCENDING";
+            sortLabel = scope.sortAttribute + " (" + scope.sortDirection + ")";
+            sorted = sortForecast(matched, scope);
+            content = buildForecastTxt(sorted, scopeLabel, sortLabel, scope);
+            path = TxtExportUtil.export("booking/occupancy_forecast", content);
+          }
+
+          if (isForecastBinarySearchable(scope)) {
+            handleForecastSearch(sorted);
+          }
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private boolean isForecastBinarySearchable(ForecastScope scope) {
+    return "DATE".equalsIgnoreCase(scope.sortAttribute)
+        && "ASCENDING".equalsIgnoreCase(scope.sortDirection);
+  }
+
+  private void handleForecastSearch(ListInterface<ForecastRow> sorted) {
+    String typed;
+    while (true) {
+      try {
+        typed = reportView.promptForecastNightSearch();
+        break;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+    if (typed == null || "E".equalsIgnoreCase(typed.trim())) {
+      return;
+    }
+
+    LocalDate target = parseDate(typed.trim());
+
+    // A lower bound rather than any hit, because one night carries a row per room type and the
+    // block has to be reported from its start.
+    int low = 1;
+    int high = sorted.getNumberOfEntries();
+    int comparisons = 0;
+    int firstMatch = -1;
+
+    while (low <= high) {
+      int mid = low + (high - low) / 2;
+      comparisons++;
+
+      LocalDate candidate = sorted.getEntry(mid).date;
+      if (candidate.isBefore(target)) {
+        low = mid + 1;
+      } else {
+        if (candidate.isEqual(target)) {
+          firstMatch = mid;
+        }
+        high = mid - 1;
+      }
+    }
+
+    ListInterface<ForecastRow> block = new ArrayList<>();
+    if (firstMatch > 0) {
+      for (int i = firstMatch; i <= sorted.getNumberOfEntries(); i++) {
+        ForecastRow row = sorted.getEntry(i);
+        if (row == null || !row.date.isEqual(target)) break;
+        block.add(row);
+      }
+    }
+
+    reportView.displayForecastSearchResult(
+        target.format(DATE_FORMAT),
+        firstMatch > 0,
+        renderForecastBlock(block),
+        firstMatch,
+        comparisons,
+        sorted.getNumberOfEntries());
+  }
+
+  private String renderForecastBlock(ListInterface<ForecastRow> block) {
+    String[][] rows = new String[block.getNumberOfEntries()][];
+
+    for (int i = 1; i <= block.getNumberOfEntries(); i++) {
+      ForecastRow row = block.getEntry(i);
+      rows[i - 1] =
+          new String[] {
+            row.roomType.name(),
+            String.valueOf(row.totalRooms),
+            String.valueOf(row.committed),
+            String.valueOf(row.free()),
+            String.format("%.1f%%", row.occupancy()),
+            String.valueOf(row.arrivalsDue),
+            row.state()
+          };
+    }
+
+    return buildTxtTable(
+        new String[] {
+          "Room Type", "Rooms", "Committed", "Free", "Occupancy", "Arrivals Due", "State"
+        },
+        rows);
+  }
+
+  private void handleForecastWindow(ForecastScope scope) {
+    while (true) {
+      try {
+        String[] typed =
+            reportView.promptForecastWindow(forecastWindowLabel(scope), maxForecastNights());
+        String start = (typed[0] == null) ? "" : typed[0].trim();
+
+        // Blank redraws, so a stray Enter never resets the window.
+        if (start.isEmpty()) continue;
+        if ("E".equalsIgnoreCase(start)) return;
+
+        scope.startDate = "-".equals(start) ? LocalDate.now() : parseDate(start);
+        if (typed[1] != null) {
+          scope.horizonNights = Integer.parseInt(typed[1]);
+        }
+        return;
+      } catch (IllegalArgumentException e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private void handleForecastColumns(ForecastScope scope) {
+    while (true) {
+      try {
+        int picked = reportView.displayColumnSelection(FORECAST_COLUMN_NAMES, scope.columns);
+        if (picked == 0) return;
+
+        if (picked == -1) {
+          for (int i = 0; i < scope.columns.length; i++) {
+            scope.columns[i] = true;
+          }
+          continue;
+        }
+
+        scope.columns[picked - 1] = !scope.columns[picked - 1];
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptForecastState(String current) {
+    while (true) {
+      try {
+        return reportView.displayForecastStateSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptForecastSort(String current) {
+    while (true) {
+      try {
+        return reportView.displayForecastSortSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int promptForecastGroupBy(String current) {
+    while (true) {
+      try {
+        return reportView.displayForecastGroupSubmenu(current);
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private int[] promptOccupancyBand(int currentMin, int currentMax) {
+    while (true) {
+      try {
+        return reportView.promptOccupancyBand(currentMin, currentMax);
+      } catch (Exception e) {
+        if (!BLANK_INPUT.equals(e.getMessage())) ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  private String forecastStateFor(int choice) {
+    if (choice == 2) return "FULL OR OVERBOOKED";
+    if (choice == 3) return "OPEN ONLY";
+    if (choice == 4) return "OVERBOOKED ONLY";
+    return "ALL NIGHTS";
+  }
+
+  private String forecastSortFor(int choice) {
+    if (choice == 1) return "OCCUPANCY";
+    if (choice == 2) return "FREE ROOMS";
+    if (choice == 3) return "ARRIVALS DUE";
+    if (choice == 4) return "ROOM TYPE";
+    return "DATE";
+  }
+
+  private String forecastWindowLabel(ForecastScope scope) {
+    LocalDate last = scope.startDate.plusDays(scope.horizonNights - 1L);
+    return scope.startDate.format(DATE_FORMAT)
+        + " .. "
+        + last.format(DATE_FORMAT)
+        + "  ("
+        + scope.horizonNights
+        + " night(s))";
+  }
+
+  private String occupancyBandLabel(ForecastScope scope) {
+    if (scope.minOccupancy < 0 && scope.maxOccupancy < 0) return "Any";
+    if (scope.minOccupancy >= 0 && scope.maxOccupancy >= 0) {
+      return scope.minOccupancy + "% to " + scope.maxOccupancy + "%";
+    }
+    return (scope.minOccupancy >= 0)
+        ? scope.minOccupancy + "% or more"
+        : scope.maxOccupancy + "% or less";
+  }
+
+  private String forecastColumnsLabel(ForecastScope scope) {
+    int chosen = 0;
+    for (boolean on : scope.columns) {
+      if (on) chosen++;
+    }
+    return chosen + " of " + FORECAST_COLUMN_NAMES.length + " shown";
+  }
+
+  private String buildForecastScopeLabel(ForecastScope scope) {
+    StringBuilder label = new StringBuilder();
+    label.append(forecastWindowLabel(scope));
+    label
+        .append("  |  ")
+        .append(scope.roomTypeFilter == null ? "All Room Types" : scope.roomTypeFilter);
+
+    if (!"ALL NIGHTS".equalsIgnoreCase(scope.stateFilter)) {
+      label.append("  |  ").append(scope.stateFilter);
+    }
+    if (scope.minOccupancy >= 0 || scope.maxOccupancy >= 0) {
+      label.append("  |  Occupancy ").append(occupancyBandLabel(scope));
+    }
+    if (scope.arrivalsDueOnly) {
+      label.append("  |  Arrivals due only");
+    }
+
+    return label.toString();
+  }
+
+  private String buildForecastTxt(
+      ListInterface<ForecastRow> sorted, String scopeLabel, String sortLabel, ForecastScope scope) {
+
+    int matched = sorted.getNumberOfEntries();
+    int shown = exportedRowCount(matched, scope.recordLimit);
+
+    StringBuilder sb = new StringBuilder();
+    appendReportHeader(sb, FORECAST_TITLE, scopeLabel, sortLabel, scope.groupBy, matched, shown);
+
+    appendSectionHeading(sb, "AVAILABILITY OUTLOOK");
+    sb.append(
+        buildTxtTable(
+            new String[] {
+              "Room Type",
+              "Rooms",
+              "Nights",
+              "Sold Out",
+              "First Sold Out",
+              "Peak Occupancy",
+              "Mean Occupancy",
+              "Arrivals Due"
+            },
+            buildForecastSummary(sorted)));
+
+    sb.append(NEW_LINE);
+
+    if (shown == 0) {
+      appendSectionHeading(sb, "NIGHTS IN SCOPE");
+      sb.append("*** NO NIGHTS MATCH THE CURRENT SCOPE ***").append(NEW_LINE);
+      return sb.toString();
+    }
+
+    appendForecastRows(sb, sorted, shown, scope);
+    appendTruncationNote(sb, matched, scope.recordLimit);
+
+    return sb.toString();
+  }
+
+  private void appendForecastRows(
+      StringBuilder sb, ListInterface<ForecastRow> sorted, int shown, ForecastScope scope) {
+
+    String[] headers = selectedForecastHeaders(scope);
+
+    if ("NO GROUPING".equalsIgnoreCase(scope.groupBy)) {
+      appendSectionHeading(sb, "NIGHTS IN SCOPE");
+      sb.append(buildTxtTable(headers, buildForecastRows(sorted, 1, shown, scope)));
+      return;
+    }
+
+    ListInterface<String> groups = distinctForecastGroups(sorted, shown, scope.groupBy);
+
+    for (int gi = 1; gi <= groups.getNumberOfEntries(); gi++) {
+      String key = groups.getEntry(gi);
+
+      ListInterface<ForecastRow> inGroup = new ArrayList<>();
+      for (int i = 1; i <= shown; i++) {
+        ForecastRow row = sorted.getEntry(i);
+        if (row != null && key.equals(forecastGroupKeyOf(row, scope.groupBy))) {
+          inGroup.add(row);
+        }
+      }
+
+      appendSectionHeading(
+          sb, scope.groupBy + ": " + key + "   (" + inGroup.getNumberOfEntries() + " row(s))");
+      sb.append(
+          buildTxtTable(
+              headers, buildForecastRows(inGroup, 1, inGroup.getNumberOfEntries(), scope)));
+      sb.append(NEW_LINE);
+    }
+  }
+
+  private ListInterface<String> distinctForecastGroups(
+      ListInterface<ForecastRow> sorted, int shown, String groupBy) {
+
+    ListInterface<String> keys = new ArrayList<>();
+    for (int i = 1; i <= shown; i++) {
+      ForecastRow row = sorted.getEntry(i);
+      if (row == null) continue;
+
+      String key = forecastGroupKeyOf(row, groupBy);
+      if (!keys.contains(key)) {
+        keys.add(key);
+      }
+    }
+    return keys;
+  }
+
+  private String forecastGroupKeyOf(ForecastRow row, String groupBy) {
+    if ("ROOM TYPE".equalsIgnoreCase(groupBy)) return row.roomType.name();
+    return row.date.format(DATE_FORMAT);
+  }
+
+  private String[] selectedForecastHeaders(ForecastScope scope) {
+    int count = 1;
+    for (boolean on : scope.columns) {
+      if (on) count++;
+    }
+
+    String[] headers = new String[count];
+    headers[0] = "No.";
+
+    int next = 1;
+    for (int i = 0; i < scope.columns.length; i++) {
+      if (scope.columns[i]) {
+        headers[next++] = FORECAST_COLUMN_NAMES[i];
+      }
+    }
+    return headers;
+  }
+
+  private String[][] buildForecastRows(
+      ListInterface<ForecastRow> source, int from, int to, ForecastScope scope) {
+
+    int count = Math.max(0, to - from + 1);
+    String[][] rows = new String[count][];
+
+    for (int i = from; i <= to; i++) {
+      rows[i - from] = buildForecastRow(i - from + 1, source.getEntry(i), scope);
+    }
+    return rows;
+  }
+
+  private String[] buildForecastRow(int rowNumber, ForecastRow row, ForecastScope scope) {
+    String[] all = (row == null) ? new String[FORECAST_COLUMN_NAMES.length] : forecastCells(row);
+
+    int count = 1;
+    for (boolean on : scope.columns) {
+      if (on) count++;
+    }
+
+    String[] cells = new String[count];
+    cells[0] = String.valueOf(rowNumber);
+
+    int next = 1;
+    for (int i = 0; i < scope.columns.length; i++) {
+      if (scope.columns[i]) {
+        cells[next++] = (all[i] == null) ? "-" : all[i];
+      }
+    }
+    return cells;
+  }
+
+  private String[] forecastCells(ForecastRow row) {
+    return new String[] {
+      row.date.format(DATE_FORMAT),
+      row.date.getDayOfWeek().name().substring(0, 3),
+      row.roomType.name(),
+      String.valueOf(row.totalRooms),
+      String.valueOf(row.committed),
+      String.valueOf(row.free()),
+      String.format("%.1f%%", row.occupancy()),
+      String.valueOf(row.arrivalsDue),
+      row.state()
+    };
+  }
+
+  // Measured over the rows that survived the filters, so the outlook describes the scope on the
+  // screen rather than the whole calendar.
+  private String[][] buildForecastSummary(ListInterface<ForecastRow> rows) {
+    Room.RoomType[] types = Room.RoomType.values();
+    String[][] table = new String[types.length + 1][];
+
+    int allRooms = 0;
+    for (int t = 0; t < types.length; t++) {
+      int rooms = roomsInScope(rows, types[t]);
+      allRooms += rooms;
+      table[t] = summariseForecast(rows, types[t], types[t].name(), rooms);
+    }
+
+    table[types.length] = summariseForecast(rows, null, "ALL TYPES", allRooms);
+    return table;
+  }
+
+  // Zero when the filters left no night of that type in scope, so the row reads honestly.
+  private int roomsInScope(ListInterface<ForecastRow> rows, Room.RoomType roomType) {
+    for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
+      ForecastRow row = rows.getEntry(i);
+      if (row != null && row.roomType == roomType) return row.totalRooms;
+    }
+    return 0;
+  }
+
+  // Nights are counted distinctly, not per row. Three room types share one night, so counting rows
+  // would report a fortnight as 42 nights on the ALL TYPES line. Sold Out follows the same rule and
+  // means "nights on which something was sold out", which is the number a desk actually acts on.
+  private String[] summariseForecast(
+      ListInterface<ForecastRow> rows, Room.RoomType roomType, String label, int rooms) {
+
+    ListInterface<String> nightsSeen = new ArrayList<>();
+    ListInterface<String> soldOutNights = new ArrayList<>();
+    int counted = 0;
+    int arrivals = 0;
+    double totalOccupancy = 0;
+    double peakOccupancy = 0;
+    LocalDate firstSoldOut = null;
+
+    for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
+      ForecastRow row = rows.getEntry(i);
+      if (row == null) continue;
+      if (roomType != null && row.roomType != roomType) continue;
+
+      String night = row.date.format(DATE_FORMAT);
+      if (!nightsSeen.contains(night)) {
+        nightsSeen.add(night);
+      }
+
+      counted++;
+      arrivals += row.arrivalsDue;
+      totalOccupancy += row.occupancy();
+      if (row.occupancy() > peakOccupancy) {
+        peakOccupancy = row.occupancy();
+      }
+
+      if (row.free() == 0) {
+        if (!soldOutNights.contains(night)) {
+          soldOutNights.add(night);
+        }
+        if (firstSoldOut == null || row.date.isBefore(firstSoldOut)) {
+          firstSoldOut = row.date;
+        }
+      }
+    }
+
+    return new String[] {
+      label,
+      String.valueOf(rooms),
+      String.valueOf(nightsSeen.getNumberOfEntries()),
+      String.valueOf(soldOutNights.getNumberOfEntries()),
+      (firstSoldOut == null) ? "-" : firstSoldOut.format(DATE_FORMAT),
+      (counted == 0) ? "-" : String.format("%.1f%%", peakOccupancy),
+      (counted == 0) ? "-" : String.format("%.1f%%", totalOccupancy / counted),
+      String.valueOf(arrivals)
+    };
   }
 
   private String formatTimestamp(LocalDateTime dateTime) {
