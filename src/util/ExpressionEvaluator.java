@@ -7,14 +7,7 @@ import adt.StackInterface;
 import java.util.function.Function;
 
 public class ExpressionEvaluator {
-
-  /**
-   * Generic Postfix Evaluator using Shunting-Yard Algorithm.
-   *
-   * @param infixExpression The raw algebraic equation string (e.g., "( A * B ) + C")
-   * @param variableResolver Function mapping token names (e.g., "WAIT") to Double values
-   * @return Calculated numerical result
-   */
+  // variableResolver = lookup function that map variable into actual number
   public static double evaluateInfix(
       String infixExpression, Function<String, Double> variableResolver) {
 
@@ -23,7 +16,7 @@ public class ExpressionEvaluator {
     }
 
     ListInterface<String> tokens = parseTokens(infixExpression);
-    ListInterface<String> postfix = convertInfixToPostfix(tokens);
+    ListInterface<String> postfix = convertInfixToPostfix(tokens); // use shunting-yard algorithm
     return evaluatePostfix(postfix, variableResolver);
   }
 
