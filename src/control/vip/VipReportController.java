@@ -765,15 +765,21 @@ public class VipReportController {
             if (r1 == null && r2 == null) return 0;
             if (r1 == null) return 1;
             if (r2 == null) return -1;
+
+            long w1 = calculateWaitMins(r1, endDate);
+            long w2 = calculateWaitMins(r2, endDate);
+            int cmp = isAsc ? Long.compare(w1, w2) : Long.compare(w2, w1);
+            if (cmp != 0) return cmp;
+
             LocalDateTime t1 = r1.getQueueArrivalTime();
             LocalDateTime t2 = r2.getQueueArrivalTime();
-            int cmp;
-            if (t1 == null && t2 == null) cmp = 0;
-            else if (t1 == null) cmp = 1;
-            else if (t2 == null) cmp = -1;
-            else cmp = isAsc ? t2.compareTo(t1) : t1.compareTo(t2);
+            int timeComp;
+            if (t1 == null && t2 == null) timeComp = 0;
+            else if (t1 == null) timeComp = 1;
+            else if (t2 == null) timeComp = -1;
+            else timeComp = isAsc ? t2.compareTo(t1) : t1.compareTo(t2);
 
-            if (cmp != 0) return cmp;
+            if (timeComp != 0) return timeComp;
             String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
             String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
             return id1.compareToIgnoreCase(id2);
