@@ -422,7 +422,7 @@ public class ManageGuestView {
             + (currentTo != null ? currentTo : "Any")
             + " ]");
     System.out.println();
-    System.out.println("Format: YYYY-MM-DD   |   blank = keep current   |   '-' = clear\n");
+    System.out.println("Format: YYYY-MM-DD   |   Enter = keep current   |   '-' = clear\n");
 
     String from = ConsoleUtil.getStringInput("From date: ");
     String to = ConsoleUtil.getStringInput("To date  : ");
