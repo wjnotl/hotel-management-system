@@ -1125,32 +1125,41 @@ public class DatabaseSeeder {
         now.minusDays(4));
 
     addVipWait(
-        vipRepo, guestRepo, "G-102", Room.RoomType.LUXURY, 9500, false, now.minusMinutes(10));
-    addVipWait(vipRepo, guestRepo, "G-103", Room.RoomType.LUXURY, 9200, false, now.minusMinutes(8));
-    addVipWait(vipRepo, guestRepo, "G-104", Room.RoomType.LUXURY, 9000, false, now.minusMinutes(5));
+        vipRepo, guestRepo, "G-102", Room.RoomType.LUXURY, 9500, false, now.minusMinutes(10), 30);
     addVipWait(
-        vipRepo, guestRepo, "G-105", Room.RoomType.LUXURY, 12000, true, now.minusMinutes(40));
+        vipRepo, guestRepo, "G-103", Room.RoomType.LUXURY, 9200, false, now.minusMinutes(8), 25);
     addVipWait(
-        vipRepo, guestRepo, "G-113", Room.RoomType.LUXURY, 7500, false, now.minusMinutes(18));
+        vipRepo, guestRepo, "G-104", Room.RoomType.LUXURY, 9000, false, now.minusMinutes(5), 20);
     addVipWait(
-        vipRepo, guestRepo, "G-114", Room.RoomType.LUXURY, 7200, false, now.minusMinutes(15));
-    addVipWait(vipRepo, guestRepo, "G-115", Room.RoomType.SUITE, 7800, false, now.minusMinutes(20));
-    addVipWait(vipRepo, guestRepo, "G-116", Room.RoomType.SUITE, 7400, false, now.minusMinutes(12));
-    addVipWait(vipRepo, guestRepo, "G-117", Room.RoomType.SUITE, 10500, true, now.minusMinutes(45));
-    addVipWait(vipRepo, guestRepo, "G-129", Room.RoomType.SUITE, 4800, false, now.minusMinutes(35));
-    addVipWait(vipRepo, guestRepo, "G-130", Room.RoomType.SUITE, 4500, false, now.minusMinutes(28));
-    addVipWait(vipRepo, guestRepo, "G-131", Room.RoomType.SUITE, 4200, false, now.minusMinutes(22));
-    addVipWait(vipRepo, guestRepo, "G-132", Room.RoomType.SUITE, 4000, false, now.minusMinutes(16));
+        vipRepo, guestRepo, "G-105", Room.RoomType.LUXURY, 12000, true, now.minusMinutes(40), 60);
     addVipWait(
-        vipRepo, guestRepo, "G-118", Room.RoomType.STANDARD, 7600, false, now.minusMinutes(20));
+        vipRepo, guestRepo, "G-113", Room.RoomType.LUXURY, 7500, false, now.minusMinutes(18), 35);
     addVipWait(
-        vipRepo, guestRepo, "G-119", Room.RoomType.STANDARD, 10800, true, now.minusMinutes(45));
+        vipRepo, guestRepo, "G-114", Room.RoomType.LUXURY, 7200, false, now.minusMinutes(15), 30);
     addVipWait(
-        vipRepo, guestRepo, "G-133", Room.RoomType.STANDARD, 4900, false, now.minusMinutes(40));
+        vipRepo, guestRepo, "G-115", Room.RoomType.SUITE, 7800, false, now.minusMinutes(20), 40);
     addVipWait(
-        vipRepo, guestRepo, "G-134", Room.RoomType.STANDARD, 4400, false, now.minusMinutes(30));
+        vipRepo, guestRepo, "G-116", Room.RoomType.SUITE, 7400, false, now.minusMinutes(12), 25);
     addVipWait(
-        vipRepo, guestRepo, "G-135", Room.RoomType.STANDARD, 4100, false, now.minusMinutes(22));
+        vipRepo, guestRepo, "G-117", Room.RoomType.SUITE, 10500, true, now.minusMinutes(45), 75);
+    addVipWait(
+        vipRepo, guestRepo, "G-129", Room.RoomType.SUITE, 4800, false, now.minusMinutes(35), 50);
+    addVipWait(
+        vipRepo, guestRepo, "G-130", Room.RoomType.SUITE, 4500, false, now.minusMinutes(28), 45);
+    addVipWait(
+        vipRepo, guestRepo, "G-131", Room.RoomType.SUITE, 4200, false, now.minusMinutes(22), 35);
+    addVipWait(
+        vipRepo, guestRepo, "G-132", Room.RoomType.SUITE, 4000, false, now.minusMinutes(16), 30);
+    addVipWait(
+        vipRepo, guestRepo, "G-118", Room.RoomType.STANDARD, 7600, false, now.minusMinutes(20), 35);
+    addVipWait(
+        vipRepo, guestRepo, "G-119", Room.RoomType.STANDARD, 10800, true, now.minusMinutes(45), 70);
+    addVipWait(
+        vipRepo, guestRepo, "G-133", Room.RoomType.STANDARD, 4900, false, now.minusMinutes(40), 60);
+    addVipWait(
+        vipRepo, guestRepo, "G-134", Room.RoomType.STANDARD, 4400, false, now.minusMinutes(30), 45);
+    addVipWait(
+        vipRepo, guestRepo, "G-135", Room.RoomType.STANDARD, 4100, false, now.minusMinutes(22), 35);
 
     Reservation vc1 =
         addVipCheckedIn(
@@ -1163,7 +1172,9 @@ public class DatabaseSeeder {
             now.minusMinutes(10),
             4,
             10,
-            3);
+            3,
+            30,
+            5);
     Reservation vc2 =
         addVipCheckedIn(
             vipRepo,
@@ -1175,7 +1186,9 @@ public class DatabaseSeeder {
             now.minusMinutes(12),
             5,
             10,
-            2);
+            2,
+            35,
+            6);
     Reservation vc3 =
         addVipCheckedIn(
             vipRepo,
@@ -1187,7 +1200,9 @@ public class DatabaseSeeder {
             now.minusMinutes(14),
             6,
             10,
-            4);
+            4,
+            40,
+            7);
     Reservation vc4 =
         addVipCheckedIn(
             vipRepo,
@@ -1199,7 +1214,9 @@ public class DatabaseSeeder {
             now.minusMinutes(22),
             10,
             15,
-            2);
+            2,
+            45,
+            8);
     Reservation vc5 =
         addVipCheckedIn(
             vipRepo,
@@ -1211,7 +1228,9 @@ public class DatabaseSeeder {
             now.minusMinutes(20),
             9,
             15,
-            3);
+            3,
+            35,
+            6);
     Reservation vc6 =
         addVipCheckedIn(
             vipRepo,
@@ -1223,7 +1242,9 @@ public class DatabaseSeeder {
             now.minusMinutes(25),
             11,
             15,
-            2);
+            2,
+            40,
+            7);
     Reservation vc7 =
         addVipCheckedIn(
             vipRepo,
@@ -1235,7 +1256,9 @@ public class DatabaseSeeder {
             now.minusMinutes(22),
             13,
             20,
-            4);
+            4,
+            50,
+            9);
     Reservation vc8 =
         addVipCheckedIn(
             vipRepo,
@@ -1247,7 +1270,9 @@ public class DatabaseSeeder {
             now.minusMinutes(30),
             15,
             20,
-            2);
+            2,
+            55,
+            10);
     Reservation vc9 =
         addVipCheckedIn(
             vipRepo,
@@ -1259,7 +1284,9 @@ public class DatabaseSeeder {
             now.minusMinutes(38),
             16,
             20,
-            5);
+            5,
+            60,
+            12);
     Reservation vc10 =
         addVipCheckedIn(
             vipRepo,
@@ -1271,7 +1298,9 @@ public class DatabaseSeeder {
             now.minusMinutes(22),
             9,
             15,
-            2);
+            2,
+            35,
+            6);
     Reservation vc11 =
         addVipCheckedIn(
             vipRepo,
@@ -1283,7 +1312,9 @@ public class DatabaseSeeder {
             now.minusMinutes(32),
             15,
             20,
-            3);
+            3,
+            50,
+            8);
     Reservation vc12 =
         addVipCheckedIn(
             vipRepo,
@@ -1295,7 +1326,9 @@ public class DatabaseSeeder {
             now.minusMinutes(40),
             16,
             20,
-            2);
+            2,
+            60,
+            10);
 
     addBilling(
         billingRepo,
@@ -1432,16 +1465,56 @@ public class DatabaseSeeder {
 
     Reservation vco1 =
         addVipCheckedOut(
-            vipRepo, guestRepo, "G-102", Room.RoomType.LUXURY, "L-801", now.minusDays(4), 5, 10, 2);
+            vipRepo,
+            guestRepo,
+            "G-102",
+            Room.RoomType.LUXURY,
+            "L-801",
+            now.minusDays(4),
+            5,
+            10,
+            2,
+            45,
+            6);
     Reservation vco2 =
         addVipCheckedOut(
-            vipRepo, guestRepo, "G-103", Room.RoomType.LUXURY, "L-802", now.minusDays(2), 4, 10, 3);
+            vipRepo,
+            guestRepo,
+            "G-103",
+            Room.RoomType.LUXURY,
+            "L-802",
+            now.minusDays(2),
+            4,
+            10,
+            3,
+            30,
+            5);
     Reservation vco3 =
         addVipCheckedOut(
-            vipRepo, guestRepo, "G-112", Room.RoomType.SUITE, "S-501", now.minusDays(5), 10, 15, 1);
+            vipRepo,
+            guestRepo,
+            "G-112",
+            Room.RoomType.SUITE,
+            "S-501",
+            now.minusDays(5),
+            10,
+            15,
+            1,
+            50,
+            8);
     Reservation vco4 =
         addVipCheckedOut(
-            vipRepo, guestRepo, "G-130", Room.RoomType.SUITE, "S-502", now.minusDays(3), 15, 20, 2);
+            vipRepo,
+            guestRepo,
+            "G-130",
+            Room.RoomType.SUITE,
+            "S-502",
+            now.minusDays(3),
+            15,
+            20,
+            2,
+            60,
+            10);
     Reservation vco5 =
         addVipCheckedOut(
             vipRepo,
@@ -1452,7 +1525,9 @@ public class DatabaseSeeder {
             now.minusDays(6),
             14,
             20,
-            2);
+            2,
+            55,
+            9);
     Reservation vco6 =
         addVipCheckedOut(
             vipRepo,
@@ -1463,7 +1538,9 @@ public class DatabaseSeeder {
             now.minusDays(1),
             16,
             20,
-            1);
+            1,
+            65,
+            11);
 
     addBilling(
         billingRepo,
@@ -1532,12 +1609,18 @@ public class DatabaseSeeder {
         Billing.Status.PAID,
         now.minusDays(1));
 
-    addVipNoShow(vipRepo, guestRepo, "G-109", Room.RoomType.LUXURY, now.minusHours(4), 10, 10);
-    addVipNoShow(vipRepo, guestRepo, "G-110", Room.RoomType.LUXURY, now.minusHours(2), 10, 10);
-    addVipNoShow(vipRepo, guestRepo, "G-124", Room.RoomType.SUITE, now.minusHours(5), 15, 15);
-    addVipNoShow(vipRepo, guestRepo, "G-125", Room.RoomType.SUITE, now.minusHours(3), 15, 15);
-    addVipNoShow(vipRepo, guestRepo, "G-139", Room.RoomType.STANDARD, now.minusHours(6), 20, 20);
-    addVipNoShow(vipRepo, guestRepo, "G-140", Room.RoomType.STANDARD, now.minusHours(1), 20, 20);
+    addVipNoShow(
+        vipRepo, guestRepo, "G-109", Room.RoomType.LUXURY, now.minusHours(4), 10, 10, 30, 5);
+    addVipNoShow(
+        vipRepo, guestRepo, "G-110", Room.RoomType.LUXURY, now.minusHours(2), 10, 10, 35, 6);
+    addVipNoShow(
+        vipRepo, guestRepo, "G-124", Room.RoomType.SUITE, now.minusHours(5), 15, 15, 45, 8);
+    addVipNoShow(
+        vipRepo, guestRepo, "G-125", Room.RoomType.SUITE, now.minusHours(3), 15, 15, 40, 7);
+    addVipNoShow(
+        vipRepo, guestRepo, "G-139", Room.RoomType.STANDARD, now.minusHours(6), 20, 20, 50, 9);
+    addVipNoShow(
+        vipRepo, guestRepo, "G-140", Room.RoomType.STANDARD, now.minusHours(1), 20, 20, 25, 4);
 
     addStdNoShow(standardRepo, "G-162", Room.RoomType.STANDARD, now.minusHours(3));
     addStdNoShow(standardRepo, "G-163", Room.RoomType.STANDARD, now.minusDays(1).minusHours(2));
@@ -1786,7 +1869,8 @@ public class DatabaseSeeder {
       Room.RoomType roomType,
       int score,
       boolean boiling,
-      LocalDateTime queuedAt) {
+      LocalDateTime queuedAt,
+      int resLeadMins) {
     Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
     if (guest == null || guest.getMemberId() == null) return;
 
@@ -1800,7 +1884,7 @@ public class DatabaseSeeder {
             Reservation.Status.WAITING,
             boiling,
             score,
-            queuedAt.minusMinutes(15),
+            queuedAt.minusMinutes(resLeadMins),
             queuedAt,
             true);
     repo.addReservation(r);
@@ -1816,12 +1900,16 @@ public class DatabaseSeeder {
       LocalDateTime queuedAt,
       int holdingUsedMins,
       int graceMins,
-      int nights) {
+      int nights,
+      int resLeadMins,
+      int queueWaitMins) {
     Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
     if (guest == null || guest.getMemberId() == null) return null;
 
     String resId = "RES-" + (resCounter++);
-    LocalDateTime checkedInAt = LocalDateTime.now().minusMinutes(holdingUsedMins);
+    LocalDateTime allocatedAt = queuedAt.plusMinutes(queueWaitMins);
+    LocalDateTime checkedInAt = allocatedAt.plusMinutes(holdingUsedMins);
+
     Reservation r =
         new Reservation(
             resId,
@@ -1831,10 +1919,10 @@ public class DatabaseSeeder {
             Reservation.Status.CHECKED_IN,
             false,
             8500,
-            queuedAt.minusMinutes(15),
+            queuedAt.minusMinutes(resLeadMins),
             queuedAt,
             true);
-    r.setAllocatedTime(checkedInAt);
+    r.setAllocatedTime(allocatedAt);
     r.setCheckInTime(checkedInAt);
     r.setAllocatedGraceMins(graceMins);
     r.setRoomNumber(roomNumber);
@@ -1853,12 +1941,16 @@ public class DatabaseSeeder {
       LocalDateTime queuedAt,
       int holdingUsedMins,
       int graceMins,
-      int nights) {
+      int nights,
+      int resLeadMins,
+      int queueWaitMins) {
     Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
     if (guest == null || guest.getMemberId() == null) return null;
 
     String resId = "RES-" + (resCounter++);
-    LocalDateTime checkedInAt = queuedAt.plusMinutes(holdingUsedMins);
+    LocalDateTime allocatedAt = queuedAt.plusMinutes(queueWaitMins);
+    LocalDateTime checkedInAt = allocatedAt.plusMinutes(holdingUsedMins);
+
     Reservation r =
         new Reservation(
             resId,
@@ -1868,10 +1960,10 @@ public class DatabaseSeeder {
             Reservation.Status.CHECKED_OUT,
             false,
             8500,
-            queuedAt.minusMinutes(15),
+            queuedAt.minusMinutes(resLeadMins),
             queuedAt,
             true);
-    r.setAllocatedTime(checkedInAt);
+    r.setAllocatedTime(allocatedAt);
     r.setCheckInTime(checkedInAt);
     r.setAllocatedGraceMins(graceMins);
     r.setRoomNumber(roomNumber);
@@ -1887,12 +1979,15 @@ public class DatabaseSeeder {
       Room.RoomType roomType,
       LocalDateTime queuedAt,
       int holdingUsedMins,
-      int graceMins) {
+      int graceMins,
+      int resLeadMins,
+      int queueWaitMins) {
     Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
     if (guest == null || guest.getMemberId() == null) return;
 
     String resId = "RES-" + (resCounter++);
-    LocalDateTime allocatedTime = queuedAt.plusMinutes(10);
+    LocalDateTime allocatedTime = queuedAt.plusMinutes(queueWaitMins);
+
     Reservation r =
         new Reservation(
             resId,
@@ -1902,7 +1997,7 @@ public class DatabaseSeeder {
             Reservation.Status.NO_SHOW,
             false,
             8000,
-            queuedAt.minusMinutes(15),
+            queuedAt.minusMinutes(resLeadMins),
             queuedAt,
             true);
     r.setAllocatedTime(allocatedTime);
