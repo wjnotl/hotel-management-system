@@ -1,6 +1,7 @@
 package entity;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 
 public class VipSystemConfig implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -56,7 +57,7 @@ public class VipSystemConfig implements Serializable {
   private double goldGraceUtilTargetPct;
   private double silverGraceUtilTargetPct;
 
-  private String lastStrikeResetDate;
+  private LocalDate lastStrikeResetDate;
 
   public VipSystemConfig() {
     resetToDefaults();
@@ -239,7 +240,7 @@ public class VipSystemConfig implements Serializable {
     return silverGraceUtilTargetPct;
   }
 
-  public String getLastStrikeResetDate() {
+  public LocalDate getLastStrikeResetDate() {
     return lastStrikeResetDate;
   }
 
@@ -371,7 +372,7 @@ public class VipSystemConfig implements Serializable {
     this.silverGraceUtilTargetPct = val;
   }
 
-  public void setLastStrikeResetDate(String lastStrikeResetDate) {
+  public void setLastStrikeResetDate(LocalDate lastStrikeResetDate) {
     this.lastStrikeResetDate = lastStrikeResetDate;
   }
 

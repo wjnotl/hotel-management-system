@@ -49,7 +49,9 @@ public class DatabaseSeeder {
       return;
     }
 
-    vipSystemConfigRepo.updateConfig(new VipSystemConfig());
+    VipSystemConfig vipSystemConfig = new VipSystemConfig();
+    vipSystemConfig.setLastStrikeResetDate(LocalDate.now());
+    vipSystemConfigRepo.updateConfig(vipSystemConfig);
 
     System.out.println("Seeding system-wide master dataset...");
     LocalDateTime now = LocalDateTime.now();
