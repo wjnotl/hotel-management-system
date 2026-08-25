@@ -413,10 +413,7 @@ public class HouseKeepingController {
   private boolean isAtShiftCapacity(HousekeepingStaff staff) {
     HousekeepingSettings settings = settingsRepo.getSettings();
     int max = getMaxRoomsForShift(staff.getShift(), settings);
-    int current =
-        staff.getAssignedRoomNumbers() == null
-            ? 0
-            : staff.getAssignedRoomNumbers().getNumberOfEntries();
+    int current = staff.getRoomCount();
     return current >= max;
   }
 

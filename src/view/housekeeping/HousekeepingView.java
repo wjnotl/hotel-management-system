@@ -415,7 +415,7 @@ public class HousekeepingView {
             String.valueOf(displayNum),
             s.getName(),
             s.getShift().name(),
-            formatAssignedRooms(s.getAssignedRoomNumbers()),
+            formatAssignedRooms(s.getAssignedRoomNumbersArray()),
             s.getAvailability().name()
           },
           settingsTable);
@@ -438,13 +438,13 @@ public class HousekeepingView {
         promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P', 'A'});
   }
 
-  private String formatAssignedRooms(ListInterface<String> rooms) {
-    if (rooms == null || rooms.isEmpty()) return "None";
+  private String formatAssignedRooms(String[] rooms) {
+    if (rooms == null || rooms.length == 0) return "None";
 
     StringBuilder sb = new StringBuilder();
-    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
-      if (i > 1) sb.append(", ");
-      sb.append(rooms.getEntry(i));
+    for (int i = 0; i < rooms.length; i++) {
+      if (i > 0) sb.append(", ");
+      sb.append(rooms[i]);
     }
     return sb.toString();
   }
@@ -550,7 +550,7 @@ public class HousekeepingView {
     System.out.println(" Shift           : " + staff.getShift().name());
     System.out.println(" Availability    : " + staff.getAvailability().name());
     System.out.println(
-        " Assigned Rooms  : " + formatAssignedRooms(staff.getAssignedRoomNumbers()) + "\n");
+        " Assigned Rooms  : " + formatAssignedRooms(staff.getAssignedRoomNumbersArray()) + "\n");
     System.out.println(" 1. Auto-Assign Next Queued Task (requires AVAILABLE)");
     System.out.println(" 2. Reassign a Room to Another Staff Member");
     System.out.println(
