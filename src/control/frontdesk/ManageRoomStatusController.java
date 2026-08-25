@@ -144,11 +144,11 @@ public class ManageRoomStatusController {
 
         int action = roomStatusView.displayRoomActionSubmenu(detailDto);
 
-        if (action == 1) handleChangeRoom(room, linked);
-        else if (action == 2) handleMarkAvailable(room, linked);
-        else if (action == 3) handleMarkOccupied(room);
-        else if (action == 4) handleMarkDirty(room);
-        else if (action == 5) return;
+        if (action == 1) {
+          if (handleChangeRoom(room, linked)) return;
+        } else if (action == 2) handleMarkAvailable(room, linked);
+        else if (action == 3) handleMarkDirty(room);
+        else if (action == 4) return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -156,11 +156,10 @@ public class ManageRoomStatusController {
   }
 
   // change room
-  private void handleChangeRoom(Room room, Reservation linked) {
+  private boolean handleChangeRoom(Room room, Reservation linked) {
     if (linked == null) {
-      ConsoleUtil.printError(
-          "This room has no active reservation to move. Use Mark Occupied instead.");
-      return;
+      ConsoleUtil.printError("This room has no active reservation to move.");
+      return false;
     }
 
     // available rooms
@@ -170,6 +169,7 @@ public class ManageRoomStatusController {
       Room r = allRooms.getEntry(i);
       if (r == null
           || r.getStatus() != Room.Status.VACANT_CLEAN
+          || r.getIsOccupied()
           || r.getRoomNumber().equalsIgnoreCase(room.getRoomNumber())
           || r.getRoomType() != room.getRoomType()) continue;
       availableBuffer.add(
@@ -177,9 +177,11 @@ public class ManageRoomStatusController {
               r.getRoomNumber(),
               r.getRoomType().name(),
               r.getStatus().name(),
+              r.getIsOccupied(),
               String.format("%.2f", r.getPrice()),
               "N/A",
-              "N/A"));
+              "N/A",
+              null));
     }
     // Sort ascending by room number
     availableBuffer.sort((a, b) -> nullSafeCompare(a.roomNumber, b.roomNumber));
@@ -187,7 +189,7 @@ public class ManageRoomStatusController {
     if (availableBuffer.isEmpty()) {
       ConsoleUtil.printError(
           "No VACANT_CLEAN " + room.getRoomType().name() + " rooms available to move into.");
-      return;
+      return false;
     }
 
     // Transfer to ArrayList for paged display
@@ -199,12 +201,12 @@ public class ManageRoomStatusController {
     Guest linkedGuest = guestRepo.findById(linked.getGuestId());
     ManageRoomStatusView.RoomDetailDTO currentDto = buildRoomDetailDTO(room, linked, linkedGuest);
     String targetRoomNumber = handleAvailableRoomSelection(availableRooms, currentDto);
-    if (targetRoomNumber == null) return;
+    if (targetRoomNumber == null) return false;
 
     Room targetRoom = roomRepo.findByRoomNumber(targetRoomNumber);
     if (targetRoom == null) {
       ConsoleUtil.printError("Selected room not found.");
-      return;
+      return false;
     }
 
     boolean confirmed =
@@ -216,7 +218,7 @@ public class ManageRoomStatusController {
                 + " to Room "
                 + targetRoom.getRoomNumber()
                 + "?");
-    if (!confirmed) return;
+    if (!confirmed) return false;
 
     // Old room → DIRTY
     Room.Status oldPrev = room.getStatus();
@@ -241,6 +243,7 @@ public class ManageRoomStatusController {
         targetRoom.getRoomNumber(),
         oldPrev.name(),
         linked.getConfirmationNumber() != null ? linked.getConfirmationNumber() : "N/A");
+    return true;
   }
 
   private String handleAvailableRoomSelection(
@@ -285,7 +288,7 @@ public class ManageRoomStatusController {
   // action 2 - mark available (vacant_clean)
   private void handleMarkAvailable(Room room, Reservation linked) {
     if (room.getStatus() == Room.Status.VACANT_CLEAN) {
-      ConsoleUtil.printError("Room is already VACANT_CLEAN (Available)!");
+      ConsoleUtil.printError("Room is already VACANT_CLEAN!");
       return;
     }
     if (linked != null) {
@@ -302,8 +305,7 @@ public class ManageRoomStatusController {
       reservationRepo.updateReservation(linked);
     } else {
       boolean confirm =
-          ConsoleUtil.showConfirmMessage(
-              "Mark Room " + room.getRoomNumber() + " as VACANT_CLEAN (Available)?");
+          ConsoleUtil.showConfirmMessage("Mark Room " + room.getRoomNumber() + " as VACANT_CLEAN?");
       if (!confirm) return;
     }
     Room.Status prev = room.getStatus();
@@ -311,28 +313,10 @@ public class ManageRoomStatusController {
     roomRepo.updateRoom(room);
     roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), prev, Room.Status.VACANT_CLEAN);
     roomStatusView.displayStatusChangeSuccess(
-        room.getRoomNumber(), room.getRoomType().name(), "VACANT_CLEAN (Available)");
+        room.getRoomNumber(), room.getRoomType().name(), "VACANT_CLEAN");
   }
 
-  // action 3 - mark occupied
-  private void handleMarkOccupied(Room room) {
-    if (room.getIsOccupied()) {
-      ConsoleUtil.printError("Room is already OCCUPIED!");
-      return;
-    }
-    boolean confirm =
-        ConsoleUtil.showConfirmMessage(
-            "Mark Room " + room.getRoomNumber() + " as OCCUPIED (manual override)?");
-    if (!confirm) return;
-    Room.Status prev = room.getStatus();
-    room.setIsOccupied(true);
-    roomRepo.updateRoom(room);
-    roomStatusHistoryRepo.recordStatusChange(room.getRoomNumber(), prev, room.getStatus());
-    roomStatusView.displayStatusChangeSuccess(
-        room.getRoomNumber(), room.getRoomType().name(), "OCCUPIED");
-  }
-
-  // action 4 - mark dirty
+  // action 3 - mark dirty
   private void handleMarkDirty(Room room) {
     if (room.getStatus() == Room.Status.DIRTY) {
       ConsoleUtil.printError("Room is already DIRTY!");
@@ -473,6 +457,7 @@ public class ManageRoomStatusController {
               r.getRoomNumber(),
               r.getRoomType().name(),
               r.getStatus().name(),
+              r.getIsOccupied(),
               String.format("%.2f", r.getPrice()),
               guestName,
               confNum,

@@ -309,7 +309,8 @@ public class ManageReservationView {
     System.out.println("Room   : " + dto.roomNumber + "  (" + dto.roomType + ")");
     System.out.printf("Rate   : RM %.2f / night  (fixed room rate)%n", rate);
     System.out.println();
-    System.out.println("Format: YYYY-MM-DD   |   blank = use suggested value   |   C = cancel\n");
+    System.out.println(
+        "Format: YYYY-MM-DD   |   Press 'Enter' = use suggested value   |   C = cancel\n");
 
     String checkIn = ConsoleUtil.getStringInput("Check-in  date [" + defaultCheckIn + "]: ");
     String checkOut = ConsoleUtil.getStringInput("Check-out date [" + defaultCheckOut + "]: ");

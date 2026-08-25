@@ -662,7 +662,7 @@ public class ReportsView {
         "Current : FROM [ " + fmt(currentFrom) + " ]  TO [ " + fmt(currentTo) + " ]");
     System.out.println();
     System.out.println(
-        "Format: YYYY-MM-DD   |   blank = keep current   |   '-' = clear (All Dates)\n");
+        "Format: YYYY-MM-DD   |   Enter = keep current   |   '-' = clear (All Dates)\n");
     String from = ConsoleUtil.getStringInput("From date: ");
     String to = ConsoleUtil.getStringInput("To date  : ");
     return new String[] {from, to};
