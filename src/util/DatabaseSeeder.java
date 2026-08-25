@@ -1,7 +1,6 @@
 package util;
 
 import control.booking.BookingSettingsStore;
-import entity.AllocationEntry;
 import entity.Billing;
 import entity.Guest;
 import entity.HousekeepingStaff;
@@ -12,8 +11,6 @@ import entity.Room;
 import entity.VipSystemConfig;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import repo.AllocationRepo;
 import repo.BillingRepo;
 import repo.GuestRepo;
 import repo.HousekeepingStaffRepo;
@@ -43,7 +40,6 @@ public class DatabaseSeeder {
     BillingRepo billingRepo = new BillingRepo();
     HousekeepingStaffRepo staffRepo = new HousekeepingStaffRepo();
     HousekeepingTaskRepo taskRepo = new HousekeepingTaskRepo();
-    AllocationRepo allocationRepo = new AllocationRepo();
     VipSystemConfigRepo vipSystemConfigRepo = new VipSystemConfigRepo();
     BookingSettingsStore bookingSettingsStore = new BookingSettingsStore();
     StandardReservationRepo standardRepo =
@@ -1154,87 +1150,6 @@ public class DatabaseSeeder {
     addVipWait(
         vipRepo, guestRepo, "G-135", Room.RoomType.STANDARD, 4100, false, now.minusMinutes(22));
 
-    addVipAllocated(
-        vipRepo,
-        guestRepo,
-        allocationRepo,
-        "G-106",
-        Room.RoomType.LUXURY,
-        "L-803",
-        now.minusMinutes(10),
-        6,
-        10);
-    addVipAllocated(
-        vipRepo,
-        guestRepo,
-        allocationRepo,
-        "G-107",
-        Room.RoomType.LUXURY,
-        "L-804",
-        now.minusMinutes(8),
-        5,
-        10);
-    addVipAllocated(
-        vipRepo,
-        guestRepo,
-        allocationRepo,
-        "G-120",
-        Room.RoomType.LUXURY,
-        "L-807",
-        now.minusMinutes(18),
-        12,
-        15);
-    addVipAllocated(
-        vipRepo,
-        guestRepo,
-        allocationRepo,
-        "G-108",
-        Room.RoomType.SUITE,
-        "S-503",
-        now.minusMinutes(12),
-        6,
-        10);
-    addVipAllocated(
-        vipRepo,
-        guestRepo,
-        allocationRepo,
-        "G-121",
-        Room.RoomType.SUITE,
-        "S-504",
-        now.minusMinutes(22),
-        11,
-        15);
-    addVipAllocated(
-        vipRepo,
-        guestRepo,
-        allocationRepo,
-        "G-122",
-        Room.RoomType.SUITE,
-        "S-507",
-        now.minusMinutes(25),
-        13,
-        15);
-    addVipAllocated(
-        vipRepo,
-        guestRepo,
-        allocationRepo,
-        "G-136",
-        Room.RoomType.STANDARD,
-        "ST-103",
-        now.minusMinutes(30),
-        15,
-        20);
-    addVipAllocated(
-        vipRepo,
-        guestRepo,
-        allocationRepo,
-        "G-137",
-        Room.RoomType.STANDARD,
-        "ST-104",
-        now.minusMinutes(36),
-        16,
-        20);
-
     Reservation vc1 =
         addVipCheckedIn(
             vipRepo,
@@ -1887,44 +1802,6 @@ public class DatabaseSeeder {
             queuedAt,
             true);
     repo.addReservation(r);
-  }
-
-  private static void addVipAllocated(
-      VipReservationRepo repo,
-      GuestRepo guestRepo,
-      AllocationRepo allocRepo,
-      String guestId,
-      Room.RoomType roomType,
-      String roomNumber,
-      LocalDateTime queuedAt,
-      int holdingUsedMins,
-      int graceMins) {
-    Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
-    if (guest == null || guest.getMemberId() == null) return;
-
-    String resId = "RES-" + (resCounter++);
-    LocalDateTime allocatedTime = LocalDateTime.now().minusMinutes(holdingUsedMins);
-    Reservation r =
-        new Reservation(
-            resId,
-            guestId,
-            NumberUtil.generateDigitPin(8),
-            roomType,
-            Reservation.Status.ALLOCATED,
-            false,
-            8000,
-            queuedAt.minusMinutes(15),
-            queuedAt,
-            true);
-    r.setAllocatedTime(allocatedTime);
-    r.setAllocatedGraceMins(graceMins);
-    r.setRoomNumber(roomNumber);
-    repo.addReservation(r);
-
-    long expMs =
-        allocatedTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            + (graceMins * 60 * 1000L);
-    allocRepo.addAllocationEntry(new AllocationEntry(resId, roomNumber, expMs));
   }
 
   private static Reservation addVipCheckedIn(

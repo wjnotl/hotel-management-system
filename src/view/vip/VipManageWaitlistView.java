@@ -265,8 +265,10 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
     System.out.printf(
         "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, totalMatches);
-    System.out.println("[A] Add Guest          [Q] Quick Assign (Highest Priority)    [R] Refresh Table");
-    System.out.println("[S] Search / Filter    [O] Change Sort Order                  [E] Exit to Queue Menu");
+    System.out.println(
+        "[A] Add Guest          [Q] Quick Assign (Highest Priority)    [R] Refresh Table");
+    System.out.println(
+        "[S] Search / Filter    [O] Change Sort Order                  [E] Exit to Queue Menu");
 
     StringBuilder navLine = new StringBuilder();
     boolean hasPrev = (currentPage > 1);
