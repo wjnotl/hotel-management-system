@@ -650,7 +650,35 @@ public class VipManageWaitlistController {
             });
 
     if ("SCORE (LOW -> HIGH)".equalsIgnoreCase(sort)) {
-      filtered.sort((r1, r2) -> Integer.compare(r1.getPriorityScore(), r2.getPriorityScore()));
+      filtered.sort(
+          (a, b) -> {
+            if (a == b) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            int scoreComp = Integer.compare(a.getPriorityScore(), b.getPriorityScore());
+            if (scoreComp != 0) {
+              return scoreComp;
+            }
+
+            // Tie-breaker for Low -> High: latest arrival time comes first (shortest wait time =
+            // lowest priority)
+            LocalDateTime tA = a.getQueueArrivalTime();
+            LocalDateTime tB = b.getQueueArrivalTime();
+            int timeComp;
+            if (tA == null && tB == null) timeComp = 0;
+            else if (tA == null) timeComp = 1;
+            else if (tB == null) timeComp = -1;
+            else timeComp = tB.compareTo(tA);
+
+            if (timeComp != 0) {
+              return timeComp;
+            }
+
+            String idA = (a.getReservationId() != null) ? a.getReservationId() : "";
+            String idB = (b.getReservationId() != null) ? b.getReservationId() : "";
+            return idB.compareToIgnoreCase(idA);
+          });
     } else if ("STRIKES (LOWEST -> HIGHEST)".equalsIgnoreCase(sort)) {
       filtered.sort(
           (r1, r2) -> {
@@ -759,11 +787,31 @@ public class VipManageWaitlistController {
           });
     } else {
       filtered.sort(
-          (r1, r2) -> {
-            if (r1 == null && r2 == null) return 0;
-            if (r1 == null) return 1;
-            if (r2 == null) return -1;
-            return Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+          (a, b) -> {
+            if (a == b) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            int scoreComp = Integer.compare(b.getPriorityScore(), a.getPriorityScore());
+            if (scoreComp != 0) {
+              return scoreComp;
+            }
+
+            LocalDateTime tA = a.getQueueArrivalTime();
+            LocalDateTime tB = b.getQueueArrivalTime();
+            int timeComp;
+            if (tA == null && tB == null) timeComp = 0;
+            else if (tA == null) timeComp = 1;
+            else if (tB == null) timeComp = -1;
+            else timeComp = tA.compareTo(tB);
+
+            if (timeComp != 0) {
+              return timeComp;
+            }
+
+            String idA = (a.getReservationId() != null) ? a.getReservationId() : "";
+            String idB = (b.getReservationId() != null) ? b.getReservationId() : "";
+            return idA.compareToIgnoreCase(idB);
           });
     }
 

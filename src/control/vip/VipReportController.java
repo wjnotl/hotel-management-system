@@ -704,9 +704,20 @@ public class VipReportController {
                     ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
                     : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
             if (cmp != 0) return cmp;
+
+            LocalDateTime t1 = r1.getQueueArrivalTime();
+            LocalDateTime t2 = r2.getQueueArrivalTime();
+            int timeComp;
+            if (t1 == null && t2 == null) timeComp = 0;
+            else if (t1 == null) timeComp = 1;
+            else if (t2 == null) timeComp = -1;
+            else timeComp = isAsc ? t2.compareTo(t1) : t1.compareTo(t2);
+
+            if (timeComp != 0) return timeComp;
+
             String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
             String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
-            return id1.compareToIgnoreCase(id2);
+            return isAsc ? id2.compareToIgnoreCase(id1) : id1.compareToIgnoreCase(id2);
           });
     } else if ("STRIKE COUNT".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
