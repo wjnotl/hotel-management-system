@@ -1,8 +1,8 @@
 package entity;
 
-import adt.ArrayList;
-import adt.ListInterface;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HousekeepingStaff implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -23,7 +23,7 @@ public class HousekeepingStaff implements Serializable {
   private String name;
   private Shift shift;
   private Availability availability;
-  private ListInterface<String> assignedRoomNumbers;
+  private List<String> assignedRoomNumbers;
 
   public HousekeepingStaff(String staffId, String name, Shift shift, Availability availability) {
     this.staffId = staffId;
@@ -49,7 +49,7 @@ public class HousekeepingStaff implements Serializable {
     return availability;
   }
 
-  public ListInterface<String> getAssignedRoomNumbers() {
+  public List<String> getAssignedRoomNumbers() {
     return assignedRoomNumbers;
   }
 

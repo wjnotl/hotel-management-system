@@ -18,6 +18,7 @@ import util.ConsoleUtil;
 import util.TxtExportUtil;
 import view.housekeeping.HousekeepingReportView;
 import view.housekeeping.HousekeepingReportView.ReportResult;
+import view.housekeeping.HousekeepingReportView.StaffPerformanceRowDTO;
 
 public class HousekeepingReportController {
   private final HousekeepingReportView reportView = new HousekeepingReportView();
@@ -37,8 +38,22 @@ public class HousekeepingReportController {
     this.settingsRepo = settingsRepo;
   }
 
-  // --- FILTER HUB LOOP ---
+  // --- REPORT TYPE ROUTER ---
   public void start() {
+    while (true) {
+      int choice = reportView.displayReportTypeMenu();
+      if (choice == 1) {
+        startOperationsReport();
+      } else if (choice == 2) {
+        startStaffPerformanceReport();
+      } else if (choice == 3) {
+        return; // Back to Housekeeping Main Menu
+      }
+    }
+  }
+
+  // --- OPERATIONS REPORT: FILTER HUB LOOP ---
+  private void startOperationsReport() {
     LocalDate startDate = null;
     LocalDate endDate = null;
     String datePresetLabel = "ALL TIME";
@@ -76,7 +91,7 @@ public class HousekeepingReportController {
         } else if (choice == 6) {
           generateAndShowReport(startDate, endDate, staffId, roomTypeFilter, taskTypeFilter);
         } else if (choice == 7) {
-          return; // Cancel, back to Housekeeping Main Menu
+          return; // Cancel, back to Report Type Menu
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -493,7 +508,7 @@ public class HousekeepingReportController {
     sb.append("   ").append(formatAvgForFile(r.avgQueueWaitMinutes, r.queueWaitCount)).append("\n");
 
     try {
-      String path = TxtExportUtil.export("housekeeping/report", sb.toString());
+      String path = TxtExportUtil.export("housekeeping/operations_report", sb.toString());
       reportView.printExportSuccess(path);
     } catch (RuntimeException e) {
       reportView.printExportFailure(e.getMessage());
@@ -503,5 +518,184 @@ public class HousekeepingReportController {
   private String formatAvgForFile(double avgMinutes, int sampleCount) {
     if (sampleCount == 0) return "N/A (no data)";
     return String.format("%.1f min (n=%d)", avgMinutes, sampleCount);
+  }
+
+  // ================= STAFF PERFORMANCE REPORT =================
+
+  // --- FILTER HUB LOOP ---
+  private void startStaffPerformanceReport() {
+    LocalDate startDate = null;
+    LocalDate endDate = null;
+    String datePresetLabel = "ALL TIME";
+    HousekeepingStaff.Shift shiftFilter = null;
+
+    while (true) {
+      try {
+        int choice =
+            reportView.displayStaffFilterHub(
+                dateRangeLabel(startDate, endDate),
+                shiftFilter == null ? "ALL" : shiftFilter.name());
+
+        if (choice == 1) {
+          Object[] range = handleDateRangeSubmenu(startDate, endDate, datePresetLabel);
+          startDate = (LocalDate) range[0];
+          endDate = (LocalDate) range[1];
+          datePresetLabel = (String) range[2];
+        } else if (choice == 2) {
+          shiftFilter = handleShiftFilterSubmenu(shiftFilter);
+        } else if (choice == 3) {
+          startDate = null;
+          endDate = null;
+          datePresetLabel = "ALL TIME";
+          shiftFilter = null;
+        } else if (choice == 4) {
+          generateAndShowStaffPerformanceReport(startDate, endDate, shiftFilter);
+        } else if (choice == 5) {
+          return; // Cancel, back to Report Type Menu
+        }
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // --- SHIFT FILTER SUBMENU ---
+  private HousekeepingStaff.Shift handleShiftFilterSubmenu(HousekeepingStaff.Shift current) {
+    while (true) {
+      try {
+        int choice = reportView.displayShiftFilterSubmenu(current == null ? "ALL" : current.name());
+        if (choice == 1) return HousekeepingStaff.Shift.MORNING;
+        if (choice == 2) return HousekeepingStaff.Shift.AFTERNOON;
+        if (choice == 3) return HousekeepingStaff.Shift.NIGHT;
+        if (choice == 4) return null;
+        if (choice == 5) return current;
+      } catch (Exception e) {
+        ConsoleUtil.printError(e.getMessage());
+      }
+    }
+  }
+
+  // --- CALCULATION ENGINE + REPORT OUTPUT ---
+  private void generateAndShowStaffPerformanceReport(
+      LocalDate startDate, LocalDate endDate, HousekeepingStaff.Shift shiftFilter) {
+
+    ListInterface<StaffPerformanceRowDTO> rows =
+        calculateStaffPerformance(startDate, endDate, shiftFilter);
+
+    int choice =
+        reportView.displayStaffPerformanceReport(
+            dateRangeLabel(startDate, endDate),
+            shiftFilter == null ? "ALL" : shiftFilter.name(),
+            rows);
+
+    if (choice == 1) {
+      exportStaffPerformanceReportToFile(
+          dateRangeLabel(startDate, endDate), shiftFilter == null ? "ALL" : shiftFilter.name(), rows);
+    }
+    // choice == 2 (or export done): falls through, back to filter hub
+  }
+
+  // Builds one fully-computed row per matching staff member — no lookups left for the view to
+  // do. Uses filter()/map() instead of manual index loops, per team convention.
+  private ListInterface<StaffPerformanceRowDTO> calculateStaffPerformance(
+      LocalDate startDate, LocalDate endDate, HousekeepingStaff.Shift shiftFilter) {
+
+    ListInterface<HousekeepingTask> allTasks = taskRepo.getTaskList();
+
+    ListInterface<HousekeepingStaff> staffToInclude =
+        staffRepo.getStaffList().filter(s -> shiftFilter == null || s.getShift() == shiftFilter);
+
+    return staffToInclude.map(
+        staff -> {
+          ListInterface<HousekeepingTask> staffTasks =
+              allTasks.filter(
+                  t ->
+                      t != null
+                          && t.getCreatedAt() != null
+                          && staff.getStaffId().equals(t.getAssignedStaffId())
+                          && (startDate == null
+                              || !t.getCreatedAt().toLocalDate().isBefore(startDate))
+                          && (endDate == null || !t.getCreatedAt().toLocalDate().isAfter(endDate)));
+
+          int completedCount =
+              staffTasks
+                  .filter(t -> t.getStatus() == HousekeepingTask.Status.COMPLETED)
+                  .getNumberOfEntries();
+          int skippedCount =
+              staffTasks
+                  .filter(t -> t.getStatus() == HousekeepingTask.Status.SKIPPED)
+                  .getNumberOfEntries();
+
+          ListInterface<HousekeepingTask> timedCleaningTasks =
+              staffTasks.filter(
+                  t ->
+                      (t.getTaskType() == HousekeepingTask.TaskType.STANDARD_CLEAN
+                              || t.getTaskType() == HousekeepingTask.TaskType.DEEP_CLEAN)
+                          && t.getStartedAt() != null
+                          && t.getCompletedAt() != null);
+
+          int timedCount = timedCleaningTasks.getNumberOfEntries();
+          double totalMinutes =
+              timedCleaningTasks.reduce(
+                  0.0,
+                  (sum, t) -> sum + Duration.between(t.getStartedAt(), t.getCompletedAt()).toMinutes());
+
+          return new StaffPerformanceRowDTO(
+              staff.getStaffId(),
+              staff.getName(),
+              staff.getShift().name(),
+              staff.getAvailability().name(),
+              completedCount,
+              skippedCount,
+              formatAvgForFile(timedCount == 0 ? 0.0 : totalMinutes / timedCount, timedCount));
+        });
+  }
+
+  // ================= TXT EXPORT (delegates to the shared TxtExportUtil, same as frontdesk)
+  // =================
+  private void exportStaffPerformanceReportToFile(
+      String dateRangeLabel, String shiftLabel, ListInterface<StaffPerformanceRowDTO> rows) {
+
+    StringBuilder sb = new StringBuilder();
+    sb.append("STAFF PERFORMANCE REPORT\n");
+    sb.append("Generated: ").append(LocalDateTime.now()).append("\n");
+    sb.append("------------------------------------------------------\n");
+    sb.append("Filters Applied:\n");
+    sb.append("  Date Range   : ").append(dateRangeLabel).append("\n");
+    sb.append("  Shift        : ").append(shiftLabel).append("\n");
+    sb.append("  Matched Staff: ").append(rows.getNumberOfEntries()).append("\n");
+    sb.append("------------------------------------------------------\n\n");
+
+    if (rows.isEmpty()) {
+      sb.append("No staff match the selected filters.\n");
+    } else {
+      for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
+        StaffPerformanceRowDTO row = rows.getEntry(i);
+        sb.append(i)
+            .append(". ")
+            .append(row.staffId)
+            .append(" - ")
+            .append(row.name)
+            .append(" (")
+            .append(row.shiftLabel)
+            .append(", ")
+            .append(row.availabilityLabel)
+            .append(")\n");
+        sb.append("   Completed: ")
+            .append(row.completedCount)
+            .append(" | Skipped: ")
+            .append(row.skippedCount)
+            .append(" | Avg Cleaning Time: ")
+            .append(row.avgCleanTimeLabel)
+            .append("\n\n");
+      }
+    }
+
+    try {
+      String path = TxtExportUtil.export("housekeeping/staff_performance_report", sb.toString());
+      reportView.printExportSuccess(path);
+    } catch (RuntimeException e) {
+      reportView.printExportFailure(e.getMessage());
+    }
   }
 }
