@@ -86,8 +86,7 @@ public class HousekeepingStaffRepo {
     if (staff == null || roomNumber == null) return false;
 
     staff.removeRoom(roomNumber);
-    if (staff.hasNoRooms()
-        && staff.getAvailability() == HousekeepingStaff.Availability.ON_TASK) {
+    if (staff.hasNoRooms() && staff.getAvailability() == HousekeepingStaff.Availability.ON_TASK) {
       staff.setAvailability(HousekeepingStaff.Availability.AVAILABLE);
     }
     save();
