@@ -343,7 +343,7 @@ public class DatabaseSeeder {
             "cynthia.yeoh@gmail.com",
             "011-3928104",
             "M-1024",
-            2));
+            3));
     guestRepo.addGuest(
         new Guest(
             "G-125",
@@ -485,7 +485,7 @@ public class DatabaseSeeder {
             "saravanan.v@gmail.com",
             "013-3920184",
             "M-1038",
-            2));
+            3));
     guestRepo.addGuest(
         new Guest(
             "G-139",
