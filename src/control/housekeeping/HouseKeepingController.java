@@ -1404,10 +1404,48 @@ public class HouseKeepingController {
         if (action == 1) {
           HousekeepingStaff staff = pickStaff("SELECT STAFF TO ASSIGN");
           if (staff != null) {
+            HousekeepingStaff previousStaff =
+                selected.getAssignedStaffId() == null
+                    ? null
+                    : staffRepo.findById(selected.getAssignedStaffId());
+
+            if (previousStaff != null && previousStaff.getStaffId().equals(staff.getStaffId())) {
+              ConsoleUtil.printError(
+                  "Task " + selected.getTaskId() + " is already assigned to " + staff.getName() + ".");
+              continue;
+            }
+
             if (!confirmShiftAssignment(staff)) {
               continue; // Declined the override — back to the task action menu
             }
-            assignTaskToStaff(selected, staff);
+
+            // Reassigning a task someone's already mid-clean on loses their progress (the new
+            // staff has to Start Cleaning from scratch) — confirm before doing that.
+            if (selected.getStatus() == HousekeepingTask.Status.IN_PROGRESS) {
+              boolean confirmed =
+                  ConsoleUtil.showConfirmMessage(
+                      "Room "
+                          + selected.getRoomNumber()
+                          + " is currently IN PROGRESS under "
+                          + (previousStaff != null ? previousStaff.getName() : "another staff member")
+                          + ". Reassigning will reset it to ASSIGNED and "
+                          + staff.getName()
+                          + " will need to Start Cleaning again. Are you sure you want to reassign?");
+              if (!confirmed) {
+                continue; // Declined — back to the task action menu
+              }
+            }
+
+            // A task already held by someone else must go through reassignTaskToStaff (resets
+            // status/progress correctly) and explicitly release the room from the old staff —
+            // otherwise the room lingers on their Assigned Rooms list forever, duplicated across
+            // both staff members on the Manage Staff Assignments board.
+            if (previousStaff != null) {
+              reassignTaskToStaff(selected, staff);
+              staffRepo.releaseRoomFromStaff(previousStaff, selected.getRoomNumber());
+            } else {
+              assignTaskToStaff(selected, staff);
+            }
           }
         } else if (action == 2) {
           boolean started = taskRepo.startCleaning(selected);
