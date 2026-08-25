@@ -98,10 +98,10 @@ public class VipReportController {
 
     String reportTitle =
         (reportType == 1)
-            ? "Wait Time Efficiency & SLA Attainment Report"
+            ? "Wait Time Efficiency & SLA Attainment Audit Report"
             : (reportType == 2)
                 ? "VIP Penalty & Eviction Audit Report"
-                : "Room Holding Bay & Grace Window Report";
+                : "Room Holding Bay & Grace Window Audit Report";
 
     boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
     if (!generateSelected) {
@@ -145,10 +145,10 @@ public class VipReportController {
 
         reportView.displayReportTitleHeader(
             (reportType == 1)
-                ? "REPORT 1: WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT"
+                ? "REPORT 1: WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT REPORT"
                 : (reportType == 2)
                     ? "REPORT 2: VIP PENALTY & EVICTION AUDIT REPORT"
-                    : "REPORT 3: ROOM HOLDING BAY & GRACE WINDOW AUDIT");
+                    : "REPORT 3: ROOM HOLDING BAY & GRACE WINDOW AUDIT REPORT");
 
         ConsoleUtil.clearBuffer();
         ConsoleUtil.startRecording();

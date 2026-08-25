@@ -13,11 +13,11 @@ public class VipReportView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("VIP ANALYTICS REPORT HUB");
     System.out.println("Select an operational performance report to generate:\n");
-    System.out.println("1. Wait Time Efficiency & SLA Attainment Report");
+    System.out.println("1. Wait Time Efficiency & SLA Attainment Audit Report");
     System.out.println("   Analyzes physical wait durations vs. tier SLA targets.\n");
     System.out.println("2. VIP Penalty & Eviction Audit Report");
     System.out.println("   Analyzes no-show strike counts & max-strike eviction lockouts.\n");
-    System.out.println("3. Room Holding Bay & Grace Window Report");
+    System.out.println("3. Room Holding Bay & Grace Window Audit Report");
     System.out.println("   Analyzes room hold times & grace countdown utilization.\n");
     System.out.println("4. Back to VIP Menu\n");
 
