@@ -413,10 +413,7 @@ public class HouseKeepingController {
   private boolean isAtShiftCapacity(HousekeepingStaff staff) {
     HousekeepingSettings settings = settingsRepo.getSettings();
     int max = getMaxRoomsForShift(staff.getShift(), settings);
-    int current =
-        staff.getAssignedRoomNumbers() == null
-            ? 0
-            : staff.getAssignedRoomNumbers().getNumberOfEntries();
+    int current = staff.getRoomCount();
     return current >= max;
   }
 
@@ -942,6 +939,33 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
+  // Finds the task currently ASSIGNED to this room (staff picked, not yet started cleaning),
+  // regardless of which staff member it's assigned to. Used to keep the Task Board in sync when
+  // a room's status is changed manually from the Room Status Sync screen.
+  private HousekeepingTask findAssignedTaskForRoom(String roomNumber) {
+    ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
+    for (int i = 1; i <= fullList.getNumberOfEntries(); i++) {
+      HousekeepingTask t = fullList.getEntry(i);
+      if (t == null) continue;
+      if (!roomNumber.equalsIgnoreCase(t.getRoomNumber())) continue;
+      if (t.getStatus() == HousekeepingTask.Status.ASSIGNED) return t;
+    }
+    return null;
+  }
+
+  // Finds a still-unassigned (PENDING, no staff yet) task for this room. Used to block a manual
+  // room status change to CLEANING until someone's actually been assigned to do the work.
+  private HousekeepingTask findPendingTaskForRoom(String roomNumber) {
+    ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
+    for (int i = 1; i <= fullList.getNumberOfEntries(); i++) {
+      HousekeepingTask t = fullList.getEntry(i);
+      if (t == null) continue;
+      if (!roomNumber.equalsIgnoreCase(t.getRoomNumber())) continue;
+      if (t.getStatus() == HousekeepingTask.Status.PENDING) return t;
+    }
+    return null;
+  }
+
   private HousekeepingTask findActiveTaskForRoom(String staffId, String roomNumber) {
     ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
     for (int i = 1; i <= fullList.getNumberOfEntries(); i++) {
@@ -1120,9 +1144,23 @@ public class HouseKeepingController {
 
             if (newStatus != oldStatus) {
               boolean okToProceed = true;
+              String blockedMessage =
+                  "Status change cancelled — resolve the pending task(s) via Task Board first.";
 
               if (newStatus == Room.Status.VACANT_CLEAN) {
                 okToProceed = resolveStaleTasksBeforeStatusChange(selected.getRoomNumber());
+              } else if (newStatus == Room.Status.CLEANING) {
+                // Cleaning can't start with nobody assigned to it yet — block and send the
+                // user to Task Board to assign staff first, same gate the Task Board itself
+                // uses for "Start Cleaning".
+                if (findPendingTaskForRoom(selected.getRoomNumber()) != null) {
+                  okToProceed = false;
+                  blockedMessage =
+                      "Room "
+                          + selected.getRoomNumber()
+                          + " has an unassigned task on the board. Assign a staff member via"
+                          + " Task Board before marking this room CLEANING.";
+                }
               }
 
               if (okToProceed) {
@@ -1130,10 +1168,20 @@ public class HouseKeepingController {
                 roomRepo.updateRoom(selected);
                 roomStatusHistoryRepo.recordStatusChange(
                     selected.getRoomNumber(), oldStatus, newStatus);
+
+                // Keep the Task Board in sync: manually marking a room CLEANING here means
+                // work has actually started, so mirror that onto its ASSIGNED task the same
+                // way "Start Cleaning" on the Task Board would (ASSIGNED -> IN_PROGRESS).
+                // Without this, the task board keeps showing ASSIGNED even though the room
+                // says CLEANING.
+                if (newStatus == Room.Status.CLEANING) {
+                  HousekeepingTask activeTask = findAssignedTaskForRoom(selected.getRoomNumber());
+                  if (activeTask != null) {
+                    taskRepo.startCleaning(activeTask);
+                  }
+                }
               } else {
-                ConsoleUtil.printError(
-                    "Status change cancelled — resolve the pending task(s) via Task Board"
-                        + " first.");
+                ConsoleUtil.printError(blockedMessage);
               }
             }
           }
@@ -1356,10 +1404,55 @@ public class HouseKeepingController {
         if (action == 1) {
           HousekeepingStaff staff = pickStaff("SELECT STAFF TO ASSIGN");
           if (staff != null) {
+            HousekeepingStaff previousStaff =
+                selected.getAssignedStaffId() == null
+                    ? null
+                    : staffRepo.findById(selected.getAssignedStaffId());
+
+            if (previousStaff != null && previousStaff.getStaffId().equals(staff.getStaffId())) {
+              ConsoleUtil.printError(
+                  "Task "
+                      + selected.getTaskId()
+                      + " is already assigned to "
+                      + staff.getName()
+                      + ".");
+              continue;
+            }
+
             if (!confirmShiftAssignment(staff)) {
               continue; // Declined the override — back to the task action menu
             }
-            assignTaskToStaff(selected, staff);
+
+            // Reassigning a task someone's already mid-clean on loses their progress (the new
+            // staff has to Start Cleaning from scratch) — confirm before doing that.
+            if (selected.getStatus() == HousekeepingTask.Status.IN_PROGRESS) {
+              boolean confirmed =
+                  ConsoleUtil.showConfirmMessage(
+                      "Room "
+                          + selected.getRoomNumber()
+                          + " is currently IN PROGRESS under "
+                          + (previousStaff != null
+                              ? previousStaff.getName()
+                              : "another staff member")
+                          + ". Reassigning will reset it to ASSIGNED and "
+                          + staff.getName()
+                          + " will need to Start Cleaning again. Are you sure you want to"
+                          + " reassign?");
+              if (!confirmed) {
+                continue; // Declined — back to the task action menu
+              }
+            }
+
+            // A task already held by someone else must go through reassignTaskToStaff (resets
+            // status/progress correctly) and explicitly release the room from the old staff —
+            // otherwise the room lingers on their Assigned Rooms list forever, duplicated across
+            // both staff members on the Manage Staff Assignments board.
+            if (previousStaff != null) {
+              reassignTaskToStaff(selected, staff);
+              staffRepo.releaseRoomFromStaff(previousStaff, selected.getRoomNumber());
+            } else {
+              assignTaskToStaff(selected, staff);
+            }
           }
         } else if (action == 2) {
           boolean started = taskRepo.startCleaning(selected);

@@ -72,9 +72,7 @@ public class HousekeepingStaffRepo {
   public boolean assignRoomToStaff(HousekeepingStaff staff, String roomNumber) {
     if (staff == null || roomNumber == null) return false;
 
-    if (!staff.getAssignedRoomNumbers().contains(roomNumber)) {
-      staff.getAssignedRoomNumbers().add(roomNumber);
-    }
+    staff.addRoom(roomNumber);
     staff.setAvailability(HousekeepingStaff.Availability.ON_TASK);
     save();
     return true;
@@ -87,9 +85,8 @@ public class HousekeepingStaffRepo {
   public boolean releaseRoomFromStaff(HousekeepingStaff staff, String roomNumber) {
     if (staff == null || roomNumber == null) return false;
 
-    staff.getAssignedRoomNumbers().remove(roomNumber);
-    if (staff.getAssignedRoomNumbers().isEmpty()
-        && staff.getAvailability() == HousekeepingStaff.Availability.ON_TASK) {
+    staff.removeRoom(roomNumber);
+    if (staff.hasNoRooms() && staff.getAvailability() == HousekeepingStaff.Availability.ON_TASK) {
       staff.setAvailability(HousekeepingStaff.Availability.AVAILABLE);
     }
     save();

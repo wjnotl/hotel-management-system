@@ -1664,10 +1664,10 @@ public class DatabaseSeeder {
             HousekeepingStaff.Shift.NIGHT,
             HousekeepingStaff.Availability.AVAILABLE);
 
-    s2.getAssignedRoomNumbers().add("L-809");
-    s3.getAssignedRoomNumbers().add("S-509");
-    s5.getAssignedRoomNumbers().add("L-810");
-    s5.getAssignedRoomNumbers().add("ST-110");
+    s2.addRoom("L-809");
+    s3.addRoom("S-509");
+    s5.addRoom("L-810");
+    s5.addRoom("ST-110");
 
     staffRepo.addStaff(s1);
     staffRepo.addStaff(s2);
