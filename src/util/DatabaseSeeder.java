@@ -24,7 +24,6 @@ import repo.VipSystemConfigRepo;
 
 public class DatabaseSeeder {
 
-  private static int resCounter = 10001;
   private static int billingCounter = 1001;
 
   public static void main(String[] args) {
@@ -1874,7 +1873,7 @@ public class DatabaseSeeder {
     Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
     if (guest == null || guest.getMemberId() == null) return;
 
-    String resId = "RES-" + (resCounter++);
+    String resId = repo.generateReservationId();
     Reservation r =
         new Reservation(
             resId,
@@ -1906,7 +1905,7 @@ public class DatabaseSeeder {
     Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
     if (guest == null || guest.getMemberId() == null) return null;
 
-    String resId = "RES-" + (resCounter++);
+    String resId = repo.generateReservationId();
     LocalDateTime allocatedAt = queuedAt.plusMinutes(queueWaitMins);
     LocalDateTime checkedInAt = allocatedAt.plusMinutes(holdingUsedMins);
 
@@ -1947,7 +1946,7 @@ public class DatabaseSeeder {
     Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
     if (guest == null || guest.getMemberId() == null) return null;
 
-    String resId = "RES-" + (resCounter++);
+    String resId = repo.generateReservationId();
     LocalDateTime allocatedAt = queuedAt.plusMinutes(queueWaitMins);
     LocalDateTime checkedInAt = allocatedAt.plusMinutes(holdingUsedMins);
 
@@ -1985,7 +1984,7 @@ public class DatabaseSeeder {
     Guest guest = (guestRepo != null) ? guestRepo.findById(guestId) : null;
     if (guest == null || guest.getMemberId() == null) return;
 
-    String resId = "RES-" + (resCounter++);
+    String resId = repo.generateReservationId();
     LocalDateTime allocatedTime = queuedAt.plusMinutes(queueWaitMins);
 
     Reservation r =
