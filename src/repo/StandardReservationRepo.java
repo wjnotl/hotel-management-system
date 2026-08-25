@@ -530,11 +530,20 @@ public class StandardReservationRepo {
 
   public int countCommittedOn(Room.RoomType roomType, LocalDate date) {
     if (roomType == null || date == null) return 0;
+    return countCommittedOverWindow(roomType, date, 1)[0];
+  }
+
+  // One sweep of the master list for a whole run of nights. Asking night by night re-reads every
+  // reservation once per night, so a forecast over d nights costs O(r + d) here rather than
+  // O(r * d), and the single date question above is just the window of one.
+  public int[] countCommittedOverWindow(Room.RoomType roomType, LocalDate from, int nights) {
+    int[] committed = new int[Math.max(0, nights)];
+    if (roomType == null || from == null || nights <= 0) return committed;
 
     boolean turnover = settings().isCheckoutDayReusable();
+    LocalDate windowEnd = from.plusDays(nights);
     ListInterface<Reservation> all = reservationRepo.getAllReservations();
 
-    int committed = 0;
     for (int i = 1; i <= all.getNumberOfEntries(); i++) {
       Reservation r = all.getEntry(i);
       if (r == null || r.getRoomType() != roomType) continue;
@@ -548,8 +557,12 @@ public class StandardReservationRepo {
         end = end.plusDays(1);
       }
 
-      if (!start.isAfter(date) && date.isBefore(end)) {
-        committed++;
+      if (!start.isBefore(windowEnd) || !from.isBefore(end)) continue;
+
+      int firstNight = (int) Math.max(0, start.toEpochDay() - from.toEpochDay());
+      int lastNight = (int) Math.min(nights - 1L, end.toEpochDay() - from.toEpochDay() - 1);
+      for (int night = firstNight; night <= lastNight; night++) {
+        committed[night]++;
       }
     }
     return committed;
@@ -608,20 +621,30 @@ public class StandardReservationRepo {
   // Future bookings still hold stock back, so walk-in screens subtract them.
   public int countReservedArrivingOn(Room.RoomType roomType, LocalDate date) {
     if (roomType == null || date == null) return 0;
+    return countArrivalsOverWindow(roomType, date, 1)[0];
+  }
+
+  // The window twin of the count above, for the same reason.
+  public int[] countArrivalsOverWindow(Room.RoomType roomType, LocalDate from, int nights) {
+    int[] arrivals = new int[Math.max(0, nights)];
+    if (roomType == null || from == null || nights <= 0) return arrivals;
 
     ListInterface<Reservation> all = reservationRepo.getAllReservations();
-    int count = 0;
     for (int i = 1; i <= all.getNumberOfEntries(); i++) {
       Reservation r = all.getEntry(i);
-      if (r != null
-          && r.getRoomType() == roomType
-          && r.getStatus() == Reservation.Status.RESERVED
-          && r.getExpectedArrivalTime() != null
-          && r.getExpectedArrivalTime().toLocalDate().isEqual(date)) {
-        count++;
+      if (r == null
+          || r.getRoomType() != roomType
+          || r.getStatus() != Reservation.Status.RESERVED
+          || r.getExpectedArrivalTime() == null) {
+        continue;
+      }
+
+      long night = r.getExpectedArrivalTime().toLocalDate().toEpochDay() - from.toEpochDay();
+      if (night >= 0 && night < nights) {
+        arrivals[(int) night]++;
       }
     }
-    return count;
+    return arrivals;
   }
 
   public String generateReservationId() {

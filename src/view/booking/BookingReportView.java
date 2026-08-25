@@ -20,10 +20,12 @@ public class BookingReportView {
     System.out.println("   Who arrived, what they were given and how long they waited.\n");
     System.out.println("2. Queue Performance & No-Show Analysis");
     System.out.println("   Average and worst waits, served counts and no-show rates.\n");
-    System.out.println("3. Back to Walk-In & Booking Menu\n");
+    System.out.println("3. Forward Occupancy & Availability Forecast");
+    System.out.println("   How full every night ahead is, per room type, and when it sells out.\n");
+    System.out.println("4. Back to Walk-In & Booking Menu\n");
 
-    int choice = ConsoleUtil.getMenuInput("Choose a report: ", 1, 3).getAsInt();
-    return (choice == 3) ? 0 : choice;
+    int choice = ConsoleUtil.getMenuInput("Choose a report: ", 1, 4).getAsInt();
+    return (choice == 4) ? 0 : choice;
   }
 
   /**
@@ -126,6 +128,7 @@ public class BookingReportView {
       int matchCount,
       int exportedCount,
       String filePath,
+      String searchTargetLabel,
       boolean offerBinarySearch,
       boolean binarySearchAvailable) {
 
@@ -151,11 +154,12 @@ public class BookingReportView {
 
     System.out.println();
     if (offerBinarySearch) {
-      if (binarySearchAvailable) {
-        System.out.println("[F] Find A Reservation ID (binary search on the sorted register)");
-      } else {
-        System.out.println("[F] Find A Reservation ID (re-sorts the report first)");
-      }
+      System.out.println(
+          "[F] Find "
+              + searchTargetLabel
+              + (binarySearchAvailable
+                  ? " (binary search on the sorted rows)"
+                  : " (re-sorts the report first)"));
     }
     System.out.println("[V] View The Report On Screen");
     System.out.println("[S] Change Filters   [R] Export Again   [E] Exit to Analytics Hub\n");
@@ -167,7 +171,8 @@ public class BookingReportView {
   }
 
   // Binary search needs the sorted key, so the screen offers the re-sort, not a refusal.
-  public boolean displayResortForSearchScreen(String currentSortLabel) {
+  public boolean displayResortForSearchScreen(
+      String currentSortLabel, String keyLabel, String requiredOrder) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("RE-SORT BEFORE SEARCHING", SCREEN_WIDTH);
 
@@ -184,13 +189,14 @@ public class BookingReportView {
         kvSettings,
         "System Notice",
         "A binary search halves the list at every step by comparing against the key it is ordered"
-            + " by, so it can only run on a register sorted by RESERVATION ID (ASCENDING). The"
-            + " report can be re-sorted and re-exported now, which changes nothing but the order"
-            + " of the rows.",
+            + " by, so it can only run on rows sorted by "
+            + requiredOrder
+            + ". The report can be re-sorted and re-exported now, which changes nothing but the"
+            + " order of the rows.",
         false);
 
     System.out.println();
-    System.out.println("1. Re-Sort By Reservation ID And Search");
+    System.out.println("1. Re-Sort By " + keyLabel + " And Search");
     System.out.println("2. Keep The Current Order And Go Back\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
@@ -487,6 +493,188 @@ public class BookingReportView {
     if ("E".equalsIgnoreCase(result.input)) return 0;
     if ("A".equalsIgnoreCase(result.input)) return -1;
     return result.getAsInt();
+  }
+
+  // ================= OCCUPANCY FORECAST SCREENS =================
+
+  /**
+   * The scope screen for the occupancy forecast.
+   *
+   * @return "1".."9" for a filter, or "X" to export, "R" to reset, "E" to leave
+   */
+  public String displayForecastControlPanel(
+      String reportTitle,
+      String windowLabel,
+      String roomTypeFilter,
+      String stateFilter,
+      String occupancyLabel,
+      boolean arrivalsDueOnly,
+      String sortAttribute,
+      String sortDirection,
+      String groupBy,
+      String columnsLabel,
+      int recordLimit,
+      int matchCount) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox(reportTitle, SCREEN_WIDTH);
+
+    System.out.println("1. Forecast Window    : [ " + windowLabel + " ]");
+    System.out.println(
+        "2. Room Type          : [ " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) + " ]");
+    System.out.println("3. Availability State : [ " + stateFilter + " ]");
+    System.out.println("4. Occupancy Band     : [ " + occupancyLabel + " ]");
+    System.out.println("5. Arrivals Due Only  : [ " + (arrivalsDueOnly ? "YES" : "NO") + " ]");
+    System.out.println("6. Sort Order         : [ " + sortAttribute + " (" + sortDirection + ") ]");
+    System.out.println("7. Group Rows By      : [ " + groupBy + " ]");
+    System.out.println("8. Columns Exported   : [ " + columnsLabel + " ]");
+    System.out.println(
+        "9. Record Limit       : [ "
+            + (recordLimit == 0 ? "Show All" : "Top " + recordLimit)
+            + " ]");
+    System.out.println();
+    System.out.println("Nights matching the current scope: " + matchCount);
+    System.out.println();
+    System.out.println("[X] Export Report To TXT   [R] Reset All Filters");
+    System.out.println("[E] Exit to Analytics Hub\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 9, new char[] {'X', 'R', 'E'})
+        .input
+        .toUpperCase();
+  }
+
+  public int displayForecastStateSubmenu(String current) {
+    return numberedMenu(
+        "AVAILABILITY STATE",
+        new String[] {
+          "Current: [ " + current + " ]",
+          "",
+          "A night is FULL once every room of that type is committed, and",
+          "OVERBOOKED when more are committed than the hotel owns."
+        },
+        new String[] {"All Nights", "Full Or Overbooked Only", "Open Only", "Overbooked Only"});
+  }
+
+  // Returns the two raw strings the clerk typed, for the controller to parse.
+  public String[] promptForecastWindow(String currentLabel, int maxNights) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("FORECAST WINDOW", SCREEN_WIDTH);
+    System.out.println("Current: [ " + currentLabel + " ]\n");
+    System.out.println("The first night to forecast, then how many nights to run for.");
+    System.out.println("Format: YYYY-MM-DD. Type '-' for tonight.");
+    System.out.println("E - Exit and keep the current window\n");
+
+    String start = ConsoleUtil.getStringInput("First night: ");
+    if (start.trim().isEmpty() || "E".equalsIgnoreCase(start.trim())) {
+      return new String[] {start, null};
+    }
+
+    GetMenuInputResult nights =
+        ConsoleUtil.getMenuInput(
+            "Nights to forecast [1 - " + maxNights + "]: ", 1, maxNights, new char[] {'E'});
+
+    return new String[] {start, nights.isNumber ? String.valueOf(nights.getAsInt()) : null};
+  }
+
+  // Returns {min, max} as percentages; -1 in either slot means that end is unbounded.
+  public int[] promptOccupancyBand(int currentMin, int currentMax) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("OCCUPANCY BAND", SCREEN_WIDTH);
+    System.out.println(
+        "Current: [ "
+            + ((currentMin < 0) ? "any" : currentMin + "%")
+            + "  ..  "
+            + ((currentMax < 0) ? "any" : currentMax + "%")
+            + " ]\n");
+    System.out.println("Only nights whose occupancy falls inside this band stay in scope.");
+    System.out.println("Type '-' at either prompt to leave that end unbounded.");
+    System.out.println("E - Exit and keep the current band\n");
+
+    GetMenuInputResult min =
+        ConsoleUtil.getMenuInput("Minimum occupancy [0 - 100]: ", 0, 100, new char[] {'E', '-'});
+    if (!min.isNumber && "E".equalsIgnoreCase(min.input)) {
+      return new int[] {currentMin, currentMax};
+    }
+
+    GetMenuInputResult max =
+        ConsoleUtil.getMenuInput("Maximum occupancy [0 - 100]: ", 0, 100, new char[] {'-'});
+
+    int low = min.isNumber ? min.getAsInt() : -1;
+    int high = max.isNumber ? max.getAsInt() : -1;
+    if (low >= 0 && high >= 0 && high < low) {
+      throw new IllegalArgumentException("The top of the band cannot fall below its bottom!");
+    }
+    return new int[] {low, high};
+  }
+
+  public int displayForecastSortSubmenu(String current) {
+    return numberedMenu(
+        "SORT ATTRIBUTE",
+        new String[] {"Current: [ " + current + " ]"},
+        new String[] {
+          "Occupancy", "Free Rooms", "Arrivals Due", "Room Type", "Date (enables the binary search)"
+        });
+  }
+
+  public int displayForecastGroupSubmenu(String current) {
+    return numberedMenu(
+        "GROUP ROWS BY",
+        new String[] {
+          "Current: [ " + current + " ]",
+          "",
+          "Grouping splits the exported table into one section per value,",
+          "each with its own row count."
+        },
+        new String[] {"No Grouping", "Room Type", "Night"});
+  }
+
+  public String promptForecastNightSearch() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("FIND A NIGHT", SCREEN_WIDTH);
+    System.out.println("The forecast is sorted by date, so this halves the remaining rows on");
+    System.out.println("every step instead of scanning them one by one.\n");
+    System.out.println("Format: YYYY-MM-DD.");
+    System.out.println("E - Exit back to the receipt\n");
+    return requireText("Enter the night: ", "The night cannot be empty!");
+  }
+
+  // The block is already laid out by the controller, which owns the table widths.
+  public void displayForecastSearchResult(
+      String night, boolean found, String renderedRows, int rowIndex, int comparisons, int total) {
+
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("BINARY SEARCH RESULT", SCREEN_WIDTH);
+
+    TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
+    TableUtil.TableSettings spanSettings =
+        new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {found ? "STATUS: FOUND" : "STATUS: [X] NOT FOUND"}, spanSettings);
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(kvSettings, "Searched Night", night, true);
+    printKeyValue(
+        kvSettings,
+        "Comparisons Used",
+        comparisons + " of " + total + " rows (a linear scan would average " + (total / 2) + ")",
+        true);
+
+    if (found) {
+      printKeyValue(kvSettings, "First Row In Report", String.valueOf(rowIndex), false);
+      System.out.println();
+      System.out.print(renderedRows);
+    } else {
+      printKeyValue(
+          kvSettings,
+          "System Notice",
+          "That night is not inside the current forecast window, or every row for it was filtered"
+              + " out. Widen the window or clear the filters.",
+          false);
+    }
+
+    System.out.println();
+    ConsoleUtil.printContinueMessage();
   }
 
   // Every submenu here is the same shape. Returning 0 means the clerk backed out.
