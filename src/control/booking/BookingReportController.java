@@ -32,7 +32,7 @@ public class BookingReportController {
 
   private static final int REPORT_PAGE_LINES = 18;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-  
+
   private static final String FIELD_NAME = "GUEST NAME";
   private static final String FIELD_GUEST_ID = "GUEST ID";
   private static final String FIELD_IC = "IC NUMBER";

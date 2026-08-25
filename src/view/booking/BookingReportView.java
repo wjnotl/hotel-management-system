@@ -495,8 +495,8 @@ public class BookingReportView {
     return result.getAsInt();
   }
 
-  //Occupancy Forecast & Availability Report
-  
+  // Occupancy Forecast & Availability Report
+
   public String displayForecastControlPanel(
       String reportTitle,
       String windowLabel,
