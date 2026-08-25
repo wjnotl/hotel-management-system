@@ -224,7 +224,7 @@ public class GuestRepo {
     if (configRepo != null) {
       entity.VipSystemConfig config = configRepo.getConfig();
       if (config != null) {
-        config.setLastStrikeResetDate(LocalDate.now().toString());
+        config.setLastStrikeResetDate(LocalDate.now());
         configRepo.updateConfig(config);
       }
     }
