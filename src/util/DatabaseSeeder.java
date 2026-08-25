@@ -919,6 +919,11 @@ public class DatabaseSeeder {
     addRoom(roomRepo, "L-808", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, true);
     addRoom(roomRepo, "L-809", Room.RoomType.LUXURY, Room.Status.DIRTY, 850.00, false);
     addRoom(roomRepo, "L-810", Room.RoomType.LUXURY, Room.Status.CLEANING, 850.00, false);
+    addRoom(roomRepo, "L-811", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, true);
+    addRoom(roomRepo, "L-812", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, true);
+    addRoom(roomRepo, "L-813", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, true);
+    addRoom(roomRepo, "L-814", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, false);
+    addRoom(roomRepo, "L-815", Room.RoomType.LUXURY, Room.Status.VACANT_CLEAN, 850.00, false);
 
     addRoom(roomRepo, "S-501", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, false);
     addRoom(roomRepo, "S-502", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, false);
@@ -930,6 +935,11 @@ public class DatabaseSeeder {
     addRoom(roomRepo, "S-508", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, true);
     addRoom(roomRepo, "S-509", Room.RoomType.SUITE, Room.Status.DIRTY, 550.00, false);
     addRoom(roomRepo, "S-510", Room.RoomType.SUITE, Room.Status.CLEANING, 550.00, false);
+    addRoom(roomRepo, "S-511", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, true);
+    addRoom(roomRepo, "S-512", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, true);
+    addRoom(roomRepo, "S-513", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, true);
+    addRoom(roomRepo, "S-514", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, true);
+    addRoom(roomRepo, "S-515", Room.RoomType.SUITE, Room.Status.VACANT_CLEAN, 550.00, false);
 
     addRoom(roomRepo, "ST-101", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
     addRoom(roomRepo, "ST-102", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
@@ -941,6 +951,11 @@ public class DatabaseSeeder {
     addRoom(roomRepo, "ST-108", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, true);
     addRoom(roomRepo, "ST-109", Room.RoomType.STANDARD, Room.Status.DIRTY, 250.00, false);
     addRoom(roomRepo, "ST-110", Room.RoomType.STANDARD, Room.Status.CLEANING, 250.00, false);
+    addRoom(roomRepo, "ST-111", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
+    addRoom(roomRepo, "ST-112", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
+    addRoom(roomRepo, "ST-113", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
+    addRoom(roomRepo, "ST-114", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
+    addRoom(roomRepo, "ST-115", Room.RoomType.STANDARD, Room.Status.VACANT_CLEAN, 250.00, false);
 
     // Seed reservations
     addStdWait(standardRepo, "G-141", Room.RoomType.LUXURY, now.minusMinutes(25));
@@ -1167,7 +1182,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-101",
             Room.RoomType.LUXURY,
-            "L-805",
+            "L-807",
             now.minusMinutes(10),
             4,
             10,
@@ -1181,7 +1196,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-109",
             Room.RoomType.LUXURY,
-            "L-806",
+            "L-808",
             now.minusMinutes(12),
             5,
             10,
@@ -1195,7 +1210,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-110",
             Room.RoomType.LUXURY,
-            "L-808",
+            "L-812",
             now.minusMinutes(14),
             6,
             10,
@@ -1209,7 +1224,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-123",
             Room.RoomType.LUXURY,
-            "L-807",
+            "L-813",
             now.minusMinutes(22),
             10,
             15,
@@ -1223,7 +1238,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-124",
             Room.RoomType.SUITE,
-            "S-505",
+            "S-507",
             now.minusMinutes(20),
             9,
             15,
@@ -1237,7 +1252,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-125",
             Room.RoomType.SUITE,
-            "S-506",
+            "S-508",
             now.minusMinutes(25),
             11,
             15,
@@ -1251,7 +1266,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-126",
             Room.RoomType.SUITE,
-            "S-507",
+            "S-512",
             now.minusMinutes(22),
             13,
             20,
@@ -1265,7 +1280,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-127",
             Room.RoomType.SUITE,
-            "S-508",
+            "S-513",
             now.minusMinutes(30),
             15,
             20,
@@ -1279,7 +1294,7 @@ public class DatabaseSeeder {
             roomRepo,
             "G-128",
             Room.RoomType.SUITE,
-            "S-505",
+            "S-514",
             now.minusMinutes(38),
             16,
             20,
@@ -1333,7 +1348,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-101",
         vc1,
-        "L-805",
+        "L-807",
         Room.RoomType.LUXURY,
         today,
         today.plusDays(3),
@@ -1344,7 +1359,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-109",
         vc2,
-        "L-806",
+        "L-808",
         Room.RoomType.LUXURY,
         today,
         today.plusDays(2),
@@ -1355,7 +1370,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-110",
         vc3,
-        "L-808",
+        "L-812",
         Room.RoomType.LUXURY,
         today,
         today.plusDays(4),
@@ -1366,7 +1381,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-123",
         vc4,
-        "L-807",
+        "L-813",
         Room.RoomType.LUXURY,
         today,
         today.plusDays(2),
@@ -1377,7 +1392,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-124",
         vc5,
-        "S-505",
+        "S-507",
         Room.RoomType.SUITE,
         today,
         today.plusDays(3),
@@ -1388,7 +1403,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-125",
         vc6,
-        "S-506",
+        "S-508",
         Room.RoomType.SUITE,
         today,
         today.plusDays(2),
@@ -1399,7 +1414,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-126",
         vc7,
-        "S-507",
+        "S-512",
         Room.RoomType.SUITE,
         today,
         today.plusDays(4),
@@ -1410,7 +1425,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-127",
         vc8,
-        "S-508",
+        "S-513",
         Room.RoomType.SUITE,
         today,
         today.plusDays(2),
@@ -1421,7 +1436,7 @@ public class DatabaseSeeder {
         billingRepo,
         "G-128",
         vc9,
-        "S-505",
+        "S-514",
         Room.RoomType.SUITE,
         today,
         today.plusDays(5),
