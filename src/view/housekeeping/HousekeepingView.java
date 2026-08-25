@@ -6,7 +6,6 @@ import entity.HousekeepingStaff;
 import entity.HousekeepingTask;
 import entity.Room;
 import entity.RoomStatusLogEntry;
-import java.util.List;
 import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
@@ -439,13 +438,13 @@ public class HousekeepingView {
         promptText, 1, maxOptionNum, new char[] {'S', 'E', 'N', 'P', 'A'});
   }
 
-  private String formatAssignedRooms(List<String> rooms) {
+  private String formatAssignedRooms(ListInterface<String> rooms) {
     if (rooms == null || rooms.isEmpty()) return "None";
 
     StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < rooms.size(); i++) {
-      if (i > 0) sb.append(", ");
-      sb.append(rooms.get(i));
+    for (int i = 1; i <= rooms.getNumberOfEntries(); i++) {
+      if (i > 1) sb.append(", ");
+      sb.append(rooms.getEntry(i));
     }
     return sb.toString();
   }

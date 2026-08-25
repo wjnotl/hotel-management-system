@@ -414,7 +414,9 @@ public class HouseKeepingController {
     HousekeepingSettings settings = settingsRepo.getSettings();
     int max = getMaxRoomsForShift(staff.getShift(), settings);
     int current =
-        staff.getAssignedRoomNumbers() == null ? 0 : staff.getAssignedRoomNumbers().size();
+        staff.getAssignedRoomNumbers() == null
+            ? 0
+            : staff.getAssignedRoomNumbers().getNumberOfEntries();
     return current >= max;
   }
 
