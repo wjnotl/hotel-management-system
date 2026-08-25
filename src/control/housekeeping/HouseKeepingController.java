@@ -413,7 +413,8 @@ public class HouseKeepingController {
   private boolean isAtShiftCapacity(HousekeepingStaff staff) {
     HousekeepingSettings settings = settingsRepo.getSettings();
     int max = getMaxRoomsForShift(staff.getShift(), settings);
-    int current = staff.getAssignedRoomNumbers() == null ? 0 : staff.getAssignedRoomNumbers().size();
+    int current =
+        staff.getAssignedRoomNumbers() == null ? 0 : staff.getAssignedRoomNumbers().size();
     return current >= max;
   }
 
@@ -1411,7 +1412,11 @@ public class HouseKeepingController {
 
             if (previousStaff != null && previousStaff.getStaffId().equals(staff.getStaffId())) {
               ConsoleUtil.printError(
-                  "Task " + selected.getTaskId() + " is already assigned to " + staff.getName() + ".");
+                  "Task "
+                      + selected.getTaskId()
+                      + " is already assigned to "
+                      + staff.getName()
+                      + ".");
               continue;
             }
 
@@ -1427,10 +1432,13 @@ public class HouseKeepingController {
                       "Room "
                           + selected.getRoomNumber()
                           + " is currently IN PROGRESS under "
-                          + (previousStaff != null ? previousStaff.getName() : "another staff member")
+                          + (previousStaff != null
+                              ? previousStaff.getName()
+                              : "another staff member")
                           + ". Reassigning will reset it to ASSIGNED and "
                           + staff.getName()
-                          + " will need to Start Cleaning again. Are you sure you want to reassign?");
+                          + " will need to Start Cleaning again. Are you sure you want to"
+                          + " reassign?");
               if (!confirmed) {
                 continue; // Declined — back to the task action menu
               }

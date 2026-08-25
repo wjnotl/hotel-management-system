@@ -590,7 +590,9 @@ public class HousekeepingReportController {
 
     if (choice == 1) {
       exportStaffPerformanceReportToFile(
-          dateRangeLabel(startDate, endDate), shiftFilter == null ? "ALL" : shiftFilter.name(), rows);
+          dateRangeLabel(startDate, endDate),
+          shiftFilter == null ? "ALL" : shiftFilter.name(),
+          rows);
     }
     // choice == 2 (or export done): falls through, back to filter hub
   }
@@ -638,7 +640,8 @@ public class HousekeepingReportController {
           double totalMinutes =
               timedCleaningTasks.reduce(
                   0.0,
-                  (sum, t) -> sum + Duration.between(t.getStartedAt(), t.getCompletedAt()).toMinutes());
+                  (sum, t) ->
+                      sum + Duration.between(t.getStartedAt(), t.getCompletedAt()).toMinutes());
 
           return new StaffPerformanceRowDTO(
               staff.getStaffId(),
