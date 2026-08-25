@@ -26,15 +26,13 @@ public class BookingReportController {
   private static final String PERFORMANCE_TITLE = "QUEUE PERFORMANCE & NO-SHOW ANALYSIS";
   private static final String FORECAST_TITLE = "FORWARD OCCUPANCY & AVAILABILITY FORECAST";
 
-  // A fortnight is what a desk plans against. The window is editable up to the booking lead time.
   private static final int DEFAULT_FORECAST_NIGHTS = 14;
   private static final String NEW_LINE = System.lineSeparator();
   private static final String BLANK_INPUT = "Input cannot be empty!";
 
-  // Leaves room for the title box and the command line on an 80 by 25 console.
   private static final int REPORT_PAGE_LINES = 18;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
+  
   private static final String FIELD_NAME = "GUEST NAME";
   private static final String FIELD_GUEST_ID = "GUEST ID";
   private static final String FIELD_IC = "IC NUMBER";

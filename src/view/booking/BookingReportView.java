@@ -495,13 +495,8 @@ public class BookingReportView {
     return result.getAsInt();
   }
 
-  // ================= OCCUPANCY FORECAST SCREENS =================
-
-  /**
-   * The scope screen for the occupancy forecast.
-   *
-   * @return "1".."9" for a filter, or "X" to export, "R" to reset, "E" to leave
-   */
+  //Occupancy Forecast & Availability Report
+  
   public String displayForecastControlPanel(
       String reportTitle,
       String windowLabel,
