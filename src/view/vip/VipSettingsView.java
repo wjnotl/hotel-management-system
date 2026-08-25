@@ -17,7 +17,7 @@ public class VipSettingsView {
     System.out.println("4. Edit Report Alert Target Limits");
     System.out.println("5. Apply Settings to Active Queue");
     System.out.println("6. Reset to Factory Default Settings");
-    System.out.println("7. Back\n");
+    System.out.println("7. Back to VIP Menu\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
   }
