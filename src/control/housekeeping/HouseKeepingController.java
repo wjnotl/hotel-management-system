@@ -551,6 +551,44 @@ public class HouseKeepingController {
     }
   }
 
+  // Marking a task Complete/Skip from the Task Board is where the room's real-world state
+  // actually changes — this pushes that change onto Room Status Sync (and its history log),
+  // which finishTask() alone never did. Also calls finishTask() while the caller there is
+  // already explicitly setting/logging the room's new status
+  private void syncRoomAfterTaskFinished(HousekeepingTask task, HousekeepingTask.Status newStatus) {
+    Room room = roomRepo.findByRoomNumber(task.getRoomNumber());
+    if (room == null) return;
+
+    if (!isCleaningTaskType(task.getTaskType())) {
+      // Maintenance checks don't affect the DIRTY/CLEANING/VACANT_CLEAN lifecycle — just log
+      // the outcome so View Status History still shows something happened.
+      roomStatusHistoryRepo.recordNote(
+          room.getRoomNumber(),
+          "Maintenance check " + newStatus.name().toLowerCase() + " (" + task.getTaskId() + ")");
+      return;
+    }
+
+    if (newStatus == HousekeepingTask.Status.COMPLETED) {
+      // Clean finished: room is now vacant and clean.
+      if (room.getStatus() != Room.Status.VACANT_CLEAN) {
+        Room.Status oldStatus = room.getStatus();
+        room.setStatus(Room.Status.VACANT_CLEAN);
+        roomRepo.updateRoom(room);
+        roomStatusHistoryRepo.recordStatusChange(
+            room.getRoomNumber(), oldStatus, Room.Status.VACANT_CLEAN);
+      }
+    } else if (newStatus == HousekeepingTask.Status.SKIPPED) {
+      // Clean was abandoned mid-way: if it had already progressed to CLEANING, drop it back to
+      // DIRTY — it still needs a proper clean. A room still sitting at DIRTY is left alone.
+      if (room.getStatus() == Room.Status.CLEANING) {
+        room.setStatus(Room.Status.DIRTY);
+        roomRepo.updateRoom(room);
+        roomStatusHistoryRepo.recordStatusChange(
+            room.getRoomNumber(), Room.Status.CLEANING, Room.Status.DIRTY);
+      }
+    }
+  }
+
   // --- STAFF ASSIGNMENTS SCREEN LOOP ---
   public void manageStaffAssignments() {
     int currentPage = 1;
@@ -1463,8 +1501,10 @@ public class HouseKeepingController {
           }
         } else if (action == 3) {
           finishTask(selected, HousekeepingTask.Status.COMPLETED);
+          syncRoomAfterTaskFinished(selected, HousekeepingTask.Status.COMPLETED);
         } else if (action == 4) {
           finishTask(selected, HousekeepingTask.Status.SKIPPED);
+          syncRoomAfterTaskFinished(selected, HousekeepingTask.Status.SKIPPED);
         } else if (action == 5) {
           boolean escalated = taskRepo.escalateToFront(selected);
           if (escalated) {
