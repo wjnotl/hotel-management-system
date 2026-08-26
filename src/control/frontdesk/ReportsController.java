@@ -52,7 +52,7 @@ public class ReportsController {
 
   // report 1 - guest checkout report
   private void runCheckoutReport() {
-    LocalDate fromDate = LocalDate.now();
+    LocalDate fromDate = LocalDate.now().withDayOfMonth(1);
     LocalDate toDate = LocalDate.now();
     String paymentFilter = null;
     String roomTypeFilter = null;
