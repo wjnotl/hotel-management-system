@@ -37,7 +37,7 @@ public class WalkInRegistrationView {
   public Room.RoomType promptRoomType(
       Guest guest,
       int[] vacantByType,
-      int[] arrivingTodayByType,
+      int[] heldForBookingsByType,
       int[] vipWaitingByType,
       int[] lineLengthByType,
       boolean enforceVipBypass,
@@ -72,12 +72,12 @@ public class WalkInRegistrationView {
             String.valueOf(i + 1),
             types[i].name(),
             String.valueOf(vacantByType[i]),
-            String.valueOf(arrivingTodayByType[i]),
+            String.valueOf(heldForBookingsByType[i]),
             String.valueOf(vipWaitingByType[i]),
             String.valueOf(lineLengthByType[i]),
             outcomeFor(
                 vacantByType[i],
-                arrivingTodayByType[i],
+                heldForBookingsByType[i],
                 vipWaitingByType[i],
                 lineLengthByType[i],
                 enforceVipBypass,
@@ -90,7 +90,8 @@ public class WalkInRegistrationView {
 
     System.out.println();
     System.out.println("ADV HELD counts rooms already promised to advance bookings arriving");
-    System.out.println("today, so they are not handed to the counter by mistake.");
+    System.out.println("today or tomorrow. A booking holds its room from the night before it");
+    System.out.println("arrives, so neither is handed to the counter by mistake.");
     System.out.println();
     System.out.println("4. Back To Guest Selection\n");
 
@@ -104,13 +105,13 @@ public class WalkInRegistrationView {
   // Mirrors the controller's decision in order, so the column never over-promises.
   private String outcomeFor(
       int vacant,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting,
       int lineLength,
       boolean enforceVipBypass,
       boolean autoAssignWhenRoomFree) {
 
-    int freeToCounter = vacant - arrivingToday;
+    int freeToCounter = vacant - heldForBookings;
 
     if (vacant == 0) {
       return "No room free, must wait";
@@ -157,45 +158,38 @@ public class WalkInRegistrationView {
     printKeyValue(
         kvSettings,
         "System Notice",
-        "This module books non-members only. A tier holder is ranked against the other waiting"
-            + " members by priority score rather than by arrival order, so their reservation has"
-            + " to be opened in the VIP module. Nothing has been recorded here.",
+        "Walk in is for non member only, VIP walk in is in VIP module",
         false);
 
     System.out.println();
     ConsoleUtil.printContinueMessage();
   }
 
-  public void displayAlreadyActiveScreen(
-      Guest guest, Reservation existing, int position, boolean acrossAllTypes) {
+  public void displayAlreadyActiveScreen(Guest guest, Reservation existing, int position) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST ALREADY BEING SERVED", SCREEN_WIDTH);
 
     String where =
         (existing.getStatus() == Reservation.Status.WAITING)
-            ? "standing in the "
+            ? "in the "
                 + existing.getRoomType().name()
                 + " line at position "
                 + ((position > 0) ? position : 1)
             : "holding "
                 + existing.getRoomType().name()
                 + " room "
-                + blankToNa(existing.getRoomNumber())
-                + " and is due to check in";
+                + blankToNa(existing.getRoomNumber());
 
     printNoticeBox(
         "STATUS: [X] SECOND BOOKING REFUSED",
         "Target Guest",
         guest.getName() + " (" + guest.getGuestId() + ")",
-        "This guest is already "
+        "Already "
             + where
-            + " under reservation "
+            + " under "
             + existing.getReservationId()
-            + (acrossAllTypes
-                ? ". One person may hold only one live standard booking, across every room type."
-                : ". One person may take only one place in a given line, though they may wait in"
-                    + " another room type's line at the same time.")
-            + " Serve or cancel that entry instead of opening a second one.");
+            + ". Settings currently allow one booking per guest. Serve or cancel that entry"
+            + " first, or turn that rule off in Settings.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -219,18 +213,7 @@ public class WalkInRegistrationView {
         "Nights Booked",
         (booking.getStayDays() != null) ? booking.getStayDays() + " night(s)" : "Not stated",
         true);
-    printKeyValue(kvSettings, "Booked At", formatTime(booking.getReservationTime()), true);
-    printKeyValue(
-        kvSettings,
-        "System Notice",
-        dueToday
-            ? "This guest reserved a room in advance and has now arrived. Using that booking keeps"
-                + " one record for the stay. Opening a separate walk-in leaves the original"
-                + " booking unclaimed."
-            : "That booking is for a different night, and a booking may only be taken up on the"
-                + " night it reserves. It stays open and untouched. Serving this guest now means"
-                + " an ordinary walk-in against today's stock.",
-        false);
+    printKeyValue(kvSettings, "Booked At", formatTime(booking.getReservationTime()), false);
 
     System.out.println();
 
@@ -253,7 +236,7 @@ public class WalkInRegistrationView {
       Room room,
       int graceMinutes,
       int vacantRooms,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting) {
 
     ConsoleUtil.clearScreen();
@@ -269,7 +252,8 @@ public class WalkInRegistrationView {
     printKeyValue(kvSettings, "Room Type", room.getRoomType().name(), true);
     printKeyValue(kvSettings, "Rate Per Night", String.format("RM %.2f", room.getPrice()), true);
     printKeyValue(kvSettings, "Rooms Left After", String.valueOf(vacantRooms - 1), true);
-    printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
+    printKeyValue(
+        kvSettings, "Held For Arrivals (Today & Tomorrow)", String.valueOf(heldForBookings), true);
     printKeyValue(kvSettings, "VIP Still Waiting", String.valueOf(vipWaiting), true);
     printKeyValue(
         kvSettings,
@@ -294,7 +278,7 @@ public class WalkInRegistrationView {
       int waiting,
       int capacity,
       int vacantRooms,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting,
       String reasonForWaiting) {
 
@@ -324,10 +308,11 @@ public class WalkInRegistrationView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Target Line", roomType.name(), true);
     printKeyValue(kvSettings, "Vacant Clean Rooms", String.valueOf(vacantRooms), true);
-    printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
+    printKeyValue(
+        kvSettings, "Held For Arrivals (Today & Tomorrow)", String.valueOf(heldForBookings), true);
     printKeyValue(kvSettings, "VIP Already Waiting", String.valueOf(vipWaiting), true);
     printKeyValue(kvSettings, "Currently Waiting", String.valueOf(waiting), true);
-    printKeyValue(kvSettings, "Array Capacity", waiting + " / " + capacity + " slots used", true);
+    printKeyValue(kvSettings, "Line Capacity", waiting + " / " + capacity + " places used", true);
     printKeyValue(kvSettings, "Position On Joining", projectedPosition + " (joins the back)", true);
     printKeyValue(kvSettings, "Why They Wait", reasonForWaiting, false);
 
@@ -347,10 +332,8 @@ public class WalkInRegistrationView {
         waiting + " waiting, the limit in force is " + maxQueueLength,
         "The "
             + roomType.name()
-            + " line has reached a limit set under Settings & Configuration, either the house"
-            + " length rule or a queue array that is full and not allowed to grow, so no further"
-            + " walk-in can be taken for this type. Serve the front of the line, raise the limit,"
-            + " or offer the guest a different room type.");
+            + " line is full. Serve the front of the line, raise the limit in Settings or offer"
+            + " another room type.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -393,7 +376,7 @@ public class WalkInRegistrationView {
     printKeyValue(kvSettings, "Guest Name", (guest != null) ? guest.getName() : "N/A", true);
     printKeyValue(kvSettings, "Room Type", reservation.getRoomType().name(), true);
     printKeyValue(kvSettings, "Place In Line", String.valueOf(position), true);
-    printKeyValue(kvSettings, "Line Length", waiting + " / " + capacity + " slots used", false);
+    printKeyValue(kvSettings, "Line Length", waiting + " / " + capacity + " places used", false);
 
     System.out.println();
     ConsoleUtil.printContinueMessage();

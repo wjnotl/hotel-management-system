@@ -15,7 +15,7 @@ public class BookingSettings implements Serializable {
   private static final int ROOM_TYPE_COUNT = 3;
 
   // Serialisation cannot tell an absent field from a false one, so the stamp dates the file.
-  private static final int CURRENT_SCHEMA = 5;
+  private static final int CURRENT_SCHEMA = 6;
   private int schemaVersion;
 
   // Hold & No-Show Rules
@@ -78,7 +78,7 @@ public class BookingSettings implements Serializable {
 
     this.pageSize = 10;
     this.maxStayNights = 30;
-    this.defaultQueueSort = "QUEUE POSITION (FIFO)";
+    this.defaultQueueSort = "QUEUE POSITION (ARRIVAL ORDER)";
     this.defaultAdvanceSort = "ARRIVAL DATE (SOONEST -> LATEST)";
     this.defaultReportPeriod = "TODAY";
     this.defaultRecordLimit = 10;
@@ -124,6 +124,11 @@ public class BookingSettings implements Serializable {
       this.allowSameDayAdvanceBooking = false;
     }
 
+    // The sort label lost its jargon, so a file still holding the old wording is renamed.
+    if (schemaVersion < 6 && "QUEUE POSITION (FIFO)".equals(defaultQueueSort)) {
+      this.defaultQueueSort = "QUEUE POSITION (ARRIVAL ORDER)";
+    }
+
     if (schemaVersion < CURRENT_SCHEMA) {
       this.schemaVersion = CURRENT_SCHEMA;
     }
@@ -138,7 +143,7 @@ public class BookingSettings implements Serializable {
       typeMaxQueueLength = blankOverrides();
     }
     if (defaultQueueSort == null || defaultQueueSort.isEmpty()) {
-      defaultQueueSort = "QUEUE POSITION (FIFO)";
+      defaultQueueSort = "QUEUE POSITION (ARRIVAL ORDER)";
     }
     if (defaultAdvanceSort == null || defaultAdvanceSort.isEmpty()) {
       defaultAdvanceSort = "ARRIVAL DATE (SOONEST -> LATEST)";

@@ -158,7 +158,7 @@ public class BookingReportView {
           "[F] Find "
               + searchTargetLabel
               + (binarySearchAvailable
-                  ? " (binary search on the sorted rows)"
+                  ? " (fast search on the sorted rows)"
                   : " (re-sorts the report first)"));
     }
     System.out.println("[V] View The Report On Screen");
@@ -170,7 +170,7 @@ public class BookingReportView {
     return ConsoleUtil.getMenuInput("Enter a command: ", commands);
   }
 
-  // Binary search needs the sorted key, so the screen offers the re-sort, not a refusal.
+  // The search needs the sorted key, so the screen offers the re-sort, not a refusal.
   public boolean displayResortForSearchScreen(
       String currentSortLabel, String keyLabel, String requiredOrder) {
     ConsoleUtil.clearScreen();
@@ -181,19 +181,10 @@ public class BookingReportView {
         new TableUtil.TableSettings(SPAN_WIDTH).setHAlign(0, TableUtil.Align.CENTER);
 
     TableUtil.printTableBorder(spanSettings, TableUtil.BorderPosition.TOP);
-    TableUtil.printTableRow(
-        new String[] {"STATUS: [!] WRONG ORDER FOR A BINARY SEARCH"}, spanSettings);
+    TableUtil.printTableRow(new String[] {"STATUS: [!] WRONG ORDER TO SEARCH"}, spanSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Sorted By", currentSortLabel, true);
-    printKeyValue(
-        kvSettings,
-        "System Notice",
-        "A binary search halves the list at every step by comparing against the key it is ordered"
-            + " by, so it can only run on rows sorted by "
-            + requiredOrder
-            + ". The report can be re-sorted and re-exported now, which changes nothing but the"
-            + " order of the rows.",
-        false);
+    printKeyValue(kvSettings, "Needs To Be Sorted By", requiredOrder, false);
 
     System.out.println();
     System.out.println("1. Re-Sort By " + keyLabel + " And Search");
@@ -205,8 +196,7 @@ public class BookingReportView {
   public String promptReservationIdSearch() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("FIND A RESERVATION ID", SCREEN_WIDTH);
-    System.out.println("The register is sorted by reservation ID, so this halves the remaining");
-    System.out.println("rows on every step instead of scanning them one by one.\n");
+    System.out.println("The register is sorted by reservation ID, so this finds it quickly.\n");
     System.out.println("E - Exit back to the receipt\n");
     return requireText("Enter the reservation ID: ", "Reservation ID cannot be empty!");
   }
@@ -223,7 +213,7 @@ public class BookingReportView {
       int total) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("BINARY SEARCH RESULT", SCREEN_WIDTH);
+    ConsoleUtil.printTitleBox("SEARCH RESULT", SCREEN_WIDTH);
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
     TableUtil.TableSettings spanSettings =
@@ -234,18 +224,14 @@ public class BookingReportView {
         new String[] {found ? "STATUS: FOUND" : "STATUS: [X] NOT FOUND"}, spanSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Searched ID", targetId, true);
-    printKeyValue(
-        kvSettings,
-        "Comparisons Used",
-        comparisons + " of " + total + " rows (a linear scan would average " + (total / 2) + ")",
-        true);
+    printKeyValue(kvSettings, "Rows Checked", comparisons + " of " + total + " rows", true);
 
     if (!found) {
       printKeyValue(
           kvSettings,
           "System Notice",
-          "No booking with that reservation ID is inside the current report scope. Widen the"
-              + " filters or check the ID.",
+          "No booking with that ID is in the current report scope. Widen the filters or check"
+              + " the ID.",
           false);
     } else {
       printKeyValue(kvSettings, "Row In Register", String.valueOf(rowIndex), true);
@@ -426,7 +412,7 @@ public class BookingReportView {
               "Guest Name",
               "Room Type",
               "Booking Status",
-              "Reservation ID (enables the binary search)"
+              "Reservation ID (enables the fast search)"
             }
             : new String[] {
               "Wait Duration",
@@ -530,6 +516,9 @@ public class BookingReportView {
     System.out.println();
     System.out.println("Nights matching the current scope: " + matchCount);
     System.out.println();
+    System.out.println("An advance booking is committed from the night before it arrives, so a");
+    System.out.println("night can show a room committed with no arrival due against it.");
+    System.out.println();
     System.out.println("[X] Export Report To TXT   [R] Reset All Filters");
     System.out.println("[E] Exit to Analytics Hub\n");
 
@@ -607,7 +596,7 @@ public class BookingReportView {
         "SORT ATTRIBUTE",
         new String[] {"Current: [ " + current + " ]"},
         new String[] {
-          "Occupancy", "Free Rooms", "Arrivals Due", "Room Type", "Date (enables the binary search)"
+          "Occupancy", "Free Rooms", "Arrivals Due", "Room Type", "Date (enables the fast search)"
         });
   }
 
@@ -626,8 +615,7 @@ public class BookingReportView {
   public String promptForecastNightSearch() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("FIND A NIGHT", SCREEN_WIDTH);
-    System.out.println("The forecast is sorted by date, so this halves the remaining rows on");
-    System.out.println("every step instead of scanning them one by one.\n");
+    System.out.println("The forecast is sorted by date, so this finds it quickly.\n");
     System.out.println("Format: YYYY-MM-DD.");
     System.out.println("E - Exit back to the receipt\n");
     return requireText("Enter the night: ", "The night cannot be empty!");
@@ -638,7 +626,7 @@ public class BookingReportView {
       String night, boolean found, String renderedRows, int rowIndex, int comparisons, int total) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("BINARY SEARCH RESULT", SCREEN_WIDTH);
+    ConsoleUtil.printTitleBox("SEARCH RESULT", SCREEN_WIDTH);
 
     TableUtil.TableSettings kvSettings = new TableUtil.TableSettings(KV_WIDTHS);
     TableUtil.TableSettings spanSettings =
@@ -649,11 +637,7 @@ public class BookingReportView {
         new String[] {found ? "STATUS: FOUND" : "STATUS: [X] NOT FOUND"}, spanSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Searched Night", night, true);
-    printKeyValue(
-        kvSettings,
-        "Comparisons Used",
-        comparisons + " of " + total + " rows (a linear scan would average " + (total / 2) + ")",
-        true);
+    printKeyValue(kvSettings, "Rows Checked", comparisons + " of " + total + " rows", true);
 
     if (found) {
       printKeyValue(kvSettings, "First Row In Report", String.valueOf(rowIndex), false);
@@ -663,7 +647,7 @@ public class BookingReportView {
       printKeyValue(
           kvSettings,
           "System Notice",
-          "That night is not inside the current forecast window, or every row for it was filtered"
+          "That night is not in the current forecast window, or every row for it was filtered"
               + " out. Widen the window or clear the filters.",
           false);
     }

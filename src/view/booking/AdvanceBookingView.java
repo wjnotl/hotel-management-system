@@ -236,12 +236,13 @@ public class AdvanceBookingView {
 
   // Availability is shown first, so a booking never starts against a refused type.
   public Room.RoomType promptRoomType(
-      Guest guest, LocalDate arrival, int[] totalByType, int[] freeByType) {
+      Guest guest, LocalDate arrival, LocalDate holdStart, int[] totalByType, int[] freeByType) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - ROOM TYPE", SCREEN_WIDTH);
     System.out.println("Guest   : " + guest.getName() + " (" + guest.getGuestId() + ")");
-    System.out.println("Arrives : " + arrival.format(DATE_FORMAT) + "\n");
+    System.out.println("Arrives : " + arrival.format(DATE_FORMAT));
+    System.out.println("Held    : " + heldWindowLabel(arrival, holdStart) + "\n");
 
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(AVAIL_WIDTHS)
@@ -254,7 +255,7 @@ public class AdvanceBookingView {
 
     TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"AVAILABILITY ON " + arrival.format(DATE_FORMAT)}, spanSettings());
+        new String[] {"AVAILABILITY OVER " + heldWindowLabel(arrival, holdStart)}, spanSettings());
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.SPAN_OPEN);
     TableUtil.printTableRow(
         new String[] {"NO.", "ROOM TYPE", "ROOMS", "FREE", "TAKEN", "STATUS"}, headerSettings);
@@ -269,7 +270,7 @@ public class AdvanceBookingView {
             String.valueOf(totalByType[i]),
             String.valueOf(freeByType[i]),
             String.valueOf(totalByType[i] - freeByType[i]),
-            (freeByType[i] > 0) ? "Bookable on this date" : "Fully booked on this date"
+            (freeByType[i] > 0) ? "Bookable for this stay" : "Fully booked in this window"
           },
           settings);
     }
@@ -277,6 +278,12 @@ public class AdvanceBookingView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();
+    if (holdStart != null && holdStart.isBefore(arrival)) {
+      System.out.println(
+          "FREE is the tightest of the two nights above. A booking holds its room from the");
+      System.out.println("night before it arrives, so that night counts against it too.");
+      System.out.println();
+    }
     System.out.println("4. Back\n");
 
     int choice = ConsoleUtil.getMenuInput("Choose a room type: ", 1, 4).getAsInt();
@@ -305,12 +312,19 @@ public class AdvanceBookingView {
   }
 
   public Integer promptNights(
-      Room.RoomType roomType, LocalDate arrival, int maxBookable, int houseMax, Integer current) {
+      Room.RoomType roomType,
+      LocalDate arrival,
+      LocalDate holdStart,
+      int lead,
+      int maxBookable,
+      int houseMax,
+      Integer current) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NEW ADVANCE BOOKING - NIGHTS", SCREEN_WIDTH);
     System.out.println("Room type : " + roomType.name());
-    System.out.println("Arrives   : " + arrival.format(DATE_FORMAT) + "\n");
+    System.out.println("Arrives   : " + arrival.format(DATE_FORMAT));
+    System.out.println("Held      : " + heldWindowLabel(arrival, holdStart) + "\n");
 
     if (maxBookable < houseMax) {
       System.out.println(
@@ -328,6 +342,13 @@ public class AdvanceBookingView {
     }
 
     System.out.println();
+    if (lead > 0 && holdStart != null) {
+      System.out.println(
+          "The night of "
+              + holdStart.format(DATE_FORMAT)
+              + " is held for this booking as well, so the calendar");
+      System.out.println("above is read from that night rather than from the arrival.");
+    }
     System.out.println("Checkout day is a turnover day, so a stay ending on the 5th does not");
     System.out.println("block another guest arriving on the 5th.");
     System.out.println("\nType 'C' to go back to the room type\n");
@@ -337,6 +358,11 @@ public class AdvanceBookingView {
 
   public void displayFullyBookedScreen(
       Room.RoomType roomType, LocalDate arrival, LocalDate firstFullDate, int totalRooms) {
+
+    // A full night before the arrival cannot be escaped by booking fewer nights, so that advice is
+    // withheld rather than sending the clerk round the same refusal again.
+    boolean heldNightIsFull = firstFullDate != null && firstFullDate.isBefore(arrival);
+
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NO ROOMS ON THAT DATE", SCREEN_WIDTH);
     printNoticeBox(
@@ -347,14 +373,26 @@ public class AdvanceBookingView {
             + totalRooms
             + " "
             + roomType.name()
-            + " room(s) are already committed on that night, counting advance bookings, guests"
-            + " still in their rooms and rooms currently on hold. Offer a different date, a"
-            + " shorter stay or another room type.");
+            + " room(s) are committed on that night. "
+            + (heldNightIsFull
+                ? "That night falls before the arrival because a booking holds its room from the"
+                    + " night before. A shorter stay cannot avoid it, so offer a different date or"
+                    + " another room type."
+                : "Offer a different date, a shorter stay or another room type."));
     ConsoleUtil.printContinueMessage();
   }
 
   String tierLabel(Member.LoyaltyTier tier) {
     return (tier == null) ? "NONE" : tier.name();
+  }
+
+  // The window the stock is actually read over, which is one night wider than the arrival unless
+  // that night has already passed.
+  private String heldWindowLabel(LocalDate arrival, LocalDate holdStart) {
+    if (holdStart == null || !holdStart.isBefore(arrival)) {
+      return arrival.format(DATE_FORMAT) + " (no earlier night left to hold)";
+    }
+    return holdStart.format(DATE_FORMAT) + "  ..  " + arrival.format(DATE_FORMAT);
   }
 
   // The nights count alone never says which nights, so both are printed together.
@@ -378,6 +416,8 @@ public class AdvanceBookingView {
       LocalDateTime arrival,
       int nights,
       LocalDate departure,
+      LocalDate holdStart,
+      int lead,
       int freeAfterBooking) {
 
     ConsoleUtil.clearScreen();
@@ -398,14 +438,21 @@ public class AdvanceBookingView {
     printKeyValue(kvSettings, "Due To Check Out", departure.format(DATE_FORMAT), true);
     printKeyValue(
         kvSettings,
-        "Rooms Left On Arrival",
+        "Room Held From",
+        (lead > 0 && holdStart != null)
+            ? holdStart.format(DATE_FORMAT) + " (the night before arrival)"
+            : arrival.format(DATE_FORMAT) + " (that night has already begun)",
+        true);
+    printKeyValue(
+        kvSettings,
+        "Rooms Left On Tightest Night",
         freeAfterBooking + " of this type after this booking is taken",
         true);
     printKeyValue(
         kvSettings,
         "Queue Placement",
-        "None. The night is committed to this booking now, so the guest is checked straight"
-            + " into a room on arrival instead of standing in the walk-in line.",
+        "None. The room is committed to this booking from the night before arrival, so the guest"
+            + " is checked straight into a ready room instead of standing in the walk-in line.",
         false);
 
     System.out.println();
@@ -529,25 +576,23 @@ public class AdvanceBookingView {
             + r.getReservationId()
             + " for a night that "
             + timing
-            + ", so it cannot be checked in today. A booking reserves one specific night and only"
-            + " that night. Take this visit as an ordinary walk-in, or close the booking as a"
-            + " no-show if the guest never came.");
+            + ", and a booking can only be used on the night it reserves. Take this as a walk-in,"
+            + " or close the booking as a no-show.");
 
     ConsoleUtil.printContinueMessage();
   }
 
-  public void displayNoRoomReadyScreen(Reservation r, Guest g, int vacantCount) {
+  public void displayNoRoomReadyScreen(Reservation r, int vacantCount) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NO ROOM READY YET", SCREEN_WIDTH);
     printNoticeBox(
         "STATUS: [!] CHECK-IN HELD UP",
         "Rooms Clean And Free",
         vacantCount + " " + r.getRoomType().name() + " room(s)",
-        "The night was reserved for "
-            + ((g != null) ? g.getName() : "this guest")
-            + ", so a room is owed. None of that type is VACANT & CLEAN this minute, which is a"
-            + " housekeeping delay rather than an overbooking. The booking stays RESERVED. Try"
-            + " again once a room has been released.");
+        "No "
+            + r.getRoomType().name()
+            + " room is VACANT & CLEAN right now. The booking stays RESERVED, so try again once"
+            + " housekeeping releases one.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -560,12 +605,11 @@ public class AdvanceBookingView {
         "STATUS: [!] MARK AS NO-SHOW",
         "Target Booking",
         r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "The booking closes as NO_SHOW and the night it was holding goes back on sale. A strike is"
-            + " recorded against the guest, taking them to "
+        "The booking closes as NO_SHOW and the night goes back on sale. The guest takes strike "
             + (strikesNow + 1)
             + " of "
             + maxStrikes
-            + " for today. Cancelling instead is the kinder path when the guest did call ahead.");
+            + " for today. Cancel instead if the guest called ahead.");
 
     System.out.println("1. Mark This Booking As A No-Show");
     System.out.println("2. Leave It Alone\n");
@@ -576,12 +620,24 @@ public class AdvanceBookingView {
   public void displayClosureSuccessScreen(Reservation r, Guest g, boolean noShow, int strikesNow) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(noShow ? "MARKED AS NO-SHOW" : "BOOKING CANCELLED", SCREEN_WIDTH);
-    printNoticeBox(
-        noShow ? "STATUS: -> NO_SHOW" : "STATUS: -> CANCELLED",
+
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {noShow ? "STATUS: -> NO_SHOW" : "STATUS: -> CANCELLED"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(
+        kvSettings,
         "Closed Booking",
         r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "The night is back on sale for other guests."
-            + (noShow ? " The guest now holds " + strikesNow + " strike(s)." : ""));
+        true);
+    printKeyValue(kvSettings, "Night", "Back on sale", noShow);
+    if (noShow) {
+      printKeyValue(kvSettings, "Strikes Held", String.valueOf(strikesNow), false);
+    }
+
+    System.out.println();
     ConsoleUtil.printContinueMessage();
   }
 
@@ -665,9 +721,9 @@ public class AdvanceBookingView {
         "STATUS: [!] CANCEL ADVANCE BOOKING",
         "Target Booking",
         r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "The booking is closed as CANCELLED and the room it was holding on "
+        "The booking closes as CANCELLED and the room it holds on "
             + formatArrival(r.getExpectedArrivalTime())
-            + " goes back on sale. It never entered a line, so nobody else moves position.");
+            + " goes back on sale.");
 
     System.out.println("1. Cancel This Advance Booking");
     System.out.println("2. Keep It\n");
@@ -682,11 +738,11 @@ public class AdvanceBookingView {
         "STATUS: [!] ARRIVAL REFUSED",
         "Target Guest",
         ((guest != null) ? guest.getName() : "Guest"),
-        "This guest is already standing in the "
+        "Already in the "
             + existing.getRoomType().name()
             + " line under "
             + existing.getReservationId()
-            + ". Serve that entry before moving another booking in.");
+            + ". Serve that entry first.");
     ConsoleUtil.printContinueMessage();
   }
 

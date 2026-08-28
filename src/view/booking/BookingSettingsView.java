@@ -33,7 +33,7 @@ public class BookingSettingsView {
         2,
         "QUEUE & ORDER RULES",
         config.getInitialQueueCapacity()
-            + " slots, "
+            + " places, "
             + (config.isAllowQueueExpansion() ? "may grow" : "fixed size")
             + "   Line limit "
             + queueLimitLabel(config).toLowerCase()
@@ -126,10 +126,10 @@ public class BookingSettingsView {
           "may get, and who is allowed to jump it."
         },
         new String[] {
-          "Initial Queue Capacity             [Current: "
+          "Starting Line Size                 [Current: "
               + config.getInitialQueueCapacity()
-              + " slots]",
-          "Allow The Queue Array To Grow      [Current: "
+              + " places]",
+          "Allow The Line To Grow             [Current: "
               + yesNo(config.isAllowQueueExpansion())
               + "]",
           "Maximum Line Length                [Current: " + queueLimitLabel(config) + "]",
@@ -142,7 +142,7 @@ public class BookingSettingsView {
           "Allow Supervisor Bypass Override   [Current: "
               + yesNo(config.isAllowBypassOverride())
               + "]",
-          "Allow Serving Out Of FIFO Order    [Current: "
+          "Allow Serving Out Of Turn          [Current: "
               + yesNo(config.isAllowNonFrontAllocation())
               + "]",
           "One Live Booking Per Guest         [Current: "
@@ -254,7 +254,7 @@ public class BookingSettingsView {
               + overrideCell(
                   config.getHoldGraceMinutesOverride(roomType),
                   config.getHoldGraceMinutes(roomType)),
-          "Queue Slots     : "
+          "Line Size       : "
               + overrideCell(
                   config.getInitialQueueCapacityOverride(roomType),
                   config.getInitialQueueCapacity(roomType)),
@@ -266,7 +266,7 @@ public class BookingSettingsView {
         },
         new String[] {
           "Set Hold Grace Window For This Type",
-          "Set Initial Queue Capacity For This Type",
+          "Set Starting Line Size For This Type",
           "Set Maximum Line Length For This Type",
           "Clear Every Override For This Type"
         });
@@ -380,22 +380,22 @@ public class BookingSettingsView {
         new String[] {"STATUS: QUEUES RECREATED FROM THE MASTER LIST"}, spanSettings());
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(
-        kvSettings, "Luxury Line", luxuryWaiting + " waiting / " + luxuryCapacity + " slots", true);
+        kvSettings,
+        "Luxury Line",
+        luxuryWaiting + " waiting / " + luxuryCapacity + " places",
+        true);
     printKeyValue(
-        kvSettings, "Suite Line", suiteWaiting + " waiting / " + suiteCapacity + " slots", true);
+        kvSettings, "Suite Line", suiteWaiting + " waiting / " + suiteCapacity + " places", true);
     printKeyValue(
         kvSettings,
         "Standard Line",
-        standardWaiting + " waiting / " + standardCapacity + " slots",
+        standardWaiting + " waiting / " + standardCapacity + " places",
         true);
     printKeyValue(
         kvSettings,
         "System Notice",
-        "Capacity and the expansion flag are fixed when a queue is created, so a changed value"
-            + " only reaches a line by rebuilding it. Waiting guests keep their FIFO order"
-            + " because the rebuild replays them by arrival time. A line already longer than a"
-            + " newly reduced capacity is opened wide enough to hold everyone rather than"
-            + " dropping the overflow.",
+        "Waiting guests keep their order, and a line longer than the new size is made big enough"
+            + " to hold everyone.",
         false);
 
     System.out.println();
@@ -410,9 +410,7 @@ public class BookingSettingsView {
         "Scope",
         "Hold rules, queue rules, advance booking rules, desk defaults and every"
             + " per-room-type override",
-        "This restores the factory values for this module only. Reservations, guests and rooms"
-            + " are not touched, and the live lines are rebuilt afterwards so the restored"
-            + " capacity takes effect straight away.");
+        "Reservations, guests and rooms are not touched. The live lines are rebuilt afterwards.");
 
     System.out.println("1. Reset Every Booking Setting To Its Default");
     System.out.println("2. Leave The Settings Alone\n");
@@ -423,11 +421,10 @@ public class BookingSettingsView {
   public void displayResetSuccessScreen() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SETTINGS RESET", SCREEN_WIDTH);
-    printNoticeBox(
+    printStatusBox(
         "STATUS: DEFAULTS RESTORED",
         "Result",
-        "All booking settings are back to their factory values",
-        "The live lines have been rebuilt so the default capacity is already in force.");
+        "All booking settings are back to their factory values, and the live lines are rebuilt");
     ConsoleUtil.printContinueMessage();
   }
 

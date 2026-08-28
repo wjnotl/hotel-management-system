@@ -343,12 +343,12 @@ public class StandardReservationRepo {
     return closed;
   }
 
-  // One live booking per guest across all types, so nobody occupies two lines at once.
+  // Only read when the one-booking-per-guest setting is on, which it is not by default.
   public Reservation findLiveReservationForGuest(String guestId) {
     return findLiveReservationForGuest(guestId, null);
   }
 
-  // A null type asks the wide question. A named type asks the rule that always holds.
+  // A null type asks across every line. A named type narrows to that one.
   public Reservation findLiveReservationForGuest(String guestId, Room.RoomType roomType) {
     if (guestId == null) return null;
 
@@ -514,6 +514,28 @@ public class StandardReservationRepo {
   // ===================== DATE AWARE AVAILABILITY =====================
   // Per date, not free right now. Bookings, occupied rooms, holds and VIP records share one stock.
 
+  // An advance booking holds its room from the night before it arrives, so the room is standing
+  // ready rather than being turned around while the guest waits at the counter. One helper, used by
+  // both the sweep that counts other people's bookings and the wizard that checks a new one, so the
+  // two can never disagree about which night a booking starts eating.
+  public static final int ADVANCE_HOLD_LEAD_NIGHTS = 1;
+
+  // A night already past cannot be held, so the eve is dropped rather than the start being dragged
+  // forward, which would move an overdue booking's whole footprint into the future.
+  public LocalDate getAdvanceHoldStartDate(LocalDate arrival) {
+    if (arrival == null) return null;
+
+    LocalDate eve = arrival.minusDays(ADVANCE_HOLD_LEAD_NIGHTS);
+    return eve.isBefore(LocalDate.now()) ? arrival : eve;
+  }
+
+  // 1 normally, 0 when the eve has already passed. Every widened query adds it to both ends.
+  public int getAdvanceHoldLeadNights(LocalDate arrival) {
+    LocalDate start = getAdvanceHoldStartDate(arrival);
+    if (start == null) return 0;
+    return (int) (arrival.toEpochDay() - start.toEpochDay());
+  }
+
   public int getTotalRoomsOfType(RoomRepo roomRepo, Room.RoomType roomType) {
     if (roomRepo == null || roomType == null) return 0;
 
@@ -551,6 +573,12 @@ public class StandardReservationRepo {
       LocalDate start = r.getOccupancyStartDate();
       LocalDate end = r.getOccupancyEndDate();
       if (start == null || end == null || !start.isBefore(end)) continue;
+
+      // Padded after the guard above, never before it: a CHECKED_OUT, NO_SHOW or CANCELLED record
+      // reports an empty interval, and widening one would turn every closed record into a night.
+      if (!r.getIsVip() && r.getStatus() == Reservation.Status.RESERVED) {
+        start = getAdvanceHoldStartDate(start);
+      }
 
       // With same day turnover off the room is not resold that day, so stays pad by a night.
       if (!turnover) {
@@ -622,6 +650,19 @@ public class StandardReservationRepo {
   public int countReservedArrivingOn(Room.RoomType roomType, LocalDate date) {
     if (roomType == null || date == null) return 0;
     return countArrivalsOverWindow(roomType, date, 1)[0];
+  }
+
+  // What a walk-in tonight is really competing with. A booking arriving tomorrow holds its room
+  // from tonight, so the counter may not sell it either. One sweep covers both nights.
+  public int countReservedHoldingOn(Room.RoomType roomType, LocalDate date) {
+    if (roomType == null || date == null) return 0;
+
+    int[] due = countArrivalsOverWindow(roomType, date, 1 + ADVANCE_HOLD_LEAD_NIGHTS);
+    int held = 0;
+    for (int i = 0; i < due.length; i++) {
+      held += due[i];
+    }
+    return held;
   }
 
   // The window twin of the count above, for the same reason.

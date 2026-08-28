@@ -146,8 +146,7 @@ public class BookingSettingsController {
             settingsView.displaySavedScreen(
                 "Hold Grace Window",
                 value + " minutes",
-                "Holds already running keep the window they were created under, so this only"
-                    + " affects holds opened from now on.");
+                "Holds already running keep their original window.");
           }
         } else if (choice == 2) {
           Integer value =
@@ -201,14 +200,14 @@ public class BookingSettingsController {
         if (choice == 1) {
           Integer value =
               promptIntSetting(
-                  "Initial Queue Capacity",
-                  "How many slots each line owns when it is created. It is a hard stop unless"
-                      + " the growth rule below is switched on, in which case the circular array"
-                      + " doubles when it fills and this is only a starting size.",
-                  config().getInitialQueueCapacity() + " slots",
+                  "Starting Line Size",
+                  "How many people each line holds when it is created. It is a hard stop unless"
+                      + " the growth rule below is switched on, in which case the line gets"
+                      + " bigger when it fills and this is only a starting size.",
+                  config().getInitialQueueCapacity() + " places",
                   MIN_QUEUE_CAPACITY,
                   MAX_QUEUE_CAPACITY,
-                  "slots",
+                  "places",
                   capacityWarning());
           if (value != null) {
             config().setInitialQueueCapacity(value);
@@ -218,10 +217,10 @@ public class BookingSettingsController {
         } else if (choice == 2) {
           Boolean value =
               promptToggleSetting(
-                  "Allow The Queue Array To Grow",
-                  "With growth on, a full line doubles its array and keeps accepting guests."
-                      + " With it off, the array is fixed and a full line refuses the next"
-                      + " walk-in outright.",
+                  "Allow The Line To Grow",
+                  "With growth on, a full line gets bigger and keeps accepting guests. With it"
+                      + " off, the line stays a fixed size and refuses the next walk-in"
+                      + " outright.",
                   config().isAllowQueueExpansion(),
                   "Allow growth",
                   "Fixed size",
@@ -248,8 +247,7 @@ public class BookingSettingsController {
             settingsView.displaySavedScreen(
                 "Maximum Line Length",
                 queueLimitLabel(value),
-                "Lowering the limit never removes guests who are already waiting. It only stops"
-                    + " the next walk-in from joining a line that is already at or over it.");
+                "Guests already waiting stay where they are. Only the next walk-in is refused.");
           }
         } else if (choice == 4) {
           Boolean value =
@@ -309,7 +307,7 @@ public class BookingSettingsController {
         } else if (choice == 7) {
           Boolean value =
               promptToggleSetting(
-                  "Allow Serving Out Of FIFO Order",
+                  "Allow Serving Out Of Turn",
                   "Whether a row other than the front of the line may be allocated a room. The"
                       + " screen still names every guest who would be skipped and asks for"
                       + " authorisation. With it off, only position 1 can be served.",
@@ -321,7 +319,7 @@ public class BookingSettingsController {
             config().setAllowNonFrontAllocation(value);
             persist();
             settingsView.displaySavedScreen(
-                "Allow Serving Out Of FIFO Order",
+                "Allow Serving Out Of Turn",
                 value ? "Allow with authorisation" : "Front of the line only",
                 null);
           }
@@ -331,8 +329,7 @@ public class BookingSettingsController {
                   "One Live Booking Per Guest",
                   "With this on, a guest who is already waiting in any line or already holding"
                       + " a room cannot be registered a second time. With it off, the same"
-                      + " person may stand in more than one line at once, one place per line."
-                      + " Taking two places in the same line is refused either way.",
+                      + " person may take as many places as they like, in any line.",
                   config().isBlockDuplicateAcrossLines(),
                   "One booking only",
                   "Allow several",
@@ -371,10 +368,7 @@ public class BookingSettingsController {
             config().setAdvanceBookingLeadDays(value);
             persist();
             settingsView.displaySavedScreen(
-                "Booking Lead Time",
-                leadLabel(value),
-                "Bookings already on file beyond the new window are left alone. Only new ones are"
-                    + " held to it.");
+                "Booking Lead Time", leadLabel(value), "Bookings already on file are left alone.");
           }
         } else if (choice == 2) {
           Boolean value =
@@ -411,8 +405,8 @@ public class BookingSettingsController {
             settingsView.displaySavedScreen(
                 "Checkout Day Is Reusable",
                 value ? "Same day turnover" : "Reserve the extra night",
-                "Every availability figure in the module is recalculated from this rule, so the"
-                    + " advance booking screens will read differently straight away.");
+                "Every availability figure is recalculated, so the advance booking screens read"
+                    + " differently straight away.");
           }
         } else if (choice == 4) {
           Boolean value =
@@ -587,17 +581,17 @@ public class BookingSettingsController {
         } else if (choice == 2) {
           Integer value =
               promptIntSetting(
-                  roomType.name() + " Initial Queue Capacity",
-                  "Overrides the house starting array size for this line only. The line has to be"
+                  roomType.name() + " Starting Line Size",
+                  "Overrides the house starting size for this line only. The line has to be"
                       + " rebuilt for a new capacity to reach it, which happens automatically"
                       + " after this is saved.",
                   overrideLabel(
                       config().getInitialQueueCapacityOverride(roomType),
                       config().getInitialQueueCapacity(roomType),
-                      "slots"),
+                      "places"),
                   MIN_QUEUE_CAPACITY,
                   MAX_QUEUE_CAPACITY,
-                  "slots",
+                  "places",
                   capacityWarningFor(roomType));
           if (value != null) {
             config().setInitialQueueCapacityOverride(roomType, value);
@@ -644,19 +638,17 @@ public class BookingSettingsController {
     int waiting = totalWaiting();
     if (waiting == 0) return null;
     return waiting
-        + " guest(s) are standing in the lines right now. Rebuilding replays them by arrival time"
-        + " so FIFO order survives, and a line longer than the new capacity is opened wide enough"
-        + " to hold everyone rather than dropping the overflow.";
+        + " guest(s) are waiting. They keep their places, and the line is made big enough to"
+        + " hold them.";
   }
 
   private String capacityWarningFor(Room.RoomType roomType) {
     int waiting = standardReservationRepo.getQueueByRoomType(roomType).getNumberOfEntries();
     if (waiting == 0) return null;
     return waiting
-        + " guest(s) are standing in the "
+        + " guest(s) are in the "
         + roomType.name()
-        + " line. They keep their places, and the array is opened wide enough to hold them even"
-        + " if the new capacity is smaller.";
+        + " line. They keep their places, and the line is made big enough to hold them.";
   }
 
   private String lineLengthWarning() {
@@ -672,12 +664,11 @@ public class BookingSettingsController {
     }
 
     if (longest == null) return null;
-    return "The longest line right now is "
+    return "The longest line is "
         + longest.name()
         + " with "
         + highest
-        + " guest(s). A limit below that leaves them where they are and only refuses the next"
-        + " arrival.";
+        + " guest(s). A lower limit leaves them where they are and only refuses the next arrival.";
   }
 
   private String lineLengthWarningFor(Room.RoomType roomType) {
@@ -686,8 +677,7 @@ public class BookingSettingsController {
     return waiting
         + " guest(s) are already in the "
         + roomType.name()
-        + " line. A limit below that leaves them where they are and only refuses the next"
-        + " arrival.";
+        + " line. A lower limit leaves them where they are and only refuses the next arrival.";
   }
 
   private String liveHoldsWarning() {
@@ -697,15 +687,12 @@ public class BookingSettingsController {
     }
 
     if (holds == 0) return null;
-    return holds
-        + " hold(s) are running right now. Each keeps the window it was created under, so none of"
-        + " them is re-timed by this change.";
+    return holds + " hold(s) are running. Each keeps its original window.";
   }
 
   private String turnoverWarning() {
-    return "Switching this off makes every stay occupy one extra night, which can make dates that"
-        + " read as free today read as fully booked afterwards. Existing bookings are not"
-        + " cancelled, but new ones will be refused on those dates.";
+    return "Switching this off makes every stay occupy one extra night, so dates that read as free"
+        + " now may read as fully booked.";
   }
 
   private int totalWaiting() {
@@ -721,7 +708,7 @@ public class BookingSettingsController {
   // Must match the strings the queue and advance controllers compare against.
   private ListInterface<String> queueSortOptions() {
     ListInterface<String> options = new ArrayList<>();
-    options.add("QUEUE POSITION (FIFO)");
+    options.add("QUEUE POSITION (ARRIVAL ORDER)");
     options.add("WAIT TIME (LONGEST -> SHORTEST)");
     options.add("WAIT TIME (SHORTEST -> LONGEST)");
     options.add("GUEST NAME (A -> Z)");
