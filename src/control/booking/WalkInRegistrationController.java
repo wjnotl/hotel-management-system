@@ -253,27 +253,21 @@ public class WalkInRegistrationController {
       boolean bypassClear) {
 
     if (vacant == 0) {
-      return "No vacant clean room of this type exists, so the guest waits for one to be"
-          + " released by housekeeping or a check-out.";
+      return "No vacant clean room of this type exists.";
     }
     if (vacant - arrivingToday <= 0) {
       return arrivingToday
-          + " advance booking(s) are arriving today against the "
+          + " advance booking(s) arrive today against "
           + vacant
-          + " free room(s) of this type, so every one of them is already promised.";
+          + " free room(s), so all are promised.";
     }
     if (!bypassClear) {
-      return vipWaiting
-          + " high tier member(s) are entitled to the free room(s) under the VIP bypass rule,"
-          + " so none is available to this line yet.";
+      return vipWaiting + " VIP guest(s) are entitled to the free room(s) under the bypass rule.";
     }
     if (lineLength > 0) {
-      return lineLength
-          + " guest(s) arrived earlier and are still waiting, so FIFO order places this guest"
-          + " behind them even though a room is free.";
+      return lineLength + " guest(s) arrived earlier, so FIFO places this guest behind them.";
     }
-    return "Automatic assignment is switched off under Settings & Configuration, so every"
-        + " walk-in joins the line and is called by the [G] Allocate Next command.";
+    return "Automatic assignment is off in Settings, so every walk-in joins the line.";
   }
 
   private boolean assignRoomNow(

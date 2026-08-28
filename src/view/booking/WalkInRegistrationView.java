@@ -157,9 +157,7 @@ public class WalkInRegistrationView {
     printKeyValue(
         kvSettings,
         "System Notice",
-        "This module books non-members only. A tier holder is ranked against the other waiting"
-            + " members by priority score rather than by arrival order, so their reservation has"
-            + " to be opened in the VIP module. Nothing has been recorded here.",
+        "Walk in is for non member only, VIP walk in is in VIP module",
         false);
 
     System.out.println();
@@ -173,29 +171,27 @@ public class WalkInRegistrationView {
 
     String where =
         (existing.getStatus() == Reservation.Status.WAITING)
-            ? "standing in the "
+            ? "in the "
                 + existing.getRoomType().name()
                 + " line at position "
                 + ((position > 0) ? position : 1)
             : "holding "
                 + existing.getRoomType().name()
                 + " room "
-                + blankToNa(existing.getRoomNumber())
-                + " and is due to check in";
+                + blankToNa(existing.getRoomNumber());
 
     printNoticeBox(
         "STATUS: [X] SECOND BOOKING REFUSED",
         "Target Guest",
         guest.getName() + " (" + guest.getGuestId() + ")",
-        "This guest is already "
+        "Already "
             + where
-            + " under reservation "
+            + " under "
             + existing.getReservationId()
             + (acrossAllTypes
-                ? ". One person may hold only one live standard booking, across every room type."
-                : ". One person may take only one place in a given line, though they may wait in"
-                    + " another room type's line at the same time.")
-            + " Serve or cancel that entry instead of opening a second one.");
+                ? ". One live booking per guest."
+                : ". One place per line, though other lines are allowed.")
+            + " Serve or cancel that entry first.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -224,12 +220,10 @@ public class WalkInRegistrationView {
         kvSettings,
         "System Notice",
         dueToday
-            ? "This guest reserved a room in advance and has now arrived. Using that booking keeps"
-                + " one record for the stay. Opening a separate walk-in leaves the original"
-                + " booking unclaimed."
-            : "That booking is for a different night, and a booking may only be taken up on the"
-                + " night it reserves. It stays open and untouched. Serving this guest now means"
-                + " an ordinary walk-in against today's stock.",
+            ? "Use the booking so the stay stays on one record. A separate walk-in leaves it"
+                + " unclaimed."
+            : "A booking can only be used on the night it reserves, so this one stays open."
+                + " Serving the guest now means an ordinary walk-in.",
         false);
 
     System.out.println();
@@ -347,10 +341,8 @@ public class WalkInRegistrationView {
         waiting + " waiting, the limit in force is " + maxQueueLength,
         "The "
             + roomType.name()
-            + " line has reached a limit set under Settings & Configuration, either the house"
-            + " length rule or a queue array that is full and not allowed to grow, so no further"
-            + " walk-in can be taken for this type. Serve the front of the line, raise the limit,"
-            + " or offer the guest a different room type.");
+            + " line is full. Serve the front of the line, raise the limit in Settings or offer"
+            + " another room type.");
     ConsoleUtil.printContinueMessage();
   }
 

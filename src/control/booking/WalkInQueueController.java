@@ -263,7 +263,7 @@ public class WalkInQueueController {
     int vipWaiting = countVipWaiting(roomType);
 
     if (freeToCounter <= 0) {
-      walkInQueueView.displayNoVacantRoomScreen(roomType, arrivingTodayCount, vipWaiting);
+      walkInQueueView.displayNoVacantRoomScreen(roomType, arrivingTodayCount);
       return;
     }
 

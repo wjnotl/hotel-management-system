@@ -146,8 +146,7 @@ public class BookingSettingsController {
             settingsView.displaySavedScreen(
                 "Hold Grace Window",
                 value + " minutes",
-                "Holds already running keep the window they were created under, so this only"
-                    + " affects holds opened from now on.");
+                "Holds already running keep their original window.");
           }
         } else if (choice == 2) {
           Integer value =
@@ -248,8 +247,7 @@ public class BookingSettingsController {
             settingsView.displaySavedScreen(
                 "Maximum Line Length",
                 queueLimitLabel(value),
-                "Lowering the limit never removes guests who are already waiting. It only stops"
-                    + " the next walk-in from joining a line that is already at or over it.");
+                "Guests already waiting stay where they are. Only the next walk-in is refused.");
           }
         } else if (choice == 4) {
           Boolean value =
@@ -371,10 +369,7 @@ public class BookingSettingsController {
             config().setAdvanceBookingLeadDays(value);
             persist();
             settingsView.displaySavedScreen(
-                "Booking Lead Time",
-                leadLabel(value),
-                "Bookings already on file beyond the new window are left alone. Only new ones are"
-                    + " held to it.");
+                "Booking Lead Time", leadLabel(value), "Bookings already on file are left alone.");
           }
         } else if (choice == 2) {
           Boolean value =
@@ -411,8 +406,8 @@ public class BookingSettingsController {
             settingsView.displaySavedScreen(
                 "Checkout Day Is Reusable",
                 value ? "Same day turnover" : "Reserve the extra night",
-                "Every availability figure in the module is recalculated from this rule, so the"
-                    + " advance booking screens will read differently straight away.");
+                "Every availability figure is recalculated, so the advance booking screens read"
+                    + " differently straight away.");
           }
         } else if (choice == 4) {
           Boolean value =
@@ -644,19 +639,17 @@ public class BookingSettingsController {
     int waiting = totalWaiting();
     if (waiting == 0) return null;
     return waiting
-        + " guest(s) are standing in the lines right now. Rebuilding replays them by arrival time"
-        + " so FIFO order survives, and a line longer than the new capacity is opened wide enough"
-        + " to hold everyone rather than dropping the overflow.";
+        + " guest(s) are waiting. They keep their places, and the array is opened wide enough to"
+        + " hold them.";
   }
 
   private String capacityWarningFor(Room.RoomType roomType) {
     int waiting = standardReservationRepo.getQueueByRoomType(roomType).getNumberOfEntries();
     if (waiting == 0) return null;
     return waiting
-        + " guest(s) are standing in the "
+        + " guest(s) are in the "
         + roomType.name()
-        + " line. They keep their places, and the array is opened wide enough to hold them even"
-        + " if the new capacity is smaller.";
+        + " line. They keep their places, and the array is opened wide enough to hold them.";
   }
 
   private String lineLengthWarning() {
@@ -672,12 +665,11 @@ public class BookingSettingsController {
     }
 
     if (longest == null) return null;
-    return "The longest line right now is "
+    return "The longest line is "
         + longest.name()
         + " with "
         + highest
-        + " guest(s). A limit below that leaves them where they are and only refuses the next"
-        + " arrival.";
+        + " guest(s). A lower limit leaves them where they are and only refuses the next arrival.";
   }
 
   private String lineLengthWarningFor(Room.RoomType roomType) {
@@ -686,8 +678,7 @@ public class BookingSettingsController {
     return waiting
         + " guest(s) are already in the "
         + roomType.name()
-        + " line. A limit below that leaves them where they are and only refuses the next"
-        + " arrival.";
+        + " line. A lower limit leaves them where they are and only refuses the next arrival.";
   }
 
   private String liveHoldsWarning() {
@@ -697,15 +688,12 @@ public class BookingSettingsController {
     }
 
     if (holds == 0) return null;
-    return holds
-        + " hold(s) are running right now. Each keeps the window it was created under, so none of"
-        + " them is re-timed by this change.";
+    return holds + " hold(s) are running. Each keeps its original window.";
   }
 
   private String turnoverWarning() {
-    return "Switching this off makes every stay occupy one extra night, which can make dates that"
-        + " read as free today read as fully booked afterwards. Existing bookings are not"
-        + " cancelled, but new ones will be refused on those dates.";
+    return "Switching this off makes every stay occupy one extra night, so dates that read as free"
+        + " now may read as fully booked.";
   }
 
   private int totalWaiting() {

@@ -405,7 +405,7 @@ public class AdvanceBookingController {
     Room room = roomRepo.findVacantCleanRoom(booking.getRoomType());
     if (room == null) {
       advanceBookingView.displayNoRoomReadyScreen(
-          booking, guest, countVacantCleanRooms(booking.getRoomType()));
+          booking, countVacantCleanRooms(booking.getRoomType()));
       return;
     }
 

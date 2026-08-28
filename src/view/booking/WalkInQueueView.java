@@ -381,36 +381,32 @@ public class WalkInQueueView {
         requeueOnLapse
             ? "the guest sent to the back of the line. Strike "
                 + maxStrikes
-                + " closes the booking as a no-show."
-            : "the booking closed as a no-show, because the house rule sends a lapsed hold"
-                + " straight out rather than back into the line.";
+                + " closes the booking."
+            : "the booking closed as a no-show.";
 
     printNoticeBox(
         "STATUS: HOLDS RELEASED",
         "Holds Lapsed",
         String.valueOf(lapsedCount),
-        "These guests did not check in within the grace window recorded on their hold, which is"
-            + " currently "
+        "These guests missed the "
             + graceMinutes
-            + " minutes. Each room has been released, a strike issued, and "
+            + " minute grace window. Each room is released, a strike issued and "
             + outcome);
 
     ConsoleUtil.printContinueMessage();
   }
 
-  public void displayNoVacantRoomScreen(Room.RoomType roomType, int arrivingToday, int vipWaiting) {
+  public void displayNoVacantRoomScreen(Room.RoomType roomType, int arrivingToday) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NO ROOM AVAILABLE", SCREEN_WIDTH);
     printNoticeBox(
         "STATUS: [X] NOTHING TO ALLOCATE",
         "Rooms Free / Promised",
         "0 free to this line, " + arrivingToday + " held for today's arrivals",
-        "There is no vacant clean "
+        "No vacant clean "
             + roomType.name()
-            + " room this line may take. Housekeeping must release a room, or an advance booking"
-            + " arriving today has to be served or cancelled, before this line can move. "
-            + vipWaiting
-            + " VIP guest(s) are also waiting for this type.");
+            + " room is free to this line. Wait for housekeeping to release one, or serve an"
+            + " advance booking arriving today.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -423,13 +419,12 @@ public class WalkInQueueView {
         "Free / VIP Waiting",
         freeToCounter + " free  vs  " + vipWaiting + " VIP waiting",
         vipWaiting
-            + " high tier member(s) are waiting for a "
-            + roomType.name()
-            + " room against only "
+            + " VIP guest(s) are waiting for "
             + freeToCounter
-            + " free room(s), so every one of them is already spoken for. Serve them from the VIP"
-            + " module. The supervisor override is switched off under Settings & Configuration,"
-            + " so no room can be taken from the bypass here.");
+            + " free "
+            + roomType.name()
+            + " room(s), so none is free to this line. Serve them from the VIP module, or turn on"
+            + " the supervisor override in Settings.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -440,8 +435,8 @@ public class WalkInQueueView {
         "STATUS: [X] ONLY THE FRONT MAY BE SERVED",
         "Place In Line",
         String.valueOf(position),
-        "Serving out of order is switched off under Settings & Configuration, so a room can only"
-            + " go to position 1. Use [G] Allocate Next, or turn the override back on.");
+        "Only position 1 may be served. Use [G] Allocate Next, or allow out of order serving in"
+            + " Settings.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -484,10 +479,7 @@ public class WalkInQueueView {
           "REASON 1: FIFO ORDER WILL BE BROKEN",
           "Guests Skipped",
           String.valueOf(skippedCount),
-          "This guest is not at the front of the line. Serving them now takes the room ahead of"
-              + " "
-              + skippedNames
-              + ", who all arrived earlier.");
+          "Serving this guest takes the room ahead of " + skippedNames + ", who arrived earlier.");
     }
 
     if (vipBypass) {
@@ -495,8 +487,8 @@ public class WalkInQueueView {
           "REASON 2: VIP BYPASS WILL BE OVERRIDDEN",
           "Vacant / VIP Waiting",
           freeToCounter + " free  vs  " + vipWaiting + " VIP waiting",
-          "Every free room of this type is spoken for by a high tier member under the bypass"
-              + " rule. One of those rooms will be given to the standard line instead.");
+          "Every free room of this type is held for a VIP. One will go to the standard line"
+              + " instead.");
     }
 
     System.out.println("1. Authorise And Allocate The Room");
@@ -659,14 +651,11 @@ public class WalkInQueueView {
         ((room != null) ? room.getRoomNumber() : "UNLINKED")
             + "  for  "
             + ((g != null) ? g.getName() : "N/A"),
-        "The room goes back on sale immediately rather than at the end of the grace window, and"
-            + " the booking closes as NO_SHOW. A strike is recorded against the guest, taking them"
-            + " to "
+        "The room goes back on sale now and the booking closes as NO_SHOW. The guest takes strike "
             + (strikesNow + 1)
             + " of "
             + maxStrikes
-            + " for today. The guest is not sent back to the line, because this is the desk"
-            + " deciding they are not coming rather than a hold that merely ran out of time.");
+            + " for today and is not sent back to the line.");
 
     System.out.println("1. Mark No-Show And Release The Room");
     System.out.println("2. Leave The Hold Running\n");
@@ -749,10 +738,9 @@ public class WalkInQueueView {
         "STATUS: [!] END OF BUSINESS CYCLE",
         "Guests Still Waiting",
         String.valueOf(waiting),
-        "Closing the "
+        "Every guest still in the "
             + roomType.name()
-            + " line cancels every guest still standing in it and empties the queue in one"
-            + " operation. Completed and held bookings are not affected.");
+            + " line is cancelled. Held and completed bookings are not affected.");
 
     System.out.println("1. Cancel All " + waiting + " Waiting Guest(s) And Clear The Line");
     System.out.println("2. Leave The Line Alone\n");
@@ -855,9 +843,7 @@ public class WalkInQueueView {
         "STATUS: [!] REMOVE FROM THE LINE",
         "Target Booking",
         r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "This guest is at position "
-            + position
-            + ". Removing them closes the gap, so everyone behind moves up one place.");
+        "This guest is at position " + position + ". Everyone behind them moves up one place.");
 
     System.out.println("1. Cancel This Reservation And Remove It From The Line");
     System.out.println("2. Keep The Reservation\n");

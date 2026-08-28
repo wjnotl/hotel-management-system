@@ -188,11 +188,9 @@ public class BookingReportView {
     printKeyValue(
         kvSettings,
         "System Notice",
-        "A binary search halves the list at every step by comparing against the key it is ordered"
-            + " by, so it can only run on rows sorted by "
+        "This search needs the rows sorted by "
             + requiredOrder
-            + ". The report can be re-sorted and re-exported now, which changes nothing but the"
-            + " order of the rows.",
+            + ". Re-sorting changes nothing but the order of the rows.",
         false);
 
     System.out.println();
@@ -234,18 +232,14 @@ public class BookingReportView {
         new String[] {found ? "STATUS: FOUND" : "STATUS: [X] NOT FOUND"}, spanSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Searched ID", targetId, true);
-    printKeyValue(
-        kvSettings,
-        "Comparisons Used",
-        comparisons + " of " + total + " rows (a linear scan would average " + (total / 2) + ")",
-        true);
+    printKeyValue(kvSettings, "Comparisons Used", comparisons + " of " + total + " rows", true);
 
     if (!found) {
       printKeyValue(
           kvSettings,
           "System Notice",
-          "No booking with that reservation ID is inside the current report scope. Widen the"
-              + " filters or check the ID.",
+          "No booking with that ID is in the current report scope. Widen the filters or check"
+              + " the ID.",
           false);
     } else {
       printKeyValue(kvSettings, "Row In Register", String.valueOf(rowIndex), true);
@@ -495,8 +489,8 @@ public class BookingReportView {
     return result.getAsInt();
   }
 
-  //Occupancy Forecast & Availability Report
-  
+  // Occupancy Forecast & Availability Report
+
   public String displayForecastControlPanel(
       String reportTitle,
       String windowLabel,
@@ -649,11 +643,7 @@ public class BookingReportView {
         new String[] {found ? "STATUS: FOUND" : "STATUS: [X] NOT FOUND"}, spanSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Searched Night", night, true);
-    printKeyValue(
-        kvSettings,
-        "Comparisons Used",
-        comparisons + " of " + total + " rows (a linear scan would average " + (total / 2) + ")",
-        true);
+    printKeyValue(kvSettings, "Comparisons Used", comparisons + " of " + total + " rows", true);
 
     if (found) {
       printKeyValue(kvSettings, "First Row In Report", String.valueOf(rowIndex), false);
@@ -663,7 +653,7 @@ public class BookingReportView {
       printKeyValue(
           kvSettings,
           "System Notice",
-          "That night is not inside the current forecast window, or every row for it was filtered"
+          "That night is not in the current forecast window, or every row for it was filtered"
               + " out. Widen the window or clear the filters.",
           false);
     }

@@ -347,9 +347,8 @@ public class AdvanceBookingView {
             + totalRooms
             + " "
             + roomType.name()
-            + " room(s) are already committed on that night, counting advance bookings, guests"
-            + " still in their rooms and rooms currently on hold. Offer a different date, a"
-            + " shorter stay or another room type.");
+            + " room(s) are committed on that night. Offer a different date, a shorter stay or"
+            + " another room type.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -529,25 +528,23 @@ public class AdvanceBookingView {
             + r.getReservationId()
             + " for a night that "
             + timing
-            + ", so it cannot be checked in today. A booking reserves one specific night and only"
-            + " that night. Take this visit as an ordinary walk-in, or close the booking as a"
-            + " no-show if the guest never came.");
+            + ", and a booking can only be used on the night it reserves. Take this as a walk-in,"
+            + " or close the booking as a no-show.");
 
     ConsoleUtil.printContinueMessage();
   }
 
-  public void displayNoRoomReadyScreen(Reservation r, Guest g, int vacantCount) {
+  public void displayNoRoomReadyScreen(Reservation r, int vacantCount) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NO ROOM READY YET", SCREEN_WIDTH);
     printNoticeBox(
         "STATUS: [!] CHECK-IN HELD UP",
         "Rooms Clean And Free",
         vacantCount + " " + r.getRoomType().name() + " room(s)",
-        "The night was reserved for "
-            + ((g != null) ? g.getName() : "this guest")
-            + ", so a room is owed. None of that type is VACANT & CLEAN this minute, which is a"
-            + " housekeeping delay rather than an overbooking. The booking stays RESERVED. Try"
-            + " again once a room has been released.");
+        "No "
+            + r.getRoomType().name()
+            + " room is VACANT & CLEAN right now. The booking stays RESERVED, so try again once"
+            + " housekeeping releases one.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -560,12 +557,11 @@ public class AdvanceBookingView {
         "STATUS: [!] MARK AS NO-SHOW",
         "Target Booking",
         r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "The booking closes as NO_SHOW and the night it was holding goes back on sale. A strike is"
-            + " recorded against the guest, taking them to "
+        "The booking closes as NO_SHOW and the night goes back on sale. The guest takes strike "
             + (strikesNow + 1)
             + " of "
             + maxStrikes
-            + " for today. Cancelling instead is the kinder path when the guest did call ahead.");
+            + " for today. Cancel instead if the guest called ahead.");
 
     System.out.println("1. Mark This Booking As A No-Show");
     System.out.println("2. Leave It Alone\n");
@@ -576,12 +572,24 @@ public class AdvanceBookingView {
   public void displayClosureSuccessScreen(Reservation r, Guest g, boolean noShow, int strikesNow) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(noShow ? "MARKED AS NO-SHOW" : "BOOKING CANCELLED", SCREEN_WIDTH);
-    printNoticeBox(
-        noShow ? "STATUS: -> NO_SHOW" : "STATUS: -> CANCELLED",
+
+    TableUtil.TableSettings kvSettings = kvSettings();
+
+    TableUtil.printTableBorder(spanSettings(), TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {noShow ? "STATUS: -> NO_SHOW" : "STATUS: -> CANCELLED"}, spanSettings());
+    TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
+    printKeyValue(
+        kvSettings,
         "Closed Booking",
         r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "The night is back on sale for other guests."
-            + (noShow ? " The guest now holds " + strikesNow + " strike(s)." : ""));
+        true);
+    printKeyValue(kvSettings, "Night", "Back on sale", noShow);
+    if (noShow) {
+      printKeyValue(kvSettings, "Strikes Held", String.valueOf(strikesNow), false);
+    }
+
+    System.out.println();
     ConsoleUtil.printContinueMessage();
   }
 
@@ -665,9 +673,9 @@ public class AdvanceBookingView {
         "STATUS: [!] CANCEL ADVANCE BOOKING",
         "Target Booking",
         r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "The booking is closed as CANCELLED and the room it was holding on "
+        "The booking closes as CANCELLED and the room it holds on "
             + formatArrival(r.getExpectedArrivalTime())
-            + " goes back on sale. It never entered a line, so nobody else moves position.");
+            + " goes back on sale.");
 
     System.out.println("1. Cancel This Advance Booking");
     System.out.println("2. Keep It\n");
@@ -682,11 +690,11 @@ public class AdvanceBookingView {
         "STATUS: [!] ARRIVAL REFUSED",
         "Target Guest",
         ((guest != null) ? guest.getName() : "Guest"),
-        "This guest is already standing in the "
+        "Already in the "
             + existing.getRoomType().name()
             + " line under "
             + existing.getReservationId()
-            + ". Serve that entry before moving another booking in.");
+            + ". Serve that entry first.");
     ConsoleUtil.printContinueMessage();
   }
 

@@ -135,9 +135,8 @@ public class GuestRegistrationView {
         "STATUS: [!] ANOTHER GUEST SHARES THIS NAME",
         "Existing Record",
         existing.getName() + " (" + existing.getGuestId() + ")",
-        "A guest with this exact name is already on record. Searching by name will always"
-            + " return the older record, so this new guest will only be reachable by guest ID."
-            + " Continue only if these are genuinely two different people.");
+        "A name search always returns the older record, so this guest would only be reachable by"
+            + " guest ID.");
 
     System.out.println("1. Register this as a separate guest anyway");
     System.out.println("2. Go back and change the name\n");
