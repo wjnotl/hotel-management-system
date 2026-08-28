@@ -126,14 +126,14 @@ public class WalkInRegistrationController {
   private Room.RoomType promptRoomType(Guest guest) {
     Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
     int[] vacant = new int[types.length];
-    int[] arrivingToday = new int[types.length];
+    int[] heldForBookings = new int[types.length];
     int[] vipWaiting = new int[types.length];
     int[] lineLength = new int[types.length];
 
     LocalDate today = LocalDate.now();
     for (int i = 0; i < types.length; i++) {
       vacant[i] = countVacantCleanRooms(types[i]);
-      arrivingToday[i] = standardReservationRepo.countReservedArrivingOn(types[i], today);
+      heldForBookings[i] = standardReservationRepo.countReservedHoldingOn(types[i], today);
       vipWaiting[i] = countVipWaiting(types[i]);
       lineLength[i] = standardReservationRepo.getQueueByRoomType(types[i]).getNumberOfEntries();
     }
@@ -143,7 +143,7 @@ public class WalkInRegistrationController {
         return registrationView.promptRoomType(
             guest,
             vacant,
-            arrivingToday,
+            heldForBookings,
             vipWaiting,
             lineLength,
             settings().isEnforceVipBypass(),
@@ -171,7 +171,7 @@ public class WalkInRegistrationController {
       int waiting,
       int queueCapacity,
       int vacant,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting,
       String reasonForWaiting) {
     while (true) {
@@ -183,7 +183,7 @@ public class WalkInRegistrationController {
             waiting,
             queueCapacity,
             vacant,
-            arrivingToday,
+            heldForBookings,
             vipWaiting,
             reasonForWaiting);
       } catch (Exception e) {
@@ -193,11 +193,11 @@ public class WalkInRegistrationController {
   }
 
   private boolean promptAssignConfirmation(
-      Guest guest, Room room, int graceMinutes, int vacant, int arrivingToday, int vipWaiting) {
+      Guest guest, Room room, int graceMinutes, int vacant, int heldForBookings, int vipWaiting) {
     while (true) {
       try {
         return registrationView.displayAssignConfirmationScreen(
-            guest, room, graceMinutes, vacant, arrivingToday, vipWaiting);
+            guest, room, graceMinutes, vacant, heldForBookings, vipWaiting);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -209,32 +209,32 @@ public class WalkInRegistrationController {
     BookingSettings config = settings();
 
     int vacant = countVacantCleanRooms(roomType);
-    int arrivingToday = arrivingToday(roomType);
-    int freeToCounter = Math.max(0, vacant - arrivingToday);
+    int heldForBookings = heldForBookings(roomType);
+    int freeToCounter = Math.max(0, vacant - heldForBookings);
     int vipWaiting = countVipWaiting(roomType);
     QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
     int lineLength = queue.getNumberOfEntries();
 
     boolean bypassClear = !config.isEnforceVipBypass() || freeToCounter > vipWaiting;
 
-    // Serve now only when a room is truly free: none promised today, none owed to a VIP, no line.
+    // Serve now only when a room is truly free: none promised, none owed to a VIP, no line.
     if (config.isAutoAssignWhenRoomFree() && freeToCounter > 0 && bypassClear && lineLength == 0) {
-      return assignRoomNow(guest, roomType, vacant, arrivingToday, vipWaiting);
+      return assignRoomNow(guest, roomType, vacant, heldForBookings, vipWaiting);
     }
 
     return enqueueGuest(
         guest,
         roomType,
         vacant,
-        arrivingToday,
+        heldForBookings,
         vipWaiting,
-        reasonForWaiting(config, vacant, arrivingToday, vipWaiting, lineLength, bypassClear));
+        reasonForWaiting(config, vacant, heldForBookings, vipWaiting, lineLength, bypassClear));
   }
 
   private String reasonForWaiting(
       BookingSettings config,
       int vacant,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting,
       int lineLength,
       boolean bypassClear) {
@@ -242,11 +242,11 @@ public class WalkInRegistrationController {
     if (vacant == 0) {
       return "No vacant clean room of this type exists.";
     }
-    if (vacant - arrivingToday <= 0) {
-      return arrivingToday
-          + " advance booking(s) arrive today against "
+    if (vacant - heldForBookings <= 0) {
+      return heldForBookings
+          + " advance booking(s) arrive today or tomorrow against "
           + vacant
-          + " free room(s), so all are promised.";
+          + " free room(s), and each holds its room from the night before, so all are promised.";
     }
     if (!bypassClear) {
       return vipWaiting + " VIP guest(s) are entitled to the free room(s) under the bypass rule.";
@@ -258,7 +258,7 @@ public class WalkInRegistrationController {
   }
 
   private boolean assignRoomNow(
-      Guest guest, Room.RoomType roomType, int vacant, int arrivingToday, int vipWaiting) {
+      Guest guest, Room.RoomType roomType, int vacant, int heldForBookings, int vipWaiting) {
 
     Room room = roomRepo.findVacantCleanRoom(roomType);
     if (room == null) {
@@ -268,7 +268,7 @@ public class WalkInRegistrationController {
 
     int graceMinutes = standardReservationRepo.getHoldGraceMinutes(roomType);
 
-    if (!promptAssignConfirmation(guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
+    if (!promptAssignConfirmation(guest, room, graceMinutes, vacant, heldForBookings, vipWaiting)) {
       return false;
     }
 
@@ -307,7 +307,7 @@ public class WalkInRegistrationController {
       Guest guest,
       Room.RoomType roomType,
       int vacant,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting,
       String reasonForWaiting) {
 
@@ -326,7 +326,7 @@ public class WalkInRegistrationController {
         waiting,
         standardReservationRepo.getQueueCapacity(roomType),
         vacant,
-        arrivingToday,
+        heldForBookings,
         vipWaiting,
         reasonForWaiting)) {
       return false;
@@ -370,21 +370,25 @@ public class WalkInRegistrationController {
 
     int vacant = countVacantCleanRooms(roomType);
     int arrivingToday = arrivingToday(roomType);
+    int heldForBookings = heldForBookings(roomType);
     int vipWaiting = countVipWaiting(roomType);
     QueueInterface<Reservation> queue = standardReservationRepo.getQueueByRoomType(roomType);
     int lineLength = queue.getNumberOfEntries();
 
     BookingSettings config = settings();
 
-    // This guest is claiming one of today's held-back rooms, so it is not subtracted twice.
-    int freeToThisGuest = Math.max(0, vacant - Math.max(0, arrivingToday - 1));
+    // This guest is claiming one of today's held-back rooms, so it is not subtracted twice. The
+    // claim is only ever offered on the arrival day, so the -1 stays bound to the today bucket and
+    // never cancels the hold a tomorrow arrival has on tonight.
+    int freeToThisGuest =
+        Math.max(0, vacant - Math.max(0, heldForBookings - Math.min(1, arrivingToday)));
     boolean bypassClear = !config.isEnforceVipBypass() || freeToThisGuest > vipWaiting;
 
     if (config.isAutoAssignWhenRoomFree()
         && freeToThisGuest > 0
         && bypassClear
         && lineLength == 0) {
-      holdRoomForBooking(booking, guest, roomType, vacant, arrivingToday, vipWaiting);
+      holdRoomForBooking(booking, guest, roomType, vacant, heldForBookings, vipWaiting);
       return;
     }
 
@@ -408,7 +412,7 @@ public class WalkInRegistrationController {
       Guest guest,
       Room.RoomType roomType,
       int vacant,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting) {
 
     Room room = roomRepo.findVacantCleanRoom(roomType);
@@ -419,7 +423,7 @@ public class WalkInRegistrationController {
 
     int graceMinutes = standardReservationRepo.getHoldGraceMinutes(roomType);
 
-    if (!promptAssignConfirmation(guest, room, graceMinutes, vacant, arrivingToday, vipWaiting)) {
+    if (!promptAssignConfirmation(guest, room, graceMinutes, vacant, heldForBookings, vipWaiting)) {
       return;
     }
 
@@ -436,8 +440,16 @@ public class WalkInRegistrationController {
     registrationView.displayAssignSuccessScreen(booking, guest, room, graceMinutes);
   }
 
+  // Only the bookings whose arrival is today, for the one place that must not subtract a hold
+  // twice.
   private int arrivingToday(Room.RoomType roomType) {
     return standardReservationRepo.countReservedArrivingOn(roomType, LocalDate.now());
+  }
+
+  // What the counter genuinely cannot sell tonight: today's arrivals plus tomorrow's, because a
+  // booking holds its room from the night before it arrives.
+  private int heldForBookings(Room.RoomType roomType) {
+    return standardReservationRepo.countReservedHoldingOn(roomType, LocalDate.now());
   }
 
   private int countVacantCleanRooms(Room.RoomType roomType) {

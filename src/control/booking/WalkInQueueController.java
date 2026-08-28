@@ -112,7 +112,7 @@ public class WalkInQueueController {
                 queue.isFull(),
                 standardReservationRepo.canQueueExpand(roomType),
                 countVacantCleanRooms(roomType),
-                arrivingToday(roomType),
+                heldForBookings(roomType),
                 countVipWaiting(roomType),
                 graceMinutes,
                 searchField,
@@ -258,12 +258,12 @@ public class WalkInQueueController {
     BookingSettings config = settings();
 
     int vacant = countVacantCleanRooms(roomType);
-    int arrivingTodayCount = arrivingToday(roomType);
-    int freeToCounter = Math.max(0, vacant - arrivingTodayCount);
+    int heldForBookings = heldForBookings(roomType);
+    int freeToCounter = Math.max(0, vacant - heldForBookings);
     int vipWaiting = countVipWaiting(roomType);
 
     if (freeToCounter <= 0) {
-      walkInQueueView.displayNoVacantRoomScreen(roomType, arrivingTodayCount);
+      walkInQueueView.displayNoVacantRoomScreen(roomType, heldForBookings);
       return;
     }
 
@@ -637,7 +637,7 @@ public class WalkInQueueController {
         int position = queue.getPosition(selected);
 
         int vacant = countVacantCleanRooms(roomType);
-        int freeToCounter = Math.max(0, vacant - arrivingToday(roomType));
+        int freeToCounter = Math.max(0, vacant - heldForBookings(roomType));
         int vipWaiting = countVipWaiting(roomType);
         Room onOffer = roomRepo.findVacantCleanRoom(roomType);
 
@@ -870,8 +870,10 @@ public class WalkInQueueController {
     return (value == null || value.isEmpty()) ? "N/A" : value;
   }
 
-  private int arrivingToday(Room.RoomType roomType) {
-    return standardReservationRepo.countReservedArrivingOn(roomType, LocalDate.now());
+  // A booking arriving tomorrow already holds its room tonight, so the counter may not sell it
+  // either. Both nights are subtracted from what this line can be given.
+  private int heldForBookings(Room.RoomType roomType) {
+    return standardReservationRepo.countReservedHoldingOn(roomType, LocalDate.now());
   }
 
   private int countVacantCleanRooms(Room.RoomType roomType) {

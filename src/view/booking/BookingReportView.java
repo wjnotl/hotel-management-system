@@ -516,6 +516,9 @@ public class BookingReportView {
     System.out.println();
     System.out.println("Nights matching the current scope: " + matchCount);
     System.out.println();
+    System.out.println("An advance booking is committed from the night before it arrives, so a");
+    System.out.println("night can show a room committed with no arrival due against it.");
+    System.out.println();
     System.out.println("[X] Export Report To TXT   [R] Reset All Filters");
     System.out.println("[E] Exit to Analytics Hub\n");
 

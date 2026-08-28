@@ -136,7 +136,7 @@ public class WalkInQueueView {
       boolean queueFull,
       boolean queueCanExpand,
       int vacantRooms,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting,
       int graceMinutes,
       String searchField,
@@ -162,13 +162,13 @@ public class WalkInQueueView {
         "ROOMS             : "
             + vacantRooms
             + " vacant clean, "
-            + arrivingToday
-            + " held for arrivals today");
+            + heldForBookings
+            + " held for arrivals today or tomorrow");
     System.out.println(
         "VIP AHEAD OF LINE : "
             + vipWaiting
             + "   ->  "
-            + verdictFor(vacantRooms - arrivingToday, vipWaiting, enforceVipBypass));
+            + verdictFor(vacantRooms - heldForBookings, vipWaiting, enforceVipBypass));
     System.out.println(
         "SEARCH            : "
             + (searchTerm == null
@@ -396,17 +396,18 @@ public class WalkInQueueView {
     ConsoleUtil.printContinueMessage();
   }
 
-  public void displayNoVacantRoomScreen(Room.RoomType roomType, int arrivingToday) {
+  public void displayNoVacantRoomScreen(Room.RoomType roomType, int heldForBookings) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("NO ROOM AVAILABLE", SCREEN_WIDTH);
     printNoticeBox(
         "STATUS: [X] NOTHING TO ALLOCATE",
         "Rooms Free / Promised",
-        "0 free to this line, " + arrivingToday + " held for today's arrivals",
+        "0 free to this line, " + heldForBookings + " held for arrivals today or tomorrow",
         "No vacant clean "
             + roomType.name()
-            + " room is free to this line. Wait for housekeeping to release one, or serve an"
-            + " advance booking arriving today.");
+            + " room is free to this line. A booking holds its room from the night before it"
+            + " arrives, so tomorrow's arrivals are counted too. Wait for housekeeping to"
+            + " release one, or serve an advance booking arriving today.");
     ConsoleUtil.printContinueMessage();
   }
 

@@ -37,7 +37,7 @@ public class WalkInRegistrationView {
   public Room.RoomType promptRoomType(
       Guest guest,
       int[] vacantByType,
-      int[] arrivingTodayByType,
+      int[] heldForBookingsByType,
       int[] vipWaitingByType,
       int[] lineLengthByType,
       boolean enforceVipBypass,
@@ -72,12 +72,12 @@ public class WalkInRegistrationView {
             String.valueOf(i + 1),
             types[i].name(),
             String.valueOf(vacantByType[i]),
-            String.valueOf(arrivingTodayByType[i]),
+            String.valueOf(heldForBookingsByType[i]),
             String.valueOf(vipWaitingByType[i]),
             String.valueOf(lineLengthByType[i]),
             outcomeFor(
                 vacantByType[i],
-                arrivingTodayByType[i],
+                heldForBookingsByType[i],
                 vipWaitingByType[i],
                 lineLengthByType[i],
                 enforceVipBypass,
@@ -90,7 +90,8 @@ public class WalkInRegistrationView {
 
     System.out.println();
     System.out.println("ADV HELD counts rooms already promised to advance bookings arriving");
-    System.out.println("today, so they are not handed to the counter by mistake.");
+    System.out.println("today or tomorrow. A booking holds its room from the night before it");
+    System.out.println("arrives, so neither is handed to the counter by mistake.");
     System.out.println();
     System.out.println("4. Back To Guest Selection\n");
 
@@ -104,13 +105,13 @@ public class WalkInRegistrationView {
   // Mirrors the controller's decision in order, so the column never over-promises.
   private String outcomeFor(
       int vacant,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting,
       int lineLength,
       boolean enforceVipBypass,
       boolean autoAssignWhenRoomFree) {
 
-    int freeToCounter = vacant - arrivingToday;
+    int freeToCounter = vacant - heldForBookings;
 
     if (vacant == 0) {
       return "No room free, must wait";
@@ -235,7 +236,7 @@ public class WalkInRegistrationView {
       Room room,
       int graceMinutes,
       int vacantRooms,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting) {
 
     ConsoleUtil.clearScreen();
@@ -251,7 +252,8 @@ public class WalkInRegistrationView {
     printKeyValue(kvSettings, "Room Type", room.getRoomType().name(), true);
     printKeyValue(kvSettings, "Rate Per Night", String.format("RM %.2f", room.getPrice()), true);
     printKeyValue(kvSettings, "Rooms Left After", String.valueOf(vacantRooms - 1), true);
-    printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
+    printKeyValue(
+        kvSettings, "Held For Arrivals (Today & Tomorrow)", String.valueOf(heldForBookings), true);
     printKeyValue(kvSettings, "VIP Still Waiting", String.valueOf(vipWaiting), true);
     printKeyValue(
         kvSettings,
@@ -276,7 +278,7 @@ public class WalkInRegistrationView {
       int waiting,
       int capacity,
       int vacantRooms,
-      int arrivingToday,
+      int heldForBookings,
       int vipWaiting,
       String reasonForWaiting) {
 
@@ -306,7 +308,8 @@ public class WalkInRegistrationView {
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.SPAN_OPEN);
     printKeyValue(kvSettings, "Target Line", roomType.name(), true);
     printKeyValue(kvSettings, "Vacant Clean Rooms", String.valueOf(vacantRooms), true);
-    printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
+    printKeyValue(
+        kvSettings, "Held For Arrivals (Today & Tomorrow)", String.valueOf(heldForBookings), true);
     printKeyValue(kvSettings, "VIP Already Waiting", String.valueOf(vipWaiting), true);
     printKeyValue(kvSettings, "Currently Waiting", String.valueOf(waiting), true);
     printKeyValue(kvSettings, "Line Capacity", waiting + " / " + capacity + " places used", true);
