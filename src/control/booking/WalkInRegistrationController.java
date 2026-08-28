@@ -78,8 +78,6 @@ public class WalkInRegistrationController {
           if (roomType == null) continue;
         }
 
-        if (isBlockedBySameLine(guest, roomType)) continue;
-
         if (placeGuest(guest, roomType)) return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -109,22 +107,11 @@ public class WalkInRegistrationController {
     return true;
   }
 
-  // The house rule, asked before a room type is picked because it does not need one.
+  // A guest may hold as many bookings as they like unless this setting says otherwise.
   private boolean isBlockedByLiveBooking(Guest guest) {
     if (!settings().isBlockDuplicateAcrossLines()) return false;
-    return refuseSecondBooking(
-        guest, standardReservationRepo.findLiveReservationForGuest(guest.getGuestId()), true);
-  }
 
-  // The rule that always holds: no two places in one line. Two different lines are fine.
-  private boolean isBlockedBySameLine(Guest guest, Room.RoomType roomType) {
-    return refuseSecondBooking(
-        guest,
-        standardReservationRepo.findLiveReservationForGuest(guest.getGuestId(), roomType),
-        false);
-  }
-
-  private boolean refuseSecondBooking(Guest guest, Reservation live, boolean acrossAllTypes) {
+    Reservation live = standardReservationRepo.findLiveReservationForGuest(guest.getGuestId());
     if (live == null) return false;
 
     int position = 0;
@@ -132,7 +119,7 @@ public class WalkInRegistrationController {
       position = standardReservationRepo.getQueueByRoomType(live.getRoomType()).getPosition(live);
     }
 
-    registrationView.displayAlreadyActiveScreen(guest, live, position, acrossAllTypes);
+    registrationView.displayAlreadyActiveScreen(guest, live, position);
     return true;
   }
 
@@ -265,7 +252,7 @@ public class WalkInRegistrationController {
       return vipWaiting + " VIP guest(s) are entitled to the free room(s) under the bypass rule.";
     }
     if (lineLength > 0) {
-      return lineLength + " guest(s) arrived earlier, so FIFO places this guest behind them.";
+      return lineLength + " guest(s) arrived earlier, so this guest goes behind them.";
     }
     return "Automatic assignment is off in Settings, so every walk-in joins the line.";
   }

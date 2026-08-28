@@ -164,8 +164,7 @@ public class WalkInRegistrationView {
     ConsoleUtil.printContinueMessage();
   }
 
-  public void displayAlreadyActiveScreen(
-      Guest guest, Reservation existing, int position, boolean acrossAllTypes) {
+  public void displayAlreadyActiveScreen(Guest guest, Reservation existing, int position) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("GUEST ALREADY BEING SERVED", SCREEN_WIDTH);
 
@@ -188,10 +187,8 @@ public class WalkInRegistrationView {
             + where
             + " under "
             + existing.getReservationId()
-            + (acrossAllTypes
-                ? ". One live booking per guest."
-                : ". One place per line, though other lines are allowed.")
-            + " Serve or cancel that entry first.");
+            + ". Settings currently allow one booking per guest. Serve or cancel that entry"
+            + " first, or turn that rule off in Settings.");
     ConsoleUtil.printContinueMessage();
   }
 
@@ -215,16 +212,7 @@ public class WalkInRegistrationView {
         "Nights Booked",
         (booking.getStayDays() != null) ? booking.getStayDays() + " night(s)" : "Not stated",
         true);
-    printKeyValue(kvSettings, "Booked At", formatTime(booking.getReservationTime()), true);
-    printKeyValue(
-        kvSettings,
-        "System Notice",
-        dueToday
-            ? "Use the booking so the stay stays on one record. A separate walk-in leaves it"
-                + " unclaimed."
-            : "A booking can only be used on the night it reserves, so this one stays open."
-                + " Serving the guest now means an ordinary walk-in.",
-        false);
+    printKeyValue(kvSettings, "Booked At", formatTime(booking.getReservationTime()), false);
 
     System.out.println();
 
@@ -321,7 +309,7 @@ public class WalkInRegistrationView {
     printKeyValue(kvSettings, "Held For Arrivals Today", String.valueOf(arrivingToday), true);
     printKeyValue(kvSettings, "VIP Already Waiting", String.valueOf(vipWaiting), true);
     printKeyValue(kvSettings, "Currently Waiting", String.valueOf(waiting), true);
-    printKeyValue(kvSettings, "Array Capacity", waiting + " / " + capacity + " slots used", true);
+    printKeyValue(kvSettings, "Line Capacity", waiting + " / " + capacity + " places used", true);
     printKeyValue(kvSettings, "Position On Joining", projectedPosition + " (joins the back)", true);
     printKeyValue(kvSettings, "Why They Wait", reasonForWaiting, false);
 
@@ -385,7 +373,7 @@ public class WalkInRegistrationView {
     printKeyValue(kvSettings, "Guest Name", (guest != null) ? guest.getName() : "N/A", true);
     printKeyValue(kvSettings, "Room Type", reservation.getRoomType().name(), true);
     printKeyValue(kvSettings, "Place In Line", String.valueOf(position), true);
-    printKeyValue(kvSettings, "Line Length", waiting + " / " + capacity + " slots used", false);
+    printKeyValue(kvSettings, "Line Length", waiting + " / " + capacity + " places used", false);
 
     System.out.println();
     ConsoleUtil.printContinueMessage();

@@ -215,7 +215,7 @@ public class WalkInQueueView {
   private String fullNote(boolean queueFull, boolean queueCanExpand) {
     if (!queueFull) return "";
     return queueCanExpand
-        ? "   [FULL - the next join doubles the array]"
+        ? "   [FULL - the line will be made bigger]"
         : "   [FULL - the next join is refused]";
   }
 
@@ -430,7 +430,7 @@ public class WalkInQueueView {
 
   public void displayNonFrontBlockedScreen(int position) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("FIFO ORDER ENFORCED", SCREEN_WIDTH);
+    ConsoleUtil.printTitleBox("ARRIVAL ORDER ENFORCED", SCREEN_WIDTH);
     printNoticeBox(
         "STATUS: [X] ONLY THE FRONT MAY BE SERVED",
         "Place In Line",
@@ -476,7 +476,7 @@ public class WalkInQueueView {
 
     if (fifoSkip) {
       printNoticeBox(
-          "REASON 1: FIFO ORDER WILL BE BROKEN",
+          "REASON 1: ARRIVAL ORDER WILL BE BROKEN",
           "Guests Skipped",
           String.valueOf(skippedCount),
           "Serving this guest takes the room ahead of " + skippedNames + ", who arrived earlier.");
@@ -839,11 +839,15 @@ public class WalkInQueueView {
   public boolean displayCancelConfirmationScreen(Reservation r, Guest g, int position) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CONFIRM CANCELLATION", SCREEN_WIDTH);
-    printNoticeBox(
+    printStatusBox(
         "STATUS: [!] REMOVE FROM THE LINE",
         "Target Booking",
-        r.getReservationId() + "  -  " + ((g != null) ? g.getName() : "N/A"),
-        "This guest is at position " + position + ". Everyone behind them moves up one place.");
+        r.getReservationId()
+            + "  -  "
+            + ((g != null) ? g.getName() : "N/A")
+            + "   (position "
+            + position
+            + ")");
 
     System.out.println("1. Cancel This Reservation And Remove It From The Line");
     System.out.println("2. Keep The Reservation\n");
@@ -921,8 +925,8 @@ public class WalkInQueueView {
   public String displaySortMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("CHANGE SORT ORDER", SCREEN_WIDTH);
-    System.out.println("Sorting only reorders this table. The queue itself stays FIFO.\n");
-    System.out.println("1. Queue Position (FIFO, the real order)");
+    System.out.println("Sorting only reorders this table. The real line never changes.\n");
+    System.out.println("1. Queue Position (the real order)");
     System.out.println("2. Wait Time (Longest -> Shortest)");
     System.out.println("3. Wait Time (Shortest -> Longest)");
     System.out.println("4. Guest Name (A -> Z)");
@@ -931,7 +935,7 @@ public class WalkInQueueView {
     System.out.println("7. Back\n");
 
     int choice = ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
-    if (choice == 1) return "QUEUE POSITION (FIFO)";
+    if (choice == 1) return "QUEUE POSITION (ARRIVAL ORDER)";
     if (choice == 2) return "WAIT TIME (LONGEST -> SHORTEST)";
     if (choice == 3) return "WAIT TIME (SHORTEST -> LONGEST)";
     if (choice == 4) return "GUEST NAME (A -> Z)";

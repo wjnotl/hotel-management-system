@@ -188,20 +188,28 @@ public class AdvanceBookingController {
       arrivalDate = promptArrivalDate(guest, config, arrivalDate);
       if (arrivalDate == null) return false;
 
+      // The booking eats the eve as well as its own nights, so every question below is asked from
+      // the held night forward. The lead is 0 only when that eve has already passed.
+      LocalDate holdStart = standardReservationRepo.getAdvanceHoldStartDate(arrivalDate);
+      int lead = standardReservationRepo.getAdvanceHoldLeadNights(arrivalDate);
+
       while (true) {
-        Room.RoomType roomType = promptRoomType(guest, arrivalDate);
+        Room.RoomType roomType = promptRoomType(guest, arrivalDate, holdStart, lead);
         if (roomType == null) break;
 
         while (true) {
-          int maxBookable =
+          // Scanned from the eve and converted back, so the figure the clerk types against still
+          // counts the guest's own nights. Capped again, because the widened cap can overshoot.
+          int runFromHold =
               standardReservationRepo.findLongestBookableStay(
-                  roomRepo, roomType, arrivalDate, config.getMaxStayNights());
+                  roomRepo, roomType, holdStart, config.getMaxStayNights() + lead);
+          int maxBookable = Math.max(0, Math.min(config.getMaxStayNights(), runFromHold - lead));
 
           if (config.isBlockOverbooking() && maxBookable <= 0) {
             advanceBookingView.displayFullyBookedScreen(
                 roomType,
                 arrivalDate,
-                arrivalDate,
+                standardReservationRepo.findFirstFullDate(roomRepo, roomType, holdStart, lead + 1),
                 standardReservationRepo.getTotalRoomsOfType(roomRepo, roomType));
             break;
           }
@@ -209,14 +217,22 @@ public class AdvanceBookingController {
           int allowed = config.isBlockOverbooking() ? maxBookable : config.getMaxStayNights();
 
           Integer picked =
-              promptNights(roomType, arrivalDate, allowed, config.getMaxStayNights(), nights);
+              promptNights(
+                  roomType,
+                  arrivalDate,
+                  holdStart,
+                  lead,
+                  allowed,
+                  config.getMaxStayNights(),
+                  nights);
           if (picked == null) break;
 
           nights = picked;
 
           // Re-checked late, because another booking may have taken the last room meanwhile.
           LocalDate firstFull =
-              standardReservationRepo.findFirstFullDate(roomRepo, roomType, arrivalDate, nights);
+              standardReservationRepo.findFirstFullDate(
+                  roomRepo, roomType, holdStart, nights + lead);
           if (config.isBlockOverbooking() && firstFull != null) {
             advanceBookingView.displayFullyBookedScreen(
                 roomType,
@@ -229,10 +245,18 @@ public class AdvanceBookingController {
           // A booking reserves a night, not a moment, so the date is stored at start of day.
           LocalDateTime arrival = arrivalDate.atStartOfDay();
           int freeAcross =
-              standardReservationRepo.countAvailableAcross(roomRepo, roomType, arrivalDate, nights);
+              standardReservationRepo.countAvailableAcross(
+                  roomRepo, roomType, holdStart, nights + lead);
 
           if (!promptNewBookingConfirmation(
-              guest, roomType, arrival, nights, arrivalDate.plusDays(nights), freeAcross - 1)) {
+              guest,
+              roomType,
+              arrival,
+              nights,
+              arrivalDate.plusDays(nights),
+              holdStart,
+              lead,
+              freeAcross - 1)) {
             continue;
           }
 
@@ -308,19 +332,23 @@ public class AdvanceBookingController {
     }
   }
 
-  private Room.RoomType promptRoomType(Guest guest, LocalDate arrival) {
+  private Room.RoomType promptRoomType(
+      Guest guest, LocalDate arrival, LocalDate holdStart, int lead) {
     Room.RoomType[] types = {Room.RoomType.LUXURY, Room.RoomType.SUITE, Room.RoomType.STANDARD};
     int[] total = new int[types.length];
     int[] free = new int[types.length];
 
     for (int i = 0; i < types.length; i++) {
       total[i] = standardReservationRepo.getTotalRoomsOfType(roomRepo, types[i]);
-      free[i] = standardReservationRepo.countAvailableOn(roomRepo, types[i], arrival);
+      // The tightest of the held night and the arrival night, so this table never offers a type
+      // the nights step two screens later refuses.
+      free[i] =
+          standardReservationRepo.countAvailableAcross(roomRepo, types[i], holdStart, lead + 1);
     }
 
     while (true) {
       try {
-        return advanceBookingView.promptRoomType(guest, arrival, total, free);
+        return advanceBookingView.promptRoomType(guest, arrival, holdStart, total, free);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -328,10 +356,17 @@ public class AdvanceBookingController {
   }
 
   private Integer promptNights(
-      Room.RoomType roomType, LocalDate arrival, int maxBookable, int houseMax, Integer current) {
+      Room.RoomType roomType,
+      LocalDate arrival,
+      LocalDate holdStart,
+      int lead,
+      int maxBookable,
+      int houseMax,
+      Integer current) {
     while (true) {
       try {
-        return advanceBookingView.promptNights(roomType, arrival, maxBookable, houseMax, current);
+        return advanceBookingView.promptNights(
+            roomType, arrival, holdStart, lead, maxBookable, houseMax, current);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -344,11 +379,13 @@ public class AdvanceBookingController {
       LocalDateTime arrival,
       int nights,
       LocalDate checkOutDate,
+      LocalDate holdStart,
+      int lead,
       int othersFree) {
     while (true) {
       try {
         return advanceBookingView.displayNewBookingConfirmationScreen(
-            guest, roomType, arrival, nights, checkOutDate, othersFree);
+            guest, roomType, arrival, nights, checkOutDate, holdStart, lead, othersFree);
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }

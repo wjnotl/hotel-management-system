@@ -200,14 +200,14 @@ public class BookingSettingsController {
         if (choice == 1) {
           Integer value =
               promptIntSetting(
-                  "Initial Queue Capacity",
-                  "How many slots each line owns when it is created. It is a hard stop unless"
-                      + " the growth rule below is switched on, in which case the circular array"
-                      + " doubles when it fills and this is only a starting size.",
-                  config().getInitialQueueCapacity() + " slots",
+                  "Starting Line Size",
+                  "How many people each line holds when it is created. It is a hard stop unless"
+                      + " the growth rule below is switched on, in which case the line gets"
+                      + " bigger when it fills and this is only a starting size.",
+                  config().getInitialQueueCapacity() + " places",
                   MIN_QUEUE_CAPACITY,
                   MAX_QUEUE_CAPACITY,
-                  "slots",
+                  "places",
                   capacityWarning());
           if (value != null) {
             config().setInitialQueueCapacity(value);
@@ -217,10 +217,10 @@ public class BookingSettingsController {
         } else if (choice == 2) {
           Boolean value =
               promptToggleSetting(
-                  "Allow The Queue Array To Grow",
-                  "With growth on, a full line doubles its array and keeps accepting guests."
-                      + " With it off, the array is fixed and a full line refuses the next"
-                      + " walk-in outright.",
+                  "Allow The Line To Grow",
+                  "With growth on, a full line gets bigger and keeps accepting guests. With it"
+                      + " off, the line stays a fixed size and refuses the next walk-in"
+                      + " outright.",
                   config().isAllowQueueExpansion(),
                   "Allow growth",
                   "Fixed size",
@@ -307,7 +307,7 @@ public class BookingSettingsController {
         } else if (choice == 7) {
           Boolean value =
               promptToggleSetting(
-                  "Allow Serving Out Of FIFO Order",
+                  "Allow Serving Out Of Turn",
                   "Whether a row other than the front of the line may be allocated a room. The"
                       + " screen still names every guest who would be skipped and asks for"
                       + " authorisation. With it off, only position 1 can be served.",
@@ -319,7 +319,7 @@ public class BookingSettingsController {
             config().setAllowNonFrontAllocation(value);
             persist();
             settingsView.displaySavedScreen(
-                "Allow Serving Out Of FIFO Order",
+                "Allow Serving Out Of Turn",
                 value ? "Allow with authorisation" : "Front of the line only",
                 null);
           }
@@ -329,8 +329,7 @@ public class BookingSettingsController {
                   "One Live Booking Per Guest",
                   "With this on, a guest who is already waiting in any line or already holding"
                       + " a room cannot be registered a second time. With it off, the same"
-                      + " person may stand in more than one line at once, one place per line."
-                      + " Taking two places in the same line is refused either way.",
+                      + " person may take as many places as they like, in any line.",
                   config().isBlockDuplicateAcrossLines(),
                   "One booking only",
                   "Allow several",
@@ -582,17 +581,17 @@ public class BookingSettingsController {
         } else if (choice == 2) {
           Integer value =
               promptIntSetting(
-                  roomType.name() + " Initial Queue Capacity",
-                  "Overrides the house starting array size for this line only. The line has to be"
+                  roomType.name() + " Starting Line Size",
+                  "Overrides the house starting size for this line only. The line has to be"
                       + " rebuilt for a new capacity to reach it, which happens automatically"
                       + " after this is saved.",
                   overrideLabel(
                       config().getInitialQueueCapacityOverride(roomType),
                       config().getInitialQueueCapacity(roomType),
-                      "slots"),
+                      "places"),
                   MIN_QUEUE_CAPACITY,
                   MAX_QUEUE_CAPACITY,
-                  "slots",
+                  "places",
                   capacityWarningFor(roomType));
           if (value != null) {
             config().setInitialQueueCapacityOverride(roomType, value);
@@ -639,7 +638,7 @@ public class BookingSettingsController {
     int waiting = totalWaiting();
     if (waiting == 0) return null;
     return waiting
-        + " guest(s) are waiting. They keep their places, and the array is opened wide enough to"
+        + " guest(s) are waiting. They keep their places, and the line is made big enough to"
         + " hold them.";
   }
 
@@ -649,7 +648,7 @@ public class BookingSettingsController {
     return waiting
         + " guest(s) are in the "
         + roomType.name()
-        + " line. They keep their places, and the array is opened wide enough to hold them.";
+        + " line. They keep their places, and the line is made big enough to hold them.";
   }
 
   private String lineLengthWarning() {
@@ -709,7 +708,7 @@ public class BookingSettingsController {
   // Must match the strings the queue and advance controllers compare against.
   private ListInterface<String> queueSortOptions() {
     ListInterface<String> options = new ArrayList<>();
-    options.add("QUEUE POSITION (FIFO)");
+    options.add("QUEUE POSITION (ARRIVAL ORDER)");
     options.add("WAIT TIME (LONGEST -> SHORTEST)");
     options.add("WAIT TIME (SHORTEST -> LONGEST)");
     options.add("GUEST NAME (A -> Z)");
