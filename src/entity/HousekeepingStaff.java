@@ -116,7 +116,7 @@ public class HousekeepingStaff implements Serializable {
     }
 
     return currentRooms;
-    }
+  }
 
   public void setStaffId(String staffId) {
     this.staffId = staffId;
