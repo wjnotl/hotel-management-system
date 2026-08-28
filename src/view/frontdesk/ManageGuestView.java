@@ -1,7 +1,5 @@
 package view.frontdesk;
 
-import adt.ArrayList;
-import adt.ListInterface;
 import entity.Billing;
 import entity.Guest;
 import entity.Member;
@@ -14,10 +12,7 @@ import util.TableUtil;
 
 public class ManageGuestView {
 
-  // =========================================================================
-  // DTO — view only renders pre-processed data
-  // =========================================================================
-
+  // dto
   public static class GuestRowDTO {
     public final String guestId;
     public final String name;
@@ -37,7 +32,8 @@ public class ManageGuestView {
 
   // Guest Table
   public ConsoleUtil.GetMenuInputResult renderGuestTable(
-      ListInterface<GuestRowDTO> guests,
+      GuestRowDTO[] pageRows,
+      int totalCount,
       String searchQuery,
       String memberLevelFilter,
       String sortCriteria,
@@ -56,7 +52,7 @@ public class ManageGuestView {
     System.out.println("SORT CRITERIA   : [ " + sortCriteria + " ]");
     System.out.println();
 
-    int total = (guests == null) ? 0 : guests.getNumberOfEntries();
+    int total = totalCount;
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
     int[] colWidths = {4, 10, 22, 18, 16, 14};
@@ -75,7 +71,7 @@ public class ManageGuestView {
         new String[] {"NO.", "GUEST ID", "NAME", "IC / PASSPORT", "PHONE", "MEMBER LEVEL"},
         settings);
 
-    if (total == 0 || guests == null) {
+    if (total == 0 || pageRows == null) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
           new TableUtil.TableSettings(new int[] {99}).setHAlign(0, TableUtil.Align.CENTER);
@@ -92,13 +88,10 @@ public class ManageGuestView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, total);
-
-    for (int i = startIndex; i <= endIndex; i++) {
-      GuestRowDTO g = guests.getEntry(i);
+    for (int i = 0; i < pageRows.length; i++) {
+      GuestRowDTO g = pageRows[i];
       if (g == null) continue;
-      int displayNum = i - startIndex + 1;
+      int displayNum = i + 1;
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(displayNum), g.guestId, g.name, g.icOrPassport, g.phone, g.memberLevel
@@ -111,7 +104,7 @@ public class ManageGuestView {
     System.out.println("[S] Search & Filter     [O] Change Sort     [R] Refresh");
     System.out.println("[P] Prev Page           [N] Next Page       [E] Exit to Front Desk\n");
 
-    int maxDisplayNum = endIndex - startIndex + 1;
+    int maxDisplayNum = pageRows.length;
     String rangeStr = (maxDisplayNum == 1) ? "1" : "1-" + maxDisplayNum;
     return ConsoleUtil.getMenuInput(
         "Select row or command (" + rangeStr + "): ",
@@ -326,7 +319,8 @@ public class ManageGuestView {
   // billing history
   public ConsoleUtil.GetMenuInputResult displayBillingHistory(
       Guest guest,
-      ListInterface<Billing> historyNewToOld,
+      Billing[] pageRows,
+      int totalCount,
       LocalDate fromDate,
       LocalDate toDate,
       int currentPage,
@@ -344,9 +338,8 @@ public class ManageGuestView {
             + " ]");
     System.out.println();
 
-    ListInterface<Billing> history =
-        (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
-    int total = history.getNumberOfEntries();
+    Billing[] history = (pageRows != null) ? pageRows : new Billing[0];
+    int total = totalCount;
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
     int[] colWidths = {4, 12, 9, 10, 16, 16, 8, 12};
@@ -386,13 +379,10 @@ public class ManageGuestView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, total);
-
-    for (int i = startIndex; i <= endIndex; i++) {
-      Billing b = history.getEntry(i);
+    for (int i = 0; i < history.length; i++) {
+      Billing b = history[i];
       if (b == null) continue;
-      int displayNum = i - startIndex + 1;
+      int displayNum = i + 1;
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(displayNum),
@@ -412,7 +402,7 @@ public class ManageGuestView {
     System.out.println("Select a row number to view the receipt.");
     System.out.println("[F] Date Filter     [P] Prev Page     [N] Next Page     [C] Return\n");
 
-    int maxDisplayNum = endIndex - startIndex + 1;
+    int maxDisplayNum = history.length;
     String rangeStr = (maxDisplayNum == 1) ? "1" : "1-" + maxDisplayNum;
     return ConsoleUtil.getMenuInput(
         "Enter row or command (" + rangeStr + "): ",
@@ -421,7 +411,7 @@ public class ManageGuestView {
         new char[] {'F', 'N', 'P', 'C'});
   }
 
-  /** Returns the raw typed strings for [from, to]; parsing/validation is done by the controller. */
+  // date filter
   public String[] promptDateFilterRaw(LocalDate currentFrom, LocalDate currentTo) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("DATE FILTER — BILLING HISTORY", 60);
@@ -432,7 +422,7 @@ public class ManageGuestView {
             + (currentTo != null ? currentTo : "Any")
             + " ]");
     System.out.println();
-    System.out.println("Format: YYYY-MM-DD   |   blank = keep current   |   '-' = clear\n");
+    System.out.println("Format: YYYY-MM-DD   |   Enter = keep current   |   '-' = clear\n");
 
     String from = ConsoleUtil.getStringInput("From date: ");
     String to = ConsoleUtil.getStringInput("To date  : ");
@@ -479,15 +469,14 @@ public class ManageGuestView {
 
   // reservation history
   public ConsoleUtil.GetMenuInputResult displayReservationHistory(
-      Guest guest, ListInterface<Reservation> historyNewToOld, int currentPage, int pageSize) {
+      Guest guest, Reservation[] pageRows, int totalCount, int currentPage, int pageSize) {
 
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox(
         "RESERVATION HISTORY: " + guest.getName() + " [" + guest.getGuestId() + "]", 93);
 
-    ListInterface<Reservation> history =
-        (historyNewToOld != null) ? historyNewToOld : new ArrayList<>();
-    int total = history.getNumberOfEntries();
+    Reservation[] history = (pageRows != null) ? pageRows : new Reservation[0];
+    int total = totalCount;
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
     int[] colWidths = {4, 12, 12, 12, 14, 22};
@@ -517,13 +506,10 @@ public class ManageGuestView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, total);
-
-    for (int i = startIndex; i <= endIndex; i++) {
-      Reservation r = history.getEntry(i);
+    for (int i = 0; i < history.length; i++) {
+      Reservation r = history[i];
       if (r == null) continue;
-      int displayNum = i - startIndex + 1;
+      int displayNum = i + 1;
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(displayNum),
@@ -541,7 +527,7 @@ public class ManageGuestView {
     System.out.println("Select a row number to view the assigned room details.");
     System.out.println("[P] Prev Page     [N] Next Page     [C] Return\n");
 
-    int maxDisplayNum = endIndex - startIndex + 1;
+    int maxDisplayNum = history.length;
     String rangeStr = (maxDisplayNum == 1) ? "1" : "1-" + maxDisplayNum;
     return ConsoleUtil.getMenuInput(
         "Enter row or command (" + rangeStr + "): ", 1, maxDisplayNum, new char[] {'N', 'P', 'C'});
@@ -568,7 +554,6 @@ public class ManageGuestView {
         kvSettings);
     printKvRow("Status", reservation.getStatus().name(), kvSettings);
     printKvRow("Reservation Time", formatDateTime(reservation.getReservationTime()), kvSettings);
-    printKvRow("Check-out Time", formatDateTime(reservation.getCheckOutTime()), kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
     System.out.println();

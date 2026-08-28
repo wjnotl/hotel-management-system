@@ -13,11 +13,11 @@ public class VipReportView {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("VIP ANALYTICS REPORT HUB");
     System.out.println("Select an operational performance report to generate:\n");
-    System.out.println("1. Wait Time Efficiency & SLA Attainment Report");
+    System.out.println("1. Wait Time Efficiency & SLA Attainment Audit Report");
     System.out.println("   Analyzes physical wait durations vs. tier SLA targets.\n");
     System.out.println("2. VIP Penalty & Eviction Audit Report");
     System.out.println("   Analyzes no-show strike counts & max-strike eviction lockouts.\n");
-    System.out.println("3. Room Holding Bay & Grace Window Report");
+    System.out.println("3. Room Holding Bay & Grace Window Audit Report");
     System.out.println("   Analyzes room hold times & grace countdown utilization.\n");
     System.out.println("4. Back to VIP Menu\n");
 
@@ -768,8 +768,7 @@ public class VipReportView {
     return ConsoleUtil.getMenuInput("Select a command: ", new char[] {'B', 'R', 'E', 'Q'});
   }
 
-  public void renderSlaReportBody(
-      SlaReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
+  public void renderSlaReportBody(SlaReportDTO viewModel, String scopeStr, String sortStr) {
 
     System.out.println(
         "Generated At: "
@@ -781,7 +780,6 @@ public class VipReportView {
     int totalMatches = (viewModel == null) ? 0 : viewModel.getTotalMatches();
     ListInterface<SlaReportRowDTO> rows = (viewModel == null) ? null : viewModel.getRows();
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
-    int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
     int[] columnWidths = {4, 11, 20, 12, 14, 12, 9, 15};
     TableUtil.TableSettings settings =
@@ -821,7 +819,7 @@ public class VipReportView {
     } else {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-      for (int i = 1; i <= displayCount; i++) {
+      for (int i = 1; i <= rowCount; i++) {
         SlaReportRowDTO row = rows.getEntry(i);
         TableUtil.printTableRow(
             new String[] {
@@ -839,15 +837,14 @@ public class VipReportView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
     }
 
-    System.out.printf("\nDisplaying %d of %d Matched Records\n", displayCount, totalMatches);
+    System.out.printf("\nDisplaying %d of %d Matched Records\n", rowCount, totalMatches);
 
     if (viewModel != null && viewModel.getSummary() != null) {
       printSlaSummaryBlock(viewModel.getSummary());
     }
   }
 
-  public void renderPenaltyReportBody(
-      PenaltyReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
+  public void renderPenaltyReportBody(PenaltyReportDTO viewModel, String scopeStr, String sortStr) {
 
     System.out.println(
         "Generated At: "
@@ -859,7 +856,6 @@ public class VipReportView {
     int totalMatches = (viewModel == null) ? 0 : viewModel.getTotalMatches();
     ListInterface<PenaltyReportRowDTO> rows = (viewModel == null) ? null : viewModel.getRows();
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
-    int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
     int[] columnWidths = {4, 11, 22, 12, 9, 14, 9};
     TableUtil.TableSettings settings =
@@ -897,7 +893,7 @@ public class VipReportView {
     } else {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-      for (int i = 1; i <= displayCount; i++) {
+      for (int i = 1; i <= rowCount; i++) {
         PenaltyReportRowDTO row = rows.getEntry(i);
         TableUtil.printTableRow(
             new String[] {
@@ -914,15 +910,14 @@ public class VipReportView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
     }
 
-    System.out.printf("\nDisplaying %d of %d Matched Records\n", displayCount, totalMatches);
+    System.out.printf("\nDisplaying %d of %d Matched Records\n", rowCount, totalMatches);
 
     if (viewModel != null && viewModel.getSummary() != null) {
       printPenaltySummaryBlock(viewModel.getSummary());
     }
   }
 
-  public void renderHoldingReportBody(
-      HoldingReportDTO viewModel, String scopeStr, String sortStr, int recordLimit) {
+  public void renderHoldingReportBody(HoldingReportDTO viewModel, String scopeStr, String sortStr) {
 
     System.out.println(
         "Generated At: "
@@ -934,7 +929,6 @@ public class VipReportView {
     int totalMatches = (viewModel == null) ? 0 : viewModel.getTotalMatches();
     ListInterface<HoldingReportRowDTO> rows = (viewModel == null) ? null : viewModel.getRows();
     int rowCount = (rows == null) ? 0 : rows.getNumberOfEntries();
-    int displayCount = (recordLimit == 0 || recordLimit >= rowCount) ? rowCount : recordLimit;
 
     int[] columnWidths = {4, 11, 18, 12, 15, 12, 13, 13};
     TableUtil.TableSettings settings =
@@ -983,7 +977,7 @@ public class VipReportView {
     } else {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-      for (int i = 1; i <= displayCount; i++) {
+      for (int i = 1; i <= rowCount; i++) {
         HoldingReportRowDTO row = rows.getEntry(i);
         TableUtil.printTableRow(
             new String[] {
@@ -1001,7 +995,7 @@ public class VipReportView {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
     }
 
-    System.out.printf("\nDisplaying %d of %d Matched Records\n", displayCount, totalMatches);
+    System.out.printf("\nDisplaying %d of %d Matched Records\n", rowCount, totalMatches);
 
     if (viewModel != null && viewModel.getSummary() != null) {
       printHoldingSummaryBlock(viewModel.getSummary());

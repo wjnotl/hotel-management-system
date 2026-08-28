@@ -226,8 +226,8 @@ public class VipController {
     if (guestRepo == null || configRepo == null) return;
 
     // Check if midnight passed while system was offline/shutdown
-    String lastResetDate = configRepo.getConfig().getLastStrikeResetDate();
-    String todayDate = LocalDate.now().toString();
+    LocalDate lastResetDate = configRepo.getConfig().getLastStrikeResetDate();
+    LocalDate todayDate = LocalDate.now();
 
     if (lastResetDate == null || !todayDate.equals(lastResetDate)) {
       guestRepo.resetAllGuestStrikes(configRepo);

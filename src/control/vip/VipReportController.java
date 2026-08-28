@@ -98,10 +98,10 @@ public class VipReportController {
 
     String reportTitle =
         (reportType == 1)
-            ? "Wait Time Efficiency & SLA Attainment Report"
+            ? "Wait Time Efficiency & SLA Attainment Audit Report"
             : (reportType == 2)
                 ? "VIP Penalty & Eviction Audit Report"
-                : "Room Holding Bay & Grace Window Report";
+                : "Room Holding Bay & Grace Window Audit Report";
 
     boolean generateSelected = handleFilterControlPanel(reportTitle, state, reportType);
     if (!generateSelected) {
@@ -145,10 +145,10 @@ public class VipReportController {
 
         reportView.displayReportTitleHeader(
             (reportType == 1)
-                ? "REPORT 1: WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT"
+                ? "REPORT 1: WAIT TIME EFFICIENCY & SLA ATTAINMENT AUDIT REPORT"
                 : (reportType == 2)
                     ? "REPORT 2: VIP PENALTY & EVICTION AUDIT REPORT"
-                    : "REPORT 3: ROOM HOLDING BAY & GRACE WINDOW AUDIT");
+                    : "REPORT 3: ROOM HOLDING BAY & GRACE WINDOW AUDIT REPORT");
 
         ConsoleUtil.clearBuffer();
         ConsoleUtil.startRecording();
@@ -156,15 +156,15 @@ public class VipReportController {
         if (reportType == 1) {
           VipReportView.SlaReportDTO dto =
               buildSlaReportDTO(filteredList, state.recordLimit, state.endDate);
-          reportView.renderSlaReportBody(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderSlaReportBody(dto, scopeStr, sortStr);
         } else if (reportType == 2) {
           VipReportView.PenaltyReportDTO dto =
               buildPenaltyReportDTO(filteredList, state.recordLimit);
-          reportView.renderPenaltyReportBody(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderPenaltyReportBody(dto, scopeStr, sortStr);
         } else {
           VipReportView.HoldingReportDTO dto =
               buildHoldingReportDTO(filteredList, state.recordLimit, state.endDate);
-          reportView.renderHoldingReportBody(dto, scopeStr, sortStr, state.recordLimit);
+          reportView.renderHoldingReportBody(dto, scopeStr, sortStr);
         }
 
         ConsoleUtil.stopRecording();
@@ -704,9 +704,20 @@ public class VipReportController {
                     ? Integer.compare(r1.getPriorityScore(), r2.getPriorityScore())
                     : Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
             if (cmp != 0) return cmp;
+
+            LocalDateTime t1 = r1.getQueueArrivalTime();
+            LocalDateTime t2 = r2.getQueueArrivalTime();
+            int timeComp;
+            if (t1 == null && t2 == null) timeComp = 0;
+            else if (t1 == null) timeComp = 1;
+            else if (t2 == null) timeComp = -1;
+            else timeComp = isAsc ? t2.compareTo(t1) : t1.compareTo(t2);
+
+            if (timeComp != 0) return timeComp;
+
             String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
             String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
-            return id1.compareToIgnoreCase(id2);
+            return isAsc ? id2.compareToIgnoreCase(id1) : id1.compareToIgnoreCase(id2);
           });
     } else if ("STRIKE COUNT".equalsIgnoreCase(sortAttr)) {
       filtered.sort(
@@ -754,15 +765,21 @@ public class VipReportController {
             if (r1 == null && r2 == null) return 0;
             if (r1 == null) return 1;
             if (r2 == null) return -1;
+
+            long w1 = calculateWaitMins(r1, endDate);
+            long w2 = calculateWaitMins(r2, endDate);
+            int cmp = isAsc ? Long.compare(w1, w2) : Long.compare(w2, w1);
+            if (cmp != 0) return cmp;
+
             LocalDateTime t1 = r1.getQueueArrivalTime();
             LocalDateTime t2 = r2.getQueueArrivalTime();
-            int cmp;
-            if (t1 == null && t2 == null) cmp = 0;
-            else if (t1 == null) cmp = 1;
-            else if (t2 == null) cmp = -1;
-            else cmp = isAsc ? t2.compareTo(t1) : t1.compareTo(t2);
+            int timeComp;
+            if (t1 == null && t2 == null) timeComp = 0;
+            else if (t1 == null) timeComp = 1;
+            else if (t2 == null) timeComp = -1;
+            else timeComp = isAsc ? t2.compareTo(t1) : t1.compareTo(t2);
 
-            if (cmp != 0) return cmp;
+            if (timeComp != 0) return timeComp;
             String id1 = (r1.getReservationId() != null) ? r1.getReservationId() : "";
             String id2 = (r2.getReservationId() != null) ? r2.getReservationId() : "";
             return id1.compareToIgnoreCase(id2);

@@ -10,6 +10,7 @@ import entity.Member;
 import entity.Reservation;
 import entity.Room;
 import entity.VipSystemConfig;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import repo.AllocationRepo;
 import repo.GuestRepo;
@@ -79,16 +80,37 @@ public class VipManageWaitlistController {
         ListInterface<VipManageWaitlistView.WaitlistRowDTO> displayDtos =
             buildWaitlistRowDTO(filteredList);
 
+        if (displayDtos == null) {
+          ConsoleUtil.printError("Error: Failed to build waitlist screen.");
+          return;
+        }
+
+        int totalMatches = displayDtos.getNumberOfEntries();
+        int totalPages =
+            (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+        if (currentPage > totalPages && totalPages > 0) {
+          currentPage = totalPages;
+        }
+
+        int startIndex = (currentPage - 1) * pageSize + 1;
+        int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+        int rowsOnPage = (totalMatches == 0) ? 0 : (endIndex - startIndex + 1);
+
+        ListInterface<VipManageWaitlistView.WaitlistRowDTO> pageSlice =
+            (totalMatches > 0) ? displayDtos.slice(startIndex, endIndex) : new LinkedList<>();
+
         ConsoleUtil.GetMenuInputResult result =
             waitlistView.renderWaitlistScreen(
-                displayDtos,
+                pageSlice,
                 roomType,
                 searchQuery,
                 tierFilter,
                 boilingFilter,
                 sortCriteria,
                 currentPage,
-                pageSize);
+                totalPages,
+                totalMatches,
+                rowsOnPage);
 
         if ("E".equalsIgnoreCase(result.input)) {
           break;
@@ -109,8 +131,6 @@ public class VipManageWaitlistController {
         } else if ("Q".equalsIgnoreCase(result.input)) {
           handleQuickAssignTop(roomType);
         } else if ("N".equalsIgnoreCase(result.input)) {
-          int totalMatches = filteredList.getNumberOfEntries();
-          int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
           if (currentPage < totalPages) {
             currentPage++;
           } else {
@@ -257,9 +277,34 @@ public class VipManageWaitlistController {
 
     while (true) {
       try {
+        int startIndex = (currentPage - 1) * pageSize + 1;
+        int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+        int rowsOnPage = endIndex - startIndex + 1;
+
+        ListInterface<Guest> rawSlice = matches.slice(startIndex, endIndex);
+        ListInterface<VipManageWaitlistView.GuestDisambiguationRowDTO> pageSlice =
+            new LinkedList<>();
+
+        for (int i = 1; i <= rawSlice.getNumberOfEntries(); i++) {
+          Guest g = rawSlice.getEntry(i);
+          if (g == null) continue;
+
+          Member m = (g.getMemberId() != null) ? memberRepo.findById(g.getMemberId()) : null;
+          String icOrPass =
+              (g.getIcNumber() != null && !g.getIcNumber().isEmpty())
+                  ? g.getIcNumber()
+                  : (g.getPassportNumber() != null ? g.getPassportNumber() : "N/A");
+          String phone = (g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
+          String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
+
+          pageSlice.add(
+              new VipManageWaitlistView.GuestDisambiguationRowDTO(
+                  String.valueOf(i), g.getGuestId(), g.getName(), icOrPass, phone, tierStr));
+        }
+
         ConsoleUtil.GetMenuInputResult input =
             waitlistView.displayGuestDisambiguationScreen(
-                matches, memberRepo.getMemberList(), searchId, currentPage, pageSize);
+                pageSlice, searchId, currentPage, totalPages, totalMatches, rowsOnPage);
 
         if (input == null) return null;
 
@@ -281,7 +326,6 @@ public class VipManageWaitlistController {
             return null;
           }
         } else {
-          int startIndex = (currentPage - 1) * pageSize + 1;
           int rowIdx = input.getAsInt();
           return matches.getEntry(startIndex + rowIdx - 1);
         }
@@ -606,7 +650,35 @@ public class VipManageWaitlistController {
             });
 
     if ("SCORE (LOW -> HIGH)".equalsIgnoreCase(sort)) {
-      filtered.sort((r1, r2) -> Integer.compare(r1.getPriorityScore(), r2.getPriorityScore()));
+      filtered.sort(
+          (a, b) -> {
+            if (a == b) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            int scoreComp = Integer.compare(a.getPriorityScore(), b.getPriorityScore());
+            if (scoreComp != 0) {
+              return scoreComp;
+            }
+
+            // Tie-breaker for Low -> High: latest arrival time comes first (shortest wait time =
+            // lowest priority)
+            LocalDateTime tA = a.getQueueArrivalTime();
+            LocalDateTime tB = b.getQueueArrivalTime();
+            int timeComp;
+            if (tA == null && tB == null) timeComp = 0;
+            else if (tA == null) timeComp = 1;
+            else if (tB == null) timeComp = -1;
+            else timeComp = tB.compareTo(tA);
+
+            if (timeComp != 0) {
+              return timeComp;
+            }
+
+            String idA = (a.getReservationId() != null) ? a.getReservationId() : "";
+            String idB = (b.getReservationId() != null) ? b.getReservationId() : "";
+            return idB.compareToIgnoreCase(idA);
+          });
     } else if ("STRIKES (LOWEST -> HIGHEST)".equalsIgnoreCase(sort)) {
       filtered.sort(
           (r1, r2) -> {
@@ -715,11 +787,31 @@ public class VipManageWaitlistController {
           });
     } else {
       filtered.sort(
-          (r1, r2) -> {
-            if (r1 == null && r2 == null) return 0;
-            if (r1 == null) return 1;
-            if (r2 == null) return -1;
-            return Integer.compare(r2.getPriorityScore(), r1.getPriorityScore());
+          (a, b) -> {
+            if (a == b) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            int scoreComp = Integer.compare(b.getPriorityScore(), a.getPriorityScore());
+            if (scoreComp != 0) {
+              return scoreComp;
+            }
+
+            LocalDateTime tA = a.getQueueArrivalTime();
+            LocalDateTime tB = b.getQueueArrivalTime();
+            int timeComp;
+            if (tA == null && tB == null) timeComp = 0;
+            else if (tA == null) timeComp = 1;
+            else if (tB == null) timeComp = -1;
+            else timeComp = tA.compareTo(tB);
+
+            if (timeComp != 0) {
+              return timeComp;
+            }
+
+            String idA = (a.getReservationId() != null) ? a.getReservationId() : "";
+            String idB = (b.getReservationId() != null) ? b.getReservationId() : "";
+            return idA.compareToIgnoreCase(idB);
           });
     }
 
@@ -740,10 +832,9 @@ public class VipManageWaitlistController {
     }
   }
 
-  private String formatWaitTime(java.time.LocalDateTime arrivalTime) {
+  private String formatWaitTime(LocalDateTime arrivalTime) {
     if (arrivalTime == null) return "N/A";
-    long minutes =
-        java.time.Duration.between(arrivalTime, java.time.LocalDateTime.now()).toMinutes();
+    long minutes = Duration.between(arrivalTime, LocalDateTime.now()).toMinutes();
     if (minutes < 0) minutes = 0;
     return minutes + " Mins";
   }

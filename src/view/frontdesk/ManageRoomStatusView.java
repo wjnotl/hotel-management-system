@@ -1,20 +1,17 @@
 package view.frontdesk;
 
-import adt.ArrayList;
 import util.ConsoleUtil;
 import util.ConsoleUtil.GetMenuInputResult;
 import util.TableUtil;
 
 public class ManageRoomStatusView {
 
-  // =========================================================================
-  // DTOs — view never touches raw entities
-  // =========================================================================
-
+  // DTOs
   public static class RoomRowDTO {
     public final String roomNumber;
     public final String roomType;
     public final String status;
+    public final String occupied;
     public final String pricePerNight;
     public final String guestName;
     public final String confirmationNumber;
@@ -27,13 +24,14 @@ public class ManageRoomStatusView {
         String pricePerNight,
         String guestName,
         String confirmationNumber) {
-      this(roomNumber, roomType, status, pricePerNight, guestName, confirmationNumber, null);
+      this(roomNumber, roomType, status, false, pricePerNight, guestName, confirmationNumber, null);
     }
 
     public RoomRowDTO(
         String roomNumber,
         String roomType,
         String status,
+        boolean occupied,
         String pricePerNight,
         String guestName,
         String confirmationNumber,
@@ -41,6 +39,7 @@ public class ManageRoomStatusView {
       this.roomNumber = orNA(roomNumber);
       this.roomType = orNA(roomType);
       this.status = orNA(status);
+      this.occupied = occupied ? "YES" : "NO";
       this.pricePerNight = orNA(pricePerNight);
       this.guestName = orNA(guestName);
       this.confirmationNumber = orNA(confirmationNumber);
@@ -83,12 +82,10 @@ public class ManageRoomStatusView {
     }
   }
 
-  // =========================================================================
-  // MAIN ROOM LIST SCREEN
-  // =========================================================================
-
+  // room list
   public GetMenuInputResult renderRoomStatusScreen(
-      ArrayList<RoomRowDTO> rooms,
+      RoomRowDTO[] pageRows,
+      int totalCount,
       String searchQuery,
       String roomTypeFilter,
       String roomStatusFilter,
@@ -97,7 +94,7 @@ public class ManageRoomStatusView {
       int pageSize) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("MANAGE ROOM STATUS", 121);
+    ConsoleUtil.printTitleBox("MANAGE ROOM STATUS", 132);
 
     System.out.println(
         "SEARCH FILTER   : [ "
@@ -110,21 +107,22 @@ public class ManageRoomStatusView {
     System.out.println("SORT CRITERIA   : [ " + sortCriteria + " ]");
     System.out.println();
 
-    int total = (rooms == null) ? 0 : rooms.getNumberOfEntries();
+    int total = totalCount;
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
-    int[] colWidths = {4, 10, 10, 14, 14, 12, 20, 14};
+    int[] colWidths = {4, 10, 10, 14, 9, 14, 12, 20, 14};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(colWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
             .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.RIGHT)
-            .setHAlign(5, TableUtil.Align.CENTER)
-            .setHAlign(6, TableUtil.Align.LEFT)
-            .setHAlign(7, TableUtil.Align.CENTER)
-            .setTruncate(6);
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.RIGHT)
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.LEFT)
+            .setHAlign(8, TableUtil.Align.CENTER)
+            .setTruncate(7);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
@@ -133,6 +131,7 @@ public class ManageRoomStatusView {
           "ROOM NO.",
           "ROOM TYPE",
           "STATUS",
+          "OCCUPIED",
           "PRICE/NIGHT",
           "RES. ID",
           "GUEST NAME",
@@ -140,10 +139,10 @@ public class ManageRoomStatusView {
         },
         settings);
 
-    if (total == 0 || rooms == null) {
+    if (total == 0 || pageRows == null) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {119}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {132}).setHAlign(0, TableUtil.Align.CENTER);
       boolean hasFilters =
           searchQuery != null || roomTypeFilter != null || roomStatusFilter != null;
       String msg =
@@ -157,19 +156,17 @@ public class ManageRoomStatusView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, total);
-
-    for (int i = startIndex; i <= endIndex; i++) {
-      RoomRowDTO dto = rooms.getEntry(i);
+    for (int i = 0; i < pageRows.length; i++) {
+      RoomRowDTO dto = pageRows[i];
       if (dto == null) continue;
-      int displayNum = i - startIndex + 1;
+      int displayNum = i + 1;
       TableUtil.printTableRow(
           new String[] {
             String.valueOf(displayNum),
             dto.roomNumber,
             dto.roomType,
             dto.status,
+            dto.occupied,
             dto.pricePerNight,
             dto.reservationId,
             dto.guestName,
@@ -183,7 +180,7 @@ public class ManageRoomStatusView {
     System.out.println("[S] Search & Filter     [O] Change Sort     [R] Refresh");
     System.out.println("[P] Prev Page           [N] Next Page       [E] Exit to Front Desk\n");
 
-    int maxDisplayNum = endIndex - startIndex + 1;
+    int maxDisplayNum = pageRows.length;
     String rangeStr = (maxDisplayNum == 1) ? "1" : "1-" + maxDisplayNum;
     return ConsoleUtil.getMenuInput(
         "Select row or command (" + rangeStr + "): ",
@@ -194,10 +191,14 @@ public class ManageRoomStatusView {
 
   // showing available room table
   public GetMenuInputResult renderAvailableRoomsTable(
-      ArrayList<RoomRowDTO> rooms, RoomDetailDTO currentRoom, int currentPage, int pageSize) {
+      RoomRowDTO[] pageRows,
+      int totalCount,
+      RoomDetailDTO currentRoom,
+      int currentPage,
+      int pageSize) {
 
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("SELECT TARGET ROOM", 80);
+    ConsoleUtil.printTitleBox("SELECT TARGET ROOM", 82);
 
     System.out.println(
         "Moving from : Room "
@@ -206,28 +207,30 @@ public class ManageRoomStatusView {
             + currentRoom.roomType
             + ")  —  "
             + currentRoom.guestInfo);
-    System.out.println("Only VACANT_CLEAN rooms are shown below.\n");
+    System.out.println("Only VACANT_CLEAN (not occupied) rooms are shown below.\n");
 
-    int total = (rooms == null) ? 0 : rooms.getNumberOfEntries();
+    int total = totalCount;
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
-    int[] colWidths = {4, 10, 10, 14, 12};
+    int[] colWidths = {4, 10, 10, 14, 9, 12};
     TableUtil.TableSettings settings =
         new TableUtil.TableSettings(colWidths)
             .setHAlign(0, TableUtil.Align.CENTER)
             .setHAlign(1, TableUtil.Align.CENTER)
             .setHAlign(2, TableUtil.Align.CENTER)
             .setHAlign(3, TableUtil.Align.CENTER)
-            .setHAlign(4, TableUtil.Align.RIGHT);
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.RIGHT);
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
     TableUtil.printTableRow(
-        new String[] {"NO.", "ROOM NO.", "ROOM TYPE", "STATUS", "PRICE/NIGHT"}, settings);
+        new String[] {"NO.", "ROOM NO.", "ROOM TYPE", "STATUS", "OCCUPIED", "PRICE/NIGHT"},
+        settings);
 
-    if (total == 0 || rooms == null) {
+    if (total == 0 || pageRows == null) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
       TableUtil.TableSettings emptySettings =
-          new TableUtil.TableSettings(new int[] {53}).setHAlign(0, TableUtil.Align.CENTER);
+          new TableUtil.TableSettings(new int[] {74}).setHAlign(0, TableUtil.Align.CENTER);
       TableUtil.printTableRow(new String[] {"*** NO AVAILABLE ROOMS ***"}, emptySettings);
       TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
       System.out.println("\nPress C to cancel.\n");
@@ -236,16 +239,18 @@ public class ManageRoomStatusView {
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, total);
-
-    for (int i = startIndex; i <= endIndex; i++) {
-      RoomRowDTO dto = rooms.getEntry(i);
+    for (int i = 0; i < pageRows.length; i++) {
+      RoomRowDTO dto = pageRows[i];
       if (dto == null) continue;
-      int displayNum = i - startIndex + 1;
+      int displayNum = i + 1;
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum), dto.roomNumber, dto.roomType, dto.status, dto.pricePerNight
+            String.valueOf(displayNum),
+            dto.roomNumber,
+            dto.roomType,
+            dto.status,
+            dto.occupied,
+            dto.pricePerNight
           },
           settings);
     }
@@ -254,7 +259,7 @@ public class ManageRoomStatusView {
     System.out.printf("\nPage %d / %d (Total Available: %d)\n\n", currentPage, totalPages, total);
     System.out.println("[P] Prev Page     [N] Next Page     [C] Cancel\n");
 
-    int maxDisplayNum = endIndex - startIndex + 1;
+    int maxDisplayNum = pageRows.length;
     String rangeStr = (maxDisplayNum == 1) ? "1" : "1-" + maxDisplayNum;
     return ConsoleUtil.getMenuInput(
         "Select row to move into (" + rangeStr + "): ",
@@ -313,11 +318,9 @@ public class ManageRoomStatusView {
     System.out.println("Current : [ " + (current == null ? "ALL" : current) + " ]\n");
     System.out.println("1. DIRTY");
     System.out.println("2. CLEANING");
-    System.out.println("3. INSPECTED");
-    System.out.println("4. VACANT_CLEAN  (Available)");
-    System.out.println("5. OCCUPIED");
-    System.out.println("6. Show All\n");
-    return ConsoleUtil.getMenuInput("Choose option: ", 1, 6).getAsInt();
+    System.out.println("3. VACANT_CLEAN");
+    System.out.println("4. Show All\n");
+    return ConsoleUtil.getMenuInput("Choose option: ", 1, 4).getAsInt();
   }
 
   // sorting menu
@@ -378,20 +381,15 @@ public class ManageRoomStatusView {
     printKvRow("Guest", dto.guestInfo, kvSettings);
     TableUtil.printTableBorder(kvSettings, TableUtil.BorderPosition.BOTTOM);
 
-    System.out.println("\n-- Room Actions --");
     System.out.println("1. Change Room          (move reservation to another room)");
-    System.out.println("2. Mark as VACANT_CLEAN (Available)");
-    System.out.println("3. Mark as OCCUPIED     (manual override)");
-    System.out.println("4. Mark as DIRTY        (flag for housekeeping)");
-    System.out.println("5. Back to Room List\n");
+    System.out.println("2. Mark as VACANT_CLEAN");
+    System.out.println("3. Mark as DIRTY       ");
+    System.out.println("4. Back to Room List\n");
 
-    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
-  // =========================================================================
-  // SUCCESS SCREENS
-  // =========================================================================
-
+  // changed room succcess
   public void displayChangeRoomSuccess(
       String oldRoomNumber, String newRoomNumber, String oldStatus, String confirmationNumber) {
     ConsoleUtil.clearScreen();
@@ -421,10 +419,7 @@ public class ManageRoomStatusView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  // =========================================================================
-  // UTILITY
-  // =========================================================================
-
+  // ulti
   private void printKvRow(String label, String value, TableUtil.TableSettings settings) {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
     TableUtil.printTableRow(new String[] {label, value}, settings);

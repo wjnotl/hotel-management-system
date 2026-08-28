@@ -1,6 +1,5 @@
 package view.frontdesk;
 
-import adt.ArrayList;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import util.ConsoleUtil;
@@ -30,10 +29,7 @@ public class ReportsView {
     lastRoomTypeFilter = v;
   }
 
-  // =========================================================================
   // DTOs
-  // =========================================================================
-
   public static class CheckoutRowDTO {
     public final String billingId, guestId, guestName, roomNumber, roomType;
     public final String checkInDate, checkOutDate, paymentStatus;
@@ -229,10 +225,7 @@ public class ReportsView {
     }
   }
 
-  // =========================================================================
-  // REPORT HUB
-  // =========================================================================
-
+  // report menu
   public int displayReportHubMenu() {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("FRONT-DESK REPORT HUB", 60);
@@ -243,12 +236,10 @@ public class ReportsView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 4).getAsInt();
   }
 
-  // =========================================================================
-  // REPORT 1 — GUEST CHECK-OUT REPORT
-  // =========================================================================
-
+  // report 1 - guest checkout report
   public GetMenuInputResult renderCheckoutReport(
-      ArrayList<CheckoutRowDTO> list,
+      CheckoutRowDTO[] pageRows,
+      int totalCount,
       CheckoutSummaryDTO summary,
       LocalDate fromDate,
       LocalDate toDate,
@@ -273,7 +264,7 @@ public class ReportsView {
     System.out.println("SORT CRITERIA   : [ " + sortCriteria + " ]");
     System.out.println();
 
-    int total = (list == null) ? 0 : list.getNumberOfEntries();
+    int total = totalCount;
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
     int[] colWidths = {4, 10, 22, 9, 10, 12, 12, 7, 12, 9};
@@ -299,7 +290,7 @@ public class ReportsView {
         },
         settings);
 
-    if (total == 0 || list == null) {
+    if (total == 0 || pageRows == null) {
       printEmptyTable(
           settings,
           134,
@@ -331,14 +322,12 @@ public class ReportsView {
     }
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, total);
-    for (int i = startIndex; i <= endIndex; i++) {
-      CheckoutRowDTO dto = list.getEntry(i);
+    for (int i = 0; i < pageRows.length; i++) {
+      CheckoutRowDTO dto = pageRows[i];
       if (dto == null) continue;
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(i - startIndex + 1),
+            String.valueOf(i + 1),
             dto.guestId,
             dto.guestName,
             dto.roomNumber,
@@ -381,14 +370,11 @@ public class ReportsView {
         "Enter a command: ", new char[] {'S', 'O', 'R', 'N', 'P', 'X', 'E'});
   }
 
-  // =========================================================================
-  // REPORT 2 — ROOM PERFORMANCE & REVENUE REPORT
-  // =========================================================================
-
+  // report 2 - room performance & revenue report
   public GetMenuInputResult renderRoomPerformanceReport(
-      ArrayList<OccupancyRowDTO> occupancyRows,
+      OccupancyRowDTO[] occupancyRows,
       OccupancySummaryDTO occupancySummary,
-      ArrayList<CheckoutRowDTO> revenueRows,
+      CheckoutRowDTO[] revenueRows,
       RevenueSummaryDTO revenueSummary,
       LocalDate fromDate,
       LocalDate toDate,
@@ -408,12 +394,12 @@ public class ReportsView {
     System.out.println("SORT CRITERIA : [ " + sortCriteria + " ]");
     System.out.println();
 
-    // ── SECTION 1: OCCUPANCY ─────────────────────────────────────────────
+    // SECTION 1: OCCUPANCY
     System.out.println(
         "──────────────────── SECTION 1 : CURRENT OCCUPANCY SNAPSHOT ────────────────────");
     System.out.println();
 
-    int occTotal = (occupancyRows == null) ? 0 : occupancyRows.getNumberOfEntries();
+    int occTotal = (occupancyRows == null) ? 0 : occupancyRows.length;
     int[] occWidths = {12, 10, 14, 7, 7, 7};
     TableUtil.TableSettings occSettings =
         new TableUtil.TableSettings(occWidths)
@@ -436,8 +422,8 @@ public class ReportsView {
       TableUtil.printTableRow(new String[] {"*** NO ROOM DATA ***"}, es);
       TableUtil.printTableBorder(es, TableUtil.BorderPosition.PLAIN_BOTTOM);
     } else {
-      for (int i = 1; i <= occTotal; i++) {
-        OccupancyRowDTO r = occupancyRows.getEntry(i);
+      for (int i = 0; i < occTotal; i++) {
+        OccupancyRowDTO r = occupancyRows[i];
         if (r == null) continue;
         TableUtil.printTableRow(
             new String[] {
@@ -449,7 +435,8 @@ public class ReportsView {
               r.occupancyRate
             },
             occSettings);
-        if (i < occTotal) TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.MIDDLE);
+        if (i < occTotal - 1)
+          TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.MIDDLE);
       }
       TableUtil.printTableBorder(occSettings, TableUtil.BorderPosition.MIDDLE);
       TableUtil.printTableRow(
@@ -466,13 +453,13 @@ public class ReportsView {
     }
     System.out.println();
 
-    // ── SECTION 2: REVENUE ───────────────────────────────────────────────
+    // SECTION 2: REVENUE
     System.out.println(
         "─────────────── SECTION 2 : REVENUE BREAKDOWN  (PAID STAYS IN PERIOD)"
             + " ───────────────");
     System.out.println();
 
-    int revTotal = (revenueRows == null) ? 0 : revenueRows.getNumberOfEntries();
+    int revTotal = (revenueRows == null) ? 0 : revenueRows.length;
     int[] revWidths = {4, 10, 22, 9, 10, 12, 12, 7, 12};
     TableUtil.TableSettings revSettings =
         new TableUtil.TableSettings(revWidths)
@@ -506,12 +493,12 @@ public class ReportsView {
       printEmptyTable(revSettings, 122, "*** NO PAID STAYS IN SELECTED PERIOD ***");
     } else {
       TableUtil.printTableBorder(revSettings, TableUtil.BorderPosition.MIDDLE);
-      for (int i = 1; i <= revTotal; i++) {
-        CheckoutRowDTO dto = revenueRows.getEntry(i);
+      for (int i = 0; i < revTotal; i++) {
+        CheckoutRowDTO dto = revenueRows[i];
         if (dto == null) continue;
         TableUtil.printTableRow(
             new String[] {
-              String.valueOf(i),
+              String.valueOf(i + 1),
               dto.guestId,
               dto.guestName,
               dto.roomNumber,
@@ -551,12 +538,10 @@ public class ReportsView {
     return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'O', 'X', 'R', 'E'});
   }
 
-  // =========================================================================
-  // REPORT 3 — STAY DURATION ANALYSIS
-  // =========================================================================
-
+  // report 3 - stay duration analysis
   public GetMenuInputResult renderStayReport(
-      ArrayList<StayRowDTO> list,
+      StayRowDTO[] pageRows,
+      int totalCount,
       StaySummaryDTO summary,
       LocalDate fromDate,
       LocalDate toDate,
@@ -578,7 +563,7 @@ public class ReportsView {
     System.out.println("SORT CRITERIA : [ " + sortCriteria + " ]");
     System.out.println();
 
-    int total = (list == null) ? 0 : list.getNumberOfEntries();
+    int total = totalCount;
     int totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
 
     int[] colWidths = {4, 10, 22, 9, 10, 12, 12, 7, 12, 9};
@@ -604,7 +589,7 @@ public class ReportsView {
         },
         settings);
 
-    if (total == 0 || list == null) {
+    if (total == 0 || pageRows == null) {
       printEmptyTable(
           settings,
           134,
@@ -619,14 +604,12 @@ public class ReportsView {
     }
 
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, total);
-    for (int i = startIndex; i <= endIndex; i++) {
-      StayRowDTO dto = list.getEntry(i);
+    for (int i = 0; i < pageRows.length; i++) {
+      StayRowDTO dto = pageRows[i];
       if (dto == null) continue;
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(i - startIndex + 1),
+            String.valueOf(i + 1),
             dto.guestId,
             dto.guestName,
             dto.roomNumber,
@@ -653,10 +636,7 @@ public class ReportsView {
         "Enter a command: ", new char[] {'S', 'O', 'R', 'N', 'P', 'X', 'E'});
   }
 
-  // =========================================================================
-  // FILTER MENUS
-  // =========================================================================
-
+  // filter menu
   public int displayFilterMenu(
       LocalDate fromDate, LocalDate toDate, String paymentFilter, String roomTypeFilter) {
     ConsoleUtil.clearScreen();
@@ -682,7 +662,7 @@ public class ReportsView {
         "Current : FROM [ " + fmt(currentFrom) + " ]  TO [ " + fmt(currentTo) + " ]");
     System.out.println();
     System.out.println(
-        "Format: YYYY-MM-DD   |   blank = keep current   |   '-' = clear (All Dates)\n");
+        "Format: YYYY-MM-DD   |   Enter = keep current   |   '-' = clear (All Dates)\n");
     String from = ConsoleUtil.getStringInput("From date: ");
     String to = ConsoleUtil.getStringInput("To date  : ");
     return new String[] {from, to};
@@ -710,10 +690,7 @@ public class ReportsView {
     return ConsoleUtil.getMenuInput("Choose option: ", 1, 4).getAsInt();
   }
 
-  // =========================================================================
-  // SORT MENUS
-  // =========================================================================
-
+  // sort menu
   public String displayCheckoutSortMenu(String currentSort) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("SORT ORDER", 60);
@@ -780,10 +757,7 @@ public class ReportsView {
     }
   }
 
-  // =========================================================================
-  // EXPORT SUCCESS
-  // =========================================================================
-
+  // export access
   public void showExportSuccess(String filePath, int rowCount) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("EXPORT SUCCESSFUL", 60);
@@ -792,10 +766,7 @@ public class ReportsView {
     ConsoleUtil.printContinueMessage("Press Enter to return...");
   }
 
-  // =========================================================================
-  // SHARED HELPERS
-  // =========================================================================
-
+  // stay summary
   private void printStaySummaryLine(StaySummaryDTO summary) {
     System.out.println(
         "Total Stays : "

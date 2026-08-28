@@ -61,9 +61,35 @@ public class VipManageAllocationController {
         ListInterface<VipManageAllocationView.AllocationRowDTO> displayDtos =
             buildAllocationRowDTO(filteredList);
 
+        if (displayDtos == null) {
+          ConsoleUtil.printError("Error: Failed to build allocation screen.");
+          return;
+        }
+
+        int totalMatches = displayDtos.getNumberOfEntries();
+        int totalPages =
+            (totalMatches == 0) ? 0 : (int) Math.ceil((double) totalMatches / pageSize);
+        if (currentPage > totalPages && totalPages > 0) {
+          currentPage = totalPages;
+        }
+
+        int startIndex = (currentPage - 1) * pageSize + 1;
+        int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
+        int maxOptionNum = (totalMatches == 0) ? 0 : (endIndex - startIndex + 1);
+
+        ListInterface<VipManageAllocationView.AllocationRowDTO> pageSlice =
+            (totalMatches > 0) ? displayDtos.slice(startIndex, endIndex) : new LinkedList<>();
+
         ConsoleUtil.GetMenuInputResult result =
             allocationView.renderAllocationScreen(
-                displayDtos, searchQuery, tierFilter, sortCriteria, currentPage, pageSize);
+                pageSlice,
+                searchQuery,
+                tierFilter,
+                sortCriteria,
+                currentPage,
+                totalPages,
+                totalMatches,
+                maxOptionNum);
 
         if ("E".equalsIgnoreCase(result.input)) {
           break;
@@ -81,8 +107,6 @@ public class VipManageAllocationController {
         } else if ("R".equalsIgnoreCase(result.input)) {
           // Refresh
         } else if ("N".equalsIgnoreCase(result.input)) {
-          int totalMatches = filteredList.getNumberOfEntries();
-          int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
           if (currentPage < totalPages) {
             currentPage++;
           } else {

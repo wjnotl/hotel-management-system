@@ -1,6 +1,5 @@
 package view.vip;
 
-import adt.ArrayList;
 import adt.ListInterface;
 import entity.AllocationEntry;
 import entity.Guest;
@@ -55,23 +54,31 @@ public class VipManageAllocationView {
   }
 
   public GetMenuInputResult renderAllocationScreen(
-      ListInterface<AllocationRowDTO> list,
+      ListInterface<AllocationRowDTO> pageSlice,
       String search,
       String tier,
       String sort,
       int currentPage,
-      int pageSize) {
-
+      int totalPages,
+      int totalMatches,
+      int maxOptionNum) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("MANAGE ALLOCATION (PENDING CHECK-IN)");
+    ConsoleUtil.printTitleBox("MANAGE ALLOCATIONS - PENDING VIP ASSIGNMENTS");
 
     System.out.println(
         "SEARCH QUERY   : [ " + (search == null ? "None" : "\"" + search + "\"") + " ]");
     System.out.println("TIER FILTER    : [ " + (tier == null ? "ALL" : tier) + " ]");
     System.out.println("SORT CRITERIA  : [ " + sort + " ]");
 
-    int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
     boolean hasActiveFilters = (search != null || tier != null);
+
+    String validStr;
+    if (pageSlice == null || totalMatches == 0) {
+      validStr = (hasActiveFilters ? "S" : "") + "RE";
+    } else {
+      validStr = "SORE" + (currentPage > 1 ? "P" : "") + (currentPage < totalPages ? "N" : "");
+    }
+    char[] validChars = validStr.toCharArray();
 
     int[] columnWidths = {4, 11, 22, 10, 15, 18};
 
@@ -100,7 +107,7 @@ public class VipManageAllocationView {
         new String[] {"NO.", "RES ID", "GUEST NAME", "TIER", "ROOM ASSIGNED", "GRACE TIMER"},
         headerSettings);
 
-    if (list == null || totalMatches == 0) {
+    if (pageSlice == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
@@ -118,21 +125,14 @@ public class VipManageAllocationView {
 
       if (hasActiveFilters) {
         System.out.println("[S] Search / Filter    [R] Refresh Table       [E] Exit to VIP Menu\n");
-        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'S', 'R', 'E'});
       } else {
         System.out.println("[R] Refresh Table      [E] Exit to VIP Menu\n");
-        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'R', 'E'});
       }
+      return ConsoleUtil.getMenuInput("Enter a command: ", validChars);
     }
 
     // Normal table display
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-    int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
-
-    ListInterface<AllocationRowDTO> pageSlice = list.slice(startIndex, endIndex);
 
     for (int i = 1; i <= pageSlice.getNumberOfEntries(); i++) {
       AllocationRowDTO item = pageSlice.getEntry(i);
@@ -159,20 +159,11 @@ public class VipManageAllocationView {
     System.out.println("[S] Search Guests      [O] Change Sort Order   [R] Refresh Table");
 
     StringBuilder navLine = new StringBuilder();
-    ArrayList<Character> validList = new ArrayList<>();
-    validList.add('S');
-    validList.add('O');
-    validList.add('R');
-    validList.add('E');
+    boolean hasPrev = (currentPage > 1);
+    boolean hasNext = (currentPage < totalPages);
 
-    if (currentPage > 1) {
-      navLine.append("[P] Prev Page          ");
-      validList.add('P');
-    }
-    if (currentPage < totalPages) {
-      navLine.append("[N] Next Page          ");
-      validList.add('N');
-    }
+    if (hasPrev) navLine.append("[P] Prev Page          ");
+    if (hasNext) navLine.append("[N] Next Page          ");
 
     if (navLine.length() > 0) {
       System.out.println(navLine.toString().trim() + "           [E] Exit to VIP Menu\n");
@@ -180,12 +171,6 @@ public class VipManageAllocationView {
       System.out.println("[E] Exit to VIP Menu\n");
     }
 
-    char[] validChars = new char[validList.getNumberOfEntries()];
-    for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
-      validChars[i - 1] = validList.getEntry(i);
-    }
-
-    int maxOptionNum = endIndex - startIndex + 1;
     String rangeStr = (maxOptionNum == 1) ? "1" : "1-" + maxOptionNum;
     String promptText = "Select a pending guest number to handle (" + rangeStr + "): ";
 

@@ -1,15 +1,31 @@
 package view.housekeeping;
 
+import adt.ListInterface;
 import util.ConsoleUtil;
+import util.TableUtil;
 
 public class HousekeepingReportView {
+
+  // --- REPORT TYPE SELECTOR ---
+
+  public int displayReportTypeMenu() {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("HOUSEKEEPING REPORTS");
+    System.out.println(" 1. Operations Report (cleaning time, productivity, overdue/skipped,");
+    System.out.println("    maintenance flags, queue wait)");
+    System.out.println(" 2. Staff Performance Report (per-staff completed/skipped tasks &");
+    System.out.println("    avg cleaning time)");
+    System.out.println(" 3. Back to Housekeeping Main Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 3).getAsInt();
+  }
 
   // --- FILTER HUB ---
 
   public int displayFilterHub(
       String dateRangeLabel, String staffLabel, String roomTypeLabel, String taskTypeLabel) {
     ConsoleUtil.clearScreen();
-    ConsoleUtil.printTitleBox("GENERATE HOUSEKEEPING REPORT");
+    ConsoleUtil.printTitleBox("GENERATE OPERATIONS REPORT");
     System.out.println(" Configure filters below, then generate the report. Nothing is");
     System.out.println(" calculated until you choose 'Generate Report'.\n");
     System.out.println(" Date Range : [ " + dateRangeLabel + " ]");
@@ -23,7 +39,7 @@ public class HousekeepingReportView {
     System.out.println(" 4. Set Task Type Filter");
     System.out.println(" 5. Reset / Clear All Filters");
     System.out.println(" 6. Generate Report");
-    System.out.println(" 7. Cancel and Return to Housekeeping Main Menu\n");
+    System.out.println(" 7. Cancel and Return to Report Menu\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 7).getAsInt();
   }
@@ -104,7 +120,132 @@ public class HousekeepingReportView {
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
   }
 
+  // ================= STAFF PERFORMANCE REPORT =================
+
+  // --- FILTER HUB ---
+
+  public int displayStaffFilterHub(String dateRangeLabel, String shiftLabel) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("GENERATE STAFF PERFORMANCE REPORT");
+    System.out.println(" Configure filters below, then generate the report. Nothing is");
+    System.out.println(" calculated until you choose 'Generate Report'.\n");
+    System.out.println(" Date Range : [ " + dateRangeLabel + " ]");
+    System.out.println(" Shift      : [ " + shiftLabel + " ]");
+    System.out.println("------------------------------------------------------");
+    System.out.println(" 1. Set Date Range");
+    System.out.println(" 2. Set Shift Filter");
+    System.out.println(" 3. Reset / Clear All Filters");
+    System.out.println(" 4. Generate Report");
+    System.out.println(" 5. Cancel and Return to Report Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+  }
+
+  // --- SHIFT FILTER SUBMENU ---
+
+  public int displayShiftFilterSubmenu(String currentLabel) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("SET SHIFT FILTER");
+    System.out.println(" Current Shift Filter: [ " + currentLabel + " ]\n");
+    System.out.println(" 1. MORNING");
+    System.out.println(" 2. AFTERNOON");
+    System.out.println(" 3. NIGHT");
+    System.out.println(" 4. Clear Filter (Show All)");
+    System.out.println(" 5. Back to Filter Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 5).getAsInt();
+  }
+
   // --- REPORT OUTPUT ---
+
+  // Fully computed by the controller — the view only formats/prints it, never resolves or
+  // looks anything up on its own (matches the "no data processing in view" rule).
+  public static class StaffPerformanceRowDTO {
+    public final String staffId;
+    public final String name;
+    public final String shiftLabel;
+    public final String availabilityLabel;
+    public final int completedCount;
+    public final int skippedCount;
+    public final String avgCleanTimeLabel;
+
+    public StaffPerformanceRowDTO(
+        String staffId,
+        String name,
+        String shiftLabel,
+        String availabilityLabel,
+        int completedCount,
+        int skippedCount,
+        String avgCleanTimeLabel) {
+      this.staffId = staffId;
+      this.name = name;
+      this.shiftLabel = shiftLabel;
+      this.availabilityLabel = availabilityLabel;
+      this.completedCount = completedCount;
+      this.skippedCount = skippedCount;
+      this.avgCleanTimeLabel = avgCleanTimeLabel;
+    }
+  }
+
+  public int displayStaffPerformanceReport(
+      String dateRangeLabel, String shiftLabel, ListInterface<StaffPerformanceRowDTO> rows) {
+    ConsoleUtil.clearScreen();
+    ConsoleUtil.printTitleBox("STAFF PERFORMANCE REPORT");
+    System.out.println(" Filters Applied:");
+    System.out.println("   Date Range : " + dateRangeLabel);
+    System.out.println("   Shift      : " + shiftLabel);
+    System.out.println("   Matched Staff: " + rows.getNumberOfEntries());
+    System.out.println("------------------------------------------------------");
+
+    TableUtil.TableSettings settings =
+        new TableUtil.TableSettings(new int[] {5, 9, 17, 11, 12, 11, 9, 18})
+            .setHAlign(0, TableUtil.Align.CENTER)
+            .setHAlign(1, TableUtil.Align.CENTER)
+            .setHAlign(3, TableUtil.Align.CENTER)
+            .setHAlign(4, TableUtil.Align.CENTER)
+            .setHAlign(5, TableUtil.Align.CENTER)
+            .setHAlign(6, TableUtil.Align.CENTER)
+            .setHAlign(7, TableUtil.Align.CENTER);
+
+    TableUtil.printTableBorder(settings, TableUtil.BorderPosition.TOP);
+    TableUtil.printTableRow(
+        new String[] {
+          "NO.", "STAFF ID", "NAME", "SHIFT", "AVAILABILITY", "COMPLETED", "SKIPPED", "AVG TIME"
+        },
+        settings);
+
+    if (rows.isEmpty()) {
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
+      TableUtil.TableSettings emptySettings =
+          new TableUtil.TableSettings(new int[] {113}).setHAlign(0, TableUtil.Align.CENTER);
+      TableUtil.printTableRow(new String[] {"No staff match the selected filters."}, emptySettings);
+      TableUtil.printTableBorder(emptySettings, TableUtil.BorderPosition.PLAIN_BOTTOM);
+    } else {
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
+      for (int i = 1; i <= rows.getNumberOfEntries(); i++) {
+        StaffPerformanceRowDTO row = rows.getEntry(i);
+        TableUtil.printTableRow(
+            new String[] {
+              String.valueOf(i),
+              row.staffId,
+              row.name,
+              row.shiftLabel,
+              row.availabilityLabel,
+              String.valueOf(row.completedCount),
+              String.valueOf(row.skippedCount),
+              row.avgCleanTimeLabel
+            },
+            settings);
+      }
+      TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
+    }
+
+    System.out.println();
+    System.out.println(" 1. Export Report to Text File");
+    System.out.println(" 2. Back to Filter Menu\n");
+
+    return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt();
+  }
 
   public static class ReportResult {
     public final int totalMatched;

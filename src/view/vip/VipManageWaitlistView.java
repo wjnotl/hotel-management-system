@@ -1,6 +1,5 @@
 package view.vip;
 
-import adt.ArrayList;
 import adt.ListInterface;
 import entity.AllocationEntry;
 import entity.Guest;
@@ -91,15 +90,65 @@ public class VipManageWaitlistView {
     }
   }
 
+  public static class GuestDisambiguationRowDTO {
+    private final String displayNum;
+    private final String guestId;
+    private final String name;
+    private final String icOrPass;
+    private final String phone;
+    private final String tierStr;
+
+    public GuestDisambiguationRowDTO(
+        String displayNum,
+        String guestId,
+        String name,
+        String icOrPass,
+        String phone,
+        String tierStr) {
+      this.displayNum = displayNum;
+      this.guestId = guestId;
+      this.name = name;
+      this.icOrPass = icOrPass;
+      this.phone = phone;
+      this.tierStr = tierStr;
+    }
+
+    public String getDisplayNum() {
+      return displayNum;
+    }
+
+    public String getGuestId() {
+      return guestId;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public String getIcOrPass() {
+      return icOrPass;
+    }
+
+    public String getPhone() {
+      return phone;
+    }
+
+    public String getTierStr() {
+      return tierStr;
+    }
+  }
+
   public GetMenuInputResult renderWaitlistScreen(
-      ListInterface<WaitlistRowDTO> list,
+      ListInterface<WaitlistRowDTO> pageSlice,
       Room.RoomType roomType,
       String search,
       String tier,
       String boiling,
       String sort,
       int currentPage,
-      int pageSize) {
+      int totalPages,
+      int totalMatches,
+      int rowsOnPage) {
     ConsoleUtil.clearScreen();
     ConsoleUtil.printTitleBox("MANAGE WAITLIST - [" + roomType.name() + " ROOMS]");
 
@@ -110,8 +159,15 @@ public class VipManageWaitlistView {
     System.out.println("BOILING FILTER   : [ " + (boiling == null ? "ALL" : boiling) + " ]");
     System.out.println("SORT CRITERIA    : [ " + sort + " ]");
 
-    int totalMatches = (list == null) ? 0 : list.getNumberOfEntries();
     boolean hasActiveFilters = (search != null || tier != null || boiling != null);
+
+    String validStr;
+    if (pageSlice == null || totalMatches == 0) {
+      validStr = "A" + (hasActiveFilters ? "S" : "") + "RE";
+    } else {
+      validStr = "AQRESO" + (currentPage > 1 ? "P" : "") + (currentPage < totalPages ? "N" : "");
+    }
+    char[] validChars = validStr.toCharArray();
 
     int[] columnWidths = {4, 11, 16, 13, 10, 10, 8, 7, 6};
 
@@ -154,7 +210,7 @@ public class VipManageWaitlistView {
         },
         headerSettings);
 
-    if (list == null || totalMatches == 0) {
+    if (pageSlice == null || totalMatches == 0) {
       TableUtil.printTableBorder(settings, TableUtil.BorderPosition.HEADER_CLOSE);
 
       TableUtil.TableSettings emptySettings =
@@ -173,24 +229,16 @@ public class VipManageWaitlistView {
       if (hasActiveFilters) {
         System.out.println("[A] Add Guest          [S] Search / Filter     [R] Refresh Table");
         System.out.println("[E] Exit to Queue Menu\n");
-
-        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'A', 'S', 'R', 'E'});
       } else {
         System.out.println(
             "[A] Add Guest          [R] Refresh Table       [E] Exit to Queue Menu\n");
-
-        return ConsoleUtil.getMenuInput("Enter a command: ", new char[] {'A', 'R', 'E'});
       }
+
+      return ConsoleUtil.getMenuInput("Enter a command: ", validChars);
     }
 
     // Normal table display
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
-
-    int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
-
-    ListInterface<WaitlistRowDTO> pageSlice = list.slice(startIndex, endIndex);
 
     for (int i = 1; i <= pageSlice.getNumberOfEntries(); i++) {
       WaitlistRowDTO item = pageSlice.getEntry(i);
@@ -217,26 +265,17 @@ public class VipManageWaitlistView {
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.BOTTOM);
     System.out.printf(
         "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, totalMatches);
-    System.out.println("[A] Add Guest          [Q] Quick Assign Top    [R] Refresh Table");
-    System.out.println("[S] Search / Filter    [O] Change Sort Order   [E] Exit to Queue Menu");
+    System.out.println(
+        "[A] Add Guest          [Q] Quick Assign (Highest Priority)    [R] Refresh Table");
+    System.out.println(
+        "[S] Search / Filter    [O] Change Sort Order                  [E] Exit to Queue Menu");
 
     StringBuilder navLine = new StringBuilder();
-    ArrayList<Character> validList = new ArrayList<>();
-    validList.add('A');
-    validList.add('Q');
-    validList.add('R');
-    validList.add('S');
-    validList.add('O');
-    validList.add('E');
+    boolean hasPrev = (currentPage > 1);
+    boolean hasNext = (currentPage < totalPages);
 
-    if (currentPage > 1) {
-      navLine.append("[P] Prev Page          ");
-      validList.add('P');
-    }
-    if (currentPage < totalPages) {
-      navLine.append("[N] Next Page          ");
-      validList.add('N');
-    }
+    if (hasPrev) navLine.append("[P] Prev Page          ");
+    if (hasNext) navLine.append("[N] Next Page          ");
 
     if (navLine.length() > 0) {
       System.out.println(navLine.toString().trim() + "\n");
@@ -244,16 +283,10 @@ public class VipManageWaitlistView {
       System.out.println();
     }
 
-    char[] validChars = new char[validList.getNumberOfEntries()];
-    for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
-      validChars[i - 1] = validList.getEntry(i);
-    }
-
-    int maxOptionNum = endIndex - startIndex + 1;
-    String rangeStr = (maxOptionNum == 1) ? "1" : "1-" + maxOptionNum;
+    String rangeStr = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
     String promptText = "Enter a command or select index (" + rangeStr + "): ";
 
-    return ConsoleUtil.getMenuInput(promptText, 1, maxOptionNum, validChars);
+    return ConsoleUtil.getMenuInput(promptText, 1, rowsOnPage, validChars);
   }
 
   public String promptAddGuestInput() {
@@ -816,15 +849,16 @@ public class VipManageWaitlistView {
   }
 
   public GetMenuInputResult displayGuestDisambiguationScreen(
-      ListInterface<Guest> matches,
-      ListInterface<Member> memberList,
+      ListInterface<GuestDisambiguationRowDTO> pageSlice,
       String searchQuery,
       int currentPage,
-      int pageSize) {
-    if (matches == null || matches.isEmpty()) return null;
+      int totalPages,
+      int totalMatches,
+      int rowsOnPage) {
+    if (pageSlice == null || pageSlice.isEmpty()) return null;
 
-    int totalMatches = matches.getNumberOfEntries();
-    int totalPages = (int) Math.ceil((double) totalMatches / pageSize);
+    String validStr = "C" + (currentPage > 1 ? "P" : "") + (currentPage < totalPages ? "N" : "");
+    char[] validChars = validStr.toCharArray();
 
     int[] columnWidths = {4, 10, 18, 18, 14, 18};
 
@@ -850,7 +884,7 @@ public class VipManageWaitlistView {
     ConsoleUtil.printTitleBox("MULTIPLE GUEST MATCHES FOUND");
 
     System.out.println("Search Term: \"" + searchQuery + "\"");
-    if (totalMatches > pageSize) {
+    if (totalMatches > pageSlice.getNumberOfEntries()) {
       System.out.println(
           "(Tip: If there are too many results, enter a more specific search query)");
     }
@@ -864,26 +898,18 @@ public class VipManageWaitlistView {
         headerSettings);
     TableUtil.printTableBorder(settings, TableUtil.BorderPosition.MIDDLE);
 
-    int startIndex = (currentPage - 1) * pageSize + 1;
-    int endIndex = Math.min(startIndex + pageSize - 1, totalMatches);
-    int rowsOnPage = endIndex - startIndex + 1;
+    for (int i = 1; i <= pageSlice.getNumberOfEntries(); i++) {
+      GuestDisambiguationRowDTO dto = pageSlice.getEntry(i);
+      if (dto == null) continue;
 
-    for (int i = startIndex; i <= endIndex; i++) {
-      Guest g = matches.getEntry(i);
-      if (g == null) continue;
-
-      Member m = (g.getMemberId() != null) ? findMember(memberList, g.getMemberId()) : null;
-      String icOrPass =
-          (g.getIcNumber() != null && !g.getIcNumber().isEmpty())
-              ? g.getIcNumber()
-              : (g.getPassportNumber() != null ? g.getPassportNumber() : "N/A");
-      String phone = (g.getPhoneNumber() != null) ? g.getPhoneNumber() : "N/A";
-      String tierStr = (m != null) ? m.getTier().name() : "NON-MEMBER";
-
-      int displayNum = i - startIndex + 1;
       TableUtil.printTableRow(
           new String[] {
-            String.valueOf(displayNum), g.getGuestId(), g.getName(), icOrPass, phone, tierStr
+            dto.getDisplayNum(),
+            dto.getGuestId(),
+            dto.getName(),
+            dto.getIcOrPass(),
+            dto.getPhone(),
+            dto.getTierStr()
           },
           settings);
     }
@@ -893,37 +919,17 @@ public class VipManageWaitlistView {
         "Page %d / %d (Total Matches: %d)\n\n", currentPage, totalPages, totalMatches);
 
     StringBuilder navLine = new StringBuilder();
-    ArrayList<Character> validList = new ArrayList<>();
-    validList.add('C');
+    boolean hasPrev = (currentPage > 1);
+    boolean hasNext = (currentPage < totalPages);
 
-    if (currentPage > 1) {
-      navLine.append("[P] Previous Page    ");
-      validList.add('P');
-    }
-    if (currentPage < totalPages) {
-      navLine.append("[N] Next Page        ");
-      validList.add('N');
-    }
+    if (hasPrev) navLine.append("[P] Previous Page    ");
+    if (hasNext) navLine.append("[N] Next Page        ");
     navLine.append("[C] Cancel / Refine Search");
     System.out.println(navLine.toString());
     System.out.println();
 
-    char[] validChars = new char[validList.getNumberOfEntries()];
-    for (int i = 1; i <= validList.getNumberOfEntries(); i++) {
-      validChars[i - 1] = validList.getEntry(i);
-    }
-
     String rangeStr = (rowsOnPage == 1) ? "1" : "1-" + rowsOnPage;
     String promptText = "Select guest index (" + rangeStr + ") or command: ";
     return ConsoleUtil.getMenuInput(promptText, 1, rowsOnPage, validChars);
-  }
-
-  private Member findMember(ListInterface<Member> memberList, String memberId) {
-    if (memberList == null || memberId == null) return null;
-    for (int i = 1; i <= memberList.getNumberOfEntries(); i++) {
-      Member m = memberList.getEntry(i);
-      if (m != null && memberId.equalsIgnoreCase(m.getMemberId())) return m;
-    }
-    return null;
   }
 }

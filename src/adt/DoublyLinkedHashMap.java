@@ -31,8 +31,8 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
   private final double loadFactorThreshold;
   private boolean enableLru;
 
-  private Node<K, V> head; // Most Recently Used
-  private Node<K, V> tail; // Least Recently Used
+  private Node<K, V> head = null; // Most Recently Used
+  private Node<K, V> tail = null; // Least Recently Used
 
   public DoublyLinkedHashMap() {
     this(DEFAULT_BUCKET_COUNT, LOAD_FACTOR_THRESHOLD, -1, false);
@@ -57,11 +57,13 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
   @SuppressWarnings("unchecked")
   public DoublyLinkedHashMap(
       int initialBucketCount, double loadFactorThreshold, int maxCapacity, boolean enableLru) {
-    this.initialBucketCount = initialBucketCount <= 0 ? DEFAULT_BUCKET_COUNT : initialBucketCount;
+    this.initialBucketCount = initialBucketCount > 0 ? initialBucketCount : DEFAULT_BUCKET_COUNT;
+
     this.buckets = (Node<K, V>[]) new Node[this.initialBucketCount];
     this.numberOfEntries = 0;
     this.maxCapacity = maxCapacity;
-    this.loadFactorThreshold = loadFactorThreshold;
+    this.loadFactorThreshold =
+        loadFactorThreshold > 0 ? loadFactorThreshold : LOAD_FACTOR_THRESHOLD;
     this.enableLru = enableLru;
   }
 
@@ -70,7 +72,17 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
   }
 
   public void setLruEnabled(boolean enableLru) {
+    if (this.enableLru == enableLru) {
+      return;
+    }
+
     this.enableLru = enableLru;
+
+    if (enableLru) {
+      rebuildAccessList();
+    } else {
+      clearAccessList();
+    }
   }
 
   @Override
@@ -78,32 +90,41 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
     if (key == null) return false;
 
     int index = getBucketIndex(key, buckets.length);
-    Node<K, V> curr = buckets[index];
+    Node<K, V> current = buckets[index];
 
-    // Check if key already exists to update value
-    while (curr != null) {
-      if (curr.key.equals(key)) {
-        curr.value = value;
+    // Key already exists.
+    while (current != null) {
+      if (current.key.equals(key)) {
+        current.value = value;
+
         if (enableLru) {
-          moveToHead(curr);
+          moveToHead(current);
         }
+
         return false;
       }
-      curr = curr.next;
+
+      current = current.next;
     }
 
-    // Capacity limit handling
+    // A capacity of zero cannot accept any entries.
+    if (hasLimit() && maxCapacity == 0) {
+      return false;
+    }
+
+    // Evict the least recently used entry when capacity is reached.
     if (hasLimit() && numberOfEntries >= maxCapacity) {
       if (!enableLru) {
         return false;
-      } else {
-        evictLru();
-        index = getBucketIndex(key, buckets.length);
       }
+
+      evictLru();
     }
 
-    // Expand buckets before inserting
-    if ((double) numberOfEntries / buckets.length > loadFactorThreshold) {
+    // Resize before inserting if the new entry would exceed
+    // the configured load factor.
+    if ((double) (numberOfEntries + 1) / buckets.length > loadFactorThreshold) {
+
       resize();
       index = getBucketIndex(key, buckets.length);
     }
@@ -124,17 +145,21 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
     if (key == null || isEmpty()) return null;
 
     int index = getBucketIndex(key, buckets.length);
-    Node<K, V> curr = buckets[index];
+    Node<K, V> current = buckets[index];
 
-    while (curr != null) {
-      if (curr.key.equals(key)) {
+    while (current != null) {
+      if (current.key.equals(key)) {
+
         if (enableLru) {
-          moveToHead(curr);
+          moveToHead(current);
         }
-        return curr.value;
+
+        return current.value;
       }
-      curr = curr.next;
+
+      current = current.next;
     }
+
     return null;
   }
 
@@ -143,32 +168,57 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
     if (key == null || isEmpty()) return null;
 
     int index = getBucketIndex(key, buckets.length);
-    Node<K, V> curr = buckets[index];
-    Node<K, V> prev = null;
 
-    while (curr != null) {
-      if (curr.key.equals(key)) {
-        if (prev == null) {
-          buckets[index] = curr.next;
+    Node<K, V> current = buckets[index];
+    Node<K, V> previous = null;
+
+    while (current != null) {
+
+      if (current.key.equals(key)) {
+
+        // Remove from hash-table collision chain.
+        if (previous == null) {
+          buckets[index] = current.next;
         } else {
-          prev.next = curr.next;
+          previous.next = current.next;
         }
+
         numberOfEntries--;
 
+        // Remove from LRU list.
         if (enableLru) {
-          removeFromAccessList(curr);
+          removeFromAccessList(current);
         }
-        return curr.value;
+
+        return current.value;
       }
-      prev = curr;
-      curr = curr.next;
+
+      previous = current;
+      current = current.next;
     }
+
     return null;
   }
 
   @Override
   public boolean containsKey(K key) {
-    return get(key) != null;
+    if (key == null || isEmpty()) {
+      return false;
+    }
+
+    int index = getBucketIndex(key, buckets.length);
+    Node<K, V> current = buckets[index];
+
+    while (current != null) {
+
+      if (current.key.equals(key)) {
+        return true;
+      }
+
+      current = current.next;
+    }
+
+    return false;
   }
 
   @Override
@@ -236,58 +286,116 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
   }
 
   private void evictLru() {
-    if (tail == null) return;
-    K lruKey = tail.key;
-    remove(lruKey);
+    if (tail == null) {
+      return;
+    }
+
+    remove(tail.key);
+  }
+
+  private void clearAccessList() {
+    Node<K, V> current = head;
+
+    while (current != null) {
+      Node<K, V> next = current.accessNext;
+
+      current.accessPrev = null;
+      current.accessNext = null;
+
+      current = next;
+    }
+
+    head = null;
+    tail = null;
+  }
+
+  private void rebuildAccessList() {
+    head = null;
+    tail = null;
+
+    for (Node<K, V> bucketHead : buckets) {
+      Node<K, V> current = bucketHead;
+
+      while (current != null) {
+        current.accessPrev = null;
+        current.accessNext = null;
+
+        addToHead(current);
+
+        current = current.next;
+      }
+    }
   }
 
   private boolean hasLimit() {
-    return maxCapacity > -1;
+    return maxCapacity >= 0;
   }
 
   private int getBucketIndex(K key, int bucketCount) {
-    int h = key.hashCode();
-    h ^= (h >>> 16); // High-bit XOR mixer
-    return (h & 0x7FFFFFFF) % bucketCount;
+    int hash = key.hashCode();
+
+    // Spread high bits into lower bits.
+    hash ^= (hash >>> 16);
+
+    return Math.floorMod(hash, bucketCount);
   }
 
   @SuppressWarnings("unchecked")
   private void resize() {
     Node<K, V>[] oldBuckets = buckets;
+
     buckets = (Node<K, V>[]) new Node[oldBuckets.length * 2];
 
-    // Preserve LRU access ordering across resize
-    Node<K, V> curr = head;
-    while (curr != null) {
-      int index = getBucketIndex(curr.key, buckets.length);
-      curr.next = buckets[index];
-      buckets[index] = curr;
-      curr = curr.accessNext;
+    for (Node<K, V> bucketHead : oldBuckets) {
+
+      Node<K, V> current = bucketHead;
+
+      while (current != null) {
+
+        Node<K, V> next = current.next;
+
+        int index = getBucketIndex(current.key, buckets.length);
+
+        current.next = buckets[index];
+        buckets[index] = current;
+
+        current = next;
+      }
     }
   }
 
   private class KeyIterator implements Iterator<K> {
-    private Node<K, V> currentNode;
 
-    KeyIterator() {
+    private Node<K, V> currentNode;
+    private int currentBucketIndex;
+
+    private KeyIterator() {
+
       if (enableLru) {
         currentNode = head;
       } else {
-        advanceToFirstBucketNode();
+        // Normal hash-table iteration.
+        currentBucketIndex = 0;
+        currentNode = null;
+
+        advanceToNextNode();
       }
     }
 
-    private int currentBucket = 0;
+    private void advanceToNextNode() {
 
-    private void advanceToFirstBucketNode() {
-      while (currentBucket < buckets.length) {
-        if (buckets[currentBucket] != null) {
-          currentNode = buckets[currentBucket];
-          currentBucket++;
+      while (currentBucketIndex < buckets.length) {
+
+        if (buckets[currentBucketIndex] != null) {
+          currentNode = buckets[currentBucketIndex];
+          currentBucketIndex++;
           return;
         }
-        currentBucket++;
+
+        currentBucketIndex++;
       }
+
+      currentNode = null;
     }
 
     @Override
@@ -300,16 +408,17 @@ public class DoublyLinkedHashMap<K, V> implements MapInterface<K, V> {
       if (!hasNext()) return null;
 
       K key = currentNode.key;
+
       if (enableLru) {
         currentNode = currentNode.accessNext;
       } else {
         if (currentNode.next != null) {
           currentNode = currentNode.next;
         } else {
-          currentNode = null;
-          advanceToFirstBucketNode();
+          advanceToNextNode();
         }
       }
+
       return key;
     }
   }
