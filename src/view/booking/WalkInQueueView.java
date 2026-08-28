@@ -157,7 +157,7 @@ public class WalkInQueueView {
             + " / "
             + queueCapacity
             + fullNote(queueFull, queueCanExpand));
-    System.out.println("NEXT UP (peek)    : " + nextUp);
+    System.out.println("NEXT UP           : " + nextUp);
     System.out.println(
         "ROOMS             : "
             + vacantRooms
@@ -537,7 +537,7 @@ public class WalkInQueueView {
         false);
 
     System.out.println();
-    System.out.println("1. Dequeue This Guest And Hold The Room");
+    System.out.println("1. Remove This Guest From The Queue And Hold The Room");
     System.out.println("2. Do Not Allocate\n");
 
     return ConsoleUtil.getMenuInput("Choose an option: ", 1, 2).getAsInt() == 1;
