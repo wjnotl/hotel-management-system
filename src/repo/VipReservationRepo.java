@@ -116,6 +116,8 @@ public class VipReservationRepo {
       PriorityQueueInterface<Reservation> roomHeap = getHeapByRoomType(reservation.getRoomType());
       if (!roomHeap.contains(reservation)) {
         roomHeap.enqueue(reservation);
+      } else {
+        roomHeap.updatePriority(reservation);
       }
     }
 
