@@ -12,7 +12,7 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
   private final boolean canExpand;
   private final Comparator<? super T> comparator;
 
-  private PriorityEntry<T>[] array; // starts from index 1
+  private PriorityEntry<T>[] array; // starts from index 0
   private int size;
   private long sequenceCounter = 0;
 
@@ -44,7 +44,7 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
   public BinaryHeapPriorityQueue(
       int initialCapacity, boolean canExpand, Comparator<? super T> comparator) {
     int cap = initialCapacity <= 0 ? DEFAULT_CAPACITY : initialCapacity;
-    this.array = (PriorityEntry<T>[]) new PriorityEntry[cap + 1];
+    this.array = (PriorityEntry<T>[]) new PriorityEntry[cap];
     this.canExpand = canExpand;
     this.comparator = comparator;
     this.size = 0;
@@ -59,33 +59,33 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
       grow();
     }
 
-    size++;
     array[size] = new PriorityEntry<>(newEntry, sequenceCounter++);
     siftUp(size);
+    size++;
     return true;
   }
 
   @Override
   public T dequeue() {
-    if (isEmpty() || array[1] == null) return null;
+    if (isEmpty()) return null;
 
-    T top = array[1].entry;
+    T top = array[0].entry;
+    size--;
 
-    if (size == 1) {
-      array[1] = null;
+    if (size == 0) {
+      array[0] = null;
     } else {
-      array[1] = array[size];
+      array[0] = array[size];
       array[size] = null;
-      siftDown(1);
+      siftDown(0);
     }
 
-    size--;
     return top;
   }
 
   @Override
   public T peek() {
-    return (isEmpty() || array[1] == null) ? null : array[1].entry;
+    return isEmpty() ? null : array[0].entry;
   }
 
   @Override
@@ -93,43 +93,38 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
     int pos = positionOf(entry);
     if (pos == -1) return false;
 
-    if (pos == size) {
-      array[size] = null;
-      size--;
-      return true;
-    }
-
-    array[pos] = array[size];
-    array[size] = null;
-    size--;
-
-    if (pos <= size && array[pos] != null) {
-      siftDown(pos);
-      siftUp(pos);
-    }
+    removeAtInternal(pos);
     return true;
   }
 
   @Override
   public T removeAt(int position) {
-    if (position < 1 || position > size || array[position] == null) return null;
+    if (position < 1 || position > size) return null;
 
-    T removed = array[position].entry;
+    int index = position - 1;
+
+    T removed = array[index].entry;
+    removeAtInternal(index);
+
+    return removed;
+  }
+
+  private void removeAtInternal(int position) {
+    size--;
 
     if (position == size) {
       array[size] = null;
-      size--;
-    } else {
-      array[position] = array[size];
-      array[size] = null;
-      size--;
-
-      if (position <= size && array[position] != null) {
-        siftDown(position);
-        siftUp(position);
-      }
+      return;
     }
-    return removed;
+
+    array[position] = array[size];
+    array[size] = null;
+
+    if (position > 0 && hasHigherPriority(array[position], array[parent(position)])) {
+      siftUp(position);
+    } else {
+      siftDown(position);
+    }
   }
 
   @Override
@@ -139,7 +134,8 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
 
   @Override
   public int getPosition(T entry) {
-    return positionOf(entry);
+    int pos = positionOf(entry);
+    return (pos == -1) ? -1 : pos + 1;
   }
 
   @Override
@@ -152,24 +148,32 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
     int pos = positionOf(entry);
     if (pos == -1 || array[pos] == null) return false;
 
-    siftUp(pos);
-    siftDown(pos);
+    // Replace stored reference while keeping original sequenceNumber
+    array[pos].entry = entry;
+
+    // Conditionally reheap based on parent priority
+    if (pos > 0 && hasHigherPriority(array[pos], array[parent(pos)])) {
+      siftUp(pos);
+    } else {
+      siftDown(pos);
+    }
+
     return true;
   }
 
   @Override
   public boolean isEmpty() {
-    return size <= 0 || array[1] == null;
+    return size <= 0;
   }
 
   @Override
   public boolean isFull() {
-    return size >= array.length - 1;
+    return size >= array.length;
   }
 
   @Override
   public void clear() {
-    for (int i = 1; i <= size; i++) {
+    for (int i = 0; i < size; i++) {
       array[i] = null;
     }
     size = 0;
@@ -182,9 +186,9 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
 
   @SuppressWarnings("unchecked")
   private void grow() {
-    int newCapacity = (array.length - 1) * 2 + 1;
+    int newCapacity = array.length * 2;
     PriorityEntry<T>[] newArray = (PriorityEntry<T>[]) new PriorityEntry[newCapacity];
-    for (int i = 1; i <= size; i++) {
+    for (int i = 0; i < size; i++) {
       newArray[i] = array[i];
     }
     array = newArray;
@@ -192,7 +196,7 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
 
   private int positionOf(T entry) {
     if (entry == null || isEmpty()) return -1;
-    for (int i = 1; i <= size; i++) {
+    for (int i = 0; i < size; i++) {
       if (array[i] != null && array[i].entry != null && array[i].entry.equals(entry)) {
         return i;
       }
@@ -211,25 +215,23 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
       comp = ((Comparable<? super T>) a.entry).compareTo(b.entry);
     }
 
-    // Positive means higher priority
     if (comp != 0) {
       return comp > 0;
     }
 
-    // Tie-breaker resolution
     return a.sequenceNumber < b.sequenceNumber;
   }
 
   private int parent(int i) {
-    return i / 2;
+    return (i - 1) / 2;
   }
 
   private int left(int i) {
-    return 2 * i;
+    return 2 * i + 1;
   }
 
   private int right(int i) {
-    return 2 * i + 1;
+    return 2 * i + 2;
   }
 
   private void swap(int a, int b) {
@@ -239,7 +241,7 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
   }
 
   private void siftUp(int i) {
-    while (i > 1 && array[i] != null && hasHigherPriority(array[i], array[parent(i)])) {
+    while (i > 0 && array[i] != null && hasHigherPriority(array[i], array[parent(i)])) {
       swap(i, parent(i));
       i = parent(i);
     }
@@ -249,10 +251,10 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
     while (true) {
       int l = left(i), r = right(i), best = i;
 
-      if (l <= size && array[l] != null && hasHigherPriority(array[l], array[best])) {
+      if (l < size && array[l] != null && hasHigherPriority(array[l], array[best])) {
         best = l;
       }
-      if (r <= size && array[r] != null && hasHigherPriority(array[r], array[best])) {
+      if (r < size && array[r] != null && hasHigherPriority(array[r], array[best])) {
         best = r;
       }
 
@@ -263,11 +265,11 @@ public class BinaryHeapPriorityQueue<T extends Comparable<T>>
   }
 
   private class PriorityQueueIterator implements Iterator<T> {
-    private int position = 1;
+    private int position = 0;
 
     @Override
     public boolean hasNext() {
-      return position <= size;
+      return position < size;
     }
 
     @Override
