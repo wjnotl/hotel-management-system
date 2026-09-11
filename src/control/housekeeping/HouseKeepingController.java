@@ -40,7 +40,7 @@ public class HouseKeepingController {
     this.settingsRepo = settingsRepo;
   }
 
-  // --- HOUSEKEEPING MAIN MENU LOOP ---
+  // Main housekeeping menu loop
   public void start() {
     while (true) {
       try {
@@ -57,7 +57,7 @@ public class HouseKeepingController {
         } else if ("5".equals(choice)) {
           manageSettings();
         } else if ("6".equals(choice)) {
-          return; // Go back to Resort Main Menu
+          return;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -65,7 +65,7 @@ public class HouseKeepingController {
     }
   }
 
-  // --- TASK BOARD SCREEN LOOP ---
+  // Task Board screen loop
   public void manageCleaningTaskBoard() {
     int currentPage = 1;
     int pageSize = 10;
@@ -77,18 +77,14 @@ public class HouseKeepingController {
 
     while (true) {
       try {
-        // 1. Fetch live data (deque order first, then terminal-status tasks)
         ListInterface<HousekeepingTask> orderedList = buildDisplayList();
-
-        // 2. Filter & Sort
         ListInterface<HousekeepingTask> filteredList =
             filterAndSortList(orderedList, searchQuery, taskTypeFilter, statusFilter, displayOrder);
 
-        // Clamp the page index in case a prior action (complete/skip/filter change) shrank the
-        // result set out from under the page we were sitting on.
+        // Re-clamp in case a prior action shrank the result set under the current page
         currentPage = clampPage(currentPage, filteredList.getNumberOfEntries(), pageSize);
 
-        // 3. Resolve each task's staff name up front so the view only prints (no lookups)
+        // Resolve staff names up front so the view only prints, no lookups
         ListInterface<HousekeepingView.TaskBoardRowDTO> rows =
             filteredList.map(
                 t -> {
@@ -100,7 +96,6 @@ public class HouseKeepingController {
                       t, staff != null ? staff.getName() : null);
                 });
 
-        // 4. Render Task Board Screen
         ConsoleUtil.GetMenuInputResult result =
             houseKeepingView.renderTaskBoardScreen(
                 rows,
@@ -118,7 +113,7 @@ public class HouseKeepingController {
         String command = result.input.trim();
 
         if ("E".equalsIgnoreCase(command)) {
-          break; // Return to Housekeeping Main Menu
+          break;
         } else if ("A".equalsIgnoreCase(command)) {
           handleAddTask(false);
         } else if ("U".equalsIgnoreCase(command)) {
@@ -161,7 +156,7 @@ public class HouseKeepingController {
     }
   }
 
-  // --- ADD TASK (BACK) / ADD URGENT TASK (FRONT) ---
+  // Adds a task to the queue. urgent=true adds to the front (Add Urgent Task).
   private void handleAddTask(boolean urgent) {
     while (true) {
       try {
@@ -169,33 +164,32 @@ public class HouseKeepingController {
         if (roomNumberInput == null
             || roomNumberInput.trim().isEmpty()
             || "C".equalsIgnoreCase(roomNumberInput.trim())) {
-          return; // Cancel action
+          return;
         }
 
         Room room = roomRepo.findByRoomNumber(roomNumberInput.trim());
         if (room == null) {
           ConsoleUtil.printError("No room found with number: " + roomNumberInput.trim());
-          continue; // Re-prompt instead of creating a task for a room that doesn't exist
+          continue;
         }
 
-        // Hard block: a room with any active task (any type) can't take another one until
-        // that task is resolved via the Task Board.
+        // A room can only have one active task at a time
         if (taskRepo.hasActiveTask(room.getRoomNumber())) {
           ConsoleUtil.printError(
               "Room "
                   + room.getRoomNumber()
                   + " already has a pending task on the board. Resolve it before adding a new"
                   + " one.");
-          continue; // Re-prompt instead of hard-cancelling
+          continue;
         }
 
         int typeChoice = houseKeepingView.promptTaskTypeInput();
         if (typeChoice == 4) {
-          return; // Cancel action, back to Task Board
+          return;
         }
         HousekeepingTask.TaskType taskType = mapTaskType(typeChoice);
 
-        // Reference info only — pulled straight from Settings, doesn't block or alter anything.
+        // Display-only reference info pulled from Settings
         boolean jumpAllowed = isQueueJumpAllowed(taskType);
         System.out.println();
         if (isCleaningTaskType(taskType)) {
@@ -234,9 +228,7 @@ public class HouseKeepingController {
           taskRepo.enqueueTask(newTask);
         }
 
-        // Sync to Room Status Sync: a cleaning-type task means the room just got messed up.
-        // Maintenance checks don't imply dirtiness (room could already be clean), so those
-        // only get logged as a note, not a forced status change.
+        // A new cleaning task means the room is dirty; maintenance checks don't imply that
         if (isCleaningTaskType(taskType)) {
           Room.Status oldStatus = room.getStatus();
           if (oldStatus != Room.Status.DIRTY) {
@@ -266,7 +258,6 @@ public class HouseKeepingController {
     }
   }
 
-  // Reference-only lookups pulled from Settings — display purposes only, no enforcement.
   private int getEstimatedCleanTimeMinutes(Room.RoomType roomType) {
     HousekeepingSettings settings = settingsRepo.getSettings();
     switch (roomType) {
@@ -296,7 +287,7 @@ public class HouseKeepingController {
         || taskType == HousekeepingTask.TaskType.DEEP_CLEAN;
   }
 
-  // --- DEQUEUE NEXT TASK (NEXT STAFF PULLS FROM FRONT) ---
+  // Pulls the next task off the front of the queue and assigns it to a chosen staff member
   private void handleDequeueNext() {
     try {
       HousekeepingTask top = taskRepo.dequeueNextTask();
@@ -307,9 +298,7 @@ public class HouseKeepingController {
 
       HousekeepingStaff staff = pickStaff("SELECT STAFF TO ASSIGN");
       if (staff == null) {
-        // No staff picked — put it back at the front (it's still in the master list; only
-        // re-insert into the deque, don't re-add it, or it'd be duplicated).
-        taskRepo.getTaskDeque().addFirst(top);
+        taskRepo.getTaskDeque().addFirst(top); // no staff picked, put task back
         return;
       }
 
@@ -319,12 +308,12 @@ public class HouseKeepingController {
                 + " is already at the max room count for their "
                 + staff.getShift().name()
                 + " shift. Pick another staff member.");
-        taskRepo.getTaskDeque().addFirst(top); // put it back, don't drop it
+        taskRepo.getTaskDeque().addFirst(top);
         return;
       }
 
       if (!confirmShiftAssignment(staff)) {
-        taskRepo.getTaskDeque().addFirst(top); // put it back, don't drop it
+        taskRepo.getTaskDeque().addFirst(top);
         return;
       }
 
@@ -346,8 +335,7 @@ public class HouseKeepingController {
     }
   }
 
-  // Staff has actually started work on the room: DIRTY -> CLEANING. Only fires from DIRTY —
-  // a room already further along is left alone so this can't regress real state.
+  // Only fires from DIRTY, so a room already further along can't be regressed
   private void advanceRoomToCleaning(String roomNumber) {
     Room room = roomRepo.findByRoomNumber(roomNumber);
     if (room == null || room.getStatus() != Room.Status.DIRTY) return;
@@ -357,10 +345,9 @@ public class HouseKeepingController {
     roomStatusHistoryRepo.recordStatusChange(roomNumber, Room.Status.DIRTY, Room.Status.CLEANING);
   }
 
-  // Checks for tasks still active on this room before a done-status change is allowed through.
-  // Returns true if it's safe to proceed (nothing stale, or the user chose to resolve it now —
-  // stale tasks get force-completed here, before the caller applies the status change). Returns
-  // false if the user declined, meaning the caller must NOT change the room's status.
+  // Checks for tasks still active on a room before letting a status change go through.
+  // Returns true if it's safe to proceed (nothing active, or the user chose to force-complete
+  // them now). Returns false if the user declined, meaning the caller must not change status.
   private boolean resolveStaleTasksBeforeStatusChange(String roomNumber) {
     ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
     ListInterface<HousekeepingTask> staleTasks = new ArrayList<>();
@@ -378,7 +365,7 @@ public class HouseKeepingController {
       }
     }
 
-    if (staleTasks.isEmpty()) return true; // nothing in the way, proceed as normal
+    if (staleTasks.isEmpty()) return true;
 
     boolean shouldComplete =
         ConsoleUtil.showConfirmMessage(
@@ -389,7 +376,7 @@ public class HouseKeepingController {
                 + " task(s) still PENDING/ASSIGNED/CLEANING. Mark them Completed and proceed"
                 + " with the status change?");
 
-    if (!shouldComplete) return false; // caller must not change the room's status
+    if (!shouldComplete) return false;
 
     for (int i = 1; i <= staleTasks.getNumberOfEntries(); i++) {
       finishTask(staleTasks.getEntry(i), HousekeepingTask.Status.COMPLETED);
@@ -397,8 +384,6 @@ public class HouseKeepingController {
     return true;
   }
 
-  // Shift now actually gates assignment: Settings defines a max-rooms cap per shift, so this
-  // checks the staff's current room load against their own shift's cap before any assignment.
   private int getMaxRoomsForShift(HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
     switch (shift) {
       case MORNING:
@@ -417,15 +402,9 @@ public class HouseKeepingController {
     return current >= max;
   }
 
-  // --- SHIFT WINDOW CHECK (WARNING + CONFIRM, NOT A HARD BLOCK) ---
-  // Shift schedules are stored as free text purely for display (e.g. "07:00 - 15:00" or
-  // whatever a manager types into Staff Configuration). This does a best-effort parse of that
-  // text into an actual time window and, if the current system time falls outside it, warns and
-  // asks for confirmation before letting the assignment go through. It never hard-blocks:
-  // - If the schedule text doesn't parse (free text can be anything), we skip the check
-  //   entirely rather than guess — no warning, no block.
-  // - If it does parse, the user can still say "yes, assign anyway" (e.g. staff starting early,
-  //   covering a shift, or just running/demoing the app at an odd hour).
+  // Shift schedules are free text (e.g. "07:00 - 15:00"). This is a best-effort check that
+  // warns (not blocks) when assigning outside the parsed window. Unparseable text is skipped
+  // silently rather than guessed at.
   private String getShiftScheduleText(
       HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
     if (shift == HousekeepingStaff.Shift.MORNING) return settings.getMorningShiftSchedule();
@@ -433,9 +412,7 @@ public class HouseKeepingController {
     return settings.getNightShiftSchedule();
   }
 
-  // Expects "H:mm - H:mm" / "HH:mm - HH:mm" (hyphen-separated, each side parseable as a time).
-  // Returns null if the text doesn't match that shape — callers must treat null as "can't tell,
-  // don't warn."
+  // Expects "H:mm - H:mm" (hyphen-separated). Returns null if it doesn't match that shape.
   private LocalTime[] parseShiftWindow(String schedule) {
     if (schedule == null) return null;
     String[] parts = schedule.split("-");
@@ -446,12 +423,11 @@ public class HouseKeepingController {
       LocalTime end = LocalTime.parse(zeroPadHour(parts[1].trim()));
       return new LocalTime[] {start, end};
     } catch (Exception e) {
-      return null; // Not a recognizable "H:mm" time on one or both sides
+      return null;
     }
   }
 
-  // LocalTime.parse requires a zero-padded hour ("07:00"); shift text may have been typed as
-  // "7:00" instead — pad it so a perfectly reasonable entry doesn't silently fail to parse.
+  // Pads "7:00" to "07:00" so LocalTime.parse doesn't reject a reasonable entry
   private String zeroPadHour(String hhmm) {
     return (hhmm.length() == 4 && hhmm.charAt(1) == ':') ? "0" + hhmm : hhmm;
   }
@@ -459,23 +435,19 @@ public class HouseKeepingController {
   private boolean isWithinShiftWindow(
       HousekeepingStaff.Shift shift, HousekeepingSettings settings) {
     LocalTime[] window = parseShiftWindow(getShiftScheduleText(shift, settings));
-    if (window == null) return true; // Unparseable — don't warn, don't block
+    if (window == null) return true;
 
     LocalTime now = LocalTime.now();
     LocalTime start = window[0];
     LocalTime end = window[1];
 
-    if (start.equals(end)) return true; // Degenerate/24h window — always "in shift"
+    if (start.equals(end)) return true;
     if (start.isBefore(end)) {
       return !now.isBefore(start) && now.isBefore(end);
     }
-    // Wraps past midnight (e.g. NIGHT: "23:00 - 07:00")
-    return !now.isBefore(start) || now.isBefore(end);
+    return !now.isBefore(start) || now.isBefore(end); // wraps past midnight (e.g. NIGHT shift)
   }
 
-  // Returns true if it's fine to proceed with assigning `staff` right now — either they're
-  // within their shift window, or the caller confirmed the override. Returns false if the
-  // caller should back out of the assignment.
   private boolean confirmShiftAssignment(HousekeepingStaff staff) {
     HousekeepingSettings settings = settingsRepo.getSettings();
     if (isWithinShiftWindow(staff.getShift(), settings)) return true;
@@ -490,33 +462,23 @@ public class HouseKeepingController {
             + "). Assign anyway?");
   }
 
-  // Assigns a task to a staff member and keeps the roster in sync: the room lands on the
-  // staff's assigned-rooms list and their availability flips to ON_TASK.
   private void assignTaskToStaff(HousekeepingTask task, HousekeepingStaff staff) {
     taskRepo.assignStaff(task, staff.getStaffId());
     staffRepo.assignRoomToStaff(staff, task.getRoomNumber());
   }
 
-  // Reassigns an active task to a different staff member. Uses reassignTask() rather than
-  // assignStaff() so a task that was already IN_PROGRESS under the old staff resets to
-  // ASSIGNED — the new staff member hasn't started cleaning yet and still needs to hit
-  // "Start Cleaning" themselves.
+  // Uses reassignTask() instead of assignStaff() so an IN_PROGRESS task resets to ASSIGNED —
+  // the new staff member still needs to hit "Start Cleaning" themselves.
   private void reassignTaskToStaff(HousekeepingTask task, HousekeepingStaff staff) {
     taskRepo.reassignTask(task, staff.getStaffId());
     staffRepo.assignRoomToStaff(staff, task.getRoomNumber());
   }
 
-  // --- STAFF PICKER HELPERS (replace manual Staff ID entry) ---
-  // Picks off the live roster, minus anyone OFF_DUTY — an off-duty staff member shouldn't be
-  // assignable at all, so they're kept out of the picker rather than being pickable and then
-  // rejected afterwards. Returns null if the user cancelled.
+  // Staff picker helpers — pick off the live roster, excluding OFF_DUTY staff
   private HousekeepingStaff pickStaff(String title) {
     return pickStaff(assignableStaffList(), title);
   }
 
-  // Picks off a caller-supplied candidate list (e.g. the roster minus one staff member). Callers
-  // that build their own candidate list are responsible for filtering OFF_DUTY out too if that
-  // list didn't already come from assignableStaffList(). Returns null if the user cancelled.
   private HousekeepingStaff pickStaff(ListInterface<HousekeepingStaff> candidates, String title) {
     ConsoleUtil.GetMenuInputResult result = houseKeepingView.displayStaffPicker(candidates, title);
     if (result == null || !result.isNumber) {
@@ -525,8 +487,6 @@ public class HouseKeepingController {
     return candidates.getEntry(result.getAsInt());
   }
 
-  // Full roster minus anyone currently OFF_DUTY — the shared "who can actually take a task right
-  // now" pool for every manual assignment/reassignment picker.
   private ListInterface<HousekeepingStaff> assignableStaffList() {
     return staffRepo
         .getStaffList()
@@ -538,8 +498,7 @@ public class HouseKeepingController {
     return source.filter(s -> s != null && !s.getStaffId().equals(exclude.getStaffId()));
   }
 
-  // Moves a task to a terminal status (Completed/Skipped) and releases the assigned staff
-  // member's hold on the room, freeing them back to AVAILABLE if they've got nothing else on.
+  // Moves a task to a terminal status and frees the assigned staff member back to AVAILABLE
   private void finishTask(HousekeepingTask task, HousekeepingTask.Status newStatus) {
     taskRepo.updateTaskStatus(task, newStatus);
 
@@ -551,17 +510,12 @@ public class HouseKeepingController {
     }
   }
 
-  // Marking a task Complete/Skip from the Task Board is where the room's real-world state
-  // actually changes — this pushes that change onto Room Status Sync (and its history log),
-  // which finishTask() alone never did. Also calls finishTask() while the caller there is
-  // already explicitly setting/logging the room's new status
+  // Pushes a task's Completed/Skipped outcome onto Room Status Sync (room state + history)
   private void syncRoomAfterTaskFinished(HousekeepingTask task, HousekeepingTask.Status newStatus) {
     Room room = roomRepo.findByRoomNumber(task.getRoomNumber());
     if (room == null) return;
 
     if (!isCleaningTaskType(task.getTaskType())) {
-      // Maintenance checks don't affect the DIRTY/CLEANING/VACANT_CLEAN lifecycle — just log
-      // the outcome so View Status History still shows something happened.
       roomStatusHistoryRepo.recordNote(
           room.getRoomNumber(),
           "Maintenance check " + newStatus.name().toLowerCase() + " (" + task.getTaskId() + ")");
@@ -569,7 +523,6 @@ public class HouseKeepingController {
     }
 
     if (newStatus == HousekeepingTask.Status.COMPLETED) {
-      // Clean finished: room is now vacant and clean.
       if (room.getStatus() != Room.Status.VACANT_CLEAN) {
         Room.Status oldStatus = room.getStatus();
         room.setStatus(Room.Status.VACANT_CLEAN);
@@ -578,8 +531,7 @@ public class HouseKeepingController {
             room.getRoomNumber(), oldStatus, Room.Status.VACANT_CLEAN);
       }
     } else if (newStatus == HousekeepingTask.Status.SKIPPED) {
-      // Clean was abandoned mid-way: if it had already progressed to CLEANING, drop it back to
-      // DIRTY — it still needs a proper clean. A room still sitting at DIRTY is left alone.
+      // Clean abandoned mid-way: drop back to DIRTY if it had progressed to CLEANING
       if (room.getStatus() == Room.Status.CLEANING) {
         room.setStatus(Room.Status.DIRTY);
         roomRepo.updateRoom(room);
@@ -589,7 +541,7 @@ public class HouseKeepingController {
     }
   }
 
-  // --- STAFF ASSIGNMENTS SCREEN LOOP ---
+  // Staff Assignments screen loop
   public void manageStaffAssignments() {
     int currentPage = 1;
     int pageSize = 10;
@@ -616,7 +568,7 @@ public class HouseKeepingController {
         String command = result.input.trim();
 
         if ("E".equalsIgnoreCase(command)) {
-          break; // Return to Housekeeping Main Menu
+          break;
         } else if ("S".equalsIgnoreCase(command)) {
           String[] filters = handleStaffFilterMenu(searchQuery, shiftFilter, availabilityFilter);
           searchQuery = filters[0];
@@ -649,7 +601,6 @@ public class HouseKeepingController {
     }
   }
 
-  // --- MAIN STAFF FILTER MENU & NESTED SUBMENUS ---
   private String[] handleStaffFilterMenu(
       String currentSearch, String currentShift, String currentAvailability) {
 
@@ -769,8 +720,6 @@ public class HouseKeepingController {
     return filtered;
   }
 
-  // Creates a new staff member: name, then shift, then an auto-generated unique ID. New staff
-  // always start AVAILABLE with no assigned rooms.
   private void handleAddStaff() {
     String nameInput = houseKeepingView.promptNewStaffName();
     if (nameInput == null || nameInput.trim().isEmpty() || "C".equalsIgnoreCase(nameInput.trim())) {
@@ -788,7 +737,7 @@ public class HouseKeepingController {
       } else if (shiftChoice == 3) {
         shift = HousekeepingStaff.Shift.NIGHT;
       } else if (shiftChoice == 4) {
-        return; // Cancelled
+        return;
       }
     }
 
@@ -808,7 +757,6 @@ public class HouseKeepingController {
     return staffRepo.generateStaffId();
   }
 
-  // --- ISOLATED STAFF ACTION SUBMENU LOOP ---
   private void handleStaffAction(
       ListInterface<HousekeepingStaff> list, int indexOnPage, int page, int pageSize) {
     while (true) {
@@ -835,7 +783,7 @@ public class HouseKeepingController {
         } else if (action == 5) {
           handleEditShift(selected);
         }
-        return; // Return back to staff roster
+        return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -855,11 +803,11 @@ public class HouseKeepingController {
       } else if (shiftChoice == 3) {
         newShift = HousekeepingStaff.Shift.NIGHT;
       } else if (shiftChoice == 4) {
-        return; // Cancelled
+        return;
       }
     }
 
-    if (newShift == oldShift) return; // No actual change
+    if (newShift == oldShift) return;
 
     staffRepo.setShift(staff, newShift);
 
@@ -876,8 +824,7 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
-  // Requires AVAILABLE first so we never dequeue a task and then discover it can't be placed —
-  // the check happens before anything leaves the queue.
+  // Checks AVAILABLE + capacity before dequeuing, so a task is never pulled and then stuck
   private void handleAutoAssignNextTask(HousekeepingStaff staff) {
     if (staff.getAvailability() != HousekeepingStaff.Availability.AVAILABLE) {
       ConsoleUtil.printError(
@@ -899,7 +846,6 @@ public class HouseKeepingController {
       return;
     }
 
-    // Checked before dequeuing so a declined override never pulls a task off the queue.
     if (!confirmShiftAssignment(staff)) {
       return;
     }
@@ -925,7 +871,6 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
-  // Moves an active task on a given room from this staff member to another one.
   private void handleReassignRoom(HousekeepingStaff fromStaff) {
     String roomNumberInput = houseKeepingView.promptRoomNumberForReassign();
     if (roomNumberInput == null
@@ -977,9 +922,7 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
-  // Finds the task currently ASSIGNED to this room (staff picked, not yet started cleaning),
-  // regardless of which staff member it's assigned to. Used to keep the Task Board in sync when
-  // a room's status is changed manually from the Room Status Sync screen.
+  // Used to keep the Task Board in sync when a room's status is changed manually
   private HousekeepingTask findAssignedTaskForRoom(String roomNumber) {
     ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
     for (int i = 1; i <= fullList.getNumberOfEntries(); i++) {
@@ -991,8 +934,7 @@ public class HouseKeepingController {
     return null;
   }
 
-  // Finds a still-unassigned (PENDING, no staff yet) task for this room. Used to block a manual
-  // room status change to CLEANING until someone's actually been assigned to do the work.
+  // Used to block manually setting a room to CLEANING before anyone's assigned
   private HousekeepingTask findPendingTaskForRoom(String roomNumber) {
     ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
     for (int i = 1; i <= fullList.getNumberOfEntries(); i++) {
@@ -1021,9 +963,7 @@ public class HouseKeepingController {
     return null;
   }
 
-  // Manually toggles between AVAILABLE and OFF_DUTY. Blocked while ON_TASK — that state is
-  // system-managed (set/cleared by task assign/finish) so a manual flip here could leave a
-  // task pointing at a staff member the roster claims is free, or vice versa.
+  // ON_TASK is system-managed (set/cleared by assign/finish), so manual toggling is blocked here
   private void handleToggleAvailability(HousekeepingStaff staff) {
     if (staff.getAvailability() == HousekeepingStaff.Availability.ON_TASK) {
       ConsoleUtil.printError(
@@ -1046,8 +986,6 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
-  // Tasks assigned to this staff member, created today — a lightweight "for the day" view
-  // built directly off the task list rather than a separate log.
   private void showStaffTaskHistory(HousekeepingStaff staff) {
     ListInterface<HousekeepingTask> fullList = taskRepo.getTaskList();
     ListInterface<HousekeepingTask> todayTasks = new ArrayList<>();
@@ -1065,7 +1003,7 @@ public class HouseKeepingController {
     houseKeepingView.renderStaffTaskHistoryScreen(staff, todayTasks);
   }
 
-  // --- ROOM STATUS SYNC SCREEN LOOP ---
+  // Room Status Sync screen loop
   public void manageRoomStatusSync() {
     int currentPage = 1;
     int pageSize = 10;
@@ -1076,9 +1014,6 @@ public class HouseKeepingController {
     while (true) {
       try {
         ListInterface<Room> filteredList = filterRoomList(searchQuery, statusFilter);
-
-        // Same clamp as the task board: an action can shrink the filtered set (e.g. a status
-        // change bumps a room out of the active status filter) out from under the current page.
         currentPage = clampPage(currentPage, filteredList.getNumberOfEntries(), pageSize);
 
         ConsoleUtil.GetMenuInputResult result =
@@ -1092,7 +1027,7 @@ public class HouseKeepingController {
         String command = result.input.trim();
 
         if ("E".equalsIgnoreCase(command)) {
-          break; // Return to Housekeeping Main Menu
+          break;
         } else if ("S".equalsIgnoreCase(command)) {
           String[] filters = handleRoomFilterMenu(searchQuery, statusFilter);
           searchQuery = filters[0];
@@ -1188,9 +1123,7 @@ public class HouseKeepingController {
               if (newStatus == Room.Status.VACANT_CLEAN) {
                 okToProceed = resolveStaleTasksBeforeStatusChange(selected.getRoomNumber());
               } else if (newStatus == Room.Status.CLEANING) {
-                // Cleaning can't start with nobody assigned to it yet — block and send the
-                // user to Task Board to assign staff first, same gate the Task Board itself
-                // uses for "Start Cleaning".
+                // Same gate as Task Board's "Start Cleaning" — needs an assigned staff first
                 if (findPendingTaskForRoom(selected.getRoomNumber()) != null) {
                   okToProceed = false;
                   blockedMessage =
@@ -1207,11 +1140,8 @@ public class HouseKeepingController {
                 roomStatusHistoryRepo.recordStatusChange(
                     selected.getRoomNumber(), oldStatus, newStatus);
 
-                // Keep the Task Board in sync: manually marking a room CLEANING here means
-                // work has actually started, so mirror that onto its ASSIGNED task the same
-                // way "Start Cleaning" on the Task Board would (ASSIGNED -> IN_PROGRESS).
-                // Without this, the task board keeps showing ASSIGNED even though the room
-                // says CLEANING.
+                // Mirror the change onto the Task Board (ASSIGNED -> IN_PROGRESS) so it
+                // doesn't fall out of sync with the room's actual status
                 if (newStatus == Room.Status.CLEANING) {
                   HousekeepingTask activeTask = findAssignedTaskForRoom(selected.getRoomNumber());
                   if (activeTask != null) {
@@ -1242,7 +1172,7 @@ public class HouseKeepingController {
                     + selected.getRoomNumber()
                     + " already has a pending task on the board. Resolve it before flagging"
                     + " another one.");
-            return; // Blocked, back to Room Status Sync screen
+            return;
           }
 
           roomStatusHistoryRepo.recordNote(selected.getRoomNumber(), "Flagged for maintenance");
@@ -1259,7 +1189,7 @@ public class HouseKeepingController {
           taskRepo.enqueueTask(maintenanceTask);
         }
 
-        if (action != 3) return; // Return to Room Status Sync screen (history has its own pause)
+        if (action != 3) return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
@@ -1306,7 +1236,6 @@ public class HouseKeepingController {
     }
   }
 
-  // --- MAIN FILTER MENU & NESTED SUBMENUS ---
   private String[] handleFilterMenu(
       String currentSearch, String currentTaskType, String currentStatus) {
 
@@ -1392,13 +1321,12 @@ public class HouseKeepingController {
     }
   }
 
-  // --- ISOLATED DISPLAY ORDER SUBMENU LOOP ---
   private String handleDisplayOrderMenu(String currentOrder) {
     while (true) {
       try {
         String selected = houseKeepingView.displayDisplayOrderMenu();
         if (selected == null) {
-          return currentOrder; // Keep current order
+          return currentOrder;
         }
         return selected;
       } catch (Exception e) {
@@ -1407,7 +1335,6 @@ public class HouseKeepingController {
     }
   }
 
-  // --- ISOLATED TASK ACTION SUBMENU LOOP ---
   private void handleTaskAction(
       ListInterface<HousekeepingTask> list, int indexOnPage, int page, int pageSize) {
     while (true) {
@@ -1423,9 +1350,7 @@ public class HouseKeepingController {
 
         int action = houseKeepingView.displayTaskActionSubmenu(selected);
 
-        // Assign / Start Cleaning / Escalate don't make sense on a task that's already
-        // Completed or Skipped — block those here so the terminal status can't be regressed
-        // (e.g. Start Cleaning silently flipping a COMPLETED task back to IN_PROGRESS).
+        // Assign / Start Cleaning / Escalate don't apply once a task is terminal
         boolean isTerminal =
             selected.getStatus() == HousekeepingTask.Status.COMPLETED
                 || selected.getStatus() == HousekeepingTask.Status.SKIPPED;
@@ -1458,11 +1383,10 @@ public class HouseKeepingController {
             }
 
             if (!confirmShiftAssignment(staff)) {
-              continue; // Declined the override — back to the task action menu
+              continue;
             }
 
-            // Reassigning a task someone's already mid-clean on loses their progress (the new
-            // staff has to Start Cleaning from scratch) — confirm before doing that.
+            // Reassigning an IN_PROGRESS task loses the current staff's progress — confirm first
             if (selected.getStatus() == HousekeepingTask.Status.IN_PROGRESS) {
               boolean confirmed =
                   ConsoleUtil.showConfirmMessage(
@@ -1477,14 +1401,12 @@ public class HouseKeepingController {
                           + " will need to Start Cleaning again. Are you sure you want to"
                           + " reassign?");
               if (!confirmed) {
-                continue; // Declined — back to the task action menu
+                continue;
               }
             }
 
-            // A task already held by someone else must go through reassignTaskToStaff (resets
-            // status/progress correctly) and explicitly release the room from the old staff —
-            // otherwise the room lingers on their Assigned Rooms list forever, duplicated across
-            // both staff members on the Manage Staff Assignments board.
+            // Reassigning must also release the room from the old staff member, or it stays
+            // duplicated on both staff members' assigned-rooms lists
             if (previousStaff != null) {
               reassignTaskToStaff(selected, staff);
               staffRepo.releaseRoomFromStaff(previousStaff, selected.getRoomNumber());
@@ -1522,15 +1444,14 @@ public class HouseKeepingController {
                     + ") and cannot be escalated.");
           }
         }
-        return; // Return back to task board
+        return;
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
       }
     }
   }
 
-  // Keeps a page index inside [1, totalPages] for a given result-set size. An empty result set
-  // still reports page 1 (matches what the view treats as its empty state).
+  // Keeps the page index inside [1, totalPages]; an empty result set reports page 1
   private int clampPage(int currentPage, int totalMatches, int pageSize) {
     int totalPages = (totalMatches == 0) ? 1 : (int) Math.ceil((double) totalMatches / pageSize);
     if (currentPage > totalPages) return totalPages;
@@ -1538,10 +1459,8 @@ public class HouseKeepingController {
     return currentPage;
   }
 
-  // --- BUILD DISPLAY LIST: TRUE DEQUE ORDER (FRONT -> BACK) FIRST, THEN EVERYTHING ELSE ---
-  // Every task appears exactly once. Still-queued (PENDING) tasks come first, in the exact
-  // order the deque would hand them out. Tasks that have already left the queue (in progress,
-  // completed, skipped) follow afterwards in their original insertion order.
+  // Builds the display order: still-queued (PENDING) tasks in deque order first, then
+  // everything else (in progress/completed/skipped) in insertion order. Each task appears once.
   private ListInterface<HousekeepingTask> buildDisplayList() {
     ListInterface<HousekeepingTask> ordered = new ArrayList<>();
 
@@ -1561,7 +1480,6 @@ public class HouseKeepingController {
     return ordered;
   }
 
-  // --- FILTER & SORT HELPER ---
   private ListInterface<HousekeepingTask> filterAndSortList(
       ListInterface<HousekeepingTask> source,
       String search,
@@ -1604,9 +1522,7 @@ public class HouseKeepingController {
       if (status != null && !status.trim().isEmpty()) {
         matchesStatus = status.equalsIgnoreCase(t.getStatus().name());
       } else {
-        // No explicit status filter selected: default the board to active work only. Nothing
-        // is deleted — Completed/Skipped tasks stay fully queryable via the status filter and
-        // remain in taskRepo for Reports (Task 4) — they just don't clutter the default view.
+        // Default view hides Completed/Skipped; they're still fully queryable via the filter
         matchesStatus =
             t.getStatus() != HousekeepingTask.Status.COMPLETED
                 && t.getStatus() != HousekeepingTask.Status.SKIPPED;
@@ -1617,7 +1533,6 @@ public class HouseKeepingController {
       }
     }
 
-    // "QUEUE ORDER" needs no re-sort: `source` already arrives in front-to-back deque order.
     if ("ROOM NUMBER (ASCENDING)".equalsIgnoreCase(displayOrder)) {
       filtered.sort((t1, t2) -> t1.getRoomNumber().compareTo(t2.getRoomNumber()));
     } else if ("ASSIGNED TIME (OLDEST -> NEWEST)".equalsIgnoreCase(displayOrder)) {
@@ -1649,7 +1564,7 @@ public class HouseKeepingController {
     return null;
   }
 
-  // --- SETTINGS & CONFIGURATION SCREEN LOOP ---
+  // Settings & Configuration screen loop
   public void manageSettings() {
     while (true) {
       try {
@@ -1660,7 +1575,7 @@ public class HouseKeepingController {
         } else if (choice == 2) {
           manageStaffConfiguration();
         } else if (choice == 3) {
-          return; // Back to Housekeeping Main Menu
+          return;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -1681,7 +1596,7 @@ public class HouseKeepingController {
         } else if (choice == 3) {
           handleEditQueueJumpTypes(settings);
         } else if (choice == 4) {
-          return; // Back to Settings Menu
+          return;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -1730,7 +1645,7 @@ public class HouseKeepingController {
             1,
             1440);
 
-    if (minutes == null) return; // Cancelled / kept unchanged
+    if (minutes == null) return;
 
     settingsRepo.updateOverdueThreshold(minutes);
 
@@ -1761,7 +1676,7 @@ public class HouseKeepingController {
         } else if (choice == 2) {
           handleEditMaxRooms(settings);
         } else if (choice == 3) {
-          return; // Back to Settings Menu
+          return;
         }
       } catch (Exception e) {
         ConsoleUtil.printError(e.getMessage());
@@ -1791,8 +1706,7 @@ public class HouseKeepingController {
     ConsoleUtil.printContinueMessage();
   }
 
-  // Blank or "C" means "keep current" — mirrors getIntegerInput's built-in cancel semantics,
-  // for the free-text fields where there's no equivalent ConsoleUtil helper.
+  // Blank or "C" means "keep current"
   private String promptOptionalText(String prompt) {
     String input = ConsoleUtil.getStringInput(prompt);
     if (input == null || input.trim().isEmpty() || "C".equalsIgnoreCase(input.trim())) {
