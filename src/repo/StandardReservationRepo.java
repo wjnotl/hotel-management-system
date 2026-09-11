@@ -254,13 +254,6 @@ public class StandardReservationRepo {
     return updateReservation(reservation);
   }
 
-  // Serving the front is the O(1) dequeue the FIFO queue exists for.
-  public Reservation allocateFront(Room.RoomType roomType) {
-    Reservation front = getQueueByRoomType(roomType).dequeue();
-    if (front == null) return null;
-    return stampAsHold(front);
-  }
-
   // The screens authorise the skip, so the repo only guarantees the entry leaves the line. Reaching
   // into the middle costs O(n); the front stays O(1).
   public Reservation allocateQueued(Reservation reservation) {
